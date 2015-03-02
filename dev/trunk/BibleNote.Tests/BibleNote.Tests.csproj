@@ -54,8 +54,26 @@
     </Otherwise>
   </Choose>
   <ItemGroup>
-    <Compile Include="UnitTest1.cs" />
+    <Compile Include="TextParserTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\BibleNote.Core\BibleNote.Core.csproj">
+      <Project>{39de7838-2f9b-4493-90ce-d63429b374b2}</Project>
+      <Name>BibleNote.Core</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\BibleNote.OneNote\BibleNote.OneNote.csproj">
+      <Project>{70468f33-5853-4f37-bf13-ea04b3f2db09}</Project>
+      <Name>BibleNote.OneNote</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\BibleNote.UI\BibleNote.UI.csproj">
+      <Project>{14c9b1d6-64be-4ef4-8809-e673cb8aab96}</Project>
+      <Name>BibleNote.UI</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\BibleNote.Word\BibleNote.Word.csproj">
+      <Project>{4b210945-7027-4a21-bc5c-acb590c029a3}</Project>
+      <Name>BibleNote.Word</Name>
+    </ProjectReference>
   </ItemGroup>
   <Choose>
     <When Condition="'$(VisualStudioVersion)' == '10.0' And '$(IsCodedUITest)' == 'True'">
