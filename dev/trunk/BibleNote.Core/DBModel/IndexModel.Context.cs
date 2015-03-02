@@ -7,16 +7,16 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace BibleNote.Core.DB
+namespace BibleNote.Core.DBModel
 {
     using System;
     using System.Data.Entity;
     using System.Data.Entity.Infrastructure;
     
-    public partial class UIModel : DbContext
+    public partial class Entities : DbContext
     {
-        public UIModel()
-            : base("name=UIModel")
+        public Entities()
+            : base("name=Entities")
         {
         }
     
@@ -25,5 +25,6 @@ namespace BibleNote.Core.DB
             throw new UnintentionalCodeFirstException();
         }
     
+        public DbSet<DocumentFolder> DocumentFolder { get; set; }
     }
 }
