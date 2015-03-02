@@ -80,6 +80,24 @@
     <Compile Include="Common\DocumentParseResult.cs" />
     <Compile Include="Common\ParagraphParseResult.cs" />
     <Compile Include="Common\VersePointer.cs" />
+    <Compile Include="DBModel\DocumentFolder.cs">
+      <DependentUpon>IndexModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="DBModel\IndexModel.Context.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>IndexModel.Context.tt</DependentUpon>
+    </Compile>
+    <Compile Include="DBModel\IndexModel.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>IndexModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="DBModel\IndexModel.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>IndexModel.edmx</DependentUpon>
+    </Compile>
     <Compile Include="DBModel\UIModel.Context.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
@@ -113,6 +131,23 @@
       <Generator>EntityModelCodeGenerator</Generator>
       <LastGenOutput>UIModel.Designer.cs</LastGenOutput>
     </EntityDeploy>
+    <EntityDeploy Include="DBModel\IndexModel.edmx">
+      <Generator>EntityModelCodeGenerator</Generator>
+      <LastGenOutput>IndexModel.Designer.cs</LastGenOutput>
+    </EntityDeploy>
+    <None Include="DBModel\IndexModel.Context.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <DependentUpon>IndexModel.edmx</DependentUpon>
+      <LastGenOutput>IndexModel.Context.cs</LastGenOutput>
+    </None>
+    <None Include="DBModel\IndexModel.edmx.diagram">
+      <DependentUpon>IndexModel.edmx</DependentUpon>
+    </None>
+    <None Include="DBModel\IndexModel.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <DependentUpon>IndexModel.edmx</DependentUpon>
+      <LastGenOutput>IndexModel.cs</LastGenOutput>
+    </None>
     <None Include="DBModel\UIModel.Context.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <DependentUpon>UIModel.edmx</DependentUpon>

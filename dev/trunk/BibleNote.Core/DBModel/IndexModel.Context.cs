@@ -13,10 +13,10 @@ namespace BibleNote.Core.DBModel
     using System.Data.Entity;
     using System.Data.Entity.Infrastructure;
     
-    public partial class Entities : DbContext
+    public partial class IndexModel : DbContext
     {
-        public Entities()
-            : base("name=Entities")
+        public IndexModel()
+            : base("name=IndexModel")
         {
         }
     

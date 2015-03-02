@@ -4,7 +4,7 @@
   <edmx:Designer xmlns="http://schemas.microsoft.com/ado/2009/11/edmx">
     <!-- Diagram content (shape and connector positions) -->
     <edmx:Diagrams>
-      <Diagram DiagramId="90cd20602db84248aac5c47f05633272" Name="Diagram1">
+      <Diagram DiagramId="6315f2c1da9a4204a377bd1d7baa1369" Name="Diagram1">
         <EntityTypeShape EntityType="BibleNote.IndexModel.DocumentFolder" Width="1.5" PointX="0.75" PointY="0.75" IsExpanded="true" />
       </Diagram>
     </edmx:Diagrams>
