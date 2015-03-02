@@ -98,21 +98,6 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>IndexModel.edmx</DependentUpon>
     </Compile>
-    <Compile Include="DBModel\UIModel.Context.cs">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>UIModel.Context.tt</DependentUpon>
-    </Compile>
-    <Compile Include="DBModel\UIModel.cs">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>UIModel.tt</DependentUpon>
-    </Compile>
-    <Compile Include="DBModel\UIModel.Designer.cs">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>UIModel.edmx</DependentUpon>
-    </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Scheme\zef2005.cs">
       <DependentUpon>zef2005.xsd</DependentUpon>
@@ -127,10 +112,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
-    <EntityDeploy Include="DBModel\UIModel.edmx">
-      <Generator>EntityModelCodeGenerator</Generator>
-      <LastGenOutput>UIModel.Designer.cs</LastGenOutput>
-    </EntityDeploy>
     <EntityDeploy Include="DBModel\IndexModel.edmx">
       <Generator>EntityModelCodeGenerator</Generator>
       <LastGenOutput>IndexModel.Designer.cs</LastGenOutput>
@@ -148,19 +129,6 @@
       <DependentUpon>IndexModel.edmx</DependentUpon>
       <LastGenOutput>IndexModel.cs</LastGenOutput>
     </None>
-    <None Include="DBModel\UIModel.Context.tt">
-      <Generator>TextTemplatingFileGenerator</Generator>
-      <DependentUpon>UIModel.edmx</DependentUpon>
-      <LastGenOutput>UIModel.Context.cs</LastGenOutput>
-    </None>
-    <None Include="DBModel\UIModel.edmx.diagram">
-      <DependentUpon>UIModel.edmx</DependentUpon>
-    </None>
-    <None Include="DBModel\UIModel.tt">
-      <Generator>TextTemplatingFileGenerator</Generator>
-      <DependentUpon>UIModel.edmx</DependentUpon>
-      <LastGenOutput>UIModel.cs</LastGenOutput>
-    </None>
     <None Include="packages.config" />
     <None Include="Scheme\zef2005.xsc">
       <DependentUpon>zef2005.xsd</DependentUpon>
@@ -173,9 +141,6 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Data\BibleNote.UI.sdf">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
     <Content Include="Data\BibleNote.Index.sdf">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
