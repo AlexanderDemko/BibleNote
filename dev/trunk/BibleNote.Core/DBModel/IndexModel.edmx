@@ -21,7 +21,7 @@
     <!-- CSDL content -->
     <edmx:ConceptualModels>
       <Schema Namespace="BibleNote.IndexModel" Alias="Self" p1:UseStrongSpatialTypes="false" xmlns:annotation="http://schemas.microsoft.com/ado/2009/02/edm/annotation" xmlns:p1="http://schemas.microsoft.com/ado/2009/02/edm/annotation" xmlns="http://schemas.microsoft.com/ado/2009/11/edm">
-        <EntityContainer Name="Entities" p1:LazyLoadingEnabled="true">
+        <EntityContainer Name="IndexModel" p1:LazyLoadingEnabled="true">
           <EntitySet Name="DocumentFolder" EntityType="BibleNote.IndexModel.DocumentFolder" />
         </EntityContainer>
         <EntityType Name="DocumentFolder">
@@ -37,7 +37,7 @@
     <!-- C-S mapping content -->
     <edmx:Mappings>
       <Mapping Space="C-S" xmlns="http://schemas.microsoft.com/ado/2009/11/mapping/cs">
-        <EntityContainerMapping StorageEntityContainer="BibleNoteIndexModelStoreContainer" CdmEntityContainer="Entities">
+        <EntityContainerMapping StorageEntityContainer="BibleNoteIndexModelStoreContainer" CdmEntityContainer="IndexModel">
           <EntitySetMapping Name="DocumentFolder">
             <EntityTypeMapping TypeName="BibleNote.IndexModel.DocumentFolder">
               <MappingFragment StoreEntitySet="DocumentFolder">
