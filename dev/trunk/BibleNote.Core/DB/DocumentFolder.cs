@@ -7,7 +7,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace BibleNote.Core.DB.Index
+namespace BibleNote.Core.DB
 {
     using System;
     using System.Collections.Generic;

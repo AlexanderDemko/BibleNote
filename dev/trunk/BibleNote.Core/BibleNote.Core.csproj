@@ -75,94 +75,110 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="DB\Index\DocumentFolder.cs">
+    <Compile Include="Common\CustomExceptions.cs" />
+    <Compile Include="Constants\SystemConstants.cs" />
+    <Compile Include="DB\DocumentFolder.cs">
       <DependentUpon>IndexModel.tt</DependentUpon>
     </Compile>
-    <Compile Include="DB\Index\IndexModel.Context.cs">
+    <Compile Include="DB\IndexModel.Context.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
       <DependentUpon>IndexModel.Context.tt</DependentUpon>
     </Compile>
-    <Compile Include="DB\Index\IndexModel.cs">
+    <Compile Include="DB\IndexModel.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
       <DependentUpon>IndexModel.tt</DependentUpon>
     </Compile>
-    <Compile Include="DB\Index\IndexModel.Designer.cs">
+    <Compile Include="DB\IndexModel.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
       <DependentUpon>IndexModel.edmx</DependentUpon>
     </Compile>
     <Compile Include="Common\DocumentParseResult.cs" />
     <Compile Include="Common\ParagraphParseResult.cs" />
-    <Compile Include="Common\Verse.cs" />
-    <Compile Include="DB\UI\UIModel.Context.cs">
+    <Compile Include="Common\VersePointer.cs" />
+    <Compile Include="DB\UIModel.Context.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
       <DependentUpon>UIModel.Context.tt</DependentUpon>
     </Compile>
-    <Compile Include="DB\UI\UIModel.cs">
+    <Compile Include="DB\UIModel.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
       <DependentUpon>UIModel.tt</DependentUpon>
     </Compile>
-    <Compile Include="DB\UI\UIModel.Designer.cs">
+    <Compile Include="DB\UIModel.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
       <DependentUpon>UIModel.edmx</DependentUpon>
     </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Scheme\zef2005.cs">
+      <DependentUpon>zef2005.xsd</DependentUpon>
+    </Compile>
+    <Compile Include="Scheme\zef2005.ext.cs" />
     <Compile Include="Services\ConfigurationManager.cs" />
     <Compile Include="Services\TextParserService.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="Constants\" />
     <Folder Include="Contracts\" />
+    <Folder Include="DB\Index\" />
+    <Folder Include="DB\UI\" />
     <Folder Include="Helpers\" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
-    <EntityDeploy Include="DB\Index\IndexModel.edmx">
+    <EntityDeploy Include="DB\IndexModel.edmx">
       <Generator>EntityModelCodeGenerator</Generator>
       <LastGenOutput>IndexModel.Designer.cs</LastGenOutput>
     </EntityDeploy>
-    <None Include="DB\Index\IndexModel.Context.tt">
+    <None Include="DB\IndexModel.Context.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <DependentUpon>IndexModel.edmx</DependentUpon>
       <LastGenOutput>IndexModel.Context.cs</LastGenOutput>
     </None>
-    <None Include="DB\Index\IndexModel.edmx.diagram">
+    <None Include="DB\IndexModel.edmx.diagram">
       <DependentUpon>IndexModel.edmx</DependentUpon>
     </None>
-    <None Include="DB\Index\IndexModel.tt">
+    <None Include="DB\IndexModel.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <DependentUpon>IndexModel.edmx</DependentUpon>
       <LastGenOutput>IndexModel.cs</LastGenOutput>
     </None>
-    <EntityDeploy Include="DB\UI\UIModel.edmx">
+    <EntityDeploy Include="DB\UIModel.edmx">
       <Generator>EntityModelCodeGenerator</Generator>
       <LastGenOutput>UIModel.Designer.cs</LastGenOutput>
     </EntityDeploy>
-    <None Include="DB\UI\UIModel.Context.tt">
+    <None Include="DB\UIModel.Context.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <DependentUpon>UIModel.edmx</DependentUpon>
       <LastGenOutput>UIModel.Context.cs</LastGenOutput>
     </None>
-    <None Include="DB\UI\UIModel.edmx.diagram">
+    <None Include="DB\UIModel.edmx.diagram">
       <DependentUpon>UIModel.edmx</DependentUpon>
     </None>
-    <None Include="DB\UI\UIModel.tt">
+    <None Include="DB\UIModel.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <DependentUpon>UIModel.edmx</DependentUpon>
       <LastGenOutput>UIModel.cs</LastGenOutput>
     </None>
     <None Include="packages.config" />
+    <None Include="Scheme\zef2005.xsc">
+      <DependentUpon>zef2005.xsd</DependentUpon>
+    </None>
+    <None Include="Scheme\zef2005.xsd">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="Scheme\zef2005.xss">
+      <DependentUpon>zef2005.xsd</DependentUpon>
+    </None>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="DB\UI\BibleNote.UI.sdf">
+    <Content Include="Data\BibleNote.UI.sdf">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="DB\Index\BibleNote.Index.sdf">
+    <Content Include="Data\BibleNote.Index.sdf">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

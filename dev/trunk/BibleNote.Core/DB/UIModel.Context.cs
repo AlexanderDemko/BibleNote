@@ -7,16 +7,16 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace BibleNote.Core.DB.Index
+namespace BibleNote.Core.DB
 {
     using System;
     using System.Data.Entity;
     using System.Data.Entity.Infrastructure;
     
-    public partial class Entities : DbContext
+    public partial class UIModel : DbContext
     {
-        public Entities()
-            : base("name=Entities")
+        public UIModel()
+            : base("name=UIModel")
         {
         }
     
@@ -25,6 +25,5 @@ namespace BibleNote.Core.DB.Index
             throw new UnintentionalCodeFirstException();
         }
     
-        public DbSet<DocumentFolder> DocumentFolder { get; set; }
     }
 }

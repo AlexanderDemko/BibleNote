@@ -4,9 +4,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BibleNote.Core.Common
+namespace BibleNote.Core.Constants
 {
-    public class Verse
+    public static class SystemConstants
     {
+        public const string NotEmptyVerseContentSymbol = "[]";
     }
 }

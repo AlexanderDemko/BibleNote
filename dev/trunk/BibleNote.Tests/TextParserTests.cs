@@ -1,6 +1,5 @@
 ﻿using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using BibleNote.Core.Services;
 
 namespace BibleNote.Tests
 {
