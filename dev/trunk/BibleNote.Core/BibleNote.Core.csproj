@@ -58,6 +58,9 @@
     <Reference Include="EntityFramework.SqlServerCompact">
       <HintPath>..\packages\EntityFramework.SqlServerCompact.6.1.2\lib\net45\EntityFramework.SqlServerCompact.dll</HintPath>
     </Reference>
+    <Reference Include="ICSharpCode.SharpZipLib">
+      <HintPath>..\ThirdParty\ICSharpCode.SharpZipLib.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.DataAnnotations" />
     <Reference Include="System.Core" />
@@ -76,12 +79,15 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Cache\XmlSerializerCache.cs" />
+    <Compile Include="Common\BibleTranslationDifferencesEx.cs" />
+    <Compile Include="Common\BibleTranslationDifferencesFormula.cs" />
     <Compile Include="Common\CustomExceptions.cs" />
     <Compile Include="Common\ModuleInfo.cs" />
     <Compile Include="Constants\SystemConstants.cs" />
     <Compile Include="Common\DocumentParseResult.cs" />
     <Compile Include="Common\ParagraphParseResult.cs" />
     <Compile Include="Common\VersePointer.cs" />
+    <Compile Include="Contracts\ICustomLogger.cs" />
     <Compile Include="DBModel\DocumentFolder.cs">
       <DependentUpon>IndexModel.tt</DependentUpon>
     </Compile>
@@ -115,13 +121,15 @@
       <DependentUpon>zef2005.xsd</DependentUpon>
     </Compile>
     <Compile Include="Scheme\zef2005.ext.cs" />
+    <Compile Include="Services\Application.cs" />
+    <Compile Include="Services\BibleParallelTranslationConnectorManager.cs" />
+    <Compile Include="Services\BibleParallelTranslationManager.cs" />
     <Compile Include="Services\ConfigurationManager.cs" />
+    <Compile Include="Services\Logger.cs" />
     <Compile Include="Services\ModulesManager.cs" />
     <Compile Include="Services\TextParserService.cs" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Contracts\" />
-  </ItemGroup>
+  <ItemGroup />
   <ItemGroup>
     <None Include="App.config" />
     <EntityDeploy Include="DBModel\IndexModel.edmx">

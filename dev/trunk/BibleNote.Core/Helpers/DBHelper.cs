@@ -15,7 +15,7 @@ namespace BibleNote.Core.Helpers
         public static IndexModel GetIndexModel()
         {
             var entityStringBuilder = new EntityConnectionStringBuilder();
-            entityStringBuilder.ProviderConnectionString = @"Data Source=" + ConfigurationManager.Instance.DBIndexPath;
+            entityStringBuilder.ProviderConnectionString = @"Data Source=" + Application.ConfigurationManager.DBIndexPath;
             entityStringBuilder.Provider = "System.Data.SqlServerCe.4.0";
             entityStringBuilder.Metadata = "res://*/DBModel.IndexModel.csdl|res://*/DBModel.IndexModel.ssdl|res://*/DBModel.IndexModel.msl";
 
