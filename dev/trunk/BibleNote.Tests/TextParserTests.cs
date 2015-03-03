@@ -28,5 +28,16 @@ namespace BibleNote.Tests
             //TestHelper.CheckVerses(expected, result, "Лк 1:16", "Лк 10:13", "Лк 10:14", "Лк 10:15", "Лк 10:16",
             //    "Лк 10:17", "Лк 18", "Лк 19", "Лк 11:1", "Лк 11:2");
         }
+
+
+        [TestMethod]
+        public void TestScenario2()
+        {
+            var input = "Ин 1:3-2";            
+
+            //var result = TestHelper.AnalyzeString(input);
+            //TestHelper.CheckVerses(expected, result, "Лк 1:16", "Лк 10:13", "Лк 10:14", "Лк 10:15", "Лк 10:16",
+            //    "Лк 10:17", "Лк 18", "Лк 19", "Лк 11:1", "Лк 11:2");
+        }
     }
 }

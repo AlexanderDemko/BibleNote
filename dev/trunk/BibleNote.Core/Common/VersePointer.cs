@@ -6,22 +6,18 @@ using System.Threading.Tasks;
 
 namespace BibleNote.Core.Common
 {
-    [Serializable]
-    public struct VerseNumber : IComparable<VerseNumber>
+    public enum MultiVerse
     {
-        public readonly static char[] Dashes = new char[] { '-', '—', '‑', '–' };
+        None = 0,
+        OneChapter = 1,
+        SeveralChapters = 2
+    }
 
-        public int Verse;
-        public int? TopVerse;
-        public bool IsMultiVerse { get { return TopVerse.HasValue; } }
-
-        public bool IsVerseBelongs(int verse)
-        {
-            if (!IsMultiVerse)
-                return Verse == verse;
-            else
-                return Verse <= verse && verse <= TopVerse.Value;
-        }
+    [Serializable]
+    public struct VerseNumber
+    {
+        public int Chapter;
+        public int Verse;                
 
         public bool IsChapter
         {
@@ -31,64 +27,23 @@ namespace BibleNote.Core.Common
             }
         }
 
-        public VerseNumber(int verse)
+        public VerseNumber(int chapter, int? verse)
         {
-            Verse = verse;
-            TopVerse = null;
+            Chapter = chapter;
+            Verse = verse.GetValueOrDefault(0);            
         }
-
-        public VerseNumber(int verse, int? topVerse)
-        {
-            Verse = verse;
-            if (topVerse.GetValueOrDefault(-1) > Verse)
-                TopVerse = topVerse;
-            else
-                TopVerse = null;
-        }
-
-        public List<int> GetAllVerses()
-        {
-            var result = new List<int>();
-
-            result.Add(Verse);
-
-            if (IsMultiVerse)
-            {
-                for (int i = Verse + 1; i <= TopVerse; i++)
-                    result.Add(i);
-            }
-
-            return result;
-        }
-
-        public static VerseNumber Parse(string s)
-        {
-            s = s.Trim();
-            var parts = s.Split(Dashes, StringSplitOptions.RemoveEmptyEntries);
-            if (parts.Length == 1)
-                return new VerseNumber(int.Parse(s));
-            else if (parts.Length == 2)
-                return new VerseNumber(int.Parse(parts[0]), int.Parse(parts[1]));
-            else
-                throw new NotSupportedException(s);
-        }     
-      
 
         public override string ToString()
         {
-            if (IsMultiVerse)
-                return string.Format("{0}-{1}", Verse, TopVerse);
+            if (IsChapter)
+                return string.Format("{0}", Chapter);
             else
-                return Verse.ToString();
+                return string.Format("{0}:{1}", Chapter, Verse);
         }
 
         public override int GetHashCode()
         {
-            var result = Verse.GetHashCode();
-            //if (TopVerse.HasValue)
-            //    result = result ^ TopVerse.Value.GetHashCode();
-
-            return result;
+            return Chapter.GetHashCode() ^ Verse.GetHashCode();            
         }
 
         public override bool Equals(object obj)
@@ -99,11 +54,9 @@ namespace BibleNote.Core.Common
             if (!(obj is VerseNumber))
                 return false;
 
-            var anotherObj = (VerseNumber)obj;
+            var otherObj = (VerseNumber)obj;
 
-            return this.Verse == anotherObj.Verse
-                //&& this.TopVerse == anotherObj.TopVerse
-                ;
+            return Chapter == otherObj.Chapter && Verse == otherObj.Verse;
         }
 
         public static bool operator ==(VerseNumber vn1, VerseNumber vn2)
@@ -124,56 +77,57 @@ namespace BibleNote.Core.Common
         {
             return !(vn1 == vn2);
         }
-
-        public static bool operator >(VerseNumber vn1, VerseNumber vn2)
-        {
-            return vn1.CompareTo(vn2) > 0;
-        }
-
-        public static bool operator >=(VerseNumber vn1, VerseNumber vn2)
-        {
-            return vn1.CompareTo(vn2) >= 0;
-        }
-
-        public static bool operator <(VerseNumber vn1, VerseNumber vn2)
-        {
-            return vn1.CompareTo(vn2) < 0;
-        }
-
-        public static bool operator <=(VerseNumber vn1, VerseNumber vn2)
-        {
-            return vn1.CompareTo(vn2) <= 0;
-        }
-
-        public int CompareTo(VerseNumber other)
-        {
-            return this.Verse.CompareTo(other.Verse);
-        }
     }
 
     [Serializable]
     public class SimpleVersePointer : ICloneable
     {
-        public int BookIndex { get; set; }
-        public int Chapter { get; set; }
-        public VerseNumber VerseNumber { get; set; }                
+        public readonly static char[] Dashes = new char[] { '-', '—', '‑', '–' };
 
+        public int BookIndex { get; set; }        
+        public VerseNumber VerseNumber { get; set; }
+        public VerseNumber? TopVerseNumber { get; set; }
+
+        public MultiVerse IsMultiVerse
+        {
+            get
+            {
+                if (TopVerseNumber.HasValue)
+                {
+                    if (VerseNumber.Chapter == TopVerseNumber.Value.Chapter)
+                        return MultiVerse.OneChapter;
+                    else
+                        return MultiVerse.SeveralChapters;
+                }
+                else
+                    return MultiVerse.None;
+            }
+        }
+        
         public SimpleVersePointer()
         { }
 
         public SimpleVersePointer(SimpleVersePointer verse)
-            : this(verse.BookIndex, verse.Chapter, new VerseNumber(verse.VerseNumber.Verse, verse.VerseNumber.TopVerse))
+            : this(verse.BookIndex, verse.VerseNumber, verse.TopVerseNumber)
         { }
 
         public SimpleVersePointer(int bookIndex, int chapter)
-            : this(bookIndex, chapter, new VerseNumber())
+            : this(bookIndex, new VerseNumber(chapter, null))
         { }
 
-        public SimpleVersePointer(int bookIndex, int chapter, VerseNumber verse)
+        public SimpleVersePointer(int bookIndex, int chapter, int verse)
+            : this(bookIndex, new VerseNumber(chapter, verse))
+        { }
+
+        public SimpleVersePointer(int bookIndex, VerseNumber verseNumber)
+            : this(bookIndex, verseNumber, null)
+        { }
+
+        public SimpleVersePointer(int bookIndex, VerseNumber verseNumber, VerseNumber? topVerseNumber)
         {
             this.BookIndex = bookIndex;
-            this.Chapter = chapter;
-            this.VerseNumber = verse;
+            this.VerseNumber = verseNumber;
+            this.TopVerseNumber = topVerseNumber;
         }
 
         public override bool Equals(object obj)
@@ -185,24 +139,29 @@ namespace BibleNote.Core.Common
                 return false;
 
             var other = (SimpleVersePointer)obj;            
-            return this.BookIndex == other.BookIndex
-                && this.Chapter == other.Chapter
-                && this.VerseNumber == other.VerseNumber;
+            return this.BookIndex == other.BookIndex                
+                && this.VerseNumber == other.VerseNumber
+                && this.TopVerseNumber == other.TopVerseNumber;
         }
 
         public override int GetHashCode()
         {
-            return this.BookIndex.GetHashCode() ^ this.Chapter.GetHashCode() ^ this.VerseNumber.GetHashCode();
+            return this.BookIndex.GetHashCode() ^ this.VerseNumber.GetHashCode() ^ this.TopVerseNumber.GetValueOrDefault().GetHashCode();
         }
 
         public override string ToString()
         {
-            return string.Format("{0} {1}:{2}", BookIndex, Chapter, VerseNumber);
-        }
-
-        public string ToFirstVerseString()
-        {
-            return string.Format("{0} {1}:{2}", BookIndex, Chapter, VerseNumber.Verse);
+            switch (IsMultiVerse)
+            {
+                case MultiVerse.None:
+                    return string.Format("{0} {1}", BookIndex, VerseNumber);                    
+                case MultiVerse.OneChapter:                    
+                    return string.Format("{0} {1}-{2}", BookIndex, VerseNumber, TopVerseNumber.Value.Verse);
+                case MultiVerse.SeveralChapters:
+                    return string.Format("{0} {1}-{2}", BookIndex, VerseNumber, TopVerseNumber.Value);
+                default:
+                    throw new NotImplementedException();
+            }            
         }
 
         public virtual object Clone()
@@ -216,25 +175,6 @@ namespace BibleNote.Core.Common
         protected virtual void CopyPropertiesTo(SimpleVersePointer verse)
         {
             
-        }
-
-        public SimpleVersePointer GetChapterPointer()
-        {
-            return new SimpleVersePointer(this.BookIndex, this.Chapter);
-        }
-
-        public List<SimpleVersePointer> GetAllVerses()
-        {
-            var result = new List<SimpleVersePointer>();
-
-            result.AddRange(this.VerseNumber.GetAllVerses().ConvertAll(v =>
-            {
-                var verse = (SimpleVersePointer)this.Clone();
-                verse.VerseNumber = new VerseNumber(v);
-                return verse;
-            }));
-
-            return result;
         }        
     }
 
@@ -259,6 +199,21 @@ namespace BibleNote.Core.Common
         /// </summary>
         public bool HasValueEvenIfEmpty { get; set; }
 
+        public ModuleVersePointer()
+            : base()
+        { }
+        
+        public ModuleVersePointer(int bookIndex, int chapter)
+            : base(bookIndex, chapter)
+        { }
+
+        public ModuleVersePointer(int bookIndex, int chapter, int verse)
+            : base(bookIndex, chapter, verse)
+        { }
+
+        public ModuleVersePointer(SimpleVersePointer verse)
+            : base(verse.BookIndex, verse.VerseNumber, verse.TopVerseNumber)
+        { }       
 
         public override string ToString()
         {
@@ -299,5 +254,66 @@ namespace BibleNote.Core.Common
     [Serializable]
     public class VersePointer : SimpleVersePointer
     {
+        public BibleBookInfo Book { get; set; }
+
+        /// <summary>
+        /// первоначально переданная строка в конструктор
+        /// </summary>
+        public string OriginalVerseName { get; set; }
+        public string OriginalBookName { get; set; }
+
+        /// <summary>
+        /// Передали "Иуд 2". Исправили ли на "Иуд 1:2"
+        /// </summary>
+        public bool WasChangedVerseAsOneChapteredBook { get; set; }
+
+        /// <summary>
+        /// родительская ссылка. Например если мы имеем дело со стихом диапазона, то здесь хранится стих, являющийся диапазоном
+        /// </summary>
+        public VersePointer ParentVersePointer { get; set; }
+
+        public override string ToString()
+        {
+            if (!string.IsNullOrEmpty(this.OriginalVerseName))
+                return this.OriginalVerseName;
+
+            return base.ToString();
+        }
+
+        /// <summary>
+        /// MultiVerseString - строка в стихе после названия книги. (*| 5:6, :6, :6-7, 5-6...)
+        /// </summary>
+        /// <returns></returns>
+        public string GetFullMultiVerseString()
+        {
+            if (VerseNumber.IsMultiVerse)
+            {
+                if (TopChapter != null && VerseNumber.TopVerse != null)
+                    return string.Format("{0}:{1}-{2}:{3}", Chapter, VerseNumber.Verse, TopChapter, VerseNumber.TopVerse);
+                else if (TopChapter != null && VerseNumber.IsChapter)
+                    return string.Format("{0}-{1}", Chapter, TopChapter);
+                else
+                    return string.Format("{0}:{1}", Chapter, VerseNumber);
+            }
+            else
+            {
+                if (VerseNumber.IsChapter)
+                    return string.Format("{0}", Chapter);
+                else
+                    return string.Format("{0}:{1}", Chapter, VerseNumber);
+            }
+        }
+
+        public static VerseNumber Parse(string s)
+        {
+            s = s.Trim();
+            var parts = s.Split(Dashes, StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length == 1)
+                return new VerseNumber(int.Parse(s));
+            else if (parts.Length == 2)
+                return new VerseNumber(int.Parse(parts[0]), int.Parse(parts[1]));
+            else
+                throw new NotSupportedException(s);
+        }     
     }
 }
