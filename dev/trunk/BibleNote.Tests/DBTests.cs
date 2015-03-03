@@ -77,14 +77,14 @@ namespace BibleNote.Tests
                 entities.SaveChanges();
             }
 
-            //using (var entities = DBHelper.GetIndexModel())
-            //{
-            //    Assert.AreEqual(foldersCount + 1, entities.DocumentFolder.Count());
-            //    var folder = entities.DocumentFolder.FirstOrDefault(f => f.FolderName == testFolderName);
-            //    Assert.IsNotNull(folder);
-            //    entities.DocumentFolder.Remove(folder);
-            //    entities.SaveChanges();
-            //}
+            using (var entities = DBHelper.GetIndexModel())
+            {
+                Assert.AreEqual(foldersCount + 1, entities.DocumentFolder.Count());
+                var folder = entities.DocumentFolder.FirstOrDefault(f => f.FolderName == testFolderName);
+                Assert.IsNotNull(folder);
+                entities.DocumentFolder.Remove(folder);
+                entities.SaveChanges();
+            }
 
             using (var entities = DBHelper.GetIndexModel())
             {

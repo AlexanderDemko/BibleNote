@@ -1,4 +1,5 @@
-﻿using System;
+﻿using BibleNote.Core.Resources;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -10,6 +11,19 @@ namespace BibleNote.Core.Common
     {
         public ProgramException(string message)
             : base(message)
+        {
+        }
+    }
+
+    public class NotConfiguredException : ProgramException
+    {
+        public NotConfiguredException()
+            : base(LocalizationConstants.SystemIsNotConfigured)
+        {
+        }
+
+        public NotConfiguredException(string message)
+            : base(string.Format(LocalizationConstants.SystemIsNotConfigured, message))
         {
         }
     }
@@ -64,6 +78,30 @@ namespace BibleNote.Core.Common
             : base(string.Format("There is no chapter '({2}) {0} {1}'", verse.BookIndex, verse.Chapter, moduleShortName), level)
         {
             this.IsChapterException = true;
+        }
+    }
+
+    public class InvalidModuleException : ProgramException
+    {
+        public InvalidModuleException(string message)
+            : base("Invalid module: " + message)
+        {
+        }
+    }
+
+    public class ModuleNotFoundException : NotConfiguredException
+    {
+        public ModuleNotFoundException(string message)
+            : base(message)
+        {
+        }
+    }
+
+    public class ModuleIsUndefinedException : InvalidModuleException
+    {
+        public ModuleIsUndefinedException(string message)
+            : base(message)
+        {
         }
     }
 }
