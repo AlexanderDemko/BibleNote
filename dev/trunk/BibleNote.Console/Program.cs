@@ -11,19 +11,8 @@ namespace BibleNoteConsole
     {
         static void Main(string[] args)
         {
-            using (var entities = new IndexModel())
-            {
-                Console.WriteLine(entities.DocumentFolder.First().FolderName);
-            }
-
-
-            //var f = new DocumentFolder();
-            //f.FolderName = "Test1";
-            //using (var entities = new IndexModel())
-            //{
-            //    entities.DocumentFolder.Add(f);
-            //    entities.SaveChanges();
-            //}
+   
+            
         }
     }
 }

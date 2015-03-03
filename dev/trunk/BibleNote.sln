@@ -1,6 +1,8 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2012
+# Visual Studio 2013
+VisualStudioVersion = 12.0.31101.0
+MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BibleNote.Core", "BibleNote.Core\BibleNote.Core.csproj", "{39DE7838-2F9B-4493-90CE-D63429B374B2}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BibleNote.OneNote", "BibleNote.OneNote\BibleNote.OneNote.csproj", "{70468F33-5853-4F37-BF13-EA04B3F2DB09}"
@@ -14,6 +16,11 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BibleNote.Console", "BibleNote.Console\BibleNote.Console.csproj", "{85ACCAD6-36D8-4C9A-8384-1DFA134B68E9}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Providers", "Providers", "{C9C9F0C2-C0E7-4303-B28A-AF13A00BAB0A}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Data", "Data", "{0A5BED81-6EA7-4535-B7C6-C6481F8E5311}"
+	ProjectSection(SolutionItems) = preProject
+		Data\Modules\rst\rst.bnm = Data\Modules\rst\rst.bnm
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(TeamFoundationVersionControl) = preSolution
