@@ -76,6 +76,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Common\CustomExceptions.cs" />
+    <Compile Include="Common\ModuleInfo.cs" />
     <Compile Include="Constants\SystemConstants.cs" />
     <Compile Include="Common\DocumentParseResult.cs" />
     <Compile Include="Common\ParagraphParseResult.cs" />
@@ -98,6 +99,8 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>IndexModel.edmx</DependentUpon>
     </Compile>
+    <Compile Include="Helpers\DBHelper.cs" />
+    <Compile Include="Helpers\StringUtils.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Scheme\zef2005.cs">
       <DependentUpon>zef2005.xsd</DependentUpon>
@@ -108,7 +111,6 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Contracts\" />
-    <Folder Include="Helpers\" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
@@ -139,11 +141,6 @@
     <None Include="Scheme\zef2005.xss">
       <DependentUpon>zef2005.xsd</DependentUpon>
     </None>
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="Data\BibleNote.Index.sdf">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
   </ItemGroup>
   <ItemGroup>
     <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
