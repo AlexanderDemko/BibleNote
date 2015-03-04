@@ -149,19 +149,28 @@ namespace BibleNote.Core.Common
             return this.BookIndex.GetHashCode() ^ this.VerseNumber.GetHashCode() ^ this.TopVerseNumber.GetValueOrDefault().GetHashCode();
         }
 
-        public override string ToString()
+        /// <summary>
+        /// Строка в стихе после названия книги. (*| 5:6, :6, :6-7, 5-6...)
+        /// </summary>
+        /// <returns></returns>
+        public virtual string GetFullVerseNumberString()
         {
             switch (IsMultiVerse)
             {
                 case MultiVerse.None:
-                    return string.Format("{0} {1}", BookIndex, VerseNumber);                    
-                case MultiVerse.OneChapter:                    
-                    return string.Format("{0} {1}-{2}", BookIndex, VerseNumber, TopVerseNumber.Value.Verse);
+                    return VerseNumber.ToString();
+                case MultiVerse.OneChapter:
+                    return string.Format("{0}-{1}", VerseNumber, TopVerseNumber.Value.Verse);
                 case MultiVerse.SeveralChapters:
-                    return string.Format("{0} {1}-{2}", BookIndex, VerseNumber, TopVerseNumber.Value);
+                    return string.Format("{0}-{1}", VerseNumber, TopVerseNumber.Value);
                 default:
                     throw new NotImplementedException();
-            }            
+            }   
+        }
+
+        public override string ToString()
+        {
+            return string.Format("{0} {1}", BookIndex, GetFullVerseNumberString());                    
         }
 
         public virtual object Clone()
@@ -217,7 +226,7 @@ namespace BibleNote.Core.Common
 
         public override string ToString()
         {
-            var result = string.Format("{0} {1}:{2}", BookIndex, Chapter, VerseNumber);
+            var result = base.ToString();
 
             if (PartIndex.HasValue)
                 result += string.Format("({0})", PartIndex);
@@ -277,43 +286,10 @@ namespace BibleNote.Core.Common
             if (!string.IsNullOrEmpty(this.OriginalVerseName))
                 return this.OriginalVerseName;
 
+            if (Book != null)
+                return string.Format("{0} {1}", Book.FriendlyShortName, GetFullVerseNumberString());
+
             return base.ToString();
-        }
-
-        /// <summary>
-        /// MultiVerseString - строка в стихе после названия книги. (*| 5:6, :6, :6-7, 5-6...)
-        /// </summary>
-        /// <returns></returns>
-        public string GetFullMultiVerseString()
-        {
-            if (VerseNumber.IsMultiVerse)
-            {
-                if (TopChapter != null && VerseNumber.TopVerse != null)
-                    return string.Format("{0}:{1}-{2}:{3}", Chapter, VerseNumber.Verse, TopChapter, VerseNumber.TopVerse);
-                else if (TopChapter != null && VerseNumber.IsChapter)
-                    return string.Format("{0}-{1}", Chapter, TopChapter);
-                else
-                    return string.Format("{0}:{1}", Chapter, VerseNumber);
-            }
-            else
-            {
-                if (VerseNumber.IsChapter)
-                    return string.Format("{0}", Chapter);
-                else
-                    return string.Format("{0}:{1}", Chapter, VerseNumber);
-            }
-        }
-
-        public static VerseNumber Parse(string s)
-        {
-            s = s.Trim();
-            var parts = s.Split(Dashes, StringSplitOptions.RemoveEmptyEntries);
-            if (parts.Length == 1)
-                return new VerseNumber(int.Parse(s));
-            else if (parts.Length == 2)
-                return new VerseNumber(int.Parse(parts[0]), int.Parse(parts[1]));
-            else
-                throw new NotSupportedException(s);
-        }     
+        }                  
     }
 }

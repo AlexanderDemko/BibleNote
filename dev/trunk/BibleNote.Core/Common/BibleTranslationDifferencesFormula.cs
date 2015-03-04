@@ -37,7 +37,7 @@ namespace BibleNote.Core.Common
         {
             get
             {
-                return BaseVersePointer.VerseNumber.IsMultiVerse;
+                return BaseVersePointer.IsMultiVerse != MultiVerse.None;
             }
         }
 
