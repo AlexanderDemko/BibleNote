@@ -88,6 +88,9 @@ namespace BibleNote.Core.Common
         public VerseNumber VerseNumber { get; set; }
         public VerseNumber? TopVerseNumber { get; set; }
 
+        public int Chapter { get { return VerseNumber.Chapter; } }
+        public int Verse { get { return VerseNumber.Verse; } }
+
         public MultiVerse IsMultiVerse
         {
             get
@@ -253,7 +256,7 @@ namespace BibleNote.Core.Common
                 moduleVersePointer.IsPartOfBigVerse = this.IsPartOfBigVerse;
                 moduleVersePointer.HasValueEvenIfEmpty = this.HasValueEvenIfEmpty;
             }
-        }
+        }        
     }
 
     public class ModuleVerse : ModuleVersePointer

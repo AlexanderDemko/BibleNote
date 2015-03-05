@@ -45,7 +45,7 @@ namespace BibleNote.Core.Common
         {
             get
             {
-                return BaseVersePointer.VerseNumber.Verse;
+                return BaseVersePointer.Verse;
             }
         }
 
@@ -53,7 +53,7 @@ namespace BibleNote.Core.Common
         {
             get
             {
-                return BaseVersePointer.VerseNumber.TopVerse.GetValueOrDefault(0);
+                return BaseVersePointer.TopVerseNumber.GetValueOrDefault().Verse;
             }
         }
 
@@ -69,7 +69,7 @@ namespace BibleNote.Core.Common
         {
             get
             {
-                return BaseVersePointer.TopChapter.GetValueOrDefault(0);
+                return BaseVersePointer.TopVerseNumber.GetValueOrDefault().Chapter;
             }
         }
 
@@ -108,7 +108,7 @@ namespace BibleNote.Core.Common
             if (_allVerses == null)
             {
                 _allVerses = new List<SimpleVersePointer>();
-                _allVerses.Add(new SimpleVersePointer(BookIndex, FirstChapter, new VerseNumber(FirstVerse)) { IsEmpty = IsEmpty });
+                _allVerses.Add(new ModuleVersePointer(BookIndex, FirstChapter, FirstVerse) { IsEmpty = IsEmpty });
 
                 if (IsMultiVerse)
                 {                    
@@ -433,7 +433,7 @@ namespace BibleNote.Core.Common
                 foreach (var parallelVerse in parallelVerses)
                 {
                     var parallelVersePointer = new ModuleVersePointer(
-                            baseVerse.BookIndex, ChapterFormulaPart.CalculateParallelChapter(baseVerse.Chapter), new VerseNumber(parallelVerse));
+                            baseVerse.BookIndex, ChapterFormulaPart.CalculateParallelChapter(baseVerse.Chapter), parallelVerse);
 
                     if (VersesFormulaPart.AllVersesArePart.GetValueOrDefault(false))
                         parallelVersePointer.PartIndex = versePartIndex++;
