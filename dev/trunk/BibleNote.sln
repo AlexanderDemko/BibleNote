@@ -19,6 +19,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Providers", "Providers", "{
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Data", "Data", "{0A5BED81-6EA7-4535-B7C6-C6481F8E5311}"
 	ProjectSection(SolutionItems) = preProject
+		Data\BibleNote.Index.sdf = Data\BibleNote.Index.sdf
 		Data\Modules\rst\rst.bnm = Data\Modules\rst\rst.bnm
 	EndProjectSection
 EndProject
