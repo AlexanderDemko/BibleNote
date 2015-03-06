@@ -27,7 +27,7 @@ namespace BibleNote.Core.Common
             }
         }
 
-        public VerseNumber(int chapter, int? verse)
+        public VerseNumber(int chapter, int? verse = null)
         {
             Chapter = chapter;
             Verse = verse.GetValueOrDefault(0);            
@@ -268,14 +268,11 @@ namespace BibleNote.Core.Common
             : base(verse.BookIndex, verse.VerseNumber, verse.TopVerseNumber)
         { }    
 
-        public VersePointer(string bookName, string originalVerseName)
+        public VersePointer(string verseString)
         {
-            if (!string.IsNullOrEmpty(bookName))
-            {
+            string fullVerseNumber = string.Empty;
 
-            }
-
-            ParseFromFullVerseNumber(originalVerseName);
+            ParseFromFullVerseNumber(fullVerseNumber);
         }                
 
         public virtual VersesListInfo<VersePointer> ExpandMultiVerse()
