@@ -14,7 +14,7 @@ namespace BibleNote.Tests
         }
 
         [TestMethod]
-        public void TestSimpleParsing()
+        public void TestParsing()
         {
             TestVerseParsing("2Петр 3", new SimpleVersePointer(61, new VerseNumber(3)));
             TestVerseParsing("2Петр 3:1", new SimpleVersePointer(61, new VerseNumber(3, 1)));
@@ -26,8 +26,12 @@ namespace BibleNote.Tests
             TestVerseParsing("2Петр (1-3)", new SimpleVersePointer(61, new VerseNumber(1), new VerseNumber(3)));
             TestVerseParsing("2Петр 2 -3:1", new SimpleVersePointer(61, new VerseNumber(2), new VerseNumber(3, 1)));
             TestVerseParsing("2 Петр1:4- 3:2", new SimpleVersePointer(61, new VerseNumber(1, 4), new VerseNumber(3, 2)));
+            TestVerseParsing("2 Петр1 : 4- 3 : 2", new SimpleVersePointer(61, new VerseNumber(1, 4), new VerseNumber(3, 2)));
             TestVerseParsing("2-e Петр1,4 - 3:2", new SimpleVersePointer(61, new VerseNumber(1, 4), new VerseNumber(3, 2)));
             TestVerseParsing("2-е Петр1,4 - 3,2", new SimpleVersePointer(61, new VerseNumber(1, 4), new VerseNumber(3, 2)));
+            TestVerseParsing("2-е Петр1, 4 - 3,2", new SimpleVersePointer(61, new VerseNumber(1, 4), new VerseNumber(3, 2)));
+            TestVerseParsing("2-е Петр1, 4 - 3 ,2", new SimpleVersePointer(61, new VerseNumber(1, 4), new VerseNumber(3, 2)));
+            TestVerseParsing("2-е Петр1, 4 - 3 , 2", new SimpleVersePointer(61, new VerseNumber(1, 4), new VerseNumber(3, 2)));
             TestVerseParsing("2-е Петр(1,4 - 3,2)", new SimpleVersePointer(61, new VerseNumber(1, 4), new VerseNumber(3, 2)));
             TestVerseParsing("2-ое Петра1,4 -  3,2", new SimpleVersePointer(61, new VerseNumber(1, 4), new VerseNumber(3, 2)));
             TestVerseParsing("2-oe Петра  1,4  -  3,2", new SimpleVersePointer(61, new VerseNumber(1, 4), new VerseNumber(3, 2)));
