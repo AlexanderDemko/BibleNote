@@ -28,7 +28,7 @@ namespace BibleNote.Core.Common
     public class BibleTranslationDifferencesBaseVersesFormula : BibleTranslationDifferencesFormulaBase
     {
         public int BookIndex { get; set; }
-        protected SimpleVersePointer BaseVersePointer { get; set; }
+        protected ModuleVersePointer BaseVersePointer { get; set; }
         protected bool IsEmpty { get; set; }
         protected bool EmptyVerseContent { get; set; }
         protected bool SkipCheck { get; set; }
@@ -57,7 +57,7 @@ namespace BibleNote.Core.Common
             }
         }
 
-        internal int FirstChapter
+        internal int Chapter
         {
             get
             {
@@ -65,13 +65,13 @@ namespace BibleNote.Core.Common
             }
         }
 
-        internal int LastChapter
-        {
-            get
-            {
-                return BaseVersePointer.TopVerseNumber.GetValueOrDefault().Chapter;
-            }
-        }
+        //internal int LastChapter
+        //{
+        //    get
+        //    {
+        //        return BaseVersePointer.TopVerseNumber.GetValueOrDefault().Chapter;
+        //    }
+        //}
 
 
         public BibleTranslationDifferencesBaseVersesFormula(int bookIndex, string baseVersesFormula, string parallelVersesFormula,
@@ -102,26 +102,11 @@ namespace BibleNote.Core.Common
             this.EmptyVerseContent = emptyVerseContent;
         }
 
-        private List<SimpleVersePointer> _allVerses;
-        public List<SimpleVersePointer> GetAllVerses()
+        private List<ModuleVersePointer> _allVerses;
+        public List<ModuleVersePointer> GetAllVerses()
         {
-            if (_allVerses == null)
-            {
-                _allVerses = new List<SimpleVersePointer>();
-                _allVerses.Add(new ModuleVersePointer(BookIndex, FirstChapter, FirstVerse) { IsEmpty = IsEmpty });
-
-                if (IsMultiVerse)
-                {                    
-                    _allVerses.AddRange(BaseVersePointer.GetAllIncludedVersesExceptFirst(new GetAllIncludedVersesArgs() { Force = true }).Verses
-                        .ConvertAll<SimpleVersePointer>(v => new SimpleVersePointer(BookIndex, v.Chapter.GetValueOrDefault(), new VerseNumber(v.Verse.GetValueOrDefault())) { IsEmpty = IsEmpty }));
-                }
-
-                if (SkipCheck)
-                    _allVerses.ForEach(v => v.SkipCheck = SkipCheck);
-
-                if (EmptyVerseContent)
-                    _allVerses.ForEach(v => v.EmptyVerseContent = EmptyVerseContent);
-            }
+            if (_allVerses == null)            
+                _allVerses = BaseVersePointer.ExpandMultiVerse().VersePointers;            
 
             return _allVerses;
         }
@@ -131,7 +116,8 @@ namespace BibleNote.Core.Common
             if (baseVersesFormula.IndexOf('(') != -1)
                 throw new NotSupportedException(string.Format("Brackets in base formula is not supported yet: {0}", baseVersesFormula));
 
-            BaseVersePointer = new VersePointer("book " + baseVersesFormula);
+            BaseVersePointer = new ModuleVersePointer();
+            BaseVersePointer.ParseFromFullVerseNumber(baseVersesFormula);
             _allVerses = null;
         }
     }
@@ -236,12 +222,14 @@ namespace BibleNote.Core.Common
 
             protected override void ParseMultiVerse()
             {
-                base.ParseMultiVerse();
+                throw new NotImplementedException();
 
-                int firstBaseVerse = ParallelVersesFormula.BaseVersesFormula.FirstChapter;
-                int lastBaseVerse = ParallelVersesFormula.BaseVersesFormula.LastChapter;
+                //base.ParseMultiVerse();
 
-                CalculateDeviationForMultiVerseFormula(firstBaseVerse, lastBaseVerse);
+                //int firstBaseVerse = ParallelVersesFormula.BaseVersesFormula.FirstChapter;
+                //int lastBaseVerse = ParallelVersesFormula.BaseVersesFormula.LastChapter;
+
+                //CalculateDeviationForMultiVerseFormula(firstBaseVerse, lastBaseVerse);
             }
 
             public int CalculateParallelChapter(int baseChapter)

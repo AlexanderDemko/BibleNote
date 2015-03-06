@@ -72,6 +72,7 @@
     <Compile Include="DBTests.cs" />
     <Compile Include="TextParserTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="VersePointerTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\BibleNote.Core\BibleNote.Core.csproj">
