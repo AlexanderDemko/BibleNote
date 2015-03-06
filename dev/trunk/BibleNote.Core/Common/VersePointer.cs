@@ -79,6 +79,12 @@ namespace BibleNote.Core.Common
         }
     }
 
+    public class VersesListInfo<T> where T : SimpleVersePointer
+    {
+        public List<T> VersePointers { get; internal set; }
+        public int VersesCount { get; internal set; }
+    }
+
     [Serializable]
     public class SimpleVersePointer : ICloneable
     {
@@ -187,11 +193,102 @@ namespace BibleNote.Core.Common
         protected virtual void CopyPropertiesTo(SimpleVersePointer verse)
         {
             
-        }        
+        }
+
+        public virtual void ParseFromFullVerseNumber(string fullVerseNumber)
+        {
+
+        }
+
+        public virtual VersesListInfo<SimpleVersePointer> ExpandMultiVerse()
+        {
+            throw new InvalidOperationException("Can be called only in derived class.");
+        }
+    }  
+
+    [Serializable]
+    public class VersePointer : SimpleVersePointer
+    {
+        private BibleBookInfo _book;
+        public BibleBookInfo Book
+        {
+            get
+            {
+                if (_book != null)
+                    return _book;
+
+                throw new NotImplementedException();
+            }
+            set
+            {
+                _book = value;
+            }
+        }    
+
+        /// <summary>
+        /// первоначально переданная строка в конструктор
+        /// </summary>
+        public string OriginalVerseName { get; set; }
+        public string OriginalBookName { get; set; }
+
+        /// <summary>
+        /// Передали "Иуд 2". Исправили ли на "Иуд 1:2"
+        /// </summary>
+        public bool WasChangedVerseAsOneChapteredBook { get; set; }
+
+        /// <summary>
+        /// родительская ссылка. Например если мы имеем дело со стихом диапазона, то здесь хранится стих, являющийся диапазоном
+        /// </summary>
+        public VersePointer ParentVersePointer { get; set; }
+
+        public override string ToString()
+        {
+            if (!string.IsNullOrEmpty(this.OriginalVerseName))
+                return this.OriginalVerseName;
+
+            if (Book != null)
+                return string.Format("{0} {1}", Book.FriendlyShortName, GetFullVerseNumberString());
+
+            return base.ToString();
+        }
+
+        public VersePointer()
+            : base()
+        { }
+        
+        public VersePointer(int bookIndex, int chapter)
+            : base(bookIndex, chapter)
+        { }
+
+        public VersePointer(int bookIndex, int chapter, int verse)
+            : base(bookIndex, chapter, verse)
+        { }
+
+        public VersePointer(SimpleVersePointer verse)
+            : base(verse.BookIndex, verse.VerseNumber, verse.TopVerseNumber)
+        { }    
+
+        public VersePointer(string bookName, string originalVerseName)
+        {
+            if (!string.IsNullOrEmpty(bookName))
+            {
+
+            }
+
+            ParseFromFullVerseNumber(originalVerseName);
+        }                
+
+        public virtual VersesListInfo<VersePointer> ExpandMultiVerse()
+        {
+            throw new NotImplementedException();
+        }
     }
 
  
 
+    /// <summary>
+    /// Валиден в рамках одной главы
+    /// </summary>
     [Serializable]
     public class ModuleVersePointer : SimpleVersePointer
     {
@@ -199,7 +296,7 @@ namespace BibleNote.Core.Common
         public bool IsEmpty { get; set; }            // если true - то стих весь пустой: и текст и номер. Отображается пустая ячейка.
         public bool EmptyVerseContent { get; set; }  // если true - то стихи пустые, и это правильно. Если же false и стих пустой, то это ошибка.
         public bool IsApocrypha { get; set; }
-        public bool SkipCheck { get; set; }
+        public bool SkipCheck { get; set; }        
 
         /// <summary>
         /// Часть "бОльшего стиха". Например, если стих :3 а в ibs :2-4 - это один стих. Используется только в одном месте, не везде может быть правильно инициилизировано.
@@ -211,21 +308,50 @@ namespace BibleNote.Core.Common
         /// </summary>
         public bool HasValueEvenIfEmpty { get; set; }
 
+        public int? TopVerse
+        {
+            get
+            {
+                if (TopVerseNumber.HasValue)
+                    return (int?)TopVerseNumber.Value.Verse;
+
+                return null;
+            }
+            set
+            {
+                TopVerseNumber = new VerseNumber(Chapter, value);
+            }
+        }
+
         public ModuleVersePointer()
             : base()
-        { }
+        {
+            Validate();
+        }
         
         public ModuleVersePointer(int bookIndex, int chapter)
             : base(bookIndex, chapter)
-        { }
+        {
+            Validate();
+        }
 
         public ModuleVersePointer(int bookIndex, int chapter, int verse)
             : base(bookIndex, chapter, verse)
-        { }
+        {
+            Validate();
+        }
 
         public ModuleVersePointer(SimpleVersePointer verse)
-            : base(verse.BookIndex, verse.VerseNumber, verse.TopVerseNumber)
-        { }       
+            : base(verse)
+        {
+            Validate();
+        }
+
+        private void Validate()
+        {
+            if (IsMultiVerse == MultiVerse.SeveralChapters)
+                throw new InvalidOperationException("Only one chapter verses is supported.");
+        }
 
         public override string ToString()
         {
@@ -257,42 +383,41 @@ namespace BibleNote.Core.Common
                 moduleVersePointer.HasValueEvenIfEmpty = this.HasValueEvenIfEmpty;
             }
         }        
+
+        public virtual VersesListInfo<ModuleVersePointer> ExpandMultiVerse()
+        {
+            var result = new VersesListInfo<ModuleVersePointer>();
+
+            if (IsMultiVerse == MultiVerse.OneChapter)
+            {
+                for (var i = Verse; i <= TopVerse; i++)
+                {
+                    result.VersePointers.Add(new ModuleVersePointer(BookIndex, Chapter, Verse) 
+                                                    { IsEmpty = IsEmpty, SkipCheck = SkipCheck, EmptyVerseContent = EmptyVerseContent });
+                }
+            }
+
+            result.VersesCount = result.VersePointers.Count();
+
+            return result;
+        }
     }
 
     public class ModuleVerse : ModuleVersePointer
     {
-    }
-
-    [Serializable]
-    public class VersePointer : SimpleVersePointer
-    {
-        public BibleBookInfo Book { get; set; }
+        /// <summary>
+        /// Строка, соответствующая номерам/номеру стиха. Может быть: "5", "5-6", "6:5-6"
+        /// </summary>
+        public string VerseNumberString { get; set; }
 
         /// <summary>
-        /// первоначально переданная строка в конструктор
+        /// Текст стиха без номера
         /// </summary>
-        public string OriginalVerseName { get; set; }
-        public string OriginalBookName { get; set; }
+        public string VerseContent { get; set; }    
 
-        /// <summary>
-        /// Передали "Иуд 2". Исправили ли на "Иуд 1:2"
-        /// </summary>
-        public bool WasChangedVerseAsOneChapteredBook { get; set; }
-
-        /// <summary>
-        /// родительская ссылка. Например если мы имеем дело со стихом диапазона, то здесь хранится стих, являющийся диапазоном
-        /// </summary>
-        public VersePointer ParentVersePointer { get; set; }
-
-        public override string ToString()
+        public ModuleVerse()
         {
-            if (!string.IsNullOrEmpty(this.OriginalVerseName))
-                return this.OriginalVerseName;
-
-            if (Book != null)
-                return string.Format("{0} {1}", Book.FriendlyShortName, GetFullVerseNumberString());
-
-            return base.ToString();
-        }                  
+            throw new NotImplementedException();
+        }
     }
 }

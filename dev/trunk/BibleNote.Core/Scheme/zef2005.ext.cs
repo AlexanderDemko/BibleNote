@@ -41,16 +41,17 @@ namespace BibleCommon.Scheme
             }
         }
         
-        public bool VerseExists(ModuleVersePointer vp, out VerseNumber verseNumber)
+        public bool VerseExists(ModuleVersePointer vp, out VerseIndex verseIndex)
         {
-            verseNumber = vp.VerseNumber;
+            verseIndex = new VerseIndex(vp.Verse, vp.TopVerse);
             try
             {
                 bool isEmpty;
                 bool isFullVerse;
                 bool isPartOfBigVerse;
                 bool hasValueEvenIfEmpty;
-                this.BooksDictionary[vp.BookIndex].GetVerseContent(vp, ModuleShortName, string.Empty, true, out verseNumber, out isEmpty, out isFullVerse, out isPartOfBigVerse, out hasValueEvenIfEmpty);
+                this.BooksDictionary[vp.BookIndex].GetVerseContent(vp, ModuleShortName, string.Empty, true, out verseIndex, 
+                                out isEmpty, out isFullVerse, out isPartOfBigVerse, out hasValueEvenIfEmpty);
                 return true;
             }
             catch (VerseNotFoundException)
@@ -99,21 +100,21 @@ namespace BibleCommon.Scheme
         /// <param name="moduleShortName"></param>
         /// <param name="strongPrefix"></param>
         /// <param name="getVerseNumberForEmptyVerses"></param>
-        /// <param name="verseNumber"></param>
+        /// <param name="verseIndex"></param>
         /// <param name="isEmpty"></param>
         /// <param name="isFullVerse"></param>
         /// <param name="isPartOfBigVerse"></param>
         /// <param name="hasValueEvenIfEmpty">У нас есть стих в ibs (Лев 12:7). Ему по смыслу соответствуют два стиха из rst (Лев 12:7-8). Но поделить стих в ibs не поулчается, потому палочка стоит в конце стиха. Но это не значит, что воьсмой стих пустой!</param>
         /// <returns></returns>
         public string GetVerseContent(ModuleVersePointer versePointer, string moduleShortName, string strongPrefix, bool getVerseNumberForEmptyVerses, 
-            out VerseNumber verseNumber, out bool isEmpty, out bool isFullVerse, out bool isPartOfBigVerse, out bool hasValueEvenIfEmpty)
+            out VerseIndex verseIndex, out bool isEmpty, out bool isFullVerse, out bool isPartOfBigVerse, out bool hasValueEvenIfEmpty)
         {
             isFullVerse = true;
             isEmpty = false;
             isPartOfBigVerse = false;
             hasValueEvenIfEmpty = false;
 
-            verseNumber = versePointer.VerseNumber;
+            verseIndex = new VerseIndex(versePointer.Verse, versePointer.TopVerse);
 
             if (versePointer.IsEmpty)
             {
@@ -129,7 +130,7 @@ namespace BibleCommon.Scheme
             if (versePointer.VerseNumber.IsChapter)            
                 return string.Empty;            
 
-            var verse = chapter.GetVerse(versePointer, moduleShortName, getVerseNumberForEmptyVerses, out verseNumber, out isPartOfBigVerse);
+            var verse = chapter.GetVerse(versePointer, moduleShortName, getVerseNumberForEmptyVerses, out verseIndex, out isPartOfBigVerse);
             if (verse == null)
                 throw new VerseNotFoundException(versePointer, moduleShortName, BaseVersePointerException.Severity.Warning);            
 
@@ -189,7 +190,7 @@ namespace BibleCommon.Scheme
             emptyVerses = new List<SimpleVersePointer>();
 
             var firstVerse = verses.First();
-            topVerse = firstVerse.VerseNumber.TopVerse.GetValueOrDefault(firstVerse.VerseNumber.Verse);
+            topVerse = firstVerse.TopVerse.GetValueOrDefault(firstVerse.Verse);
 
             isEmpty = true;
             isFullVerses = true;
@@ -200,8 +201,9 @@ namespace BibleCommon.Scheme
             foreach (var verse in verses)
             {
                 bool localIsEmpty, localIsFullVerse;
-                VerseNumber vn;
-                var verseContent = GetVerseContent(verse, moduleShortName, strongPrefix, false, out vn, out localIsEmpty, out localIsFullVerse, out isPartOfBigVerse, out hasValueEvenIfEmpty);
+                VerseIndex verseIndex;
+                var verseContent = GetVerseContent(verse, moduleShortName, strongPrefix, false, out verseIndex, 
+                                        out localIsEmpty, out localIsFullVerse, out isPartOfBigVerse, out hasValueEvenIfEmpty);
                 contents.Add(verseContent);
 
                 if (!localIsEmpty)
@@ -218,11 +220,11 @@ namespace BibleCommon.Scheme
                 isEmpty = isEmpty && localIsEmpty;
                 isFullVerses = isFullVerses && localIsFullVerse;
 
-                if (vn.Verse > topVerse + 1)
+                if (verseIndex.Index > topVerse + 1)
                     isDiscontinuous = true;
 
-                if (vn.TopVerse.GetValueOrDefault(vn.Verse) > topVerse)
-                    topVerse = vn.TopVerse.GetValueOrDefault(vn.Verse);                                
+                if (verseIndex.TopIndex.GetValueOrDefault(verseIndex.Index) > topVerse)
+                    topVerse = verseIndex.TopIndex.GetValueOrDefault(verseIndex.Index);                                
             }
 
             if (topVerse == firstVerse.VerseNumber.Verse)
@@ -277,11 +279,11 @@ namespace BibleCommon.Scheme
         }       
 
         private Dictionary<int, VERS> _versesDictionary;
-        public VERS GetVerse(SimpleVersePointer versePointer, string moduleShortName, bool getVerseNumberForEmptyVerses, out VerseNumber verseNumber, out bool isPartOfBigVerse)
+        public VERS GetVerse(ModuleVersePointer versePointer, string moduleShortName, bool getVerseNumberForEmptyVerses, out VerseIndex verseIndex, out bool isPartOfBigVerse)
         {
             VERS result = null;
             isPartOfBigVerse = false;
-            verseNumber = versePointer.VerseNumber;
+            verseIndex = new VerseIndex(versePointer.Verse, versePointer.TopVerse);
 
             if (_versesDictionary == null)
                 LoadVersesDictionary(versePointer, moduleShortName);            
@@ -289,8 +291,8 @@ namespace BibleCommon.Scheme
             if (_versesDictionary.ContainsKey(versePointer.VerseNumber.Verse))
             {
                 result = _versesDictionary[versePointer.VerseNumber.Verse];
-                verseNumber = result.VerseNumber;
-                isPartOfBigVerse = verseNumber.IsMultiVerse;
+                verseIndex = result.VerseIndex;
+                isPartOfBigVerse = verseIndex.IsSeveralVerses;
             }
             else
             {
@@ -299,7 +301,7 @@ namespace BibleCommon.Scheme
                 if (result != null)
                 {
                     if (getVerseNumberForEmptyVerses)
-                        verseNumber = result.VerseNumber;
+                        verseIndex = result.VerseIndex;
                     isPartOfBigVerse = true;
                     result = VERS.Empty;  // так как стих является частью бОльшего стиха
                 }
@@ -319,6 +321,19 @@ namespace BibleCommon.Scheme
                                     BaseVersePointerException.Severity.Error);
                 _versesDictionary.Add(v.Index, v);               
             }
+        }
+    }
+
+    public class VerseIndex
+    {
+        public int Index { get; set; }
+        public int? TopIndex { get; set; }
+        public bool IsSeveralVerses { get { return TopIndex.HasValue; } }
+
+        public VerseIndex(int index, int? topIndex = null)
+        {
+            this.Index = index;
+            this.TopIndex = TopIndex;
         }
     }
 
@@ -352,11 +367,11 @@ namespace BibleCommon.Scheme
         }
 
         [XmlIgnore]
-        public VerseNumber VerseNumber
+        public VerseIndex VerseIndex
         {
             get
             {
-                return new VerseNumber(Index, TopIndex);
+                return new VerseIndex(Index, TopIndex);
             }
         }
 
