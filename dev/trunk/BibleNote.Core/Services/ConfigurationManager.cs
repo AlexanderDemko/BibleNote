@@ -9,6 +9,7 @@ namespace BibleNote.Core.Services
     public class ConfigurationManager
     {
         public string DBIndexPath { get; set; }
+        public string DBContentPath { get; set; }
         public string ModuleShortName { get; set; }
         
 
@@ -17,6 +18,7 @@ namespace BibleNote.Core.Services
             if (loadTestData)
             {
                 DBIndexPath = @"C:\prj\BibleNote v4\dev\trunk\Data\BibleNote.Index.sdf";
+                DBContentPath = @"C:\prj\BibleNote v4\dev\trunk\Data\BibleNote.Content.sdf";
                 ModuleShortName = "rst";
             }
             else

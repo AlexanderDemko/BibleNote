@@ -42,5 +42,38 @@ namespace BibleNote.Tests
                 Assert.IsNull(entities.DocumentFolder.FirstOrDefault(f => f.FolderName == testFolderName));
             }            
         }
+
+        [TestMethod]
+        public void TestContentDBAccessibility()
+        {
+            var parametersCount = 0;
+            var testParameterName = "Test1";
+            using (var entities = DBHelper.GetContentModel())
+                parametersCount = entities.Parameters.Count();
+
+            using (var entities = DBHelper.GetContentModel())
+            {
+                var newParameter = new Parameters();
+                newParameter.Name = testParameterName;
+                newParameter.Value = "testValue";
+                entities.Parameters.Add(newParameter);
+                entities.SaveChanges();
+            }
+
+            using (var entities = DBHelper.GetContentModel())
+            {
+                Assert.AreEqual(parametersCount + 1, entities.Parameters.Count());
+                var parameter = entities.Parameters.FirstOrDefault(f => f.Name == testParameterName);
+                Assert.IsNotNull(parameter);
+                entities.Parameters.Remove(parameter);
+                entities.SaveChanges();
+            }
+
+            using (var entities = DBHelper.GetContentModel())
+            {
+                Assert.AreEqual(parametersCount, entities.Parameters.Count());
+                Assert.IsNull(entities.Parameters.FirstOrDefault(f => f.Name == testParameterName));
+            }
+        }
     }
 }
