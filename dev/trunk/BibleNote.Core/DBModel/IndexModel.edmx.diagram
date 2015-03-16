@@ -5,7 +5,7 @@
     <!-- Diagram content (shape and connector positions) -->
     <edmx:Diagrams>
       <Diagram DiagramId="6315f2c1da9a4204a377bd1d7baa1369" Name="Diagram1">
-        <EntityTypeShape EntityType="BibleNote.IndexModel.DocumentFolder" Width="1.5" PointX="0.75" PointY="0.75" IsExpanded="true" />
+        <EntityTypeShape EntityType="BibleNote.Core.DBModel.DocumentFolder" Width="1.5" PointX="0.75" PointY="0.75" IsExpanded="true" />
       </Diagram>
     </edmx:Diagrams>
   </edmx:Designer>

@@ -129,7 +129,6 @@
     <Compile Include="Services\ModulesManager.cs" />
     <Compile Include="Services\TextParserService.cs" />
   </ItemGroup>
-  <ItemGroup />
   <ItemGroup>
     <None Include="App.config" />
     <EntityDeploy Include="DBModel\IndexModel.edmx">

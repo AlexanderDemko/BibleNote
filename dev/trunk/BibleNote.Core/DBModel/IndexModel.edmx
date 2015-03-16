@@ -20,9 +20,9 @@
     </edmx:StorageModels>
     <!-- CSDL content -->
     <edmx:ConceptualModels>
-      <Schema Namespace="BibleNote.IndexModel" Alias="Self" p1:UseStrongSpatialTypes="false" xmlns:annotation="http://schemas.microsoft.com/ado/2009/02/edm/annotation" xmlns:p1="http://schemas.microsoft.com/ado/2009/02/edm/annotation" xmlns="http://schemas.microsoft.com/ado/2009/11/edm">
+      <Schema Namespace="BibleNote.Core.DBModel" Alias="Self" p1:UseStrongSpatialTypes="false" xmlns:annotation="http://schemas.microsoft.com/ado/2009/02/edm/annotation" xmlns:p1="http://schemas.microsoft.com/ado/2009/02/edm/annotation" xmlns="http://schemas.microsoft.com/ado/2009/11/edm">
         <EntityContainer Name="IndexModel" p1:LazyLoadingEnabled="true">
-          <EntitySet Name="DocumentFolder" EntityType="BibleNote.IndexModel.DocumentFolder" />
+          <EntitySet Name="DocumentFolder" EntityType="BibleNote.Core.DBModel.DocumentFolder" />
         </EntityContainer>
         <EntityType Name="DocumentFolder">
           <Key>
@@ -39,7 +39,7 @@
       <Mapping Space="C-S" xmlns="http://schemas.microsoft.com/ado/2009/11/mapping/cs">
         <EntityContainerMapping StorageEntityContainer="BibleNoteIndexModelStoreContainer" CdmEntityContainer="IndexModel">
           <EntitySetMapping Name="DocumentFolder">
-            <EntityTypeMapping TypeName="BibleNote.IndexModel.DocumentFolder">
+            <EntityTypeMapping TypeName="BibleNote.Core.DBModel.DocumentFolder">
               <MappingFragment StoreEntitySet="DocumentFolder">
                 <ScalarProperty Name="FolderId" ColumnName="FolderId" />
                 <ScalarProperty Name="FolderName" ColumnName="FolderName" />
