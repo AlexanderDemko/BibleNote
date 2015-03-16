@@ -21,5 +21,16 @@ namespace BibleNote.Core.Helpers
 
             return new IndexModel(entityStringBuilder.ConnectionString);
         }
+
+
+        public static ContentModel GetContentModel()
+        {
+            var entityStringBuilder = new EntityConnectionStringBuilder();
+            entityStringBuilder.ProviderConnectionString = @"Data Source=" + Application.ConfigurationManager.DBContentPath;
+            entityStringBuilder.Provider = "System.Data.SqlServerCe.4.0";
+            entityStringBuilder.Metadata = "res://*/DBModel.ContentModel.csdl|res://*/DBModel.ContentModel.ssdl|res://*/DBModel.ContentModel.msl";
+
+            return new ContentModel(entityStringBuilder.ConnectionString);
+        }
     }
 }

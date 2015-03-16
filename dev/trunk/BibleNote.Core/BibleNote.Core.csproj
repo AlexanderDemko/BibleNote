@@ -88,6 +88,21 @@
     <Compile Include="Common\ParagraphParseResult.cs" />
     <Compile Include="Common\VersePointer.cs" />
     <Compile Include="Contracts\ICustomLogger.cs" />
+    <Compile Include="DBModel\ContentModel.Context.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>ContentModel.Context.tt</DependentUpon>
+    </Compile>
+    <Compile Include="DBModel\ContentModel.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>ContentModel.tt</DependentUpon>
+    </Compile>
+    <Compile Include="DBModel\ContentModel.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>ContentModel.edmx</DependentUpon>
+    </Compile>
     <Compile Include="DBModel\DocumentFolder.cs">
       <DependentUpon>IndexModel.tt</DependentUpon>
     </Compile>
@@ -105,6 +120,9 @@
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
       <DependentUpon>IndexModel.edmx</DependentUpon>
+    </Compile>
+    <Compile Include="DBModel\Parameters.cs">
+      <DependentUpon>ContentModel.tt</DependentUpon>
     </Compile>
     <Compile Include="Helpers\DBHelper.cs" />
     <Compile Include="Helpers\StringUtils.cs" />
@@ -137,6 +155,23 @@
       <Generator>EntityModelCodeGenerator</Generator>
       <LastGenOutput>IndexModel.Designer.cs</LastGenOutput>
     </EntityDeploy>
+    <EntityDeploy Include="DBModel\ContentModel.edmx">
+      <Generator>EntityModelCodeGenerator</Generator>
+      <LastGenOutput>ContentModel.Designer.cs</LastGenOutput>
+    </EntityDeploy>
+    <None Include="DBModel\ContentModel.Context.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <DependentUpon>ContentModel.edmx</DependentUpon>
+      <LastGenOutput>ContentModel.Context.cs</LastGenOutput>
+    </None>
+    <None Include="DBModel\ContentModel.edmx.diagram">
+      <DependentUpon>ContentModel.edmx</DependentUpon>
+    </None>
+    <None Include="DBModel\ContentModel.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <DependentUpon>ContentModel.edmx</DependentUpon>
+      <LastGenOutput>ContentModel.cs</LastGenOutput>
+    </None>
     <None Include="DBModel\IndexModel.Context.tt">
       <Generator>TextTemplatingFileGenerator</Generator>
       <DependentUpon>IndexModel.edmx</DependentUpon>
