@@ -15,8 +15,8 @@ namespace BibleNote.Core.DBModel
     
     public partial class IndexModel : DbContext
     {
-        public IndexModel(string connectionString)
-            : base(connectionString)
+        public IndexModel()
+            : base("name=IndexModel")
         {
         }
     
