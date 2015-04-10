@@ -1,12 +1,19 @@
 ﻿using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using BibleNote.Core.Common;
+using BibleNote.Core.Services.System;
 
 namespace BibleNote.Tests
 {
     [TestClass]
     public class VersePointerTests
     {
+        [TestInitialize]
+        public void Init()
+        {
+            DIContainer.InitWithDefaults();
+        }
+
         private static void TestVerseParsing(string originalVerse, SimpleVersePointer expectedVerse)
         {
             var actualVerse = new VersePointer(originalVerse);

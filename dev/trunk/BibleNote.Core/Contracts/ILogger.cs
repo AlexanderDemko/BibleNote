@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace BibleNote.Core.Contracts
 {
-    public interface ICustomLogger
+    public interface ILogger
     {        
         void LogMessage(string message, params object[] args);
         void LogWarning(string message, params object[] args);

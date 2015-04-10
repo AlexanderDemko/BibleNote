@@ -5,9 +5,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BibleNote.Core.Services
+namespace BibleNote.Core.Services.System
 {
-    public class Logger : ICustomLogger
+    public class Logger : ILogger
     {
         public void LogMessage(string message, params object[] args)
         {

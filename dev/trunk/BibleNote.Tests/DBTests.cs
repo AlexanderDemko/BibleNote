@@ -5,12 +5,19 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using BibleNote.Core.DBModel;
 using BibleNote.Core.Helpers;
 using System.Linq;
+using BibleNote.Core.Services.System;
 
 namespace BibleNote.Tests
 { 
     [TestClass]
     public class DBTests
     {
+        [TestInitialize]
+        public void Init()
+        {
+            DIContainer.InitWithDefaults();
+        }
+
         [TestMethod]
         public void TestCreateAndDeleteFolder()
         {

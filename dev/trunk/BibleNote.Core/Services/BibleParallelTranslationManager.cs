@@ -1,6 +1,7 @@
 ﻿using BibleCommon.Scheme;
 using BibleNote.Core.Common;
 using BibleNote.Core.Contracts;
+using BibleNote.Core.Services.System;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,16 +11,27 @@ using System.Xml.Linq;
 
 namespace BibleNote.Core.Services
 {
-    public class BibleParallelTranslationManager
-    {   
-        public static bool MergeModuleWithMainBible(ModuleInfo parallelModuleInfo)
+    public class BibleParallelTranslationManager : IBibleParallelTranslationManager
+    {
+        private ILogger _logger;
+        private IConfigurationManager _configurationManager;
+        private IModulesManager _modulesManager;
+
+        public BibleParallelTranslationManager()
         {
-            if (!string.IsNullOrEmpty(Application.ConfigurationManager.ModuleShortName)
-                && Application.ConfigurationManager.ModuleShortName != parallelModuleInfo.ShortName)
+            _logger = DIContainer.Resolve<ILogger>();
+            _configurationManager = DIContainer.Resolve<IConfigurationManager>();
+            _modulesManager = DIContainer.Resolve<IModulesManager>();
+        }
+
+        public bool MergeModuleWithMainBible(ModuleInfo parallelModuleInfo)
+        {
+            if (!string.IsNullOrEmpty(_configurationManager.ModuleShortName)
+                && _configurationManager.ModuleShortName != parallelModuleInfo.ShortName)
             {
                 try
                 {
-                    var baseModuleInfo = Application.ModulesManager.GetModuleInfo(Application.ConfigurationManager.ModuleShortName);
+                    var baseModuleInfo = _modulesManager.GetModuleInfo(_configurationManager.ModuleShortName);
 
                     // merge book abbriviations
                     foreach (var baseBook in baseModuleInfo.BibleStructure.BibleBooks)
@@ -51,25 +63,28 @@ namespace BibleNote.Core.Services
                         }
                     }
 
-                    Application.ModulesManager.UpdateModuleManifest(baseModuleInfo);
+                    _modulesManager.UpdateModuleManifest(baseModuleInfo);
 
                     return true;
                 }
-                catch (ModuleNotFoundException) { }
+                catch (ModuleNotFoundException e) 
+                {
+                    _logger.LogWarning(e.ToString());
+                }
             }
 
             return false;
         }
 
 
-        public static void RemoveBookAbbreviationsFromMainBible(string parallelModuleName, bool removeAllParallelModulesAbbriviations)
+        public void RemoveBookAbbreviationsFromMainBible(string parallelModuleName, bool removeAllParallelModulesAbbriviations)
         {
-            if (!string.IsNullOrEmpty(Application.ConfigurationManager.ModuleShortName)
-                && Application.ConfigurationManager.ModuleShortName != parallelModuleName)
+            if (!string.IsNullOrEmpty(_configurationManager.ModuleShortName)
+                && _configurationManager.ModuleShortName != parallelModuleName)
             {
                 try
                 {
-                    var baseModuleInfo = Application.ModulesManager.GetModuleInfo(Application.ConfigurationManager.ModuleShortName);
+                    var baseModuleInfo = _modulesManager.GetModuleInfo(_configurationManager.ModuleShortName);
 
                     foreach (var baseBook in baseModuleInfo.BibleStructure.BibleBooks)
                     {
@@ -78,18 +93,21 @@ namespace BibleNote.Core.Services
                             || (!removeAllParallelModulesAbbriviations && abbr.ModuleName == parallelModuleName));
                     }
 
-                    Application.ModulesManager.UpdateModuleManifest(baseModuleInfo);
+                    _modulesManager.UpdateModuleManifest(baseModuleInfo);
                 }
-                catch (ModuleNotFoundException) { }
+                catch (ModuleNotFoundException e) 
+                {
+                    _logger.LogWarning(e.ToString());
+                }
             }
         }
 
-        public static void MergeAllModulesWithMainBible()
+        public void MergeAllModulesWithMainBible()
         {
-            foreach (var module in Application.ModulesManager.GetModules(true)
+            foreach (var module in _modulesManager.GetModules(true)
                 .Where(m => m.Type == Common.ModuleType.Bible || m.Type == Common.ModuleType.Strong))
             {
-                BibleParallelTranslationManager.MergeModuleWithMainBible(module);
+                MergeModuleWithMainBible(module);
             }
         }
     }

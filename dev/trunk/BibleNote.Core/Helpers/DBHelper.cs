@@ -1,5 +1,7 @@
-﻿using BibleNote.Core.DBModel;
+﻿using BibleNote.Core.Contracts;
+using BibleNote.Core.DBModel;
 using BibleNote.Core.Services;
+using BibleNote.Core.Services.System;
 using System;
 using System.Collections.Generic;
 using System.Data.EntityClient;
@@ -15,7 +17,7 @@ namespace BibleNote.Core.Helpers
         public static IndexModel GetIndexModel()
         {
             var entityStringBuilder = new EntityConnectionStringBuilder();
-            entityStringBuilder.ProviderConnectionString = @"Data Source=" + Application.ConfigurationManager.DBIndexPath;
+            entityStringBuilder.ProviderConnectionString = string.Format("Data Source={0}", DIContainer.Resolve<IConfigurationManager>().DBIndexPath);
             entityStringBuilder.Provider = "System.Data.SqlServerCe.4.0";
             entityStringBuilder.Metadata = "res://*/DBModel.IndexModel.csdl|res://*/DBModel.IndexModel.ssdl|res://*/DBModel.IndexModel.msl";
 
@@ -26,7 +28,7 @@ namespace BibleNote.Core.Helpers
         public static ContentModel GetContentModel()
         {
             var entityStringBuilder = new EntityConnectionStringBuilder();
-            entityStringBuilder.ProviderConnectionString = @"Data Source=" + Application.ConfigurationManager.DBContentPath;
+            entityStringBuilder.ProviderConnectionString = string.Format("Data Source=", DIContainer.Resolve<IConfigurationManager>().DBContentPath);
             entityStringBuilder.Provider = "System.Data.SqlServerCe.4.0";
             entityStringBuilder.Metadata = "res://*/DBModel.ContentModel.csdl|res://*/DBModel.ContentModel.ssdl|res://*/DBModel.ContentModel.msl";
 

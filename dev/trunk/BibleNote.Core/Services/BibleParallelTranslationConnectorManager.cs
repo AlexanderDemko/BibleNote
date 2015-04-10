@@ -1,4 +1,6 @@
 ﻿using BibleNote.Core.Common;
+using BibleNote.Core.Contracts;
+using BibleNote.Core.Services.System;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -21,15 +23,23 @@ namespace BibleNote.Core.Services
         }
     }
 
-    public static class BibleParallelTranslationConnectorManager
+    public class BibleParallelTranslationConnectorManager : IBibleParallelTranslationConnectorManager
     {
-        private static Dictionary<string, ParallelBibleInfo> _cache = new Dictionary<string, ParallelBibleInfo>();
-        private static string GetKey(string baseModuleShortName, string parallelModuleShortName)
+        private IModulesManager _modulesManager;
+
+        public BibleParallelTranslationConnectorManager()
+        {
+            _modulesManager = DIContainer.Resolve<IModulesManager>();
+        }
+
+
+        private Dictionary<string, ParallelBibleInfo> _cache = new Dictionary<string, ParallelBibleInfo>();
+        private string GetKey(string baseModuleShortName, string parallelModuleShortName)
         {
             return string.Format("{0}_{1}", baseModuleShortName, parallelModuleShortName).ToLower();
         }
 
-        public static ModuleVersePointer GetParallelVersePointer(ModuleVersePointer baseVersePointer, string baseModuleShortName, string parallelModuleShortName)
+        public ModuleVersePointer GetParallelVersePointer(ModuleVersePointer baseVersePointer, string baseModuleShortName, string parallelModuleShortName)
         {
             ModuleVersePointer result = null;
 
@@ -47,7 +57,7 @@ namespace BibleNote.Core.Services
             return result;
         }
 
-        public static ParallelBibleInfo GetParallelBibleInfo(string baseModuleShortName, string parallelModuleShortName, bool refreshCache = false)
+        public ParallelBibleInfo GetParallelBibleInfo(string baseModuleShortName, string parallelModuleShortName, bool refreshCache = false)
         {
             var key = GetKey(baseModuleShortName, parallelModuleShortName);
 
@@ -55,15 +65,15 @@ namespace BibleNote.Core.Services
                 return _cache[key];
             else
             {
-                var baseModuleInfo = Application.ModulesManager.GetModuleInfo(baseModuleShortName);
-                var parallelModuleInfo = Application.ModulesManager.GetModuleInfo(parallelModuleShortName);
+                var baseModuleInfo = _modulesManager.GetModuleInfo(baseModuleShortName);
+                var parallelModuleInfo = _modulesManager.GetModuleInfo(parallelModuleShortName);
 
                 return GetParallelBibleInfo(baseModuleShortName, parallelModuleShortName,
                     baseModuleInfo.BibleTranslationDifferences, parallelModuleInfo.BibleTranslationDifferences, refreshCache);
             }
         }
 
-        public static ParallelBibleInfo GetParallelBibleInfo(string baseModuleShortName, string parallelModuleShortName,
+        public ParallelBibleInfo GetParallelBibleInfo(string baseModuleShortName, string parallelModuleShortName,
             BibleTranslationDifferences baseBookTranslationDifferences,
             BibleTranslationDifferences parallelBookTranslationDifferences, bool refreshCache = false)
         {
@@ -97,7 +107,7 @@ namespace BibleNote.Core.Services
 
 
 
-        private static void ProcessForBaseBookVerses(BibleTranslationDifferencesEx baseTranslationDifferencesEx, BibleTranslationDifferencesEx parallelTranslationDifferencesEx,
+        private void ProcessForBaseBookVerses(BibleTranslationDifferencesEx baseTranslationDifferencesEx, BibleTranslationDifferencesEx parallelTranslationDifferencesEx,
             ParallelBibleInfo result)
         {
             foreach (int bookIndex in baseTranslationDifferencesEx.BibleVersesDifferences.Keys)
@@ -141,7 +151,7 @@ namespace BibleNote.Core.Services
             }
         }
 
-        private static void JoinBaseAndParallelVerses(ModuleVersePointer versesKey, ComparisonVersesInfo baseVerses, ComparisonVersesInfo parallelVerses,
+        private void JoinBaseAndParallelVerses(ModuleVersePointer versesKey, ComparisonVersesInfo baseVerses, ComparisonVersesInfo parallelVerses,
             ModuleVersePointersComparisonTable bookVersePointersComparisonTables)
         {
             if (baseVerses.Count == 1)
@@ -196,7 +206,7 @@ namespace BibleNote.Core.Services
             All
         }
 
-        private static List<ModuleVersePointer> GetParallelVersesList(ModuleVersePointer baseVerse, ComparisonVersesInfo parallelVerses, ref int startIndex,
+        private List<ModuleVersePointer> GetParallelVersesList(ModuleVersePointer baseVerse, ComparisonVersesInfo parallelVerses, ref int startIndex,
             GetAllVersesType getAllVerses, bool isPartParallelVersePointer, List<ModuleVersePointer> prevParallelVerses)
         {
             var result = new List<ModuleVersePointer>();
@@ -265,7 +275,7 @@ namespace BibleNote.Core.Services
             return result;
         }
 
-        private static void ProcessForParallelBookVerses(BibleTranslationDifferencesEx baseTranslationDifferencesEx, BibleTranslationDifferencesEx parallelTranslationDifferencesEx,
+        private void ProcessForParallelBookVerses(BibleTranslationDifferencesEx baseTranslationDifferencesEx, BibleTranslationDifferencesEx parallelTranslationDifferencesEx,
            ParallelBibleInfo result)
         {
             foreach (int bookIndex in parallelTranslationDifferencesEx.BibleVersesDifferences.Keys)
