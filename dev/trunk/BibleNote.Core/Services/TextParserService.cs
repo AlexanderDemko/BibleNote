@@ -1,4 +1,5 @@
 ﻿using BibleNote.Core.Common;
+using BibleNote.Core.Contracts;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,9 +8,9 @@ using System.Threading.Tasks;
 
 namespace BibleNote.Core.Services
 {
-    public class TextParserService
+    public class TextParserService : ITextParserService
     {
-        public ParagraphParseResult ParseParagraph(string text, DocumentParseResult docParseResult)
+        public ParagraphParseResult ParseParagraph(string text, DocumentParseContext docParseResult)
         {
             var result = new ParagraphParseResult();
 

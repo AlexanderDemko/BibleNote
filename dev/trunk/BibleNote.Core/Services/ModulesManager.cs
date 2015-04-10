@@ -2,8 +2,10 @@
 using BibleNote.Core.Cache;
 using BibleNote.Core.Common;
 using BibleNote.Core.Constants;
+using BibleNote.Core.Contracts;
 using BibleNote.Core.Helpers;
 using BibleNote.Core.Resources;
+using BibleNote.Core.Services.System;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -14,27 +16,38 @@ using System.Threading.Tasks;
 
 namespace BibleNote.Core.Services
 {
-    public class ModulesManager
+    public class ModulesManager : IModulesManager
     {
+        private ILogger _logger;
+        private IConfigurationManager _configurationManager;
+        private IBibleParallelTranslationManager _bibleParallelTranslationManager;
+
+        public ModulesManager()
+        {
+            _logger = DIContainer.Resolve<ILogger>();
+            _configurationManager = DIContainer.Resolve<IConfigurationManager>();
+            _bibleParallelTranslationManager = DIContainer.Resolve<IBibleParallelTranslationManager>();
+        }
+
         public ModuleInfo GetCurrentModuleInfo()
         {
-            if (!string.IsNullOrEmpty(Application.ConfigurationManager.ModuleShortName))
-                return GetModuleInfo(Application.ConfigurationManager.ModuleShortName);
+            if (!string.IsNullOrEmpty(_configurationManager.ModuleShortName))
+                return GetModuleInfo(_configurationManager.ModuleShortName);
 
             throw new ModuleIsUndefinedException("Current Module is undefined.");
         }
 
         public XMLBIBLE GetCurrentBibleContent()
         {
-            if (!string.IsNullOrEmpty(Application.ConfigurationManager.ModuleShortName))
-                return GetModuleBibleInfo(Application.ConfigurationManager.ModuleShortName);
+            if (!string.IsNullOrEmpty(_configurationManager.ModuleShortName))
+                return GetModuleBibleInfo(_configurationManager.ModuleShortName);
 
             throw new ModuleIsUndefinedException("Current Module is undefined.");
         }
 
         public string GetCurrentModuleDirectiory()
         {
-            return GetModuleDirectory(Application.ConfigurationManager.ModuleShortName);
+            return GetModuleDirectory(_configurationManager.ModuleShortName);
         }
 
         public string GetModuleDirectory(string moduleShortName)
@@ -163,7 +176,7 @@ namespace BibleNote.Core.Services
         {
             try
             {
-                Application.ModulesManager.CheckModule(moduleName, moduleType);
+                CheckModule(moduleName, moduleType);
             }
             catch (InvalidModuleException)
             {
@@ -217,8 +230,8 @@ namespace BibleNote.Core.Services
 
                 if (module.Type == Common.ModuleType.Bible || module.Type == Common.ModuleType.Strong)
                 {
-                    if (!BibleParallelTranslationManager.MergeModuleWithMainBible(module))
-                        BibleParallelTranslationManager.MergeAllModulesWithMainBible();
+                    if (!_bibleParallelTranslationManager.MergeModuleWithMainBible(module))
+                        _bibleParallelTranslationManager.MergeAllModulesWithMainBible();
                 }
 
                 return module;
@@ -268,12 +281,12 @@ namespace BibleNote.Core.Services
                 }
                 catch (UnauthorizedAccessException ex)
                 {
-                    Application.Logger.LogException(ex);
+                    _logger.LogException(ex);
                 }
             }
 
-            BibleParallelTranslationManager.RemoveBookAbbreviationsFromMainBible(moduleShortName, false);
-            BibleParallelTranslationManager.MergeAllModulesWithMainBible();   // например, у меня основной модуль KJV. Я добавил RST, а потом - UBIO. Когда я удалю RST - надо добавить в основной модуль сокращения из UBIO (ведь раньше они не были добавлены, так как они повторялись с RST)
+            _bibleParallelTranslationManager.RemoveBookAbbreviationsFromMainBible(moduleShortName, false);
+            _bibleParallelTranslationManager.MergeAllModulesWithMainBible();   // например, у меня основной модуль KJV. Я добавил RST, а потом - UBIO. Когда я удалю RST - надо добавить в основной модуль сокращения из UBIO (ведь раньше они не были добавлены, так как они повторялись с RST)
         } 
 
 
@@ -300,7 +313,7 @@ namespace BibleNote.Core.Services
             }
         }
 
-        private static string CopyModulePackage(string originalFilePath, string destFilePath)
+        private string CopyModulePackage(string originalFilePath, string destFilePath)
         {
             try
             {
@@ -309,7 +322,7 @@ namespace BibleNote.Core.Services
             }
             catch (Exception ex)
             {
-                Application.Logger.LogException(ex);
+                _logger.LogException(ex);
 
                 if (ex is IOException
                     || ex is UnauthorizedAccessException)

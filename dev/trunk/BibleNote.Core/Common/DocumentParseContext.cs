@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace BibleNote.Core.Common
 {
-    public class DocumentParseResult
+    public class DocumentParseContext
     {
     }
 }

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using BibleNote.Core.Services;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -270,12 +271,20 @@ namespace BibleNote.Core.Common
 
         public VersePointer(string verseString)
         {
+            this.OriginalVerseName = verseString;
+            //this.Book = Application. TryToGetBook(verseString);
+
             string fullVerseNumber = string.Empty;
 
             ParseFromFullVerseNumber(fullVerseNumber);
         }                
 
         public virtual VersesListInfo<VersePointer> ExpandMultiVerse()
+        {
+            throw new NotImplementedException();
+        }
+
+        protected override void CopyPropertiesTo(SimpleVersePointer verse)
         {
             throw new NotImplementedException();
         }
@@ -368,9 +377,11 @@ namespace BibleNote.Core.Common
 
         protected override void CopyPropertiesTo(SimpleVersePointer verse)
         {
+            base.CopyPropertiesTo(verse);
+
             if (verse is ModuleVersePointer)
             {
-                var moduleVersePointer = ((ModuleVersePointer)verse);
+                var moduleVersePointer = (ModuleVersePointer)verse;
                 moduleVersePointer.IsApocrypha = this.IsApocrypha;
                 moduleVersePointer.IsEmpty = this.IsEmpty;
                 moduleVersePointer.PartIndex = this.PartIndex;
