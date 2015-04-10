@@ -15,7 +15,7 @@ namespace BibleNote.Core.Services
         public bool UseCommaDelimiter { get; set; }
         
 
-        internal ConfigurationManager(bool loadTestData)
+        public ConfigurationManager(bool loadTestData)
         {
             if (loadTestData)
             {
