@@ -13,6 +13,9 @@ namespace BibleNote.Core.Helpers
 
         public static string GetText(string htmlString)
         {
+            if (string.IsNullOrEmpty(htmlString))
+                return htmlString;
+
             return htmlPattern.Replace(htmlString, string.Empty);
         }
 

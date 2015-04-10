@@ -27,7 +27,7 @@ namespace BibleNote.Core.Services.System
         public static void InitWithDefaults()
         {
             Container.RegisterType<ILogger, Logger>();
-            Container.RegisterType<IConfigurationManager, ConfigurationManager>();
+            Container.RegisterType<IConfigurationManager, ConfigurationManager>(new InjectionConstructor(true));
             Container.RegisterType<IModulesManager, ModulesManager>();
             Container.RegisterType<ITextParserService, TextParserService>();
             Container.RegisterType<IBibleParallelTranslationConnectorManager, BibleParallelTranslationConnectorManager>();
