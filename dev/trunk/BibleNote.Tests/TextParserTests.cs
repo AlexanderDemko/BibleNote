@@ -12,6 +12,7 @@ namespace BibleNote.Tests
     {
         private ITextParserService _textParserService;
         private IConfigurationManager _configurationManager;
+        private IVersePointerFactory _verseParserService;
 
         [TestInitialize]
         public void Init()
@@ -19,6 +20,7 @@ namespace BibleNote.Tests
             DIContainer.InitWithDefaults();
             _textParserService = DIContainer.Resolve<ITextParserService>();
             _configurationManager = DIContainer.Resolve<IConfigurationManager>();
+            _verseParserService = DIContainer.Resolve<IVersePointerFactory>();
         }
 
         [TestCleanup]
@@ -35,7 +37,7 @@ namespace BibleNote.Tests
             Assert.IsTrue(result.Verses.Count == verses.Length, "Verses length is not the same. Expected: {0}. Found: {1}", verses.Length, result.Verses.Count);
 
             foreach (var verse in verses)
-                Assert.IsTrue(result.Verses.Contains(new VersePointer(verse)), "Can not find the verse: '{0}'", verse);
+                Assert.IsTrue(result.Verses.Contains(_verseParserService.CreateVersePointer(verse)), "Can not find the verse: '{0}'", verse);
         }
 
 
@@ -302,6 +304,28 @@ namespace BibleNote.Tests
                 _configurationManager.UseCommaDelimiter
                     ? new string[] { "Исх 19:11" }
                     : new string[] { "Исх 19", "Исх 11" });
+        }
+
+        public void TestScenario24()
+        {
+            var input = @"[<span
+lang=ru>&quot;С учением об уподоблении (отождествлении) связаны важные богословские истины. Верующий отождествляется с Христом в Его смерти (Рим. 6:1-</span><span
+style='font-weight:bold' lang=ru>11</span><span lang=ru>); погребении (Рим. 6:</span><span
+style='font-weight:bold' lang=ru>4</span><span style='font-weight:bold'
+lang=en-US>-6</span><span lang=ru>); в Его воскресении (Кол. </span><span
+style='background:yellow;mso-highlight:yellow' lang=ru>3:1</span><span lang=ru>); вознесении (Е</span><span
+style='color:#E84C22' lang=ru>ф. 2:6</span><span lang=ru>); в Его царстве (2 </span><span
+style='font-style:italic' lang=ru>Тим. 2:12</span><span lang=ru>) и в Его славе (</span><span
+style='text-decoration:underline' lang=ru>Рим. 8:17</span><span lang=ru>)</span><span
+lang=en-US> </span><span lang=ru>и </span><span style='font-weight:bold'
+lang=ru>*</span><span lang=ru>2Пет </span><span style='background:yellow;
+mso-highlight:yellow' lang=ru>1</span><span style='color:#E84C22' lang=ru>:</span><span
+style='font-weight:bold' lang=ru>5</span><span style='font-style:italic'
+lang=ru>-8</span><span style='font-weight:bold;font-style:italic' lang=ru>*</span><span
+lang=ru>&quot; (Джон Уолвурд)</span>";
+
+            var result = _textParserService.ParseParagraph(input, null);
+            CheckVerses(input, result, "Рим. 6:1-11", "Рим. 6:4-6", "Кол. 3:1", "Еф. 2:6", "2 Тим. 2:12", "Рим. 8:17", "2Пет 1:5-8");
         }
     }
 }

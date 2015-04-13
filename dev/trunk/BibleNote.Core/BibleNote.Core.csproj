@@ -58,6 +58,9 @@
     <Reference Include="EntityFramework.SqlServerCompact">
       <HintPath>..\packages\EntityFramework.SqlServerCompact.6.1.2\lib\net45\EntityFramework.SqlServerCompact.dll</HintPath>
     </Reference>
+    <Reference Include="HtmlAgilityPack">
+      <HintPath>..\packages\HtmlAgilityPack.1.4.9\lib\Net45\HtmlAgilityPack.dll</HintPath>
+    </Reference>
     <Reference Include="ICSharpCode.SharpZipLib">
       <HintPath>..\ThirdParty\ICSharpCode.SharpZipLib.dll</HintPath>
     </Reference>
@@ -93,6 +96,7 @@
     <Compile Include="Common\BibleTranslationDifferencesFormula.cs" />
     <Compile Include="Common\CustomExceptions.cs" />
     <Compile Include="Common\ModuleInfo.cs" />
+    <Compile Include="Common\VerseEntryInfo.cs" />
     <Compile Include="Constants\SystemConstants.cs" />
     <Compile Include="Common\DocumentParseContext.cs" />
     <Compile Include="Common\ParagraphParseResult.cs" />
@@ -100,20 +104,22 @@
     <Compile Include="Contracts\ILogger.cs" />
     <Compile Include="Contracts\IModulesManager.cs" />
     <Compile Include="Contracts\ITextParserService.cs" />
+    <Compile Include="Contracts\IVersePointerFactory.cs" />
+    <Compile Include="Contracts\IVerseRecognitionService.cs" />
     <Compile Include="DBModel\ContentModel.Context.cs">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
       <DependentUpon>ContentModel.Context.tt</DependentUpon>
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
     </Compile>
     <Compile Include="DBModel\ContentModel.cs">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
       <DependentUpon>ContentModel.tt</DependentUpon>
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
     </Compile>
     <Compile Include="DBModel\ContentModel.Designer.cs">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
       <DependentUpon>ContentModel.edmx</DependentUpon>
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
     </Compile>
     <Compile Include="DBModel\DocumentFolder.cs">
       <DependentUpon>IndexModel.tt</DependentUpon>
@@ -161,30 +167,32 @@
     <Compile Include="Services\System\Logger.cs" />
     <Compile Include="Services\ModulesManager.cs" />
     <Compile Include="Services\TextParserService.cs" />
+    <Compile Include="Services\VersePointerFactory.cs" />
+    <Compile Include="Services\VerseRecognitionService.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config">
       <SubType>Designer</SubType>
     </None>
-    <EntityDeploy Include="DBModel\IndexModel.edmx">
-      <Generator>EntityModelCodeGenerator</Generator>
-      <LastGenOutput>IndexModel.Designer.cs</LastGenOutput>
-    </EntityDeploy>
     <EntityDeploy Include="DBModel\ContentModel.edmx">
       <Generator>EntityModelCodeGenerator</Generator>
       <LastGenOutput>ContentModel.Designer.cs</LastGenOutput>
     </EntityDeploy>
+    <EntityDeploy Include="DBModel\IndexModel.edmx">
+      <Generator>EntityModelCodeGenerator</Generator>
+      <LastGenOutput>IndexModel.Designer.cs</LastGenOutput>
+    </EntityDeploy>
     <None Include="DBModel\ContentModel.Context.tt">
-      <Generator>TextTemplatingFileGenerator</Generator>
       <DependentUpon>ContentModel.edmx</DependentUpon>
+      <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>ContentModel.Context.cs</LastGenOutput>
     </None>
     <None Include="DBModel\ContentModel.edmx.diagram">
       <DependentUpon>ContentModel.edmx</DependentUpon>
     </None>
     <None Include="DBModel\ContentModel.tt">
-      <Generator>TextTemplatingFileGenerator</Generator>
       <DependentUpon>ContentModel.edmx</DependentUpon>
+      <Generator>TextTemplatingFileGenerator</Generator>
       <LastGenOutput>ContentModel.cs</LastGenOutput>
     </None>
     <None Include="DBModel\IndexModel.Context.tt">

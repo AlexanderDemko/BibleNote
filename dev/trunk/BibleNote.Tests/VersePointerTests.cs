@@ -2,21 +2,25 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using BibleNote.Core.Common;
 using BibleNote.Core.Services.System;
+using BibleNote.Core.Contracts;
 
 namespace BibleNote.Tests
 {
     [TestClass]
     public class VersePointerTests
     {
+        private IVersePointerFactory _verseParserService;
+
         [TestInitialize]
         public void Init()
         {
             DIContainer.InitWithDefaults();
+            _verseParserService = DIContainer.Resolve<IVersePointerFactory>();
         }
 
-        private static void TestVerseParsing(string originalVerse, SimpleVersePointer expectedVerse)
+        private void TestVerseParsing(string originalVerse, SimpleVersePointer expectedVerse)
         {
-            var actualVerse = new VersePointer(originalVerse);
+            var actualVerse = _verseParserService.CreateVersePointer(originalVerse);
             Assert.AreEqual(expectedVerse, actualVerse);
         }
 
@@ -54,7 +58,7 @@ namespace BibleNote.Tests
         [TestMethod]
         public void TestVerseExpanding()
         {
-            var versesListInfo = new VersePointer("Ин 2:3-4:7").ExpandMultiVerse();
+            var versesListInfo = _verseParserService.CreateVersePointer("Ин 2:3-4:7").ExpandMultiVerse();
             Assert.AreEqual(66, versesListInfo.VersesCount);
             Assert.AreEqual(31, versesListInfo.VersePointers.Count);
         }
