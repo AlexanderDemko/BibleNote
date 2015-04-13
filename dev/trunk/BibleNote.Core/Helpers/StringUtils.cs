@@ -116,5 +116,15 @@ namespace BibleNote.Core.Helpers
 
             return default(char);
         }
+
+        public static int GetNextIndexOfDigit(string text, int index)
+        {
+            var result = -1;
+
+            if (text.Length >= index + 2)
+                result = text.IndexOfAny(new char[] { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '<' }, index + 1);
+
+            return result;
+        }
     }
 }

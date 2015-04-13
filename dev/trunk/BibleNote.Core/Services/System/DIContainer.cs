@@ -26,12 +26,14 @@ namespace BibleNote.Core.Services.System
 
         public static void InitWithDefaults()
         {
-            Container.RegisterType<ILogger, Logger>();
-            Container.RegisterType<IConfigurationManager, ConfigurationManager>(new InjectionConstructor(true));
-            Container.RegisterType<IModulesManager, ModulesManager>();
-            Container.RegisterType<ITextParserService, TextParserService>();
-            Container.RegisterType<IBibleParallelTranslationConnectorManager, BibleParallelTranslationConnectorManager>();
-            Container.RegisterType<IBibleParallelTranslationManager, BibleParallelTranslationManager>();
+            Container.RegisterType<ILogger, Logger>(new ContainerControlledLifetimeManager());
+            Container.RegisterType<IConfigurationManager, ConfigurationManager>(new ContainerControlledLifetimeManager(), new InjectionConstructor(true));
+            Container.RegisterType<IModulesManager, ModulesManager>(new ContainerControlledLifetimeManager());
+            Container.RegisterType<ITextParserService, TextParserService>(new TransientLifetimeManager());
+            Container.RegisterType<IBibleParallelTranslationConnectorManager, BibleParallelTranslationConnectorManager>(new ContainerControlledLifetimeManager());
+            Container.RegisterType<IBibleParallelTranslationManager, BibleParallelTranslationManager>(new ContainerControlledLifetimeManager());
+            Container.RegisterType<IVerseRecognitionService, VerseRecognitionService>(new TransientLifetimeManager());
+            Container.RegisterType<IVersePointerFactory, VersePointerFactory>(new TransientLifetimeManager());
         }
 
         /// <summary>

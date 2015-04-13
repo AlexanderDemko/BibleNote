@@ -198,7 +198,7 @@ namespace BibleNote.Core.Common
 
         public virtual void ParseFromFullVerseNumber(string fullVerseNumber)
         {
-
+            throw new NotImplementedException();
         }
 
         public virtual VersesListInfo<SimpleVersePointer> ExpandMultiVerse()
@@ -251,33 +251,7 @@ namespace BibleNote.Core.Common
                 return string.Format("{0} {1}", Book.FriendlyShortName, GetFullVerseNumberString());
 
             return base.ToString();
-        }
-
-        public VersePointer()
-            : base()
-        { }
-        
-        public VersePointer(int bookIndex, int chapter)
-            : base(bookIndex, chapter)
-        { }
-
-        public VersePointer(int bookIndex, int chapter, int verse)
-            : base(bookIndex, chapter, verse)
-        { }
-
-        public VersePointer(SimpleVersePointer verse)
-            : base(verse.BookIndex, verse.VerseNumber, verse.TopVerseNumber)
-        { }    
-
-        public VersePointer(string verseString)
-        {
-            this.OriginalVerseName = verseString;
-            //this.Book = Application. TryToGetBook(verseString);
-
-            string fullVerseNumber = string.Empty;
-
-            ParseFromFullVerseNumber(fullVerseNumber);
-        }                
+        }                                
 
         public virtual VersesListInfo<VersePointer> ExpandMultiVerse()
         {

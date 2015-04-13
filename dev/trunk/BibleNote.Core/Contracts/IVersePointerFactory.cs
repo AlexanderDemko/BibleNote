@@ -7,8 +7,8 @@ using System.Threading.Tasks;
 
 namespace BibleNote.Core.Contracts
 {
-    public interface ITextParserService
+    public interface IVersePointerFactory
     {
-        ParagraphParseResult ParseParagraph(string text, DocumentParseContext docParseContext);
+        VersePointer CreateVersePointer(string text);
     }
 }
