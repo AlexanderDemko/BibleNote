@@ -101,6 +101,7 @@
     <Compile Include="Common\DocumentParseContext.cs" />
     <Compile Include="Common\ParagraphParseResult.cs" />
     <Compile Include="Common\VersePointer.cs" />
+    <Compile Include="Constants\VerseConstants.cs" />
     <Compile Include="Contracts\ILogger.cs" />
     <Compile Include="Contracts\IModulesManager.cs" />
     <Compile Include="Contracts\ITextParserService.cs" />
@@ -145,6 +146,7 @@
     <Compile Include="Helpers\DBHelper.cs" />
     <Compile Include="Helpers\StringUtils.cs" />
     <Compile Include="Helpers\SystemUtils.cs" />
+    <Compile Include="Helpers\VerseUtils.cs" />
     <Compile Include="Helpers\XmlUtils.cs" />
     <Compile Include="Helpers\ZipLibHelper.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
