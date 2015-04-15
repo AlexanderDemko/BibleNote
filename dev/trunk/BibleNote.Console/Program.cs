@@ -1,7 +1,5 @@
-﻿using BibleNote.Core.Contracts;
-using BibleNote.Core.DBModel;
-using BibleNote.Core.Services;
-using BibleNote.Core.Services.System;
+﻿using BibleNote.Analytics.Data;
+using BibleNote.Analytics.Services;
 using HtmlAgilityPack;
 using System;
 using System.Collections.Generic;
@@ -15,8 +13,10 @@ namespace BibleNoteConsole
     {
         static void Main(string[] args)
         {
-            DIContainer.InitWithDefaults();
-            var a = DIContainer.Resolve<IModulesManager>();
+            using (var analyticsContext = new AnalyticsContext())
+            {
+                Console.WriteLine(analyticsContext.DocumentFolders.Count());
+            }
 
 
             var doc = new HtmlDocument();

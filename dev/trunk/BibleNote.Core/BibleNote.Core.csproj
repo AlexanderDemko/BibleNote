@@ -91,135 +91,13 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Cache\XmlSerializerCache.cs" />
-    <Compile Include="Common\BibleTranslationDifferencesEx.cs" />
-    <Compile Include="Common\BibleTranslationDifferencesFormula.cs" />
-    <Compile Include="Common\CustomExceptions.cs" />
-    <Compile Include="Common\ModuleInfo.cs" />
-    <Compile Include="Common\VerseEntryInfo.cs" />
-    <Compile Include="Constants\SystemConstants.cs" />
-    <Compile Include="Common\DocumentParseContext.cs" />
-    <Compile Include="Common\ParagraphParseResult.cs" />
-    <Compile Include="Common\VersePointer.cs" />
-    <Compile Include="Constants\VerseConstants.cs" />
-    <Compile Include="Contracts\ILogger.cs" />
-    <Compile Include="Contracts\IModulesManager.cs" />
-    <Compile Include="Contracts\ITextParserService.cs" />
-    <Compile Include="Contracts\IVersePointerFactory.cs" />
-    <Compile Include="Contracts\IVerseRecognitionService.cs" />
-    <Compile Include="DBModel\ContentModel.Context.cs">
-      <DependentUpon>ContentModel.Context.tt</DependentUpon>
-      <DesignTime>True</DesignTime>
-      <AutoGen>True</AutoGen>
-    </Compile>
-    <Compile Include="DBModel\ContentModel.cs">
-      <DependentUpon>ContentModel.tt</DependentUpon>
-      <DesignTime>True</DesignTime>
-      <AutoGen>True</AutoGen>
-    </Compile>
-    <Compile Include="DBModel\ContentModel.Designer.cs">
-      <DependentUpon>ContentModel.edmx</DependentUpon>
-      <DesignTime>True</DesignTime>
-      <AutoGen>True</AutoGen>
-    </Compile>
-    <Compile Include="DBModel\DocumentFolder.cs">
-      <DependentUpon>IndexModel.tt</DependentUpon>
-    </Compile>
-    <Compile Include="DBModel\IndexModel.Context.cs">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>IndexModel.Context.tt</DependentUpon>
-    </Compile>
-    <Compile Include="DBModel\IndexModel.cs">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>IndexModel.tt</DependentUpon>
-    </Compile>
-    <Compile Include="DBModel\IndexModel.Designer.cs">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>IndexModel.edmx</DependentUpon>
-    </Compile>
-    <Compile Include="DBModel\Parameters.cs">
-      <DependentUpon>ContentModel.tt</DependentUpon>
-    </Compile>
-    <Compile Include="Helpers\DBHelper.cs" />
-    <Compile Include="Helpers\StringUtils.cs" />
-    <Compile Include="Helpers\SystemUtils.cs" />
-    <Compile Include="Helpers\VerseUtils.cs" />
-    <Compile Include="Helpers\XmlUtils.cs" />
-    <Compile Include="Helpers\ZipLibHelper.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Resources\LocalizationConstants.Designer.cs">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>LocalizationConstants.resx</DependentUpon>
-    </Compile>
-    <Compile Include="Scheme\zef2005.cs">
-      <DependentUpon>zef2005.xsd</DependentUpon>
-    </Compile>
-    <Compile Include="Scheme\zef2005.ext.cs" />
-    <Compile Include="Services\BibleParallelTranslationConnectorManager.cs" />
-    <Compile Include="Services\BibleParallelTranslationManager.cs" />
-    <Compile Include="Services\ConfigurationManager.cs" />
-    <Compile Include="Contracts\IConfigurationManager.cs" />
-    <Compile Include="Contracts\IBibleParallelTranslationConnectorManager.cs" />
-    <Compile Include="Contracts\IBibleParallelTranslationManager.cs" />
-    <Compile Include="Services\System\DIContainer.cs" />
-    <Compile Include="Services\System\Logger.cs" />
-    <Compile Include="Services\ModulesManager.cs" />
-    <Compile Include="Services\TextParserService.cs" />
-    <Compile Include="Services\VersePointerFactory.cs" />
-    <Compile Include="Services\VerseRecognitionService.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config">
       <SubType>Designer</SubType>
     </None>
-    <EntityDeploy Include="DBModel\ContentModel.edmx">
-      <Generator>EntityModelCodeGenerator</Generator>
-      <LastGenOutput>ContentModel.Designer.cs</LastGenOutput>
-    </EntityDeploy>
-    <EntityDeploy Include="DBModel\IndexModel.edmx">
-      <Generator>EntityModelCodeGenerator</Generator>
-      <LastGenOutput>IndexModel.Designer.cs</LastGenOutput>
-    </EntityDeploy>
-    <None Include="DBModel\ContentModel.Context.tt">
-      <DependentUpon>ContentModel.edmx</DependentUpon>
-      <Generator>TextTemplatingFileGenerator</Generator>
-      <LastGenOutput>ContentModel.Context.cs</LastGenOutput>
-    </None>
-    <None Include="DBModel\ContentModel.edmx.diagram">
-      <DependentUpon>ContentModel.edmx</DependentUpon>
-    </None>
-    <None Include="DBModel\ContentModel.tt">
-      <DependentUpon>ContentModel.edmx</DependentUpon>
-      <Generator>TextTemplatingFileGenerator</Generator>
-      <LastGenOutput>ContentModel.cs</LastGenOutput>
-    </None>
-    <None Include="DBModel\IndexModel.Context.tt">
-      <Generator>TextTemplatingFileGenerator</Generator>
-      <DependentUpon>IndexModel.edmx</DependentUpon>
-      <LastGenOutput>IndexModel.Context.cs</LastGenOutput>
-    </None>
-    <None Include="DBModel\IndexModel.edmx.diagram">
-      <DependentUpon>IndexModel.edmx</DependentUpon>
-    </None>
-    <None Include="DBModel\IndexModel.tt">
-      <Generator>TextTemplatingFileGenerator</Generator>
-      <DependentUpon>IndexModel.edmx</DependentUpon>
-      <LastGenOutput>IndexModel.cs</LastGenOutput>
-    </None>
     <None Include="packages.config" />
-    <None Include="Scheme\zef2005.xsc">
-      <DependentUpon>zef2005.xsd</DependentUpon>
-    </None>
-    <None Include="Scheme\zef2005.xsd">
-      <SubType>Designer</SubType>
-    </None>
-    <None Include="Scheme\zef2005.xss">
-      <DependentUpon>zef2005.xsd</DependentUpon>
-    </None>
   </ItemGroup>
   <ItemGroup>
     <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
@@ -245,13 +123,6 @@
       <ProductName>SQL Server Compact 4.0 SP1</ProductName>
       <Install>true</Install>
     </BootstrapperPackage>
-  </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="Resources\LocalizationConstants.resx">
-      <Generator>ResXFileCodeGenerator</Generator>
-      <LastGenOutput>LocalizationConstants.Designer.cs</LastGenOutput>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Resources\LocalizationConstants.ru.resx" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
