@@ -1,6 +1,7 @@
 ﻿using BibleNote.Core.Common;
 using BibleNote.Core.Contracts;
 using BibleNote.Core.Services.System;
+using Microsoft.Practices.Unity;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -25,13 +26,8 @@ namespace BibleNote.Core.Services
 
     public class BibleParallelTranslationConnectorManager : IBibleParallelTranslationConnectorManager
     {
-        private IModulesManager _modulesManager;
-
-        public BibleParallelTranslationConnectorManager()
-        {
-            _modulesManager = DIContainer.Resolve<IModulesManager>();
-        }
-
+        [Dependency]
+        public IModulesManager ModulesManager { get; set; }
 
         private Dictionary<string, ParallelBibleInfo> _cache = new Dictionary<string, ParallelBibleInfo>();
         private string GetKey(string baseModuleShortName, string parallelModuleShortName)
@@ -65,8 +61,8 @@ namespace BibleNote.Core.Services
                 return _cache[key];
             else
             {
-                var baseModuleInfo = _modulesManager.GetModuleInfo(baseModuleShortName);
-                var parallelModuleInfo = _modulesManager.GetModuleInfo(parallelModuleShortName);
+                var baseModuleInfo = ModulesManager.GetModuleInfo(baseModuleShortName);
+                var parallelModuleInfo = ModulesManager.GetModuleInfo(parallelModuleShortName);
 
                 return GetParallelBibleInfo(baseModuleShortName, parallelModuleShortName,
                     baseModuleInfo.BibleTranslationDifferences, parallelModuleInfo.BibleTranslationDifferences, refreshCache);

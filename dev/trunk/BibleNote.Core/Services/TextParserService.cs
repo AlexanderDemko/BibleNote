@@ -3,6 +3,7 @@ using BibleNote.Core.Contracts;
 using BibleNote.Core.Helpers;
 using BibleNote.Core.Services.System;
 using HtmlAgilityPack;
+using Microsoft.Practices.Unity;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,14 +14,14 @@ namespace BibleNote.Core.Services
 {
     public class TextParserService : ITextParserService
     {
+        [Dependency]
+        public IVerseRecognitionService VerseRecognitionService { get; set; }
 
-        private IVerseRecognitionService _verseRecognitionService;
         private DocumentParseContext _docParseContext;
         private ParagraphParseResult _result;
 
         public TextParserService()
-        {
-            _verseRecognitionService = DIContainer.Resolve<VerseRecognitionService>();
+        {   
             _result = new ParagraphParseResult();            
         }
 
@@ -52,7 +53,7 @@ namespace BibleNote.Core.Services
 
         private void ParseTextNode(string text, int index = 0)
         {
-            var verseEntryInfo = _verseRecognitionService.TryGetVerse(text, index);
+            var verseEntryInfo = VerseRecognitionService.TryGetVerse(text, index);
 
             while (verseEntryInfo.VersePointerFound)
             {

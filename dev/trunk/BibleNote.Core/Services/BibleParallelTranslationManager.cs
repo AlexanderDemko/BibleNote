@@ -2,6 +2,7 @@
 using BibleNote.Core.Common;
 using BibleNote.Core.Contracts;
 using BibleNote.Core.Services.System;
+using Microsoft.Practices.Unity;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,26 +14,15 @@ namespace BibleNote.Core.Services
 {
     public class BibleParallelTranslationManager : IBibleParallelTranslationManager
     {
-        private ILogger _logger;
-        private IConfigurationManager _configurationManager;
-        private IModulesManager _modulesManager;
+        [Dependency]
+        public ILogger Logger { get; set; }
 
-        public BibleParallelTranslationManager()
+        public bool MergeModuleWithMainBible(ModuleInfo baseModuleInfo, ModuleInfo parallelModuleInfo)
         {
-            _logger = DIContainer.Resolve<ILogger>();
-            _configurationManager = DIContainer.Resolve<IConfigurationManager>();
-            _modulesManager = DIContainer.Resolve<IModulesManager>();
-        }
-
-        public bool MergeModuleWithMainBible(ModuleInfo parallelModuleInfo)
-        {
-            if (!string.IsNullOrEmpty(_configurationManager.ModuleShortName)
-                && _configurationManager.ModuleShortName != parallelModuleInfo.ShortName)
+            if (baseModuleInfo != null && baseModuleInfo.ShortName != parallelModuleInfo.ShortName)
             {
                 try
                 {
-                    var baseModuleInfo = _modulesManager.GetModuleInfo(_configurationManager.ModuleShortName);
-
                     // merge book abbriviations
                     foreach (var baseBook in baseModuleInfo.BibleStructure.BibleBooks)
                     {
@@ -63,13 +53,11 @@ namespace BibleNote.Core.Services
                         }
                     }
 
-                    _modulesManager.UpdateModuleManifest(baseModuleInfo);
-
                     return true;
                 }
                 catch (ModuleNotFoundException e) 
                 {
-                    _logger.LogWarning(e.ToString());
+                    Logger.LogWarning(e.ToString());
                 }
             }
 
@@ -77,37 +65,32 @@ namespace BibleNote.Core.Services
         }
 
 
-        public void RemoveBookAbbreviationsFromMainBible(string parallelModuleName, bool removeAllParallelModulesAbbriviations)
+        public void RemoveBookAbbreviationsFromMainBible(ModuleInfo baseModuleInfo, string parallelModuleName, bool removeAllParallelModulesAbbriviations)
         {
-            if (!string.IsNullOrEmpty(_configurationManager.ModuleShortName)
-                && _configurationManager.ModuleShortName != parallelModuleName)
+            if (baseModuleInfo != null && baseModuleInfo.ShortName != parallelModuleName)
             {
                 try
                 {
-                    var baseModuleInfo = _modulesManager.GetModuleInfo(_configurationManager.ModuleShortName);
-
                     foreach (var baseBook in baseModuleInfo.BibleStructure.BibleBooks)
                     {
                         baseBook.Abbreviations.RemoveAll(abbr =>
                             (removeAllParallelModulesAbbriviations && !string.IsNullOrEmpty(abbr.ModuleName))
                             || (!removeAllParallelModulesAbbriviations && abbr.ModuleName == parallelModuleName));
                     }
-
-                    _modulesManager.UpdateModuleManifest(baseModuleInfo);
                 }
                 catch (ModuleNotFoundException e) 
                 {
-                    _logger.LogWarning(e.ToString());
+                    Logger.LogWarning(e.ToString());
                 }
             }
         }
 
-        public void MergeAllModulesWithMainBible()
+        public void MergeAllModulesWithMainBible(ModuleInfo baseModule, IEnumerable<ModuleInfo> otherModules)
         {
-            foreach (var module in _modulesManager.GetModules(true)
+            foreach (var module in otherModules
                 .Where(m => m.Type == Common.ModuleType.Bible || m.Type == Common.ModuleType.Strong))
             {
-                MergeModuleWithMainBible(module);
+                MergeModuleWithMainBible(baseModule, module);
             }
         }
     }
