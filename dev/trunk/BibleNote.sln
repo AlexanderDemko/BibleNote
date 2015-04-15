@@ -28,9 +28,19 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BibleNote.Analytics.Service
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BibleNote.Analytics.Core", "BibleNote.Analytics.Core\BibleNote.Analytics.Core.csproj", "{72939EBB-2258-4EE9-9645-4944A6450192}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BibleNote.UI.Core", "BibleNote.UI.Core\BibleNote.UI.Core.csproj", "{8E78EB0B-41CB-460A-BB21-A08733A31D54}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BibleNote.UI.Data", "BibleNote.UI.Data\BibleNote.UI.Data.csproj", "{614C2528-C151-49E4-A500-C5440D90EAD7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BibleNote.UI.Models", "BibleNote.UI.Models\BibleNote.UI.Models.csproj", "{88387860-F319-4293-8C21-86154FEC6791}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BibleNote.UI.Contracts", "BibleNote.UI.Contracts\BibleNote.UI.Contracts.csproj", "{05345883-462D-48F0-8F19-B8B711870314}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BibleNote.UI.Services", "BibleNote.UI.Services\BibleNote.UI.Services.csproj", "{4F5E6A82-BBCE-42DC-ADE6-8C672D806AB9}"
+EndProject
 Global
 	GlobalSection(TeamFoundationVersionControl) = preSolution
-		SccNumberOfProjects = 8
+		SccNumberOfProjects = 13
 		SccEnterpriseProvider = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
 		SccTeamFoundationServer = https://demko.visualstudio.com/defaultcollection
 		SccLocalPath0 = .
@@ -60,6 +70,26 @@ Global
 		SccProjectTopLevelParentUniqueName7 = BibleNote.sln
 		SccProjectName7 = BibleNote.Analytics.Core
 		SccLocalPath7 = BibleNote.Analytics.Core
+		SccProjectUniqueName8 = BibleNote.UI.Core\\BibleNote.UI.Core.csproj
+		SccProjectTopLevelParentUniqueName8 = BibleNote.sln
+		SccProjectName8 = BibleNote.UI.Core
+		SccLocalPath8 = BibleNote.UI.Core
+		SccProjectUniqueName9 = BibleNote.UI.Data\\BibleNote.UI.Data.csproj
+		SccProjectTopLevelParentUniqueName9 = BibleNote.sln
+		SccProjectName9 = BibleNote.UI.Data
+		SccLocalPath9 = BibleNote.UI.Data
+		SccProjectUniqueName10 = BibleNote.UI.Models\\BibleNote.UI.Models.csproj
+		SccProjectTopLevelParentUniqueName10 = BibleNote.sln
+		SccProjectName10 = BibleNote.UI.Models
+		SccLocalPath10 = BibleNote.UI.Models
+		SccProjectUniqueName11 = BibleNote.UI.Contracts\\BibleNote.UI.Contracts.csproj
+		SccProjectTopLevelParentUniqueName11 = BibleNote.sln
+		SccProjectName11 = BibleNote.UI.Contracts
+		SccLocalPath11 = BibleNote.UI.Contracts
+		SccProjectUniqueName12 = BibleNote.UI.Services\\BibleNote.UI.Services.csproj
+		SccProjectTopLevelParentUniqueName12 = BibleNote.sln
+		SccProjectName12 = BibleNote.UI.Services
+		SccLocalPath12 = BibleNote.UI.Services
 	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -94,6 +124,26 @@ Global
 		{72939EBB-2258-4EE9-9645-4944A6450192}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{72939EBB-2258-4EE9-9645-4944A6450192}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{72939EBB-2258-4EE9-9645-4944A6450192}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8E78EB0B-41CB-460A-BB21-A08733A31D54}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8E78EB0B-41CB-460A-BB21-A08733A31D54}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8E78EB0B-41CB-460A-BB21-A08733A31D54}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8E78EB0B-41CB-460A-BB21-A08733A31D54}.Release|Any CPU.Build.0 = Release|Any CPU
+		{614C2528-C151-49E4-A500-C5440D90EAD7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{614C2528-C151-49E4-A500-C5440D90EAD7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{614C2528-C151-49E4-A500-C5440D90EAD7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{614C2528-C151-49E4-A500-C5440D90EAD7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{88387860-F319-4293-8C21-86154FEC6791}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{88387860-F319-4293-8C21-86154FEC6791}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{88387860-F319-4293-8C21-86154FEC6791}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{88387860-F319-4293-8C21-86154FEC6791}.Release|Any CPU.Build.0 = Release|Any CPU
+		{05345883-462D-48F0-8F19-B8B711870314}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{05345883-462D-48F0-8F19-B8B711870314}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{05345883-462D-48F0-8F19-B8B711870314}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{05345883-462D-48F0-8F19-B8B711870314}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4F5E6A82-BBCE-42DC-ADE6-8C672D806AB9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4F5E6A82-BBCE-42DC-ADE6-8C672D806AB9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4F5E6A82-BBCE-42DC-ADE6-8C672D806AB9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4F5E6A82-BBCE-42DC-ADE6-8C672D806AB9}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -105,5 +155,10 @@ Global
 		{A47192D6-2DC9-40D5-B28C-AD55E298F68F} = {75EA2CBB-D373-49D9-B812-CC4B82429AA1}
 		{38AF7691-09FA-4373-AEA2-52F6D3D50C85} = {75EA2CBB-D373-49D9-B812-CC4B82429AA1}
 		{72939EBB-2258-4EE9-9645-4944A6450192} = {75EA2CBB-D373-49D9-B812-CC4B82429AA1}
+		{8E78EB0B-41CB-460A-BB21-A08733A31D54} = {4878DD17-95DF-4BAB-AB68-4A9789B84D56}
+		{614C2528-C151-49E4-A500-C5440D90EAD7} = {4878DD17-95DF-4BAB-AB68-4A9789B84D56}
+		{88387860-F319-4293-8C21-86154FEC6791} = {4878DD17-95DF-4BAB-AB68-4A9789B84D56}
+		{05345883-462D-48F0-8F19-B8B711870314} = {4878DD17-95DF-4BAB-AB68-4A9789B84D56}
+		{4F5E6A82-BBCE-42DC-ADE6-8C672D806AB9} = {4878DD17-95DF-4BAB-AB68-4A9789B84D56}
 	EndGlobalSection
 EndGlobal
