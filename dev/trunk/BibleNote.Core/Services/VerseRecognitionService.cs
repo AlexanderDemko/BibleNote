@@ -3,6 +3,7 @@ using BibleNote.Core.Constants;
 using BibleNote.Core.Contracts;
 using BibleNote.Core.Helpers;
 using BibleNote.Core.Services.System;
+using Microsoft.Practices.Unity;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,15 +16,13 @@ namespace BibleNote.Core.Services
     {
         private char[] _chapterVerseDelimiter;
         private char[] _startVerseChars;
-        private readonly object _locker = new object();        
+        private readonly object _locker = new object();
 
-        private IVersePointerFactory _verseParserService;
-        private IConfigurationManager _configurationManager;
-        public VerseRecognitionService()
-        {
-            _verseParserService = DIContainer.Resolve<IVersePointerFactory>();
-            _configurationManager = DIContainer.Resolve<IConfigurationManager>();
-        }
+        [Dependency]
+        public IVersePointerFactory VersePointerFactory { get; set; }
+
+        [Dependency]
+        public IConfigurationManager ConfigurationManager { get; set; }        
 
         public VerseEntryInfo TryGetVerse(string text, int index)
         {
@@ -65,7 +64,7 @@ namespace BibleNote.Core.Services
                     if (_chapterVerseDelimiter == null)
                     {
                         var chars = new List<char>() { VerseConstants.DefaultChapterVerseDelimiter };
-                        if (_configurationManager.UseCommaDelimiter)
+                        if (ConfigurationManager.UseCommaDelimiter)
                             chars.Add(',');
 
                         _chapterVerseDelimiter = chars.ToArray();

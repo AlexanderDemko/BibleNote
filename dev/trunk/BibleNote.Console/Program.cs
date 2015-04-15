@@ -1,4 +1,5 @@
-﻿using BibleNote.Core.DBModel;
+﻿using BibleNote.Core.Contracts;
+using BibleNote.Core.DBModel;
 using BibleNote.Core.Services;
 using BibleNote.Core.Services.System;
 using HtmlAgilityPack;
@@ -14,6 +15,10 @@ namespace BibleNoteConsole
     {
         static void Main(string[] args)
         {
+            DIContainer.InitWithDefaults();
+            var a = DIContainer.Resolve<IModulesManager>();
+
+
             var doc = new HtmlDocument();
             doc.LoadHtml("test<div style='color:green' width='100px'> first text <text style='color:red' height=50px>text!!!</text>last text</div>");
 
