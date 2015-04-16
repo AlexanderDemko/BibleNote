@@ -5,9 +5,10 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace Word.Model.Entities
-{    
-    public class Verse:WordObjectBase
+{
+    public class Word:WordObjectBase
     {
-        public List<Word> Words { get; set; }
+        public string Text { get; set; }
+        public bool IsText { get; set; }
     }
 }

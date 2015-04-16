@@ -38,13 +38,21 @@ textarea {
 .word{
     /*margin-left:3px;   */
 }
-.hovered{
+.author{
     color:red;
    border-top:1px solid;
-   border-bottom:1px solid;
-     
-      
+   border-bottom:1px solid;           
 }
+.receivers{
+    color:blue;
+   border-top:1px solid;
+   border-bottom:1px solid;           
+}
+
+.hover{
+    background-color:lightblue
+}
+
 .checked{
     background-color:yellow;   
 }
@@ -55,3 +63,11 @@ textarea {
 #result{
      cursor:pointer;
 }
+
+.verse {
+    font-weight:bold;
+    color:blue;
+    font-size:14pt;
+}
+
+

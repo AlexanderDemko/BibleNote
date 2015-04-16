@@ -26,7 +26,7 @@ namespace Word.Web
                 ));
 
 
-            bundles.Add(new ScriptBundle("~/bundles/angular").Include("~/Scripts/angular.js", "~/Scripts/angular-aria.js",
+            bundles.Add(new ScriptBundle("~/bundles/angular").Include("~/Scripts/angular.js",
               "~/Scripts/controllers/*.js", "~/Scripts/directives/*.js", "~/Scripts/services/*.js", "~/Scripts/modules/*.js"));
 
 
