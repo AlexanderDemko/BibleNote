@@ -6,8 +6,8 @@ using System.Web.Mvc;
 
 namespace Word.Web.Controllers
 {
-    [Authorize]
-    [RequireHttps]
+    
+    
     public class HomeController : Controller
     {
         public ActionResult Index()

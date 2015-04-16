@@ -8,8 +8,8 @@
 <div ng-app="app">
     <dx-ribbon dx-ribbon-method='@Url.Action("Get","Ribbon")' dx-ribbon-current-tool="tool"></dx-ribbon>
 
-    <word-text-analyzer load-url="/api/Verse">
-        <word-versus num="2" ref="1302">            
+    <word-text-analyzer load-url="/api/Verse" hover-class="tool">
+        <word-versus num="2" ref="1302">
         </word-versus>
     </word-text-analyzer>
 

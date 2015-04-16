@@ -48,6 +48,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Entities\Verse.cs" />
+    <Compile Include="Entities\Word.cs" />
     <Compile Include="Entities\WordObjectBase.cs" />
     <Compile Include="RibbonClasses.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
