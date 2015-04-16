@@ -63,16 +63,18 @@ namespace BibleNote.Analytics.Core.Helpers
             return null;
         }
 
-        public static char GetCharAfterNumber(string text, int startOfNumberIndex)
+        public static char GetCharAfterNumber(string text, int startOfNumberIndex, out int indexOfChar)
         {
-            for (var i = 0; i < 3; i++)
+            for (var i = 1; i < 3; i++)
             {
-                var c = GetChar(text, startOfNumberIndex);
+                indexOfChar = startOfNumberIndex + i;
+                var c = GetChar(text, indexOfChar);
                 if (!char.IsDigit(c))
                     return c;
             }
 
-            throw new NotImplementedException();
+            indexOfChar = startOfNumberIndex + 3;
+            return GetChar(text, indexOfChar);
         }
 
         public static int? GetStringLastNumber(string s)
