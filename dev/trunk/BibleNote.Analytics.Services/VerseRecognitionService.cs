@@ -13,18 +13,18 @@ namespace BibleNote.Analytics.Services
 {
     public class VerseRecognitionService : IVerseRecognitionService
     {
-        private char[] _chapterVerseDelimiter;
-        private char[] _startVerseChars;
-        private readonly object _locker = new object();
-
         [Dependency]
         public IVersePointerFactory VersePointerFactory { get; set; }
 
         [Dependency]
-        public IConfigurationManager ConfigurationManager { get; set; }        
+        public IConfigurationManager ConfigurationManager { get; set; }
+        
+        public VerseEntryInfo VerseEntryInfo { get; set; }
 
         public VerseEntryInfo TryGetVerse(string text, int index)
         {
+            VerseEntryInfo = new VerseEntryInfo();
+
             var indexOfDigit = StringUtils.GetNextIndexOfDigit(text, index);            
             while (indexOfDigit != -1)
             {
@@ -46,49 +46,19 @@ namespace BibleNote.Analytics.Services
         private bool EntryIsLikeVerse(string text, int indexOfDigit)
         {
             var prevChar = StringUtils.GetChar(text, indexOfDigit - 1);
-            var nextChar = StringUtils.GetCharAfterNumber(text, indexOfDigit);
+            int endOfVerseEntry;
+            var nextChar = StringUtils.GetCharAfterNumber(text, indexOfDigit, out endOfVerseEntry);
 
-            return (GetStartVerseChars().Contains(prevChar) || char.IsLetter(prevChar))
-                 && !char.IsLetter(nextChar);
-        }
+            var result = (VerseUtils.GetStartVerseChars(ConfigurationManager.UseCommaDelimiter).Contains(prevChar) || char.IsLetter(prevChar))
+                 && (nextChar == default(char) || !(char.IsLetter(nextChar) || char.IsDigit(nextChar)));
 
-
-        //todo: перенести в singleton class
-        private char[] GetChapterVerseDelimiters()
-        {
-            if (_chapterVerseDelimiter == null)
+            if (result)
             {
-                lock (_locker)
-                {
-                    if (_chapterVerseDelimiter == null)
-                    {
-                        var chars = new List<char>() { VerseConstants.DefaultChapterVerseDelimiter };
-                        if (ConfigurationManager.UseCommaDelimiter)
-                            chars.Add(',');
-
-                        _chapterVerseDelimiter = chars.ToArray();
-                    }
-                }
+                VerseEntryInfo.EndIndex = endOfVerseEntry;
+                VerseEntryInfo.EndOfTextDetected = nextChar == default(char);
             }
 
-            return _chapterVerseDelimiter;
-        }
-
-
-        private char[] GetStartVerseChars()
-        {
-            if (_startVerseChars == null)
-            {
-                lock (_locker)
-                {
-                    if (_startVerseChars == null)
-                    {
-                        _startVerseChars = new List<char>(GetChapterVerseDelimiters()) { ',', ';', ' ', '.' }.Distinct().ToArray();
-                    }
-                }
-            }
-
-            return _startVerseChars;
+            return result;
         }
     }
 }

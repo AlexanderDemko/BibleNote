@@ -306,6 +306,7 @@ namespace BibleNote.Tests.Analytics
                     : new string[] { "Исх 19", "Исх 11" });
         }
 
+        [TestMethod]
         public void TestScenario24()
         {
             var input = @"[<span
@@ -326,6 +327,15 @@ lang=ru>&quot; (Джон Уолвурд)</span>";
 
             var result = _textParserService.ParseParagraph(input, null);
             CheckVerses(input, result, "Рим. 6:1-11", "Рим. 6:4-6", "Кол. 3:1", "Еф. 2:6", "2 Тим. 2:12", "Рим. 8:17", "2Пет 1:5-8");
+        }
+
+        [TestMethod]
+        public void TestScenario25()
+        {
+            var input = "Не понимает 'Луки 21-я глава', '1Кор. 1:29 ; 3:21; 4:7', 'В Первом послании к Коринфянам (10:31)'";
+
+            var result = _textParserService.ParseParagraph(input, null);
+            CheckVerses(input, result, "Лк 21", "1Кор 1:29", "1Кор 3:21", "1Кор 4:7", "1Кор 10:31");
         }
     }
 }
