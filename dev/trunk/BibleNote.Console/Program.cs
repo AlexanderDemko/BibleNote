@@ -3,6 +3,7 @@ using BibleNote.Analytics.Services;
 using HtmlAgilityPack;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -13,19 +14,22 @@ namespace BibleNoteConsole
     {
         static void Main(string[] args)
         {
-            using (var analyticsContext = new AnalyticsContext())
+            var sw = new Stopwatch();
+            sw.Start();
+
+            try
             {
-                Console.WriteLine(analyticsContext.DocumentFolders.Count());
+                var tester = new CheckVerseRecognitionVariantsPerfomance();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.ToString());
             }
 
+            sw.Stop();
 
-            var doc = new HtmlDocument();
-            doc.LoadHtml("test<div style='color:green' width='100px'> first text <text style='color:red' height=50px>text!!!</text>last text</div>");
-
-            Console.WriteLine(doc.DocumentNode.ChildNodes[0].InnerText);
-
-
-            Console.ReadLine();
-        }
+            Console.WriteLine("Finish. Elapsed time: {0}", sw.Elapsed);
+            Console.ReadKey();
+        }        
     }
 }

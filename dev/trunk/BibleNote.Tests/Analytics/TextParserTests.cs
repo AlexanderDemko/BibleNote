@@ -309,7 +309,7 @@ namespace BibleNote.Tests.Analytics
         [TestMethod]
         public void TestScenario24()
         {
-            var input = @"[<span
+            var input = @"<span
 lang=ru>&quot;С учением об уподоблении (отождествлении) связаны важные богословские истины. Верующий отождествляется с Христом в Его смерти (Рим. 6:1-</span><span
 style='font-weight:bold' lang=ru>11</span><span lang=ru>); погребении (Рим. 6:</span><span
 style='font-weight:bold' lang=ru>4</span><span style='font-weight:bold'
