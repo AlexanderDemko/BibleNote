@@ -26,21 +26,23 @@ interface RibbonSettings{
 }
 
 interface WordObjectBase {
-    Number: number;
-    Reference: number;
-    RefName: string;
+    number: number;
+    reference: number;
+    refName: string;
 }
 
 interface Book extends WordObjectBase {  
-    Chapters: Array<Chapter>;
+    chapters: Array<Chapter>;
 }
 interface Chapter extends WordObjectBase {   
-    Verses: Array<Verse>;
+    verses: Array<Verse>;
 }
 interface Verse extends WordObjectBase {   
-    Words: Array<Word>;
+    words: Array<Word>;
 }
-interface Word {
+interface Word extends WordObjectBase{
+    text: string;
+    isText: boolean;
 }
 
 declare class dhtmlXRibbon{
