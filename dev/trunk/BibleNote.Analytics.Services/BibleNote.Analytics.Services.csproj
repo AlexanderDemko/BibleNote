@@ -56,6 +56,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ApplicationManager.cs" />
     <Compile Include="BibleParallelTranslationConnectorManager.cs" />
     <Compile Include="BibleParallelTranslationManager.cs" />
     <Compile Include="ConfigurationManager.cs" />

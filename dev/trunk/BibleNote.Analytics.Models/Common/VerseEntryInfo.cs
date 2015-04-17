@@ -14,7 +14,7 @@ namespace BibleNote.Analytics.Models.Common
         public bool EndOfTextDetected { get; set; }
         public bool IsImportantVerse { get; set; }
         public bool IsExcluded { get; set; }
-        public bool IsInSquareBrackets { get; set; }
+        public bool IsInSquareBrackets { get; set; }        
 
         public bool VersePointerFound
         {

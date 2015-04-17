@@ -208,11 +208,12 @@ namespace BibleNote.Analytics.Services
             }
         }
 
-        public ModuleInfo UploadModule(string originalFilePath, string destFilePath, string moduleName)
+        public ModuleInfo UploadModule(string originalFilePath, string moduleName)
         {
             if (Path.GetExtension(originalFilePath).ToLower() != SystemConstants.ModuleFileExtension)
                 throw new InvalidModuleException(string.Format(LocalizationConstants.SelectFileWithExtension, SystemConstants.ModuleFileExtension));
 
+            var destFilePath = Path.Combine(GetModulesPackagesDirectory(), moduleName + SystemConstants.ModuleFileExtension);
             destFilePath = CopyModulePackage(originalFilePath, destFilePath);
 
             string destFolder = GetModuleDirectory(moduleName);
@@ -295,8 +296,13 @@ namespace BibleNote.Analytics.Services
 
             BibleParallelTranslationManager.MergeAllModulesWithMainBible(baseModule,
                     GetModules(true).Where(m => m.ShortName != ConfigurationManager.ModuleShortName));   // например, у меня основной модуль KJV. Я добавил RST, а потом - UBIO. Когда я удалю RST - надо добавить в основной модуль сокращения из UBIO (ведь раньше они не были добавлены, так как они повторялись с RST)
-        } 
+        }
 
+        public void SetCurrentModule(string moduleShortName)
+        {
+            ConfigurationManager.ModuleShortName = moduleShortName;
+            ConfigurationManager.SaveChanges();
+        }
 
         private void DeleteDirectory(object directoryPath)
         {

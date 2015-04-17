@@ -1,5 +1,6 @@
 ﻿using BibleNote.Analytics.Data;
 using BibleNote.Analytics.Services;
+using BibleNote.Analytics.Services.System;
 using HtmlAgilityPack;
 using System;
 using System.Collections.Generic;
@@ -14,12 +15,14 @@ namespace BibleNoteConsole
     {
         static void Main(string[] args)
         {
+            DIContainer.InitWithDefaults();
             var sw = new Stopwatch();
             sw.Start();
 
             try
             {
                 var tester = new CheckVerseRecognitionVariantsPerfomance();
+                tester.RunTests();
             }
             catch (Exception ex)
             {

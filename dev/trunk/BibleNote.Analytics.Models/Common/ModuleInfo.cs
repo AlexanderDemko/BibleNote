@@ -109,11 +109,17 @@ namespace BibleNote.Analytics.Models.Common
         /// <summary>
         /// возвращает книгу Библии с учётом всех сокращений 
         /// </summary>
-        /// <param name="s"></param>
-        /// <param name="endsWithDot">Методу передаётся уже стримленная строка. Потому отдельно передаётся: заканчивалось ли название книги на точку. Если имя книги было полное (а не сокращённое) и оно окончивалось на точку, то не считаем это верной записью</param>
+        /// <param name="s">Строка, которая предположительно представляет собой название книги. Ни одного лишнего сивола не должно быть.</param>
+        /// <param name="endsWithDot">Методу передаётся уже стримленная строка. Потому отдельно передаётся: заканчивалось ли название книги на точку. Если имя книги было полное (а не сокращённое) и оно окончивалось на точку, то не считаем это верной записью.</param>
         /// <returns></returns>
         public BibleBookInfo GetBibleBook(string s, bool endsWithDot, out string moduleName)
         {
+            if (s.Length == 0)
+            {
+                moduleName = null;
+                return null;
+            }
+
             s = s.ToLowerInvariant();
 
             var result = GetBibleBookByExactMatch(s, endsWithDot, out moduleName);
@@ -137,9 +143,9 @@ namespace BibleNote.Analytics.Models.Common
             {
                 Abbreviation abbreviation = null;
 
-                if (book.AllAbbreviationsWithSectionName.ContainsKey(s))
+                if (book.AllAbbreviations.ContainsKey(s))
                 {
-                    abbreviation = book.AllAbbreviationsWithSectionName[s];
+                    abbreviation = book.AllAbbreviations[s];
                     if (endsWithDot && abbreviation.IsFullBookName)
                         abbreviation = null;
                 }
@@ -208,10 +214,7 @@ namespace BibleNote.Analytics.Models.Common
         public string Name { get; set; }
 
         [XmlAttribute]
-        public string ShortName { get; set; }
-
-        [XmlAttribute]
-        public string SectionName { get; set; }
+        public string ShortName { get; set; }        
 
         [XmlAttribute]
         [DefaultValue("")]
@@ -259,26 +262,13 @@ namespace BibleNote.Analytics.Models.Common
             get
             {
                 if (_allAbbreviations == null)
-                    _allAbbreviations = GetAllAbbreviations(false);
+                    _allAbbreviations = GetAllAbbreviations();
 
                 return _allAbbreviations;
             }
-        }
+        }      
 
-        private Dictionary<string, Abbreviation> _allAbbreviationsWithSectionName;
-        [XmlIgnore]
-        public Dictionary<string, Abbreviation> AllAbbreviationsWithSectionName
-        {
-            get
-            {
-                if (_allAbbreviationsWithSectionName == null)
-                    _allAbbreviationsWithSectionName = GetAllAbbreviations(true);
-
-                return _allAbbreviationsWithSectionName;
-            }
-        }
-
-        private Dictionary<string, Abbreviation> GetAllAbbreviations(bool includeSectionName)
+        private Dictionary<string, Abbreviation> GetAllAbbreviations()
         {
             var result = new Dictionary<string, Abbreviation>(StringComparer.OrdinalIgnoreCase);
             var nameLower = Name.ToLowerInvariant();
@@ -291,13 +281,7 @@ namespace BibleNote.Analytics.Models.Common
             {
                 if (!result.ContainsKey(abbr.Value))
                     result.Add(abbr.Value, abbr);
-            }
-
-            if (includeSectionName)
-            {
-                var sectionNameLower = SectionName.ToLowerInvariant();
-                result.Add(sectionNameLower, new Abbreviation(sectionNameLower) { IsFullBookName = true });
-            }
+            }            
 
             return result;
         }
@@ -315,7 +299,7 @@ namespace BibleNote.Analytics.Models.Common
 
         [XmlAttribute]
         [DefaultValue("")]
-        public string ModuleName { get; set; }
+        public string ModuleName { get; set; }        
 
         public Abbreviation()
         {
