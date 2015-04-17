@@ -43,6 +43,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="IApplicationManager.cs" />
     <Compile Include="IBibleParallelTranslationConnectorManager.cs" />
     <Compile Include="IBibleParallelTranslationManager.cs" />
     <Compile Include="IConfigurationManager.cs" />

@@ -28,6 +28,7 @@ namespace BibleNote.Analytics.Contracts
         bool ModuleIsCorrect(string moduleName, BibleNote.Analytics.Models.Common.ModuleType? moduleType = null);
         ModuleInfo ReadModuleInfo(string moduleFilePath);
         void UpdateModuleManifest(ModuleInfo moduleInfo);
-        ModuleInfo UploadModule(string originalFilePath, string destFilePath, string moduleName);
+        ModuleInfo UploadModule(string originalFilePath, string moduleName);
+        void SetCurrentModule(string moduleShortName);
     }
 }

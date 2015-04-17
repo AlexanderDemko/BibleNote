@@ -18,8 +18,14 @@ namespace BibleNote.Analytics.Services
 
         [Dependency]
         public IConfigurationManager ConfigurationManager { get; set; }
+
+        [Dependency]
+        public IModulesManager ModulesManager { get; set; }
+
+        [Dependency]
+        public IApplicationManager ApplicationManager { get; set; }
         
-        public VerseEntryInfo VerseEntryInfo { get; set; }
+        public VerseEntryInfo VerseEntryInfo { get; set; }        
 
         public VerseEntryInfo TryGetVerse(string text, int index)
         {
@@ -41,6 +47,29 @@ namespace BibleNote.Analytics.Services
         private string GetVersePointerPotentialString(string text, int indexOfDigit)
         {
             throw new NotImplementedException();
+        }
+
+        //todo: доделать (рефакторинг + возвращать модуль)
+        private string GetBookName(string text, bool endsWithDot)
+        {
+            var index = -1;
+            string moduleName;
+
+            do
+            {
+                var bibleBookInfo = ApplicationManager.CurrentModuleInfo.GetBibleBook(text, endsWithDot, out moduleName);
+                if (bibleBookInfo != null)
+                    return bibleBookInfo.Name;
+                else
+                {
+                    index = text.IndexOfAny(new char[] { ' ', ',', '.', ':', '-', '/', '\\', '>', '<', '=' });
+                    if (index != -1)
+                        text = text.Substring(index + 1);
+                }
+
+            } while (index > -1);
+
+            return null;
         }
 
         private bool EntryIsLikeVerse(string text, int indexOfDigit)

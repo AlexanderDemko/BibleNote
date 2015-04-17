@@ -782,6 +782,10 @@
       <Abbreviation IsFullBookName="true">1-коринфянам</Abbreviation>
       <Abbreviation>1-коринф</Abbreviation>
       <Abbreviation>1-кор</Abbreviation>
+	  <Abbreviation>первое послание к коринфянам</Abbreviation>
+	  <Abbreviation>первом послании к коринфянам</Abbreviation>
+	  <Abbreviation>первое послание к коринфской церкви</Abbreviation>
+	  <Abbreviation>первом послании к коринфской церкви</Abbreviation>
     </BibleBook>
     <BibleBook Index="47" Name="2-е Коринфянам" ShortName="2коринфянам" SectionName="15. 2-е Коринфянам">
       <Abbreviation>2кор</Abbreviation>
@@ -796,6 +800,10 @@
       <Abbreviation IsFullBookName="true">2-коринфянам</Abbreviation>
       <Abbreviation>2-коринф</Abbreviation>
       <Abbreviation>2-кор</Abbreviation>
+	  <Abbreviation>воторое послание к коринфянам</Abbreviation>
+	  <Abbreviation>вотором послании к коринфянам</Abbreviation>
+	  <Abbreviation>воторое послание к коринфской церкви</Abbreviation>
+	  <Abbreviation>вотором послании к коринфской церкви</Abbreviation>
     </BibleBook>
     <BibleBook Index="48" Name="К Галатам" ShortName="галатам" SectionName="16. К Галатам">
       <Abbreviation>гал</Abbreviation>

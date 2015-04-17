@@ -34,6 +34,7 @@ namespace BibleNote.Analytics.Services.System
             Container.RegisterType<IBibleParallelTranslationManager, BibleParallelTranslationManager>(new ContainerControlledLifetimeManager());
             Container.RegisterType<IVerseRecognitionService, VerseRecognitionService>(new TransientLifetimeManager());
             Container.RegisterType<IVersePointerFactory, VersePointerFactory>(new TransientLifetimeManager());
+            Container.RegisterType<IApplicationManager, ApplicationManager>(new ContainerControlledLifetimeManager());
         }
 
         /// <summary>

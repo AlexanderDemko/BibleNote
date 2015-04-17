@@ -223,7 +223,9 @@ namespace BibleNote.Analytics.Models.Common
             {
                 _book = value;
             }
-        }    
+        }
+
+        public string ModuleName { get; set; }
 
         /// <summary>
         /// первоначально переданная строка в конструктор
