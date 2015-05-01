@@ -15,7 +15,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using ModuleType = BibleNote.Analytics.Models.Common.ModuleType;
 
-namespace BibleNote.Analytics.Services
+namespace BibleNote.Analytics.Services.Environment
 {
     public class ModulesManager : IModulesManager
     {

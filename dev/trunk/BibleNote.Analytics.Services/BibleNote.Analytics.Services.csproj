@@ -56,17 +56,17 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ApplicationManager.cs" />
-    <Compile Include="BibleParallelTranslationConnectorManager.cs" />
-    <Compile Include="BibleParallelTranslationManager.cs" />
-    <Compile Include="ConfigurationManager.cs" />
-    <Compile Include="ModulesManager.cs" />
+    <Compile Include="Environment\ApplicationManager.cs" />
+    <Compile Include="ParallelVerses\BibleParallelTranslationConnectorManager.cs" />
+    <Compile Include="ParallelVerses\BibleParallelTranslationManager.cs" />
+    <Compile Include="Environment\ConfigurationManager.cs" />
+    <Compile Include="Environment\ModulesManager.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="System\DIContainer.cs" />
     <Compile Include="System\Logger.cs" />
-    <Compile Include="TextParserService.cs" />
-    <Compile Include="VersePointerFactory.cs" />
-    <Compile Include="VerseRecognitionService.cs" />
+    <Compile Include="VerseParsing\TextParserService.cs" />
+    <Compile Include="VerseParsing\VersePointerFactory.cs" />
+    <Compile Include="VerseParsing\VerseRecognitionService.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\BibleNote.Analytics.Contracts\BibleNote.Analytics.Contracts.csproj">

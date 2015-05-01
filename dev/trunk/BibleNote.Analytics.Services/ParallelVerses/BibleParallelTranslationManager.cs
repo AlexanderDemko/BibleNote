@@ -9,7 +9,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 
-namespace BibleNote.Analytics.Services
+namespace BibleNote.Analytics.Services.ParallelVerses
 {
     public class BibleParallelTranslationManager : IBibleParallelTranslationManager
     {
