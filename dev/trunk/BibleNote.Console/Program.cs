@@ -21,8 +21,11 @@ namespace BibleNoteConsole
 
             try
             {
-                var tester = new CheckVerseRecognitionVariantsPerfomance();
-                tester.RunTests();
+                //new CheckVerseRecognitionVariantsPerfomance().RunTests();
+
+                var htmlDoc = new HtmlDocument();
+                htmlDoc.LoadHtml("123");
+                
             }
             catch (Exception ex)
             {

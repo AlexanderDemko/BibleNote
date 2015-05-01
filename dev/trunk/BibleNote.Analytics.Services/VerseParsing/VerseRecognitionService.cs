@@ -11,6 +11,15 @@ using System.Threading.Tasks;
 
 namespace BibleNote.Analytics.Services.VerseParsing
 {
+    public class BookEntry
+    {
+        public string BookName { get; set; }
+        public string ModuleName { get; set; }
+    }
+
+    /// <summary>
+    /// Класс оперирует только обычной строкой. Ничего не знает об html. Ищет стих только в пределах переданной строки. Ему не важно, нашёл он книгу, главу или только стих.
+    /// </summary>
     public class VerseRecognitionService : IVerseRecognitionService
     {
         [Dependency]
@@ -23,46 +32,56 @@ namespace BibleNote.Analytics.Services.VerseParsing
         public IModulesManager ModulesManager { get; set; }
 
         [Dependency]
-        public IApplicationManager ApplicationManager { get; set; }
+        public IApplicationManager ApplicationManager { get; set; }       
         
-        public VerseEntryInfo VerseEntryInfo { get; set; }        
-
-        public VerseEntryInfo TryGetVerse(string text, int index)
+        public VerseEntryInfo TryGetVerse(string text, int startIndex)
         {
-            VerseEntryInfo = new VerseEntryInfo();
+            VerseEntryInfo result = null;
 
-            var indexOfDigit = StringUtils.GetNextIndexOfDigit(text, index);            
+            var indexOfDigit = StringUtils.GetNextIndexOfDigit(text, startIndex);
             while (indexOfDigit != -1)
             {
                 if (EntryIsLikeVerse(text, indexOfDigit))
                 {
-                    var versePointerPotentialString = GetVersePointerPotentialString(text, indexOfDigit);                
+                    var actualStringStartIndex = indexOfDigit - ApplicationManager.CurrentModuleInfo.MaxBookNameLength - 2;
+                    if (actualStringStartIndex < startIndex) 
+                        actualStringStartIndex = startIndex;
 
+
+                    // todo: немного не понятно, нужно ли здесь вызвать другой сервис (тот же VersePointerFactory). Или просто текущий класс не делать в таком процедурном стиле.
+                    result = TryGetVerseEntry(text, actualStringStartIndex, indexOfDigit);                    
                 }
+
+                if (result != null && result.VersePointerFound)
+                    break;
+                else
+                    indexOfDigit = StringUtils.GetNextIndexOfDigit(text, indexOfDigit + 1);
             }
 
-            throw new NotImplementedException();
+            return result;
         }
 
-        private string GetVersePointerPotentialString(string text, int indexOfDigit)
+        private VerseEntryInfo TryGetVerseEntry(string text, int startIndex, int indexOfDigit)
         {
-            throw new NotImplementedException();
+            var result = new VerseEntryInfo();
+            //var bookName = GetBookName(text.Substring(startIndex, indexOfDigit - startIndex), );
+
+            return result;
         }
 
-        //todo: доделать (рефакторинг + возвращать модуль)
-        private string GetBookName(string text, bool endsWithDot)
+        private BookEntry GetBookName(string text, bool endsWithDot)
         {
-            var index = -1;
+            var index = -1;            
             string moduleName;
 
             do
             {
                 var bibleBookInfo = ApplicationManager.CurrentModuleInfo.GetBibleBook(text, endsWithDot, out moduleName);
                 if (bibleBookInfo != null)
-                    return bibleBookInfo.Name;
+                    return new BookEntry() { BookName = bibleBookInfo.Name, ModuleName = moduleName };
                 else
                 {
-                    index = text.IndexOfAny(new char[] { ' ', ',', '.', ':', '-', '/', '\\', '>', '<', '=' });
+                    index = text.IndexOfAny(VerseUtils.GetWordDelimiters());
                     if (index != -1)
                         text = text.Substring(index + 1);
                 }
@@ -75,17 +94,11 @@ namespace BibleNote.Analytics.Services.VerseParsing
         private bool EntryIsLikeVerse(string text, int indexOfDigit)
         {
             var prevChar = StringUtils.GetChar(text, indexOfDigit - 1);
-            int endOfVerseEntry;
-            var nextChar = StringUtils.GetCharAfterNumber(text, indexOfDigit, out endOfVerseEntry);
+            int indexOfChar;
+            var nextChar = StringUtils.GetCharAfterNumber(text, indexOfDigit, out indexOfChar);
 
             var result = (VerseUtils.GetStartVerseChars(ConfigurationManager.UseCommaDelimiter).Contains(prevChar) || char.IsLetter(prevChar))
                  && (nextChar == default(char) || !(char.IsLetter(nextChar) || char.IsDigit(nextChar)));
-
-            if (result)
-            {
-                VerseEntryInfo.EndIndex = endOfVerseEntry;
-                VerseEntryInfo.EndOfTextDetected = nextChar == default(char);
-            }
 
             return result;
         }

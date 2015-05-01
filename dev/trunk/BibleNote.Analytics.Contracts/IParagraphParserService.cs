@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace BibleNote.Analytics.Contracts
 {
-    public interface ITextParserService
+    public interface IParagraphParserService
     {
         ParagraphParseResult ParseParagraph(string text, DocumentParseContext docParseContext);
     }
