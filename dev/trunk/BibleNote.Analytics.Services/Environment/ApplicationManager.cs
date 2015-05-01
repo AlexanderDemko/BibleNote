@@ -7,7 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BibleNote.Analytics.Services
+namespace BibleNote.Analytics.Services.Environment
 {
     public class ApplicationManager : IApplicationManager
     {

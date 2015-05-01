@@ -8,7 +8,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BibleNote.Analytics.Services
+namespace BibleNote.Analytics.Services.VerseParsing
 {
     public class TextParserService : ITextParserService
     {

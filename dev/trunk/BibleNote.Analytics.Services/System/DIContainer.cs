@@ -1,4 +1,7 @@
 ﻿using BibleNote.Analytics.Contracts;
+using BibleNote.Analytics.Services.Environment;
+using BibleNote.Analytics.Services.ParallelVerses;
+using BibleNote.Analytics.Services.VerseParsing;
 using Microsoft.Practices.Unity;
 using System;
 using System.Collections.Generic;
