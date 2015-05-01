@@ -10,7 +10,7 @@ namespace BibleNote.Tests.Analytics
     [TestClass]
     public class TextParserTests
     {
-        private ITextParserService _textParserService;
+        private IParagraphParserService _textParserService;
         private IConfigurationManager _configurationManager;
         private IVersePointerFactory _verseParserService;
 
@@ -18,7 +18,7 @@ namespace BibleNote.Tests.Analytics
         public void Init()
         {
             DIContainer.InitWithDefaults();
-            _textParserService = DIContainer.Resolve<ITextParserService>();
+            _textParserService = DIContainer.Resolve<IParagraphParserService>();
             _configurationManager = DIContainer.Resolve<IConfigurationManager>();
             _verseParserService = DIContainer.Resolve<IVersePointerFactory>();
         }

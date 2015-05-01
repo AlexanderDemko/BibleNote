@@ -9,30 +9,31 @@ namespace BibleNote.Analytics.Core.Helpers
 {
     public static class VerseUtils
     {
-        private static char[] _chapterVerseDelimiter;
+        private static char[] _chapterVerseDelimiters;
         private static char[] _startVerseChars;
+        private static char[] _wordDelmiters;
+
         private static readonly object _locker = new object();
                 
         public static char[] GetChapterVerseDelimiters(bool useCommaDelimiter)
         {
-            if (_chapterVerseDelimiter == null)
+            if (_chapterVerseDelimiters == null)
             {
                 lock (_locker)
                 {
-                    if (_chapterVerseDelimiter == null)
+                    if (_chapterVerseDelimiters == null)
                     {
                         var chars = new List<char>() { VerseConstants.DefaultChapterVerseDelimiter };
                         if (useCommaDelimiter)
                             chars.Add(',');
 
-                        _chapterVerseDelimiter = chars.ToArray();
+                        _chapterVerseDelimiters = chars.ToArray();
                     }
                 }
             }
 
-            return _chapterVerseDelimiter;
+            return _chapterVerseDelimiters;
         }
-
 
         public static char[] GetStartVerseChars(bool useCommaDelimiter)
         {
@@ -48,6 +49,22 @@ namespace BibleNote.Analytics.Core.Helpers
             }
 
             return _startVerseChars;
+        }
+
+        public static char[] GetWordDelimiters()
+        {
+            if (_wordDelmiters == null)
+            {
+                lock(_locker)
+                {
+                    if (_wordDelmiters == null)
+                    {
+                        _wordDelmiters = new char[] { ' ', ',', '.', ':', '-', '/', '\\', '>', '<', '=' };
+                    }
+                }
+            }
+
+            return _wordDelmiters;
         }
     }
 }

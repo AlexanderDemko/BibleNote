@@ -100,6 +100,19 @@ namespace BibleNote.Analytics.Models.Common
         [XmlElement]
         public BibleStructureInfo BibleStructure { get; set; }
 
+        private int _maxBookNameLength;
+        [XmlIgnore]
+        public int MaxBookNameLength
+        {
+            get 
+            {
+                if (_maxBookNameLength == 0)
+                    _maxBookNameLength = this.BibleStructure.BibleBooks.Max(b => b.Abbreviations.Max(ab => ab.Value.Length));
+
+                return _maxBookNameLength;
+            }
+        }
+
         public ModuleInfo()
         {
             this.BibleTranslationDifferences = new BibleTranslationDifferences();
