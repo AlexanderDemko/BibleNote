@@ -8,6 +8,6 @@ namespace BibleNote.Analytics.Core.Constants
 {
     public static class VerseConstants
     {
-        public const char DefaultChapterVerseDelimiter = ':';
+        
     }
 }

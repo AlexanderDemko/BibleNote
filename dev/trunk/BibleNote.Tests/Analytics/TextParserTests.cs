@@ -10,7 +10,7 @@ namespace BibleNote.Tests.Analytics
     [TestClass]
     public class TextParserTests
     {
-        private IParagraphParserService _textParserService;
+        private IParagraphParser _parahraphParserService;
         private IConfigurationManager _configurationManager;
         private IVersePointerFactory _verseParserService;
 
@@ -18,7 +18,7 @@ namespace BibleNote.Tests.Analytics
         public void Init()
         {
             DIContainer.InitWithDefaults();
-            _textParserService = DIContainer.Resolve<IParagraphParserService>();
+            _parahraphParserService = DIContainer.Resolve<IParagraphParser>();
             _configurationManager = DIContainer.Resolve<IConfigurationManager>();
             _verseParserService = DIContainer.Resolve<IVersePointerFactory>();
         }
@@ -47,7 +47,7 @@ namespace BibleNote.Tests.Analytics
             var input = "тест Лк 1:16, 10:13-17;18-19; 11:1-2 тест";
             var expected = "тест Лк 1:16, 10:13-17; 18-19; 11:1-2 тест";
 
-            var result = _textParserService.ParseParagraph(input, null);
+            var result = _parahraphParserService.ParseParagraph(input, null);
             CheckVerses(expected, result, "Лк 1:16", "Лк 10:13", "Лк 10:14", "Лк 10:15", "Лк 10:16",
                 "Лк 10:17", "Лк 18", "Лк 19", "Лк 11:1", "Лк 11:2");            
         }
@@ -57,7 +57,7 @@ namespace BibleNote.Tests.Analytics
         {
             var input = "тест Лк 1:16, 10:13-17,18-19; 11:1-2 тест";
 
-            var result = _textParserService.ParseParagraph(input, null);
+            var result = _parahraphParserService.ParseParagraph(input, null);
             CheckVerses(input, result, "Лк 1:16", "Лк 10:13", "Лк 10:14",
                 "Лк 10:15", "Лк 10:16", "Лк 10:17", "Лк 10:18", "Лк 10:19", "Лк 11:1", "Лк 11:2");
         }
@@ -67,7 +67,7 @@ namespace BibleNote.Tests.Analytics
         {
             var input = "Этот тест из 1 Ин 1 был подготвлен в (:2) и :3-4 и в :7-6, _:8_ стихах. А в 2-е Ин 1:3-5,6 тоже интересная инфа о {:7}. И о 2Тим 1:1,2-3";
 
-            var result = _textParserService.ParseParagraph(input, null);
+            var result = _parahraphParserService.ParseParagraph(input, null);
             CheckVerses(input, result, "1Ин 1", "1Ин 1:2", "1Ин 1:3", "1Ин 1:4", "1Ин 1:7", "1Ин 1:8",
                 "2Ин 1:3", "2Ин 1:4", "2Ин 1:5", "2Ин 1:6", "2Ин 1:7", "2Тим 1:1", "2Тим 1:2", "2Тим 1:3");
         }
@@ -78,7 +78,7 @@ namespace BibleNote.Tests.Analytics
             var input = "1 Лк 1:1, 2";
             var expected = "1 Лк 1:1,2";
 
-            var result = _textParserService.ParseParagraph(input, null);
+            var result = _parahraphParserService.ParseParagraph(input, null);
             CheckVerses(expected, result, "Лк 1:1", "Лк 1:2");
         }
 
@@ -87,7 +87,7 @@ namespace BibleNote.Tests.Analytics
         {
             var input = "Ин 1: вот и Отк 5(синодальный перевод) и Деяния 1:5,6: вот";
 
-            var result = _textParserService.ParseParagraph(input, null);
+            var result = _parahraphParserService.ParseParagraph(input, null);
             CheckVerses(input, result, "Ин 1", "Отк 5", "Деян 1:5", "Деян 1:6");
         }
 
@@ -96,7 +96,7 @@ namespace BibleNote.Tests.Analytics
         {
             var input = "Ин 1:50-2:2,3-4";
 
-            var result = _textParserService.ParseParagraph(input, null);
+            var result = _parahraphParserService.ParseParagraph(input, null);
             CheckVerses(input, result, "Ин 1:50", "Ин 1:51", "Ин 2:1", "Ин 2:2", "Ин 2:3", "Ин 2:4");
         }
 
@@ -105,7 +105,7 @@ namespace BibleNote.Tests.Analytics
         {
             var input = "Ин 1:50-2:2,4-5";
 
-            var result = _textParserService.ParseParagraph(input, null);
+            var result = _parahraphParserService.ParseParagraph(input, null);
             CheckVerses(input, result, "Ин 1:50", "Ин 1:51", "Ин 2:1", "Ин 2:2", "Ин 2:4", "Ин 2:5");
         }
 
@@ -114,7 +114,7 @@ namespace BibleNote.Tests.Analytics
         {
             var input = ":1-2 как и в :3,4-5";
 
-            var result = _textParserService.ParseParagraph(input, null);
+            var result = _parahraphParserService.ParseParagraph(input, null);
             CheckVerses(input, result, "1Кор 1", "1Кор 1:1", "1Кор 1:2", "1Кор 1:3", "1Кор 1:4", "1Кор 1:5");
         }
 
@@ -123,7 +123,7 @@ namespace BibleNote.Tests.Analytics
         {
             var input = "Ps 89:1-2";
 
-            var result = _textParserService.ParseParagraph(input, null);
+            var result = _parahraphParserService.ParseParagraph(input, null);
             CheckVerses(input, result, "Пс 88:1", "Пс 88:2", "Пс 88:3");
         }
 
@@ -134,7 +134,7 @@ namespace BibleNote.Tests.Analytics
             var expectedIfUseCommaDelimiter = "В Ин 1:1 написано. И в 1,2 веке про это писали! Про :2 - тоже";
             var expectedIfNotUseCommaDelimiter = "В Ин 1, 1 написано. И в 1,2 веке про это писали! Про :2 - тоже";
 
-            var result = _textParserService.ParseParagraph(input, null);
+            var result = _parahraphParserService.ParseParagraph(input, null);
             CheckVerses(
                 _configurationManager.UseCommaDelimiter ? expectedIfUseCommaDelimiter : expectedIfNotUseCommaDelimiter,
                 result,
@@ -150,7 +150,7 @@ namespace BibleNote.Tests.Analytics
             var expectedIfUseCommaDelimiter = "в 1 Ин 1:2-3 и в Иисуса Навина 2-3 было написано про 1-е Кор 1:2-3,4-5; 6-7, 8-9, 10 и в :7";
             var expectedIfNotUseCommaDelimiter = "в 1 Ин 1, 2-3 и в Иисуса Навина 2-3 было написано про 1-е Кор 1, 2-3, 4-5; 6-7, 8-9, 10 и в :7";
 
-            var result = _textParserService.ParseParagraph(input, null);
+            var result = _parahraphParserService.ParseParagraph(input, null);
             CheckVerses(
                 _configurationManager.UseCommaDelimiter ? expectedIfUseCommaDelimiter : expectedIfNotUseCommaDelimiter,
                 result,
@@ -171,7 +171,7 @@ namespace BibleNote.Tests.Analytics
             var expectedIfUseCommaDelimiter = "Ин 1:2,3 и ещё: Марка 1:2,3: а потом Лк 1:2-3";
             var expectedIfNotUseCommaDelimiter = "Ин 1, 2, 3 и ещё: Марка 1, 2, 3: а потом Лк 1, 2-3";
 
-            var result = _textParserService.ParseParagraph(input, null);
+            var result = _parahraphParserService.ParseParagraph(input, null);
 
             CheckVerses(
                 _configurationManager.UseCommaDelimiter ? expectedIfUseCommaDelimiter : expectedIfNotUseCommaDelimiter,
@@ -187,7 +187,7 @@ namespace BibleNote.Tests.Analytics
             var input = "<span lang=en>1</span><span lang=ru>И</span><span lang=ru>н</span><span lang=ru> </span><span lang=ru>1</span><span lang=ru>:</span><span lang=ru>1</span> и <span lang=ru>:</span><span lang=ru>7</span>";
             var expected = "1Ин 1:1 и :7";
 
-            var result = _textParserService.ParseParagraph(input, null);
+            var result = _parahraphParserService.ParseParagraph(input, null);
             CheckVerses(expected, result, "1Ин 1:1", "1Ин 1:7");
         }
 
@@ -196,7 +196,7 @@ namespace BibleNote.Tests.Analytics
         {
             var input = "I Cor 6:7, II Tim 2:3";
 
-            var result = _textParserService.ParseParagraph(input, null);
+            var result = _parahraphParserService.ParseParagraph(input, null);
             CheckVerses(input, result, "1Кор 6:7", "2 Тим 2:3");
         }
 
@@ -207,7 +207,7 @@ namespace BibleNote.Tests.Analytics
             var expectedIfUseCommaDelimiter = "Исх. 13:14,15,20.";
             var expectedIfNotUseCommaDelimiter = "Исх. 13, 14, 15, 20.";
 
-            var result = _textParserService.ParseParagraph(input, null);
+            var result = _parahraphParserService.ParseParagraph(input, null);
             CheckVerses(
                 _configurationManager.UseCommaDelimiter ? expectedIfUseCommaDelimiter : expectedIfNotUseCommaDelimiter,
                 result,
@@ -222,7 +222,7 @@ namespace BibleNote.Tests.Analytics
             var input = "<span lang=ru>Вот Ин 1</span><span lang=en-US>:</span><span lang=ru>12 где в </span><span lang=ro>:</span><span lang=se-FI>13</span>";
             var expected = "Вот Ин 1:12 где в :13";
 
-            var result = _textParserService.ParseParagraph(input, null);
+            var result = _parahraphParserService.ParseParagraph(input, null);
             CheckVerses(expected, result, "Ин 1:12", "Ин 1:13");
         }
 
@@ -232,7 +232,7 @@ namespace BibleNote.Tests.Analytics
         {
             var input = "Иуда 14,15";
 
-            var result = _textParserService.ParseParagraph(input, null);
+            var result = _parahraphParserService.ParseParagraph(input, null);
             CheckVerses(input, result, "Иуд 1:14", "Иуд 1:15");
         }
 
@@ -241,7 +241,7 @@ namespace BibleNote.Tests.Analytics
         {
             var input = "Ин 20:7-9, Л2";
 
-            var result = _textParserService.ParseParagraph(input, null);
+            var result = _parahraphParserService.ParseParagraph(input, null);
             CheckVerses(input, result, "Ин 20:7", "Ин 20:8", "Ин 20:9");
         }
 
@@ -252,7 +252,7 @@ namespace BibleNote.Tests.Analytics
             var expectedIfUseCommaDelimiter = "Ис 43:4, 45:5, 46:7";
             var expectedIfNotUseCommaDelimiter = "Ис 43, 4, 45, 5, 46, 7";
 
-            var result = _textParserService.ParseParagraph(input, null);
+            var result = _parahraphParserService.ParseParagraph(input, null);
             CheckVerses(
                 _configurationManager.UseCommaDelimiter ? expectedIfUseCommaDelimiter : expectedIfNotUseCommaDelimiter,
                 result,
@@ -267,7 +267,7 @@ namespace BibleNote.Tests.Analytics
             var input = "Ин1, Ин1:20";
             var expected = "Ин 1, Ин 1:20";
 
-            var result = _textParserService.ParseParagraph(input, null);
+            var result = _parahraphParserService.ParseParagraph(input, null);
             CheckVerses(expected, result, "Ин 1", "Ин 1:20");
         }
 
@@ -277,7 +277,7 @@ namespace BibleNote.Tests.Analytics
             var input = "2Ин2";
             var expected = "2Ин 2";
 
-            var result = _textParserService.ParseParagraph(input, null);
+            var result = _parahraphParserService.ParseParagraph(input, null);
             CheckVerses(expected, result, "2Ин 1:2");
         }
 
@@ -286,7 +286,7 @@ namespace BibleNote.Tests.Analytics
         {
             var input = "2Ин2,3Ин3";
             var expected = "2Ин 2,3Ин 3";
-            var result = _textParserService.ParseParagraph(input, null);
+            var result = _parahraphParserService.ParseParagraph(input, null);
             CheckVerses(expected, result, "2Ин 1:2", "3Ин 1:3");
         }
 
@@ -297,7 +297,7 @@ namespace BibleNote.Tests.Analytics
             var expectedIfUseCommaDelimiter = "Исх. 19:11";
             var expectedIfNotUseCommaDelimiter = "Исх. 19, 11";
 
-            var result = _textParserService.ParseParagraph(input, null);
+            var result = _parahraphParserService.ParseParagraph(input, null);
             CheckVerses(
                 _configurationManager.UseCommaDelimiter ? expectedIfUseCommaDelimiter : expectedIfNotUseCommaDelimiter,
                 result,
@@ -325,7 +325,7 @@ style='font-weight:bold' lang=ru>5</span><span style='font-style:italic'
 lang=ru>-8</span><span style='font-weight:bold;font-style:italic' lang=ru>*</span><span
 lang=ru>&quot; (Джон Уолвурд)</span>";
 
-            var result = _textParserService.ParseParagraph(input, null);
+            var result = _parahraphParserService.ParseParagraph(input, null);
             CheckVerses(input, result, "Рим. 6:1-11", "Рим. 6:4-6", "Кол. 3:1", "Еф. 2:6", "2 Тим. 2:12", "Рим. 8:17", "2Пет 1:5-8");
         }
 
@@ -334,8 +334,44 @@ lang=ru>&quot; (Джон Уолвурд)</span>";
         {
             var input = "Не понимает 'Луки 21-я глава', '1Кор. 1:29 ; 3:21; 4:7', 'В Первом послании к Коринфянам (10:31)'";
 
-            var result = _textParserService.ParseParagraph(input, null);
+            var result = _parahraphParserService.ParseParagraph(input, null);
             CheckVerses(input, result, "Лк 21", "1Кор 1:29", "1Кор 3:21", "1Кор 4:7", "1Кор 10:31");
+        }
+
+        [TestMethod]
+        public void TestScenario26()
+        {
+            var input = ".-5 Ин 1:5,6: вот";
+
+            var result = _parahraphParserService.ParseParagraph(input, null);
+            CheckVerses(input, result, "Ин 1:5", "Ин 1:6");
+        }
+
+        [TestMethod]
+        public void TestScenario27()
+        {
+            var input = ".:5 Ин.  (5 : 7), Лк.   (6:7)";
+
+            var result = _parahraphParserService.ParseParagraph(input, null);
+            CheckVerses(input, result, "Ин 5:7");
+        }
+
+        [TestMethod]
+        public void TestScenario28()
+        {
+            var input = "<b><b>Ин</b><b>3:16</b></b> <b>Лк<b>5:1<b/>6:2</b>";
+
+            var result = _parahraphParserService.ParseParagraph(input, null);
+            CheckVerses(input, result, "Ин 3:16");
+        }
+
+        [TestMethod]
+        public void TestScenario29()
+        {
+            var input = "Ин 5:6 и 7 стих, 8ст, ст9-11, ст.12,13";
+
+            var result = _parahraphParserService.ParseParagraph(input, null);
+            CheckVerses(input, result, "Ин 5:6", "Ин 5:7", "Ин 5:8", "Ин 5:9", "Ин 5:10", "Ин 5:11", "Ин 5:12", "Ин 5:13");
         }
     }
 }

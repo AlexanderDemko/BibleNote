@@ -49,7 +49,7 @@
     <Compile Include="IConfigurationManager.cs" />
     <Compile Include="ILogger.cs" />
     <Compile Include="IModulesManager.cs" />
-    <Compile Include="IParagraphParserService.cs" />
+    <Compile Include="IParagraphParser.cs" />
     <Compile Include="IVersePointerFactory.cs" />
     <Compile Include="IVerseRecognitionService.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

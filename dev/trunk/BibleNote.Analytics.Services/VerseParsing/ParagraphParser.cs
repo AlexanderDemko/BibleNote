@@ -29,7 +29,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
         }        
     }
 
-    public class ParagraphParserService : IParagraphParserService
+    public class ParagraphParser : IParagraphParser
     {
         [Dependency]
         public IVerseRecognitionService VerseRecognitionService { get; set; }
@@ -37,7 +37,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
         private DocumentParseContext _docParseContext;
         private ParagraphParseResult _result;
 
-        public ParagraphParserService()
+        public ParagraphParser()
         {   
             _result = new ParagraphParseResult();            
         }

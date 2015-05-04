@@ -27,6 +27,14 @@ namespace BibleNote.Analytics.Models.Common
             }
         }
 
+        public bool IsEmpty
+        {
+            get
+            {
+                return Chapter == 0;
+            }
+        }
+
         public VerseNumber(int chapter, int? verse = null)
         {
             Chapter = chapter;
@@ -228,7 +236,7 @@ namespace BibleNote.Analytics.Models.Common
         public string ModuleName { get; set; }
 
         /// <summary>
-        /// первоначально переданная строка в конструктор
+        /// первоначально переданная строка в конструктор. Может быть пустой.
         /// </summary>
         public string OriginalVerseName { get; set; }
         public string OriginalBookName { get; set; }
@@ -242,6 +250,13 @@ namespace BibleNote.Analytics.Models.Common
         /// родительская ссылка. Например если мы имеем дело со стихом диапазона, то здесь хранится стих, являющийся диапазоном
         /// </summary>
         public VersePointer ParentVersePointer { get; set; }
+
+        public VersePointer(BibleBookInfo bookInfo, string moduleName, VerseNumber verseNumber, VerseNumber? topVerseNumber)
+            : base(bookInfo.Index, verseNumber, topVerseNumber)
+        {
+            Book = bookInfo;
+            ModuleName = moduleName;
+        }
 
         public override string ToString()
         {
