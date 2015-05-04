@@ -11,7 +11,6 @@ namespace BibleNote.Analytics.Services.Environment
 {
     public class ApplicationManager : IApplicationManager
     {
-        [Dependency]
         public IModulesManager ModulesManager { get; set; }
 
         private ModuleInfo _currentModuleInfo;
@@ -20,8 +19,9 @@ namespace BibleNote.Analytics.Services.Environment
             get { return _currentModuleInfo; }
         }
 
-        public ApplicationManager()
+        public ApplicationManager(IModulesManager modulesManager)
         {
+            ModulesManager = modulesManager;
             ReloadInfo();
         }
 

@@ -68,13 +68,13 @@ namespace BibleNote.Analytics.Core.Helpers
             for (var i = 1; i < 3; i++)
             {
                 indexOfChar = startOfNumberIndex + i;
-                var c = GetChar(text, indexOfChar);
+                var c = GetCharLight(text, indexOfChar);
                 if (!char.IsDigit(c))
                     return c;
             }
 
             indexOfChar = startOfNumberIndex + 3;
-            return GetChar(text, indexOfChar);
+            return GetCharLight(text, indexOfChar);
         }
 
         public static int? GetStringLastNumber(string s)
@@ -131,12 +131,26 @@ namespace BibleNote.Analytics.Core.Helpers
             return default(char);
         }
 
+        /// <summary>
+        /// Отсутствует проверка на index >= 0
+        /// </summary>
+        /// <param name="s"></param>
+        /// <param name="index"></param>
+        /// <returns></returns>
+        public static char GetCharLight(string s, int index)
+        {
+            if (index < s.Length)
+                return s[index];
+
+            return default(char);
+        }
+
         public static int GetNextIndexOfDigit(string text, int index)
         {
             var result = -1;
 
             if (text.Length >= index + 2)
-                result = text.IndexOfAny(new char[] { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '<' }, index + 1);
+                result = text.IndexOfAny(new char[] { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' }, index + 1);
 
             return result;
         }
