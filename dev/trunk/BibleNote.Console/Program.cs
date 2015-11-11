@@ -2,6 +2,7 @@
 using BibleNote.Analytics.Core.Helpers;
 using BibleNote.Analytics.Data;
 using BibleNote.Analytics.Services;
+using BibleNote.Analytics.Services.Environment;
 using BibleNote.Analytics.Services.System;
 using BibleNote.Analytics.Services.VerseParsing;
 using HtmlAgilityPack;
@@ -16,14 +17,21 @@ namespace BibleNoteConsole
 {    
     class Program
     {
+        public static IModulesManager ModulesManager { get; set; }
+
         static void Main(string[] args)
         {
             DIContainer.InitWithDefaults();
+            ModulesManager = DIContainer.Resolve<IModulesManager>();
+
             var sw = new Stopwatch();
             sw.Start();
 
             try
             {
+                var moduleInfo = ModulesManager.UploadModule(@"C:\Users\lux_demko\Desktop\BibleNote\dev\trunk\Data\Modules\rst\rst.bnm", "rst");
+                ModulesManager.SetCurrentModule("rst");
+
                 //new CheckVerseRecognitionVariantsPerfomance().RunTests();
                 //TestChar2IntPerfomance(VerseUtils.GetVerseNumber);                
 

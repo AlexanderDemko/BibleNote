@@ -22,12 +22,12 @@ namespace BibleNote.Analytics.Services.VerseParsing
     public class VerseNumberEntry 
     {
         public VerseNumber VerseNumber { get; set; }
-        public int Startindex { get; set; }
+        public int StartIndex { get; set; }
         public int EndIndex { get; set; }
     }
 
     /// <summary>
-    /// Класс оперирует только обычной строкой. Ничего не знает об html. Ищет стих только в пределах переданной строки. Ему не важно, нашёл он книгу, главу или только стих.
+    /// Класс оперирует только обычной строкой. Ничего не знает об html. Ищет стих только в пределах переданной строки. Ему неважно, нашёл он книгу, главу или только стих.
     /// </summary>
     public class VerseRecognitionService : IVerseRecognitionService
     {

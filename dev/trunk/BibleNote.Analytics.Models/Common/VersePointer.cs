@@ -51,7 +51,7 @@ namespace BibleNote.Analytics.Models.Common
 
         public override int GetHashCode()
         {
-            return Chapter.GetHashCode() ^ Verse.GetHashCode();            
+            return Chapter.GetHashCode()*397 ^ Verse.GetHashCode();            
         }
 
         public override bool Equals(object obj)
@@ -163,7 +163,7 @@ namespace BibleNote.Analytics.Models.Common
 
         public override int GetHashCode()
         {
-            return this.BookIndex.GetHashCode() ^ this.VerseNumber.GetHashCode() ^ this.TopVerseNumber.GetValueOrDefault().GetHashCode();
+            return this.BookIndex.GetHashCode() * 31 ^ this.VerseNumber.GetHashCode() ^ this.TopVerseNumber.GetValueOrDefault().GetHashCode();
         }
 
         /// <summary>
