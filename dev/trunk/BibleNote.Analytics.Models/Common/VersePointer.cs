@@ -252,7 +252,7 @@ namespace BibleNote.Analytics.Models.Common
         public VersePointer ParentVersePointer { get; set; }
 
         public VersePointer(BibleBookInfo bookInfo, string moduleName, VerseNumber verseNumber, VerseNumber? topVerseNumber)
-            : base(bookInfo.Index, verseNumber, topVerseNumber)
+            : base(bookInfo != null ? bookInfo.Index : 0, verseNumber, topVerseNumber)
         {
             Book = bookInfo;
             ModuleName = moduleName;

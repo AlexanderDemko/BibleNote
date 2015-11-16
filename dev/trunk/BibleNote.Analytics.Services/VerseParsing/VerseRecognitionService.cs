@@ -11,21 +11,7 @@ using System.Threading.Tasks;
 
 namespace BibleNote.Analytics.Services.VerseParsing
 {
-    public class BookEntry
-    {
-        public BibleBookInfo BookInfo { get; set; }
-        public string ModuleName { get; set; }
-        public int StartIndex { get; set; }
-        public int EndIndex { get; set; }
-    }
-
-    public class VerseNumberEntry 
-    {
-        public VerseNumber VerseNumber { get; set; }
-        public int StartIndex { get; set; }
-        public int EndIndex { get; set; }
-    }
-
+    
     /// <summary>
     /// Класс оперирует только обычной строкой. Ничего не знает об html. Ищет стих только в пределах переданной строки. Ему неважно, нашёл он книгу, главу или только стих.
     /// </summary>
@@ -71,24 +57,48 @@ namespace BibleNote.Analytics.Services.VerseParsing
         private VerseEntryInfo TryGetVerseEntry(string text, int startIndex, int indexOfDigit)
         {
             var bookEntry = TryGetBookName(text, startIndex, indexOfDigit);
-            var verseNumber = TryGetVerseNumber(text, indexOfDigit);
-            var topVerseNumber = TryGetTopVerseNumber(text, verseNumber.EndIndex + 1);
+            var verseNumberEntry = TryGetVerseNumber(text, indexOfDigit);
+            VerseNumberEntry topVerseNumberEntry = null;
+
+            if (verseNumberEntry.VerseNumber.IsChapter && !verseNumberEntry.CanBeJustNumber(text))
+                verseNumberEntry.VerseNumber = new VerseNumber();
+            else
+                topVerseNumberEntry = TryGetTopVerseNumber(text, verseNumberEntry.EndIndex + 1);           
             
 
             var result = new VerseEntryInfo()
             {
-                StartIndex = bookEntry != null ? bookEntry.StartIndex : indexOfDigit,
-                EndIndex = (topVerseNumber ?? verseNumber).EndIndex,
-                VersePointer = new VersePointer(bookEntry.BookInfo, bookEntry.ModuleName, verseNumber.VerseNumber, topVerseNumber != null ? topVerseNumber.VerseNumber : (VerseNumber?)null)
-                //, EntryType = GetEntryType()
+                StartIndex = bookEntry != null ? bookEntry.StartIndex : verseNumberEntry.StartIndex,
+                EndIndex = verseNumberEntry != null ? (topVerseNumberEntry ?? verseNumberEntry).EndIndex : indexOfDigit,
+                VersePointer = new VersePointer(
+                    bookEntry != null ? bookEntry.BookInfo : null, bookEntry != null ? bookEntry.ModuleName : null,
+                    verseNumberEntry.VerseNumber,  
+                    topVerseNumberEntry != null ? topVerseNumberEntry.VerseNumber : (VerseNumber?)null),
+                EntryType = GetEntryType(bookEntry, verseNumberEntry)
+                //, ...                
             };
 
-            //todo: надо правильно понимать стихи :5, 5 стих, ст.5 или просто "Ин 5". В таких случаях разные будут StartIndex.
-                    //if (prevChar == ",")    // надо проверить, чтоб предыдущий символ тоже был цифрой   
+            //todo: надо правильно понимать стихи :5, 5 стих, ст.5 или просто "Ин 5". В таких случаях разные будут StartIndex.                    
             //todo: оказывается, что здесь надо ещё возвращать IsImportantVerse, IsExcluded, IsInSquareBrackets
 
             return result;
         }
+
+        private VerseEntryType GetEntryType(BookEntry bookEntry, VerseNumberEntry verseNumberEntry)
+        {
+            if (verseNumberEntry.VerseNumber.IsEmpty)
+                return VerseEntryType.None;
+
+            if (bookEntry != null)
+                return verseNumberEntry.VerseNumber.IsChapter ? VerseEntryType.BookChapter : VerseEntryType.BookChapterVerse;
+            else
+            {
+                if (verseNumberEntry.IsVerse)
+                    return VerseEntryType.Verse;
+
+                return verseNumberEntry.VerseNumber.IsChapter ? VerseEntryType.ChapterOrVerse : VerseEntryType.ChapterVerse;
+            }
+        }        
 
         private VerseEntryType GetEntryType()
         {
@@ -105,11 +115,11 @@ namespace BibleNote.Analytics.Services.VerseParsing
             var spaceWasFound = false;
             var cursorIndex = indexOfDigit;
             var maxVerseNumberLength = 9;
-
-            //todo: здесь проблема. Мы захватываем последний пробел. Потому что считаем пробел нормальным, хотя он нормален только между глава/разделитель/стих.
+            var lastValuableCharIndex = 0;
+            
             while (cursorIndex - indexOfDigit + 1 <= maxVerseNumberLength)
             {
-                var c = StringUtils.GetCharLight(text, cursorIndex++);
+                var c = StringUtils.GetCharLight(text, cursorIndex);
 
                 if (char.IsDigit(c))
                 {
@@ -118,6 +128,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
                     else
                         verseDigits[verseIndex++] = c;
 
+                    lastValuableCharIndex = cursorIndex;
                     spaceWasFound = false;
                 }
                 else if (c == ' ' && !spaceWasFound)
@@ -131,12 +142,14 @@ namespace BibleNote.Analytics.Services.VerseParsing
                 }
                 else
                     break;
+
+                cursorIndex++;
             }
 
             var chapter = VerseUtils.GetVerseNumber(chapterDigits, chapterIndex);            
             var verse = VerseUtils.GetVerseNumber(verseDigits, verseIndex);            
 
-            return new VerseNumberEntry() { EndIndex = cursorIndex - 1, VerseNumber = new VerseNumber(chapter, verse)};            
+            return new VerseNumberEntry() { StartIndex = indexOfDigit, EndIndex = lastValuableCharIndex, VerseNumber = new VerseNumber(chapter, verse)};            
         }
 
         private VerseNumberEntry TryGetTopVerseNumber(string text, int startIndex)
@@ -178,8 +191,11 @@ namespace BibleNote.Analytics.Services.VerseParsing
                 var endIndex = GetBookEndIndex(text, indexOfDigit);
                 var bookPotentialString = text.Substring(startIndex, endIndex - startIndex + 1);
                 bookEntry = GetBookName(bookPotentialString, text[endIndex + 1] == '.');  // здесь text[endIndex + 1] не выдаст исключения, так как до этого мы работали с бОльшими индексами.
-                bookEntry.StartIndex += startIndex;
-                bookEntry.EndIndex = endIndex;
+                if (bookEntry != null)
+                {
+                    bookEntry.StartIndex += startIndex;
+                    bookEntry.EndIndex = endIndex;
+                }
             }
 
             return bookEntry;

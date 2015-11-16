@@ -71,6 +71,7 @@
   <ItemGroup>
     <Compile Include="Analytics\DBTests.cs" />
     <Compile Include="Analytics\TextParserTests.cs" />
+    <Compile Include="Analytics\VerseRecognitionTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Analytics\VersePointerTests.cs" />
   </ItemGroup>
