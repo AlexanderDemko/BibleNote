@@ -22,22 +22,24 @@ namespace BibleNote.Analytics.Models.Common
         public int EndIndex { get; set; }
         public bool IsVerse { get; set; }
 
-        public bool CanBeJustNumber(string text)
+        public bool CanBeJustNumber(string text, VerseNumberEntry topVerseNumberEntry)
         {
             var prevChar = StringUtils.GetChar(text, StartIndex - 1);
-            if (prevChar == ':')
+            var prevPrevChar = StringUtils.GetChar(text, StartIndex - 2);
+
+            if (prevChar == ':' && !char.IsDigit(prevPrevChar)) 
             {
                 IsVerse = true;
                 StartIndex--;
                 return true;
             }
 
-            if (prevChar == ',')
-            {
-                var prevPrevChar = StringUtils.GetChar(text, StartIndex - 2);
-                if (char.IsDigit(prevPrevChar))
-                    return true;
-            }
+            if (prevChar == ',' && char.IsDigit(prevPrevChar))
+                return true;
+
+            var nextChar = StringUtils.GetCharLight(text, StartIndex + 1);
+            if (VerseUtils.IsDash(nextChar) && topVerseNumberEntry != null && topVerseNumberEntry.VerseNumber.IsChapter)            
+                return true;            
 
             return false;
         }
@@ -54,6 +56,7 @@ namespace BibleNote.Analytics.Models.Common
         ChapterOrVerse = 6
     }
 
+    //todo: что за IsExcluded? И зачем InSquareBrackets?
     public enum VerseEntryOptions
     {
         None = 0,
