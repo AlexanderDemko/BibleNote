@@ -9,23 +9,15 @@ namespace BibleNote.Analytics.Core.Helpers
 {
     public static class VerseUtils
     {
-        private static char[] _chapterVerseDelimiters;
-        private static char[] _startVerseChars;
+        private static char[] _chapterVerseDelimiters;        
         private static char[] _wordDelmiters = new char[] { ' ', ',', '.', ':', '-', '/', '\\', '>', '<', '=' };
         private static char[] _midVerseChars = new char[] { '.', ' ', '(' };  // допустимые символы между книгой и главой.
         private static char[] _dashes = new char[] { '-', '—', '‑', '–', '−' };
+        private static char[] _startVerseAdditionalChars = new char[] { ',', ';' }; 
 
         private static readonly object _locker = new object();
 
         public const char DefaultChapterVerseDelimiter = ':';
-
-        public static char[] Dashes
-        {
-            get
-            {
-                return _dashes;
-            }
-        }
 
         public static char[] WordDelimiters
         {
@@ -35,15 +27,28 @@ namespace BibleNote.Analytics.Core.Helpers
             }
         }
 
-        public static char[] MidVerseChars
+        public static bool IsDash(char c)
         {
-            get
-            {          
-                return _midVerseChars;
-            }
+            return _dashes.Contains(c);            
         }
 
-        public static char[] GetChapterVerseDelimiters(bool useCommaDelimiter)
+        public static bool IsWordDelimiter(char c)
+        {
+            return _wordDelmiters.Contains(c);            
+        }
+
+        public static bool IsMidVerseChar(char c)
+        {
+            return _midVerseChars.Contains(c);            
+        }
+
+        /// <summary>
+        /// Разделитель главы и стиха
+        /// </summary>
+        /// <param name="c"></param>
+        /// <param name="useCommaDelimiter"></param>
+        /// <returns></returns>
+        public static bool IsChapterVerseDelimiter(char c, bool useCommaDelimiter)
         {
             if (_chapterVerseDelimiters == null)
             {
@@ -60,23 +65,12 @@ namespace BibleNote.Analytics.Core.Helpers
                 }
             }
 
-            return _chapterVerseDelimiters;
-        }    
+            return _chapterVerseDelimiters.Contains(c);
+        }            
         
-        public static char[] GetStartVerseChars(bool useCommaDelimiter)
+        public static bool IsStartVerseChar(char c, bool useCommaDelimiter)
         {
-            if (_startVerseChars == null)
-            {
-                lock (_locker)
-                {
-                    if (_startVerseChars == null)
-                    {
-                        _startVerseChars = new List<char>(GetChapterVerseDelimiters(useCommaDelimiter)) { ',', ';', ' ', '.' }.Distinct().ToArray();
-                    }
-                }
-            }
-
-            return _startVerseChars;
+            return _startVerseAdditionalChars.Contains(c) || IsChapterVerseDelimiter(c, useCommaDelimiter) || IsMidVerseChar(c);
         }
 
         // Тестировал производительность. Данный подход самый быстрый.
