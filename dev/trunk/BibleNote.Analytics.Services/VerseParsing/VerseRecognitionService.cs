@@ -57,13 +57,16 @@ namespace BibleNote.Analytics.Services.VerseParsing
         private VerseEntryInfo TryGetVerseEntry(string text, int startIndex, int indexOfDigit)
         {
             var bookEntry = TryGetBookName(text, startIndex, indexOfDigit);
-            var verseNumberEntry = TryGetVerseNumber(text, indexOfDigit);
+            var verseNumberEntry = TryGetVerseNumber(text, indexOfDigit, ConfigurationManager.UseCommaDelimiter);
             var topVerseNumberEntry = TryGetTopVerseNumber(text, verseNumberEntry.EndIndex + 1);
 
-            if (verseNumberEntry.VerseNumber.IsChapter && !verseNumberEntry.CanBeJustNumber(text, topVerseNumberEntry))
+            var entryType = GetEntryType(bookEntry, verseNumberEntry);
+            if ((entryType == VerseEntryType.Chapter || entryType == VerseEntryType.ChapterOrVerse || entryType == VerseEntryType.Verse)
+                && !verseNumberEntry.CanBeJustNumber(text, topVerseNumberEntry))
                 verseNumberEntry.VerseNumber = new VerseNumber();
 
-            //todo: нет нужды всё это вычислять, если уже точно известно, что не нашли стих.
+            if (verseNumberEntry.VerseNumber.IsEmpty)
+                return new VerseEntryInfo() { EntryType = VerseEntryType.None };
 
             var entryStartIndex = bookEntry != null ? bookEntry.StartIndex : verseNumberEntry.StartIndex;
             var entryEndIndex = verseNumberEntry != null ? (topVerseNumberEntry ?? verseNumberEntry).EndIndex : indexOfDigit;            
@@ -76,7 +79,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
                     bookEntry != null ? bookEntry.BookInfo : null, bookEntry != null ? bookEntry.ModuleName : null,
                     verseNumberEntry.VerseNumber,  
                     topVerseNumberEntry != null ? topVerseNumberEntry.VerseNumber : (VerseNumber?)null),
-                EntryType = GetEntryType(bookEntry, verseNumberEntry),
+                EntryType = GetEntryType(bookEntry, verseNumberEntry),  // нужно заново пересчитать, так как могло измениться в verseNumberEntry.CanBeJustNumber
                 VerseEntryOptions = GetVerseEntryOptions(text, entryStartIndex, entryEndIndex)
             };
 
@@ -86,7 +89,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
         private VerseEntryOptions GetVerseEntryOptions(string text, int entryStartIndex, int entryEndIndex)
         {
             var prevChar = StringUtils.GetChar(text, entryStartIndex - 1);
-            var nextChar = StringUtils.GetCharLight(text, entryEndIndex + 1);
+            var nextChar = StringUtils.GetChar(text, entryEndIndex + 1);
 
             if (prevChar == '*' && nextChar == '*')
                 return VerseEntryOptions.ImportantVerse;
@@ -113,7 +116,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
             }
         }        
 
-        private VerseNumberEntry TryGetVerseNumber(string text, int indexOfDigit)
+        private VerseNumberEntry TryGetVerseNumber(string text, int indexOfDigit, bool useCommaDelimiter)
         {
             char[] chapterDigits = new char[3];
             char[] verseDigits = new char[3];
@@ -127,7 +130,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
             
             while (cursorIndex - indexOfDigit + 1 <= maxVerseNumberLength)
             {
-                var c = StringUtils.GetCharLight(text, cursorIndex);
+                var c = StringUtils.GetChar(text, cursorIndex);
 
                 if (char.IsDigit(c))
                 {
@@ -143,7 +146,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
                 {
                     spaceWasFound = true;
                 }
-                else if (VerseUtils.IsChapterVerseDelimiter(c, ConfigurationManager.UseCommaDelimiter) && !chapterWasFound)
+                else if (VerseUtils.IsChapterVerseDelimiter(c, useCommaDelimiter) && !chapterWasFound)
                 {
                     chapterWasFound = true;
                     spaceWasFound = false;
@@ -170,7 +173,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
 
             while (cursorIndex - startIndex <= maxSpaceBetweenVerseNumbers)
             {
-                var c = StringUtils.GetCharLight(text, cursorIndex);
+                var c = StringUtils.GetChar(text, cursorIndex);
                 
                 if (VerseUtils.IsDash(c) && !dashWasFound)
                 {
@@ -189,7 +192,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
             }
 
             if (dashWasFound && digitWasFound)
-                return TryGetVerseNumber(text, indexOfDigit);
+                return TryGetVerseNumber(text, indexOfDigit, false);
             else
                 return null;
         }        

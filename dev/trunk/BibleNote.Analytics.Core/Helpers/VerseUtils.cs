@@ -13,11 +13,11 @@ namespace BibleNote.Analytics.Core.Helpers
         private static char[] _wordDelmiters = new char[] { ' ', ',', '.', ':', '-', '/', '\\', '>', '<', '=' };
         private static char[] _midVerseChars = new char[] { '.', ' ', '(' };  // допустимые символы между книгой и главой.
         private static char[] _dashes = new char[] { '-', '—', '‑', '–', '−' };
-        private static char[] _startVerseAdditionalChars = new char[] { ',', ';' }; 
+        private static char[] _startVerseAdditionalChars = new char[] { ',', ';' };
+        private static char[] _defaultChapterVerseDelimiters = new char[] { ':' };
+        private static char[] _extendedChapterVerseDelimiters = new char[] { ':', ',' };
 
-        private static readonly object _locker = new object();
-
-        public const char DefaultChapterVerseDelimiter = ':';
+        private static readonly object _locker = new object();        
 
         public static char[] WordDelimiters
         {
@@ -50,22 +50,10 @@ namespace BibleNote.Analytics.Core.Helpers
         /// <returns></returns>
         public static bool IsChapterVerseDelimiter(char c, bool useCommaDelimiter)
         {
-            if (_chapterVerseDelimiters == null)
-            {
-                lock (_locker)
-                {
-                    if (_chapterVerseDelimiters == null)
-                    {
-                        var chars = new List<char>() { DefaultChapterVerseDelimiter };
-                        if (useCommaDelimiter)
-                            chars.Add(',');
+            if (useCommaDelimiter)
+                return _extendedChapterVerseDelimiters.Contains(c);
 
-                        _chapterVerseDelimiters = chars.ToArray();
-                    }
-                }
-            }
-
-            return _chapterVerseDelimiters.Contains(c);
+            return _defaultChapterVerseDelimiters.Contains(c);                       
         }            
         
         public static bool IsStartVerseChar(char c, bool useCommaDelimiter)

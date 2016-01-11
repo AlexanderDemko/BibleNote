@@ -37,9 +37,9 @@ namespace BibleNote.Analytics.Models.Common
             if (prevChar == ',' && char.IsDigit(prevPrevChar))
                 return true;
 
-            var nextChar = StringUtils.GetCharLight(text, StartIndex + 1);
-            if (VerseUtils.IsDash(nextChar) && topVerseNumberEntry != null && topVerseNumberEntry.VerseNumber.IsChapter)            
-                return true;            
+            //var nextChar = StringUtils.GetChar(text, StartIndex + 1);
+            //if (VerseUtils.IsDash(nextChar) && topVerseNumberEntry != null && topVerseNumberEntry.VerseNumber.IsChapter)
+            //    return true;            
 
             return false;
         }
