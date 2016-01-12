@@ -10,8 +10,7 @@ namespace BibleNote.Analytics.Services.Environment
     public class ConfigurationManager : IConfigurationManager
     {   
         public string ModuleShortName { get; set; }
-        public bool UseCommaDelimiter { get; set; }
-        
+        public bool UseCommaDelimiter { get; set; }        
 
         public ConfigurationManager(bool loadTestData)
         {
