@@ -28,15 +28,19 @@ namespace BibleNoteConsole
             sw.Start();
 
             try
-            {
-                var moduleInfo = ModulesManager.UploadModule(@"C:\Users\lux_demko\Desktop\BibleNote\dev\trunk\Data\Modules\rst\rst.bnm", "rst");
+            {   
+                var _moduleInfo = ModulesManager.UploadModule(@"C:\prj\BibleNote v4\dev\trunk\Data\Modules\rst\rst.bnm", "rst");
                 ModulesManager.SetCurrentModule("rst");
+                var bible = ModulesManager.GetCurrentBibleContent();
+                Console.WriteLine(bible.Books.Skip(39).First().Items.Count());
+
+                Console.WriteLine(bible.Books.Skip(39).SelectMany(b => b.Chapters.SelectMany(c => c.Verses)).Count());
 
                 //new CheckVerseRecognitionVariantsPerfomance().RunTests();
                 //TestChar2IntPerfomance(VerseUtils.GetVerseNumber);                
 
-                var service = DIContainer.Resolve<IVerseRecognitionService>();
-                var verseEntryInfo = service.TryGetVerse("В этом тексте есть Ин 5:6 и ещё другие стихи, например :7.", 0);
+                //var service = DIContainer.Resolve<IVerseRecognitionService>();
+                //var verseEntryInfo = service.TryGetVerse("В этом тексте есть Ин 5:6 и ещё другие стихи, например :7.", 0);
                                 
                 
             }

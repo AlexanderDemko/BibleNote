@@ -17,7 +17,7 @@ namespace BibleNote.Tests.Analytics
         [TestInitialize]
         public void Init()
         {
-            DIContainer.InitWithDefaults();
+            DIContainer.InitWithDefaults();            
             _parahraphParserService = DIContainer.Resolve<IParagraphParser>();
             _configurationManager = DIContainer.Resolve<IConfigurationManager>();
             _verseParserService = DIContainer.Resolve<IVersePointerFactory>();
@@ -40,6 +40,15 @@ namespace BibleNote.Tests.Analytics
                 Assert.IsTrue(result.Verses.Contains(_verseParserService.CreateVersePointer(verse)), "Can not find the verse: '{0}'", verse);
         }
 
+        [TestMethod]
+        public void TestScenario0()
+        {
+            var input = "<div>Это тестовая Ин 3:16 строка<br/>с переводом строки. Лк<br />5:6 - это первая ссылка, <p>Лк<font>7</font>:<font>8</font></p> - это вторая</div>";
+            var expected = "<div>Это тестовая Ин 3:16 строка<br/>с переводом строки. Лк<br />5:6 - это первая ссылка, <p>Лк 7:8<font></font><font></font></p> - это вторая</div>";
+
+            var result = _parahraphParserService.ParseParagraph(input, null);
+            CheckVerses(expected, result, "Лк 7:8");
+        }
 
         [TestMethod]
         public void TestScenario1()
