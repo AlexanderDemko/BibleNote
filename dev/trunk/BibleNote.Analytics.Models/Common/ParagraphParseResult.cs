@@ -11,8 +11,7 @@ namespace BibleNote.Analytics.Models.Common
         public string OutputHTML { get; set; }
         public List<VersePointer> Verses { get; set; }
         public List<ParagraphTextPart> TextParts { get; set; }
-
-        public bool LastPartIsVerse { get; set; }
+        
     }
 
 
