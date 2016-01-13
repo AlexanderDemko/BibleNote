@@ -26,7 +26,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
         public TextNodesString()
         {
             NodesInfo = new List<TextNodeEntry>();
-        }        
+        }
     }
 
     public class ParagraphParser : IParagraphParser
@@ -56,27 +56,42 @@ namespace BibleNote.Analytics.Services.VerseParsing
 
         private void ParseNode(HtmlNode htmlNode)
         {
+            //if (htmlNode.IsTextNode())
+            //{
+            //    ParseTextNodesSingleLevelArray(BuildParseString(new[] { htmlNode }));
+            //}
+            //else 
             if (!htmlNode.IsHierarchyNode())
+            {
                 ParseTextNodesSingleLevelArray(BuildParseString(htmlNode.ChildNodes));
+            }
             else
             {
-                var nodes = new HtmlNodeCollection(null);
+                var nodes = new List<HtmlNode>();
 
                 foreach (var childNode in htmlNode.ChildNodes)
                 {
-                    if (htmlNode.IsTextNode())
+                    if (childNode.IsTextNode())
+                    {
                         nodes.Add(childNode);
-                    else
+                        continue;
+                    }
+
+                    if (childNode.HasChildNodes())
                     {
                         if (nodes.Count > 0)
-                        {
+                        {                            
                             ParseTextNodesSingleLevelArray(BuildParseString(nodes));
-                            nodes = null;
-                            nodes = new HtmlNodeCollection(null);
+                            nodes.Clear();                            
                         }
                         ParseNode(childNode);
                     }
+
+                    // иначе - это пустая нода, типа <br/>
                 }
+
+                if (nodes.Count > 0)
+                    ParseTextNodesSingleLevelArray(BuildParseString(nodes));
             }           
         }
 
@@ -101,7 +116,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
             }
         }
 
-        private TextNodesString BuildParseString(HtmlNodeCollection nodes)
+        private TextNodesString BuildParseString(IEnumerable<HtmlNode> nodes)
         {
             var result = new TextNodesString();
             var sb = new StringBuilder();
@@ -119,6 +134,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
                 sb.Append(nodeText);
             }
 
+            result.Value = sb.ToString();
             return result;
         }        
     }

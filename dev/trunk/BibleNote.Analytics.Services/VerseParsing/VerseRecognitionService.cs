@@ -51,6 +51,9 @@ namespace BibleNote.Analytics.Services.VerseParsing
                     indexOfDigit = StringUtils.GetNextIndexOfDigit(text, indexOfDigit + 1);
             }
 
+            if (result == null)
+                result = new VerseEntryInfo() { EntryType = VerseEntryType.None };
+
             return result;
         }
 
