@@ -20,6 +20,11 @@ namespace BibleNote.Analytics.Core.Extensions
                 || (node.NodeType == HtmlNodeType.Element && node.ChildNodes.Count == 1 && node.ChildNodes[0].NodeType == HtmlNodeType.Text);
         }
 
+        public static bool HasChildNodes(this HtmlNode node)
+        {
+            return node.ChildNodes.Count > 0;
+        }
+
         public static string GetTextNodeInnerText(this HtmlNode node)
         {
             HtmlNode textNode = null;
@@ -27,7 +32,7 @@ namespace BibleNote.Analytics.Core.Extensions
             if (node.NodeType == HtmlNodeType.Text)
                 textNode = node;
 
-            if (node.NodeType == HtmlNodeType.Document && node.ChildNodes.Count == 1 && node.ChildNodes[0].NodeType == HtmlNodeType.Text)
+            if (node.NodeType == HtmlNodeType.Element && node.ChildNodes.Count == 1 && node.ChildNodes[0].NodeType == HtmlNodeType.Text)
                 textNode = node.ChildNodes[0];
 
             if (textNode != null)

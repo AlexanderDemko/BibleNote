@@ -8,7 +8,7 @@ using BibleNote.Analytics.Models.Common;
 namespace BibleNote.Tests.Analytics
 {
     [TestClass]
-    public class TextParserTests
+    public class ParagraphParserTests
     {
         private IParagraphParser _parahraphParserService;
         private IConfigurationManager _configurationManager;
