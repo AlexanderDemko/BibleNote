@@ -42,25 +42,25 @@ namespace BibleNote.Analytics.Services.VerseParsing
             _result = new ParagraphParseResult();            
         }
 
-        public ParagraphParseResult ParseParagraph(string text, DocumentParseContext docParseContext)
+        public ParagraphParseResult ParseParagraph(HtmlNode node, DocumentParseContext docParseContext)
         {
             _docParseContext = docParseContext;            
 
-            var htmlDoc = new HtmlDocument();
-            htmlDoc.LoadHtml(text);
-
-            ParseNode(htmlDoc.DocumentNode);             
+            ParseNode(node);
 
             return _result;
         }
 
-        private void ParseNode(HtmlNode htmlNode)
+        public ParagraphParseResult ParseParagraph(string text, DocumentParseContext docParseContext)
         {
-            //if (htmlNode.IsTextNode())
-            //{
-            //    ParseTextNodesSingleLevelArray(BuildParseString(new[] { htmlNode }));
-            //}
-            //else 
+            var htmlDoc = new HtmlDocument();
+            htmlDoc.LoadHtml(text);
+
+            return ParseParagraph(htmlDoc.DocumentNode, docParseContext);
+        }
+
+        private void ParseNode(HtmlNode htmlNode)
+        {   
             if (!htmlNode.IsHierarchyNode())
             {
                 ParseTextNodesSingleLevelArray(BuildParseString(htmlNode.ChildNodes));
