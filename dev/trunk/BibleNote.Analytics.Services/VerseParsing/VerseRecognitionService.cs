@@ -21,7 +21,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
         public IVersePointerFactory VersePointerFactory { get; set; }
 
         [Dependency]
-        public IConfigurationManager ConfigurationManager { get; set; }
+        public IConfigurationManager ConfigurationManager { get; set; } 
 
         [Dependency]
         public IModulesManager ModulesManager { get; set; }
