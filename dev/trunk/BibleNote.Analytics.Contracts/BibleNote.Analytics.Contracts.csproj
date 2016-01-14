@@ -53,6 +53,8 @@
     <Compile Include="IVersePointerFactory.cs" />
     <Compile Include="IVerseRecognitionService.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Providers\IDocumentProvider.cs" />
+    <Compile Include="Providers\INavigationProvider.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\BibleNote.Analytics.Models\BibleNote.Analytics.Models.csproj">
@@ -62,7 +64,6 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="ParallelVerses\" />
-    <Folder Include="Providers\" />
     <Folder Include="System\" />
     <Folder Include="VerseParsing\" />
   </ItemGroup>
