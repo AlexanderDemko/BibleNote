@@ -25,7 +25,7 @@ namespace BibleNote.Analytics.Core.Extensions
             return node.ChildNodes.Count > 0;
         }
 
-        public static string GetTextNodeInnerText(this HtmlNode node)
+        public static HtmlNode GetTextNode(this HtmlNode node)
         {
             HtmlNode textNode = null;
 
@@ -36,7 +36,7 @@ namespace BibleNote.Analytics.Core.Extensions
                 textNode = node.ChildNodes[0];
 
             if (textNode != null)
-                return textNode.InnerText;
+                return textNode;
 
             throw new ArgumentException("Node is not TextNode");
         }
