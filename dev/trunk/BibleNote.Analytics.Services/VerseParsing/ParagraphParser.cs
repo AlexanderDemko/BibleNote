@@ -103,8 +103,10 @@ namespace BibleNote.Analytics.Services.VerseParsing
             var skipNodes = 0;
             while (verseEntryInfo.VersePointerFound)
             {
-                skipNodes = MoveVerseTextInOneNode(parseString, verseEntryInfo, skipNodes);  
+                skipNodes = MoveVerseTextInOneNode(parseString, verseEntryInfo, skipNodes);
 
+
+                // нужно добавить новый сервис, который по найденному VersePointer-у (который не является окончательным) и DocumentParseContex-у будет определять, является ли этот VersePointer реальной ссылкой, и будет его дополнять. А уже, наверное, здесь дополним DocumentParseContex. Или лучше научим DocumentParseContex самому себя наполнять.
                 // а потом - проверить (спросить у провайдера), можно ли преобразовать в ссылку. И если да - то преобразовать (сама ссылка своя, но итоговый её вариант должен дать провайдер).
 
                 index = verseEntryInfo.EndIndex + 1;
