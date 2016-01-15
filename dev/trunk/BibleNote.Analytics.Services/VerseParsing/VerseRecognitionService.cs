@@ -1,4 +1,5 @@
-﻿using BibleNote.Analytics.Contracts;
+﻿using BibleNote.Analytics.Contracts.Environment;
+using BibleNote.Analytics.Contracts.VerseParsing;
 using BibleNote.Analytics.Core.Constants;
 using BibleNote.Analytics.Core.Helpers;
 using BibleNote.Analytics.Models.Common;

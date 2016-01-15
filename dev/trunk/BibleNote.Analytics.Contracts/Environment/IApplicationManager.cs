@@ -5,10 +5,12 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BibleNote.Analytics.Contracts
+namespace BibleNote.Analytics.Contracts.Environment
 {
-    public interface IParagraphParser
+    public interface IApplicationManager
     {
-        ParagraphParseResult ParseParagraph(string text, DocumentParseContext docParseContext);
+        ModuleInfo CurrentModuleInfo { get; }
+
+        void ReloadInfo();
     }
 }

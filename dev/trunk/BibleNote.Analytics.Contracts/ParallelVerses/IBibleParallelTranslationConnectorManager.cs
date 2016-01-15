@@ -1,7 +1,7 @@
 ﻿using BibleNote.Analytics.Models.Common;
 using System;
 
-namespace BibleNote.Analytics.Contracts
+namespace BibleNote.Analytics.Contracts.ParallelVerses
 {
     public interface IBibleParallelTranslationConnectorManager
     {

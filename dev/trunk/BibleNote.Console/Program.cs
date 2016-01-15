@@ -1,4 +1,4 @@
-﻿using BibleNote.Analytics.Contracts;
+﻿using BibleNote.Analytics.Contracts.Environment;
 using BibleNote.Analytics.Core.Helpers;
 using BibleNote.Analytics.Data;
 using BibleNote.Analytics.Services;

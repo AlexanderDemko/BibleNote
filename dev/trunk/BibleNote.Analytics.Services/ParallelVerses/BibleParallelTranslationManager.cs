@@ -1,4 +1,5 @@
-﻿using BibleNote.Analytics.Contracts;
+﻿using BibleNote.Analytics.Contracts.ParallelVerses;
+using BibleNote.Analytics.Contracts.System;
 using BibleNote.Analytics.Models.Common;
 using BibleNote.Analytics.Models.Exceptions;
 using Microsoft.Practices.Unity;

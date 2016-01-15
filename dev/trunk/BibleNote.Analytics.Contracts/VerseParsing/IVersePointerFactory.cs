@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BibleNote.Analytics.Contracts
+namespace BibleNote.Analytics.Contracts.VerseParsing
 {
     public interface IVersePointerFactory
     {

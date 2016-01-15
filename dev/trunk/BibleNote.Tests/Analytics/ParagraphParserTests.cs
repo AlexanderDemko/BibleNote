@@ -1,9 +1,10 @@
 ﻿using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using BibleNote.Analytics.Core.Helpers;
-using BibleNote.Analytics.Contracts;
 using BibleNote.Analytics.Services.System;
 using BibleNote.Analytics.Models.Common;
+using BibleNote.Analytics.Contracts.VerseParsing;
+using BibleNote.Analytics.Contracts.Environment;
 
 namespace BibleNote.Tests.Analytics
 {
@@ -43,7 +44,7 @@ namespace BibleNote.Tests.Analytics
         [TestMethod]
         public void TestScenario0()
         {
-            var input = "<div>Это тестовая Ин 3:16 строка<br/>с переводом строки. Лк<br />5:6 - это первая ссылка, <p>Лк<font>7</font>:<font>8</font></p> - это вторая</div>";
+            var input = "<div>Это тестовая Ин 3:16 строка<BR/>с переводом строки. Лк<br />5:6 - это первая ссылка, <p>Лк<font>7</font>:<font>8 и ещё </font><font>Мк 5:</font>6-7!!</p> - это вторая<p><font></font></p><p></p></div>";
             var expected = "<div>Это тестовая Ин 3:16 строка<br/>с переводом строки. Лк<br />5:6 - это первая ссылка, <p>Лк 7:8<font></font><font></font></p> - это вторая</div>";
 
             var result = _parahraphParserService.ParseParagraph(input, null);

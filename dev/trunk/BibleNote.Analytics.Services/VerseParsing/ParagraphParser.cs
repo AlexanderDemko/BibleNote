@@ -1,5 +1,4 @@
-﻿using BibleNote.Analytics.Contracts;
-using BibleNote.Analytics.Models.Common;
+﻿using BibleNote.Analytics.Models.Common;
 using HtmlAgilityPack;
 using Microsoft.Practices.Unity;
 using System;
@@ -8,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using BibleNote.Analytics.Core.Extensions;
+using BibleNote.Analytics.Contracts.VerseParsing;
 
 namespace BibleNote.Analytics.Services.VerseParsing
 {
@@ -77,17 +77,14 @@ namespace BibleNote.Analytics.Services.VerseParsing
                         continue;
                     }
 
-                    if (childNode.HasChildNodes())
+                    if ((childNode.HasChildNodes() || childNode.Name == "br") && nodes.Count > 0)
                     {
-                        if (nodes.Count > 0)
-                        {                            
-                            ParseTextNodesSingleLevelArray(BuildParseString(nodes));
-                            nodes.Clear();                            
-                        }
-                        ParseNode(childNode);
+                        ParseTextNodesSingleLevelArray(BuildParseString(nodes));
+                        nodes.Clear();
                     }
 
-                    // иначе - это пустая нода, типа <br/>
+                    if (childNode.HasChildNodes())
+                        ParseNode(childNode);
                 }
 
                 if (nodes.Count > 0)
@@ -97,10 +94,10 @@ namespace BibleNote.Analytics.Services.VerseParsing
 
         private void ParseTextNodesSingleLevelArray(TextNodesString parseString)
         {
-            if (parseString.Value.Length == 0)
+            if (string.IsNullOrEmpty(parseString.Value))
                 return;
 
-            var index = 0;
+            var index = 0;         // чтобы анализировать с первого символа, так как теперь поддерживаем ещё и такие ссылки, как "5:6 - ..."
             var verseEntryInfo = VerseRecognitionService.TryGetVerse(parseString.Value, index);
 
             var skipNodes = 0;
@@ -127,7 +124,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
                 {
                     if (firstVerseNode == null)
                     {
-                        if (nodeEntry.StartIndex >= verseEntryInfo.StartIndex)
+                        if (nodeEntry.StartIndex <= verseEntryInfo.StartIndex)
                         {
                             if (nodeEntry.EndIndex >= verseEntryInfo.EndIndex)
                                 break;
@@ -137,9 +134,20 @@ namespace BibleNote.Analytics.Services.VerseParsing
                     }
                     else
                     {
-                        var verseTextPart = nodeEntry.Node.InnerText.Substring(0,
-                            (verseEntryInfo.EndIndex > nodeEntry.EndIndex ? nodeEntry.EndIndex : verseEntryInfo.EndIndex) - nodeEntry.StartIndex);
+                        var moveCharsCount = (verseEntryInfo.EndIndex > nodeEntry.EndIndex ? nodeEntry.EndIndex : verseEntryInfo.EndIndex) - nodeEntry.StartIndex + 1;
+                        var verseTextPart = nodeEntry.Node.InnerText.Substring(0, moveCharsCount);
+
+
+#if DEBUG
+                        if (firstVerseNode.InnerHtml != firstVerseNode.InnerText)
+                            throw new InvalidOperationException("firstVerseNode.InnerHtml != firstVerseNode.InnerText");
+
+                        if (nodeEntry.Node.InnerHtml != nodeEntry.Node.InnerText)
+                            throw new InvalidOperationException("nodeEntry.Node.InnerHtml != nodeEntry.Node.InnerText");
+#endif
+
                         firstVerseNode.InnerHtml += verseTextPart;
+                        nodeEntry.Node.InnerHtml = nodeEntry.Node.InnerHtml.Remove(0, moveCharsCount);
 
                         if (verseEntryInfo.EndIndex < nodeEntry.EndIndex)
                             break;
@@ -166,7 +174,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
                                         { 
                                             Node = textNode, 
                                             StartIndex = sb.Length, 
-                                            EndIndex = sb.Length + textNode.InnerText.Length 
+                                            EndIndex = sb.Length + textNode.InnerText.Length - 1
                                         });
                 sb.Append(textNode.InnerText);
             }
