@@ -43,15 +43,15 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="IApplicationManager.cs" />
-    <Compile Include="IBibleParallelTranslationConnectorManager.cs" />
-    <Compile Include="IBibleParallelTranslationManager.cs" />
-    <Compile Include="IConfigurationManager.cs" />
-    <Compile Include="ILogger.cs" />
-    <Compile Include="IModulesManager.cs" />
-    <Compile Include="IParagraphParser.cs" />
-    <Compile Include="IVersePointerFactory.cs" />
-    <Compile Include="IVerseRecognitionService.cs" />
+    <Compile Include="Environment\IApplicationManager.cs" />
+    <Compile Include="ParallelVerses\IBibleParallelTranslationConnectorManager.cs" />
+    <Compile Include="ParallelVerses\IBibleParallelTranslationManager.cs" />
+    <Compile Include="Environment\IConfigurationManager.cs" />
+    <Compile Include="System\ILogger.cs" />
+    <Compile Include="Environment\IModulesManager.cs" />
+    <Compile Include="VerseParsing\IParagraphParser.cs" />
+    <Compile Include="VerseParsing\IVersePointerFactory.cs" />
+    <Compile Include="VerseParsing\IVerseRecognitionService.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Providers\IDocumentProvider.cs" />
     <Compile Include="Providers\INavigationProvider.cs" />
@@ -62,11 +62,7 @@
       <Name>BibleNote.Analytics.Models</Name>
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="ParallelVerses\" />
-    <Folder Include="System\" />
-    <Folder Include="VerseParsing\" />
-  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

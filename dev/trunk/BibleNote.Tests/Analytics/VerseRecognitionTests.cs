@@ -1,4 +1,4 @@
-﻿using BibleNote.Analytics.Contracts;
+﻿using BibleNote.Analytics.Contracts.VerseParsing;
 using BibleNote.Analytics.Models.Common;
 using BibleNote.Analytics.Services.System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;

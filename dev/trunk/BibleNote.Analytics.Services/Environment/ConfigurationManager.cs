@@ -1,4 +1,4 @@
-﻿using BibleNote.Analytics.Contracts;
+﻿using BibleNote.Analytics.Contracts.Environment;
 using System;
 using System.Collections.Generic;
 using System.Linq;

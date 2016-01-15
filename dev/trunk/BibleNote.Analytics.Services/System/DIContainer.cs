@@ -1,4 +1,7 @@
-﻿using BibleNote.Analytics.Contracts;
+﻿using BibleNote.Analytics.Contracts.Environment;
+using BibleNote.Analytics.Contracts.ParallelVerses;
+using BibleNote.Analytics.Contracts.System;
+using BibleNote.Analytics.Contracts.VerseParsing;
 using BibleNote.Analytics.Services.Environment;
 using BibleNote.Analytics.Services.ParallelVerses;
 using BibleNote.Analytics.Services.VerseParsing;

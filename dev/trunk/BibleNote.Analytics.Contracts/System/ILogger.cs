@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BibleNote.Analytics.Contracts
+namespace BibleNote.Analytics.Contracts.System
 {
     public interface ILogger
     {        

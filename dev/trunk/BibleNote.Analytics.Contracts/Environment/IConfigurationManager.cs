@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace BibleNote.Analytics.Contracts
+namespace BibleNote.Analytics.Contracts.Environment
 {
     /// <summary>
     /// Загруженные данные должны быть закэшированы.

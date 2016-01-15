@@ -2,7 +2,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace BibleNote.Analytics.Contracts
+namespace BibleNote.Analytics.Contracts.ParallelVerses
 {
     public interface IBibleParallelTranslationManager
     {

@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BibleNote.Analytics.Contracts
+namespace BibleNote.Analytics.Contracts.Environment
 {
     public interface IModulesManager
     {
@@ -22,7 +22,7 @@ namespace BibleNote.Analytics.Contracts
         XMLBIBLE GetModuleBibleInfo(string moduleShortName);
         string GetModuleDirectory(string moduleShortName);
         ModuleInfo GetModuleInfo(string moduleShortName);
-        System.Collections.Generic.List<ModuleInfo> GetModules(bool correctOnly);
+        List<ModuleInfo> GetModules(bool correctOnly);
         string GetModulesDirectory();
         string GetModulesPackagesDirectory();
         bool ModuleIsCorrect(string moduleName, BibleNote.Analytics.Models.Common.ModuleType? moduleType = null);
