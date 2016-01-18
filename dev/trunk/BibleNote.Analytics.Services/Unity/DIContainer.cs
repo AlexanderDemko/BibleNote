@@ -3,6 +3,7 @@ using BibleNote.Analytics.Contracts.Logging;
 using BibleNote.Analytics.Contracts.ParallelVerses;
 using BibleNote.Analytics.Contracts.VerseParsing;
 using BibleNote.Analytics.Core.Extensions;
+using BibleNote.Analytics.Data;
 using BibleNote.Analytics.Services.Environment;
 using BibleNote.Analytics.Services.Logging;
 using BibleNote.Analytics.Services.ParallelVerses;
@@ -33,24 +34,27 @@ namespace BibleNote.Analytics.Services.Unity
             Container = new UnityContainer();                                   
         }
 
-        public static void RegisterCoreServices(UnityContainer container)
+        private static void RegisterCoreServices()
         {
             var sourceName = typeof(DIContainer).Assembly.GetName().Name;
-            container.RegisterType<ILog, DiagnosticsLog>(new ContainerControlledLifetimeManager(), new InjectionConstructor(sourceName))
+            Container.RegisterType<ILog, DiagnosticsLog>(new ContainerControlledLifetimeManager(), new InjectionConstructor(sourceName))
                 .RegisterType<ITracer, DefaultTracer>(new ContainerControlledLifetimeManager());
 
-            container.AddNewExtension<Interception>();
-            container.RegisterType<IMatchingRule, AnyMatchingRule>();
-            container.RegisterType<ICallHandler, LogCallHandler>();
+            Container.AddNewExtension<Interception>();
+            Container.RegisterType<IMatchingRule, AnyMatchingRule>();
+            Container.RegisterType<ICallHandler, LogCallHandler>();
 
-            container.Configure<Interception>().AddPolicy("LogPolicy")
+            Container.Configure<Interception>().AddPolicy("LogPolicy")
                 .AddMatchingRule<AnyMatchingRule>()
                 .AddCallHandler<LogCallHandler>();            
         }
 
         public static void InitWithDefaults()
         {
+            RegisterCoreServices();
+
             Container
+                .RegisterContextType<AnalyticsContext>()
                 .RegisterTracingType<IConfigurationManager, ConfigurationManager>(new ContainerControlledLifetimeManager(), new InjectionConstructor(true))
                 .RegisterTracingType<IModulesManager, ModulesManager>(new ContainerControlledLifetimeManager())                
                 .RegisterTracingType<IBibleParallelTranslationConnectorManager, BibleParallelTranslationConnectorManager>(new ContainerControlledLifetimeManager())

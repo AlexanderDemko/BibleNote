@@ -112,7 +112,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
                 var versePointer = VerseRecognitionService.TryRecognizeVerse(verseEntry, DocParseContext);
                 if (versePointer != null)
                 {
-                    Result.OutputHTML += // эм...
+                    //Result.OutputHTML += // эм...
                     Result.TextParts.Add(new ParagraphTextPart()
                     {
                         Type = ParagraphTextPart.ParagraphTextPartType.Verse,
