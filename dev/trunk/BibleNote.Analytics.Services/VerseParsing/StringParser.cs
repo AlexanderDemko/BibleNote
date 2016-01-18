@@ -19,9 +19,6 @@ namespace BibleNote.Analytics.Services.VerseParsing
     public class StringParser : IStringParser
     {
         [Dependency]
-        public IVersePointerFactory VersePointerFactory { get; set; }
-
-        [Dependency]
         public IConfigurationManager ConfigurationManager { get; set; } 
 
         [Dependency]

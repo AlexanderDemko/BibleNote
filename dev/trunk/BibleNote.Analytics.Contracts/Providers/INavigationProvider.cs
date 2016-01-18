@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace BibleNote.Analytics.Contracts.Providers
 {
-    interface INavigationProvider
+    public interface INavigationProvider
     {
     }
 }

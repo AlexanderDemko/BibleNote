@@ -41,7 +41,7 @@ namespace BibleNote.Tests.Analytics
             analyticsContext.SaveChanges();
 
             Assert.AreEqual(foldersCount, analyticsContext.DocumentFolders.Count());
-            Assert.IsNull(analyticsContext.DocumentFolders.FirstOrDefault(f => f.Name == testFolderName));
+            Assert.IsNull(analyticsContext.DocumentFolders.FirstOrDefault(f => f.Name == testFolderName));            
         }
     }
 }

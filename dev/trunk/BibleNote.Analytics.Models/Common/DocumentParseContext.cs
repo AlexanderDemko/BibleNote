@@ -8,5 +8,6 @@ namespace BibleNote.Analytics.Models.Common
 {
     public class DocumentParseContext
     {
+        
     }
 }
