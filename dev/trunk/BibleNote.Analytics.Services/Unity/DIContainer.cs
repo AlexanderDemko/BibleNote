@@ -52,13 +52,13 @@ namespace BibleNote.Analytics.Services.Unity
         {
             Container
                 .RegisterTracingType<IConfigurationManager, ConfigurationManager>(new ContainerControlledLifetimeManager(), new InjectionConstructor(true))
-                .RegisterTracingType<IModulesManager, ModulesManager>(new ContainerControlledLifetimeManager())
-                .RegisterTracingType<IParagraphParser, ParagraphParser>(new TransientLifetimeManager())
+                .RegisterTracingType<IModulesManager, ModulesManager>(new ContainerControlledLifetimeManager())                
                 .RegisterTracingType<IBibleParallelTranslationConnectorManager, BibleParallelTranslationConnectorManager>(new ContainerControlledLifetimeManager())
                 .RegisterTracingType<IBibleParallelTranslationManager, BibleParallelTranslationManager>(new ContainerControlledLifetimeManager())
-                .RegisterTracingType<IVerseRecognitionService, VerseRecognitionService>(new ContainerControlledLifetimeManager())
-                .RegisterTracingType<IStringParserService, StringParserService>(new TransientLifetimeManager())
+                .RegisterTracingType<IVerseRecognitionService, VerseRecognitionService>(new TransientLifetimeManager())
+                .RegisterTracingType<IStringParser, StringParser>(new TransientLifetimeManager())
                 .RegisterTracingType<IVersePointerFactory, VersePointerFactory>(new TransientLifetimeManager())
+                .RegisterTracingType<IParagraphParser, ParagraphParser>(new TransientLifetimeManager())
                 .RegisterTracingType<IApplicationManager, ApplicationManager>(new ContainerControlledLifetimeManager());
         }
 

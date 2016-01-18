@@ -32,23 +32,26 @@ namespace BibleNote.Analytics.Services.VerseParsing
     public class ParagraphParser : IParagraphParser
     {
         [Dependency]
-        public IStringParserService VerseRecognitionService { get; set; }
+        public IStringParser StringParser { get; set; }
 
-        private DocumentParseContext _docParseContext;
-        private ParagraphParseResult _result;
+        [Dependency]
+        public IVerseRecognitionService VerseRecognitionService { get; set; }
+
+        protected DocumentParseContext DocParseContext { get; set; }
+        protected ParagraphParseResult Result { get; set; }        
 
         public ParagraphParser()
         {   
-            _result = new ParagraphParseResult();            
+            Result = new ParagraphParseResult();            
         }
 
         public ParagraphParseResult ParseParagraph(HtmlNode node, DocumentParseContext docParseContext)
         {
-            _docParseContext = docParseContext;            
+            DocParseContext = docParseContext;            
 
             ParseNode(node);
 
-            return _result;
+            return Result;
         }
 
         public ParagraphParseResult ParseParagraph(string text, DocumentParseContext docParseContext)
@@ -98,20 +101,34 @@ namespace BibleNote.Analytics.Services.VerseParsing
                 return;
 
             var index = 0;         // чтобы анализировать с первого символа, так как теперь поддерживаем ещё и такие ссылки, как "5:6 - ..."
-            var verseEntryInfo = VerseRecognitionService.TryGetVerse(parseString.Value, index);
+            var verseEntry = StringParser.TryGetVerse(parseString.Value, index);
 
+            var htmlResultLength = Result.OutputHTML.Length;
             var skipNodes = 0;
-            while (verseEntryInfo.VersePointerFound)
+            while (verseEntry.VersePointerFound)
             {
-                skipNodes = MoveVerseTextInOneNode(parseString, verseEntryInfo, skipNodes);
+                skipNodes = MoveVerseTextInOneNode(parseString, verseEntry, skipNodes);
 
+                var versePointer = VerseRecognitionService.TryRecognizeVerse(verseEntry, DocParseContext);
+                if (versePointer != null)
+                {
+                    Result.OutputHTML += // эм...
+                    Result.TextParts.Add(new ParagraphTextPart()
+                    {
+                        Type = ParagraphTextPart.ParagraphTextPartType.Verse,
+                        Verse = versePointer,
+                        StartIndex = htmlResultLength + verseEntry.StartIndex,
+                        EndIndex = htmlResultLength + verseEntry.EndIndex   // подождите, но ведь мы сгенерировали html по обычной ссылке - она ведь теперь стала длиннее. 
+                    });
+                    Result.Verses.Add(versePointer);
+                }
 
-                // нужно добавить новый сервис, который по найденному VersePointer-у (который не является окончательным) и DocumentParseContex-у будет определять, является ли этот VersePointer реальной ссылкой, и будет его дополнять. А уже, наверное, здесь дополним DocumentParseContex. Или лучше научим DocumentParseContex самому себя наполнять.
+                // А уже, наверное, здесь дополним DocumentParseContex. Или лучше научим DocumentParseContex самому себя наполнять найденными стихами.
                 // а потом - проверить (спросить у провайдера), можно ли преобразовать в ссылку. И если да - то преобразовать (сама ссылка своя, но итоговый её вариант должен дать провайдер).
 
-                index = verseEntryInfo.EndIndex + 1;
+                index = verseEntry.EndIndex + 1;
                 if (index < parseString.Value.Length - 2)
-                    verseEntryInfo = VerseRecognitionService.TryGetVerse(parseString.Value, index);
+                    verseEntry = StringParser.TryGetVerse(parseString.Value, index);
                 else 
                     break;
             }

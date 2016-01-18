@@ -83,7 +83,7 @@
     <Compile Include="Unity\LogCallHandler.cs" />
     <Compile Include="VerseParsing\ParagraphParser.cs" />
     <Compile Include="VerseParsing\VersePointerFactory.cs" />
-    <Compile Include="VerseParsing\StringParserService.cs" />
+    <Compile Include="VerseParsing\StringParser.cs" />
     <Compile Include="VerseParsing\VerseRecognitionService.cs" />
   </ItemGroup>
   <ItemGroup>
