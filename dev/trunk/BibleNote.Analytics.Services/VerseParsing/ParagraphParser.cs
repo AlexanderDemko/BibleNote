@@ -32,7 +32,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
     public class ParagraphParser : IParagraphParser
     {
         [Dependency]
-        public IVerseRecognitionService VerseRecognitionService { get; set; }
+        public IStringParserService VerseRecognitionService { get; set; }
 
         private DocumentParseContext _docParseContext;
         private ParagraphParseResult _result;

@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace BibleNote.Analytics.Contracts.VerseParsing
 {
-    public interface IVerseRecognitionService
+    public interface IStringParserService
     {
         VerseEntryInfo TryGetVerse(string text, int index);
     }

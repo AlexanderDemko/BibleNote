@@ -38,7 +38,7 @@ namespace BibleNote.Analytics.Services.System
             Container.RegisterType<IParagraphParser, ParagraphParser>(new TransientLifetimeManager());
             Container.RegisterType<IBibleParallelTranslationConnectorManager, BibleParallelTranslationConnectorManager>(new ContainerControlledLifetimeManager());
             Container.RegisterType<IBibleParallelTranslationManager, BibleParallelTranslationManager>(new ContainerControlledLifetimeManager());
-            Container.RegisterType<IVerseRecognitionService, VerseRecognitionService>(new TransientLifetimeManager());
+            Container.RegisterType<IStringParserService, StringParserService>(new TransientLifetimeManager());
             Container.RegisterType<IVersePointerFactory, VersePointerFactory>(new TransientLifetimeManager());
             Container.RegisterType<IApplicationManager, ApplicationManager>(new ContainerControlledLifetimeManager());
         }
