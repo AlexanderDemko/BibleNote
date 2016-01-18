@@ -65,14 +65,10 @@ namespace BibleNote.Analytics.Services.Unity
                 .RegisterTracingType<IParagraphParser, ParagraphParser>(new TransientLifetimeManager())
                 .RegisterTracingType<IApplicationManager, ApplicationManager>(new ContainerControlledLifetimeManager());
         }
-
-        /// <summary>
-        /// Resolves the type parameter T to an instance of the appropriate type.
-        /// </summary>
-        /// <typeparam name="T">Type of object to return</typeparam>
-        public static T Resolve<T>()
+        
+        public static T Resolve<T>(params ResolverOverride[] overrides)
         {
-            return Container.Resolve<T>();            
+            return Container.Resolve<T>(overrides);            
         }
     }
 }

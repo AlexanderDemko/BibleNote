@@ -1,8 +1,6 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2013
-VisualStudioVersion = 12.0.31101.0
-MinimumVisualStudioVersion = 10.0.40219.1
+# Visual Studio 2012
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BibleNote.Tests", "BibleNote.Tests\BibleNote.Tests.csproj", "{3B9DA479-AD87-41A3-944F-C434A741137F}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BibleNote.Console", "BibleNote.Console\BibleNote.Console.csproj", "{85ACCAD6-36D8-4C9A-8384-1DFA134B68E9}"
@@ -38,9 +36,13 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BibleNote.UI.Contracts", "B
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BibleNote.UI.Services", "BibleNote.UI.Services\BibleNote.UI.Services.csproj", "{4F5E6A82-BBCE-42DC-ADE6-8C672D806AB9}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BibleNote.Analytics.Providers.HtmlProvider", "BibleNote.Analytics.Providers.HtmlProvider\BibleNote.Analytics.Providers.HtmlProvider.csproj", "{84381C15-F3E9-4EB5-9D98-FE29352F2627}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BibleNote.Analytics.Providers.FolderNavigationProvider", "BibleNote.Analytics.Providers.FolderNavigationProvider\BibleNote.Analytics.Providers.FolderNavigationProvider.csproj", "{A2538A2F-EA54-4F42-B1EB-CF4B2E3ED503}"
+EndProject
 Global
 	GlobalSection(TeamFoundationVersionControl) = preSolution
-		SccNumberOfProjects = 13
+		SccNumberOfProjects = 15
 		SccEnterpriseProvider = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
 		SccTeamFoundationServer = https://demko.visualstudio.com/defaultcollection
 		SccLocalPath0 = .
@@ -90,6 +92,14 @@ Global
 		SccProjectTopLevelParentUniqueName12 = BibleNote.sln
 		SccProjectName12 = BibleNote.UI.Services
 		SccLocalPath12 = BibleNote.UI.Services
+		SccProjectUniqueName13 = BibleNote.Analytics.Providers.HtmlProvider\\BibleNote.Analytics.Providers.HtmlProvider.csproj
+		SccProjectTopLevelParentUniqueName13 = BibleNote.sln
+		SccProjectName13 = BibleNote.Analytics.Providers.HtmlProvider
+		SccLocalPath13 = BibleNote.Analytics.Providers.HtmlProvider
+		SccProjectUniqueName14 = BibleNote.Analytics.Providers.FolderNavigationProvider\\BibleNote.Analytics.Providers.FolderNavigationProvider.csproj
+		SccProjectTopLevelParentUniqueName14 = BibleNote.sln
+		SccProjectName14 = BibleNote.Analytics.Providers.FolderNavigationProvider
+		SccLocalPath14 = BibleNote.Analytics.Providers.FolderNavigationProvider
 	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -144,6 +154,14 @@ Global
 		{4F5E6A82-BBCE-42DC-ADE6-8C672D806AB9}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4F5E6A82-BBCE-42DC-ADE6-8C672D806AB9}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4F5E6A82-BBCE-42DC-ADE6-8C672D806AB9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{84381C15-F3E9-4EB5-9D98-FE29352F2627}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{84381C15-F3E9-4EB5-9D98-FE29352F2627}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{84381C15-F3E9-4EB5-9D98-FE29352F2627}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{84381C15-F3E9-4EB5-9D98-FE29352F2627}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A2538A2F-EA54-4F42-B1EB-CF4B2E3ED503}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A2538A2F-EA54-4F42-B1EB-CF4B2E3ED503}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A2538A2F-EA54-4F42-B1EB-CF4B2E3ED503}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A2538A2F-EA54-4F42-B1EB-CF4B2E3ED503}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -155,6 +173,8 @@ Global
 		{A47192D6-2DC9-40D5-B28C-AD55E298F68F} = {75EA2CBB-D373-49D9-B812-CC4B82429AA1}
 		{38AF7691-09FA-4373-AEA2-52F6D3D50C85} = {75EA2CBB-D373-49D9-B812-CC4B82429AA1}
 		{72939EBB-2258-4EE9-9645-4944A6450192} = {75EA2CBB-D373-49D9-B812-CC4B82429AA1}
+		{84381C15-F3E9-4EB5-9D98-FE29352F2627} = {C9C9F0C2-C0E7-4303-B28A-AF13A00BAB0A}
+		{A2538A2F-EA54-4F42-B1EB-CF4B2E3ED503} = {C9C9F0C2-C0E7-4303-B28A-AF13A00BAB0A}
 		{8E78EB0B-41CB-460A-BB21-A08733A31D54} = {4878DD17-95DF-4BAB-AB68-4A9789B84D56}
 		{614C2528-C151-49E4-A500-C5440D90EAD7} = {4878DD17-95DF-4BAB-AB68-4A9789B84D56}
 		{88387860-F319-4293-8C21-86154FEC6791} = {4878DD17-95DF-4BAB-AB68-4A9789B84D56}

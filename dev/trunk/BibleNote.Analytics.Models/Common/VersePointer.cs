@@ -216,22 +216,8 @@ namespace BibleNote.Analytics.Models.Common
 
     [Serializable]
     public class VersePointer : SimpleVersePointer
-    {
-        private BibleBookInfo _book;
-        public BibleBookInfo Book
-        {
-            get
-            {
-                if (_book != null)
-                    return _book;
-
-                throw new NotImplementedException();
-            }
-            set
-            {
-                _book = value;
-            }
-        }
+    {        
+        public BibleBookInfo Book { get; set;}
 
         public string ModuleName { get; set; }
 
@@ -263,10 +249,10 @@ namespace BibleNote.Analytics.Models.Common
             if (!string.IsNullOrEmpty(this.OriginalVerseName))
                 return this.OriginalVerseName;
 
-            if (Book != null)
-                return string.Format("{0} {1}", Book.FriendlyShortName, GetFullVerseNumberString());
-
-            return base.ToString();
+            
+            return string.Concat(
+                        Book != null ? string.Format("{0} ", Book.FriendlyShortName): string.Empty, 
+                        GetFullVerseNumberString());
         }                                
 
         public virtual VersesListInfo<VersePointer> ExpandMultiVerse()

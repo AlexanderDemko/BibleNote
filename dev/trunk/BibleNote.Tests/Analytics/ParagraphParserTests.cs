@@ -5,6 +5,8 @@ using BibleNote.Analytics.Services.Unity;
 using BibleNote.Analytics.Models.Common;
 using BibleNote.Analytics.Contracts.VerseParsing;
 using BibleNote.Analytics.Contracts.Environment;
+using Microsoft.Practices.Unity;
+using BibleNote.Analytics.Providers.HtmlProvider;
 
 namespace BibleNote.Tests.Analytics
 {
@@ -19,7 +21,7 @@ namespace BibleNote.Tests.Analytics
         public void Init()
         {
             DIContainer.InitWithDefaults();            
-            _parahraphParserService = DIContainer.Resolve<IParagraphParser>();
+            _parahraphParserService = DIContainer.Resolve<IParagraphParser>(new ParameterOverrides { { "documentProvider", new LocalHtmlProvider() } });
             _configurationManager = DIContainer.Resolve<IConfigurationManager>();
             _verseParserService = DIContainer.Resolve<IVersePointerFactory>();
         }

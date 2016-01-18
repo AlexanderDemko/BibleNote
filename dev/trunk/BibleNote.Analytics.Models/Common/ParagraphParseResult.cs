@@ -16,6 +16,7 @@ namespace BibleNote.Analytics.Models.Common
         {
             Verses = new List<VersePointer>();
             TextParts = new List<ParagraphTextPart>();
+            OutputHTML = string.Empty;
         }        
     }
 

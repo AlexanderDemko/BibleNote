@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using BibleNote.Analytics.Core.Extensions;
 using BibleNote.Analytics.Contracts.VerseParsing;
+using BibleNote.Analytics.Contracts.Providers;
 
 namespace BibleNote.Analytics.Services.VerseParsing
 {
@@ -37,12 +38,15 @@ namespace BibleNote.Analytics.Services.VerseParsing
         [Dependency]
         public IVerseRecognitionService VerseRecognitionService { get; set; }
 
-        protected DocumentParseContext DocParseContext { get; set; }
-        protected ParagraphParseResult Result { get; set; }        
+        public DocumentParseContext DocParseContext { get; private set; }
+        public ParagraphParseResult Result { get; private set; }
+        public IDocumentProvider DocumentProvider { get; private set; }
 
-        public ParagraphParser()
+
+        public ParagraphParser(IDocumentProvider documentProvider)
         {   
-            Result = new ParagraphParseResult();            
+            Result = new ParagraphParseResult();
+            DocumentProvider = documentProvider;
         }
 
         public ParagraphParseResult ParseParagraph(HtmlNode node, DocumentParseContext docParseContext)
@@ -107,7 +111,10 @@ namespace BibleNote.Analytics.Services.VerseParsing
             var skipNodes = 0;
             while (verseEntry.VersePointerFound)
             {
-                skipNodes = MoveVerseTextInOneNode(parseString, verseEntry, skipNodes);
+                if (!DocumentProvider.IsReadonly)
+                {
+                    skipNodes = MoveVerseTextInOneNode(parseString, verseEntry, skipNodes);
+                }
 
                 var versePointer = VerseRecognitionService.TryRecognizeVerse(verseEntry, DocParseContext);
                 if (versePointer != null)
