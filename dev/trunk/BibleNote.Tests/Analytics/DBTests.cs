@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using BibleNote.Analytics.Core.Helpers;
 using System.Linq;
-using BibleNote.Analytics.Services.System;
+using BibleNote.Analytics.Services.Unity;
 using BibleNote.Analytics.Data;
 using BibleNote.Analytics.Models.Entities;
 

@@ -1,5 +1,5 @@
-﻿using BibleNote.Analytics.Contracts.ParallelVerses;
-using BibleNote.Analytics.Contracts.System;
+﻿using BibleNote.Analytics.Contracts.Logging;
+using BibleNote.Analytics.Contracts.ParallelVerses;
 using BibleNote.Analytics.Models.Common;
 using BibleNote.Analytics.Models.Exceptions;
 using Microsoft.Practices.Unity;
@@ -15,7 +15,7 @@ namespace BibleNote.Analytics.Services.ParallelVerses
     public class BibleParallelTranslationManager : IBibleParallelTranslationManager
     {
         [Dependency]
-        public ILogger Logger { get; set; }
+        public ILog Log { get; set; }
 
         public bool MergeModuleWithMainBible(ModuleInfo baseModuleInfo, ModuleInfo parallelModuleInfo)
         {
@@ -57,7 +57,7 @@ namespace BibleNote.Analytics.Services.ParallelVerses
                 }
                 catch (ModuleNotFoundException e) 
                 {
-                    Logger.LogWarning(e.ToString());
+                    Log.Write(LogLevel.Warning, e.ToString());
                 }
             }
 
@@ -80,7 +80,7 @@ namespace BibleNote.Analytics.Services.ParallelVerses
                 }
                 catch (ModuleNotFoundException e) 
                 {
-                    Logger.LogWarning(e.ToString());
+                    Log.Write(LogLevel.Warning, e.ToString());
                 }
             }
         }

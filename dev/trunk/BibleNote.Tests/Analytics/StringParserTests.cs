@@ -1,6 +1,6 @@
 ﻿using BibleNote.Analytics.Contracts.VerseParsing;
 using BibleNote.Analytics.Models.Common;
-using BibleNote.Analytics.Services.System;
+using BibleNote.Analytics.Services.Unity;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
