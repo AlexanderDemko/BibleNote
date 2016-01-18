@@ -66,7 +66,7 @@
     <Compile Include="System\Logger.cs" />
     <Compile Include="VerseParsing\ParagraphParser.cs" />
     <Compile Include="VerseParsing\VersePointerFactory.cs" />
-    <Compile Include="VerseParsing\VerseRecognitionService.cs" />
+    <Compile Include="VerseParsing\StringParserService.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\BibleNote.Analytics.Contracts\BibleNote.Analytics.Contracts.csproj">

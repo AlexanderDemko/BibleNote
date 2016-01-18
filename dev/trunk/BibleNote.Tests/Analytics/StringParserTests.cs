@@ -11,15 +11,15 @@ using System.Threading.Tasks;
 namespace BibleNote.Tests.Analytics
 {
     [TestClass]
-    public class VerseRecognitionTests
+    public class StringParserTests
     {
-        private IVerseRecognitionService _verseRecognitionService;
+        private IStringParserService _verseRecognitionService;
 
         [TestInitialize]
         public void Init()
         {
             DIContainer.InitWithDefaults();
-            _verseRecognitionService = DIContainer.Resolve<IVerseRecognitionService>();
+            _verseRecognitionService = DIContainer.Resolve<IStringParserService>();
         }
 
         private void AssertVerseEntry(VerseEntryInfo verseEntryInfo, int startIndex, int endIndex, VerseEntryType verseEntryType,

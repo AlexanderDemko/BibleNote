@@ -16,7 +16,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
     /// <summary>
     /// Класс оперирует только обычной строкой. Ничего не знает об html. Ищет стих только в пределах переданной строки. Ему неважно, нашёл он книгу, главу или только стих.
     /// </summary>
-    public class VerseRecognitionService : IVerseRecognitionService
+    public class StringParserService : IStringParserService
     {
         [Dependency]
         public IVersePointerFactory VersePointerFactory { get; set; }
