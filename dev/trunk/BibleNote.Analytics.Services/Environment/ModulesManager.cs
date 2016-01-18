@@ -1,6 +1,6 @@
 ﻿using BibleNote.Analytics.Contracts.Environment;
+using BibleNote.Analytics.Contracts.Logging;
 using BibleNote.Analytics.Contracts.ParallelVerses;
-using BibleNote.Analytics.Contracts.System;
 using BibleNote.Analytics.Core.Constants;
 using BibleNote.Analytics.Core.Helpers;
 using BibleNote.Analytics.Core.Resources;
@@ -22,7 +22,7 @@ namespace BibleNote.Analytics.Services.Environment
     public class ModulesManager : IModulesManager
     {
         [Dependency]
-        public ILogger Logger { get; set; }
+        public ILog Log { get; set; }
 
         [Dependency]
         public IConfigurationManager ConfigurationManager { get; set; }
@@ -288,7 +288,7 @@ namespace BibleNote.Analytics.Services.Environment
                 }
                 catch (UnauthorizedAccessException ex)
                 {
-                    Logger.LogException(ex);
+                    Log.Write(LogLevel.Error, ex.ToString());
                 }
             }
 
@@ -314,7 +314,7 @@ namespace BibleNote.Analytics.Services.Environment
                 if (Directory.Exists((string)directoryPath))
                     Directory.Delete((string)directoryPath, true);
             }
-            catch (Exception ex) { Logger.LogException(ex); }                
+            catch (Exception ex) { Log.Write(LogLevel.Error, ex.ToString()); }                
         }
 
         private static T Dessirialize<T>(string xmlFilePath)
@@ -338,7 +338,7 @@ namespace BibleNote.Analytics.Services.Environment
             }
             catch (Exception ex)
             {
-                Logger.LogException(ex);
+                Log.Write(LogLevel.Error, ex.ToString());
 
                 if (ex is IOException
                     || ex is UnauthorizedAccessException)

@@ -1,7 +1,7 @@
 ﻿using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using BibleNote.Analytics.Core.Helpers;
-using BibleNote.Analytics.Services.System;
+using BibleNote.Analytics.Services.Unity;
 using BibleNote.Analytics.Models.Common;
 using BibleNote.Analytics.Contracts.VerseParsing;
 using BibleNote.Analytics.Contracts.Environment;
