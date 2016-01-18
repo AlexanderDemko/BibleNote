@@ -13,13 +13,13 @@ namespace BibleNote.Tests.Analytics
     [TestClass]
     public class StringParserTests
     {
-        private IStringParserService _verseRecognitionService;
+        private IStringParser _stringParser;
 
         [TestInitialize]
         public void Init()
         {
             DIContainer.InitWithDefaults();
-            _verseRecognitionService = DIContainer.Resolve<IStringParserService>();
+            _stringParser = DIContainer.Resolve<IStringParser>();
         }
 
         private void AssertVerseEntry(VerseEntryInfo verseEntryInfo, int startIndex, int endIndex, VerseEntryType verseEntryType,
@@ -38,13 +38,13 @@ namespace BibleNote.Tests.Analytics
         {
             var s = "Тест и Ин 5:6, а потом 5:7,8. 9 глава. 10 стих. и :7. ст.5-6. *:8-9*, [5:7], в 5 стихе, в главе 6. Лк 5-6,8 и 7:9";
 
-            var verseEntry = _verseRecognitionService.TryGetVerse(s, 0);
+            var verseEntry = _stringParser.TryGetVerse(s, 0);
             AssertVerseEntry(verseEntry, 7, 12, VerseEntryType.BookChapterVerse);
 
-            verseEntry = _verseRecognitionService.TryGetVerse(s, verseEntry.EndIndex + 1);
+            verseEntry = _stringParser.TryGetVerse(s, verseEntry.EndIndex + 1);
             AssertVerseEntry(verseEntry, 23, 25, VerseEntryType.ChapterVerse);
 
-            verseEntry = _verseRecognitionService.TryGetVerse(s, verseEntry.EndIndex + 1);
+            verseEntry = _stringParser.TryGetVerse(s, verseEntry.EndIndex + 1);
             AssertVerseEntry(verseEntry, 27, 27, VerseEntryType.ChapterOrVerse);
 
             //verseEntry = _verseRecognitionService.TryGetVerse(s, verseEntry.EndIndex + 1);
@@ -53,13 +53,13 @@ namespace BibleNote.Tests.Analytics
             //verseEntry = _verseRecognitionService.TryGetVerse(s, verseEntry.EndIndex + 1);
             //AssertVerseEntry(verseEntry, 39, 45, VerseEntryType.Verse);
 
-            verseEntry = _verseRecognitionService.TryGetVerse(s, verseEntry.EndIndex + 1);
+            verseEntry = _stringParser.TryGetVerse(s, verseEntry.EndIndex + 1);
             AssertVerseEntry(verseEntry, 50, 51, VerseEntryType.Verse);
 
             //verseEntry = _verseRecognitionService.TryGetVerse(s, verseEntry.EndIndex + 1);
             //AssertVerseEntry(verseEntry, 54, 59, VerseEntryType.Verse);
 
-            verseEntry = _verseRecognitionService.TryGetVerse(s, verseEntry.EndIndex + 1);
+            verseEntry = _stringParser.TryGetVerse(s, verseEntry.EndIndex + 1);
             AssertVerseEntry(verseEntry, 63, 66, VerseEntryType.Verse, VerseEntryOptions.ImportantVerse);
 
             //verseEntry = _verseRecognitionService.TryGetVerse(s, verseEntry.EndIndex + 1);
@@ -71,13 +71,13 @@ namespace BibleNote.Tests.Analytics
             //verseEntry = _verseRecognitionService.TryGetVerse(s, verseEntry.EndIndex + 1);
             //AssertVerseEntry(verseEntry, 90, 96, VerseEntryType.Chapter);
 
-            verseEntry = _verseRecognitionService.TryGetVerse(s, verseEntry.EndIndex + 1);
+            verseEntry = _stringParser.TryGetVerse(s, verseEntry.EndIndex + 1);
             AssertVerseEntry(verseEntry, 99, 104, VerseEntryType.BookChapter);
 
-            verseEntry = _verseRecognitionService.TryGetVerse(s, verseEntry.EndIndex + 1);
+            verseEntry = _stringParser.TryGetVerse(s, verseEntry.EndIndex + 1);
             AssertVerseEntry(verseEntry, 106, 106, VerseEntryType.ChapterOrVerse);
 
-            verseEntry = _verseRecognitionService.TryGetVerse(s, verseEntry.EndIndex + 1);
+            verseEntry = _stringParser.TryGetVerse(s, verseEntry.EndIndex + 1);
             AssertVerseEntry(verseEntry, 110, 112, VerseEntryType.ChapterVerse);
         }
     }

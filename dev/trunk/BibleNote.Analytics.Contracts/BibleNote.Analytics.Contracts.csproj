@@ -76,7 +76,7 @@
     <Compile Include="Environment\IModulesManager.cs" />
     <Compile Include="VerseParsing\IParagraphParser.cs" />
     <Compile Include="VerseParsing\IVersePointerFactory.cs" />
-    <Compile Include="VerseParsing\IStringParserService.cs" />
+    <Compile Include="VerseParsing\IStringParser.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Providers\IDocumentProvider.cs" />
     <Compile Include="Providers\INavigationProvider.cs" />
