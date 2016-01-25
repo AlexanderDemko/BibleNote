@@ -59,7 +59,7 @@ namespace BibleNote.Analytics.Services.Unity
                 .RegisterTracingType<IModulesManager, ModulesManager>(new ContainerControlledLifetimeManager())                
                 .RegisterTracingType<IBibleParallelTranslationConnectorManager, BibleParallelTranslationConnectorManager>(new ContainerControlledLifetimeManager())
                 .RegisterTracingType<IBibleParallelTranslationManager, BibleParallelTranslationManager>(new ContainerControlledLifetimeManager())
-                .RegisterTracingType<IVerseRecognitionService, VerseRecognitionService>(new TransientLifetimeManager())
+                .RegisterTracingType<IVerseRecognitionService, VerseRecognitionService>(new ContainerControlledLifetimeManager())
                 .RegisterTracingType<IStringParser, StringParser>(new TransientLifetimeManager())
                 .RegisterTracingType<IVersePointerFactory, VersePointerFactory>(new TransientLifetimeManager())
                 .RegisterTracingType<IParagraphParser, ParagraphParser>(new TransientLifetimeManager())

@@ -10,23 +10,32 @@ namespace BibleNote.Analytics.Services.VerseParsing
 {
     public class VerseRecognitionService : IVerseRecognitionService
     {
-        protected bool VerseRecognized { get; set; }
+        private static List<Func<VerseEntryInfo, DocumentParseContext, VersePointer>> _funcs = new List<Func<VerseEntryInfo, DocumentParseContext, VersePointer>>() 
+        { 
+            FullVerseRule 
+        };
 
         public VersePointer TryRecognizeVerse(VerseEntryInfo verseEntry, DocumentParseContext docParseContext)
         {
             if (!verseEntry.VersePointerFound)
                 return null;
-            return verseEntry.VersePointer;
 
-            //return FullVerseRule(verseEntry, docParseContext);
+            foreach (var func in _funcs)
+            {
+                var recognizedVerse = func(verseEntry, docParseContext);
+                if (recognizedVerse != null)                                    
+                    return recognizedVerse;                
+            }
+
+            return null;
         }
 
-        private VerseRecognitionService FullVerseRule(VerseEntryInfo verseEntry, DocumentParseContext docParseContext)
+        private static VersePointer FullVerseRule(VerseEntryInfo verseEntry, DocumentParseContext docParseContext)
         {
-            //if (verseEntry.EntryType == VerseEntryType.BookChapter || verseEntry.EntryType == VerseEntryType.BookChapterVerse)
-            //    return verseEntry.VersePointer;
-
-            return this;
+            if (verseEntry.EntryType == VerseEntryType.BookChapter || verseEntry.EntryType == VerseEntryType.BookChapterVerse)
+                return verseEntry.VersePointer;   
+         
+            return null;
         }
     }
 }
