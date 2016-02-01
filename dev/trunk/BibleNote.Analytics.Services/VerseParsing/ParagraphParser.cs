@@ -113,7 +113,8 @@ namespace BibleNote.Analytics.Services.VerseParsing
             {
                 if (!DocumentProvider.IsReadonly)
                 {
-                    skipNodes = MoveVerseTextInOneNode(parseString, verseEntry, skipNodes);
+                    var verseNode = MoveVerseTextInOneNode(parseString, verseEntry, ref skipNodes);
+                    //verseEntry.
                 }
 
                 var versePointer = VerseRecognitionService.TryRecognizeVerse(verseEntry, DocParseContext);
@@ -141,38 +142,48 @@ namespace BibleNote.Analytics.Services.VerseParsing
             }
         }
 
-        private int MoveVerseTextInOneNode(TextNodesString parseString, VerseEntryInfo verseEntryInfo, int skipNodes)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="parseString"></param>
+        /// <param name="verseEntryInfo"></param>
+        /// <param name="skipNodes">Чтобы не проверять строку с начала</param>
+        /// <returns></returns>
+        private TextNodeEntry MoveVerseTextInOneNode(TextNodesString parseString, VerseEntryInfo verseEntryInfo, ref int skipNodes)
         {
+            var result = new TextNodeEntry();
+
             if (parseString.NodesInfo.Count > 1)
-            {
-                HtmlNode firstVerseNode = null;
+            {                
                 foreach (var nodeEntry in parseString.NodesInfo.Skip(skipNodes))
                 {
-                    if (firstVerseNode == null)
+                    if (result.Node == null)
                     {
                         if (nodeEntry.StartIndex <= verseEntryInfo.StartIndex)
                         {
-                            if (nodeEntry.EndIndex >= verseEntryInfo.EndIndex)
-                                break;
+                            result.Node = nodeEntry.Node;
+                            result.StartIndex = verseEntryInfo.StartIndex - nodeEntry.StartIndex;
+                            result.EndIndex = nodeEntry.EndIndex >= verseEntryInfo.EndIndex ? verseEntryInfo.EndIndex : nodeEntry.EndIndex;
 
-                            firstVerseNode = nodeEntry.Node;
+                            if (nodeEntry.EndIndex >= verseEntryInfo.EndIndex)                            
+                                break;
                         }
                     }
                     else
                     {
                         var moveCharsCount = (verseEntryInfo.EndIndex > nodeEntry.EndIndex ? nodeEntry.EndIndex : verseEntryInfo.EndIndex) - nodeEntry.StartIndex + 1;
                         var verseTextPart = nodeEntry.Node.InnerText.Substring(0, moveCharsCount);
-
+                        result.EndIndex += moveCharsCount;
 
 #if DEBUG
-                        if (firstVerseNode.InnerHtml != firstVerseNode.InnerText)
+                        if (result.Node.InnerHtml != result.Node.InnerText)
                             throw new InvalidOperationException("firstVerseNode.InnerHtml != firstVerseNode.InnerText");
 
                         if (nodeEntry.Node.InnerHtml != nodeEntry.Node.InnerText)
                             throw new InvalidOperationException("nodeEntry.Node.InnerHtml != nodeEntry.Node.InnerText");
 #endif
 
-                        firstVerseNode.InnerHtml += verseTextPart;
+                        result.Node.InnerHtml += verseTextPart;
                         nodeEntry.Node.InnerHtml = nodeEntry.Node.InnerHtml.Remove(0, moveCharsCount);
 
                         if (verseEntryInfo.EndIndex < nodeEntry.EndIndex)
@@ -181,8 +192,14 @@ namespace BibleNote.Analytics.Services.VerseParsing
                     skipNodes++;
                 }
             }
+            else
+            {
+                result.Node = parseString.NodesInfo.First().Node;
+                result.StartIndex = verseEntryInfo.StartIndex;
+                result.EndIndex = verseEntryInfo.EndIndex;
+            }
 
-            return skipNodes;
+            return result;
         }
 
         private TextNodesString BuildParseString(IEnumerable<HtmlNode> nodes)
