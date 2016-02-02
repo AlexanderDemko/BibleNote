@@ -111,19 +111,19 @@ namespace BibleNote.Analytics.Services.VerseParsing
             var skipNodes = 0;
             while (verseEntry.VersePointerFound)
             {
-                if (!DocumentProvider.IsReadonly)
-                {
-                    var verseNode = MoveVerseTextInOneNode(parseString, verseEntry, ref skipNodes);
-                    var verseLink = DocumentProvider.GetVersePointerLink(verseEntry.VersePointer);
-                    verseNode.Node.InnerHtml = string.Concat(
-                        verseNode.Node.InnerHtml.Substring(0, verseNode.StartIndex), 
-                        verseLink, 
-                        verseNode.Node.InnerHtml.Substring(verseNode.EndIndex));
-                }
-
                 var versePointer = VerseRecognitionService.TryRecognizeVerse(verseEntry, DocParseContext);
                 if (versePointer != null)
                 {
+                    if (!DocumentProvider.IsReadonly)
+                    {
+                        var verseNode = MoveVerseTextInOneNode(parseString, verseEntry, ref skipNodes);
+                        var verseLink = DocumentProvider.GetVersePointerLink(verseEntry.VersePointer);
+                        verseNode.Node.InnerHtml = string.Concat(
+                            verseNode.Node.InnerHtml.Substring(0, verseNode.StartIndex),
+                            verseLink,
+                            verseNode.Node.InnerHtml.Substring(verseNode.EndIndex + 1));
+                    }
+
                     //Result.OutputHTML += // эм...
                     Result.TextParts.Add(new ParagraphTextPart()
                     {
