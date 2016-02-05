@@ -121,7 +121,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
                         verseNode.Node.InnerHtml = string.Concat(
                             verseNode.Node.InnerHtml.Substring(0, verseNode.StartIndex),
                             verseLink,
-                            verseNode.Node.InnerHtml.Substring(verseNode.EndIndex + 1));
+                            verseNode.EndIndex > verseNode.Node.InnerHtml.Length ? verseNode.Node.InnerHtml.Substring(verseNode.EndIndex + 1) : string.Empty);
                     }
 
                     //Result.OutputHTML += // эм...
@@ -167,7 +167,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
                         {
                             result.Node = nodeEntry.Node;
                             result.StartIndex = verseEntryInfo.StartIndex - nodeEntry.StartIndex;
-                            result.EndIndex = nodeEntry.EndIndex >= verseEntryInfo.EndIndex ? verseEntryInfo.EndIndex : nodeEntry.EndIndex;
+                            result.EndIndex = (nodeEntry.EndIndex >= verseEntryInfo.EndIndex ? verseEntryInfo.EndIndex : nodeEntry.EndIndex) - nodeEntry.StartIndex;
 
                             if (nodeEntry.EndIndex >= verseEntryInfo.EndIndex)                            
                                 break;
