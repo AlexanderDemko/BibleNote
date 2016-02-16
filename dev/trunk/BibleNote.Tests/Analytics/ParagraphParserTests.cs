@@ -7,6 +7,7 @@ using BibleNote.Analytics.Contracts.VerseParsing;
 using BibleNote.Analytics.Contracts.Environment;
 using Microsoft.Practices.Unity;
 using BibleNote.Analytics.Providers.HtmlProvider;
+using HtmlAgilityPack;
 
 namespace BibleNote.Tests.Analytics
 {
@@ -32,8 +33,13 @@ namespace BibleNote.Tests.Analytics
             
         }
 
-        private void CheckVerses(string expectedOutput, ParagraphParseResult result, params string[] verses)
+        private void CheckVerses(string input, string expectedOutput, params string[] verses)
         {
+            var htmlDoc = new HtmlDocument();
+            htmlDoc.LoadHtml(input);
+
+            var result = _parahraphParserService.ParseParagraph(htmlDoc.DocumentNode, null);
+
             var output = StringUtils.GetText(result.OutputHTML);
             Assert.AreEqual(expectedOutput, output, "The output html is wrong.");
 
@@ -46,10 +52,11 @@ namespace BibleNote.Tests.Analytics
         [TestMethod]
         public void TestScenario0()
         {
-            var input = "<div>Это тестовая Ин 3:16 строка<BR/>с переводом строки. Лк<br />5:6 - это первая ссылка, <p>Лк<font>7</font>:<font>8 и ещё </font><font>Мк 5:</font>6-7!!</p> - это вторая<p><font></font></p><p></p></div>";
-            var expected = "<div>Это тестовая Ин 3:16 строка<br/>с переводом строки. Лк<br />5:6 - это первая ссылка, <p>Лк 7:8<font></font><font></font></p> - это вторая</div>";
+            var input = "<div>Это <p>тестовая <font>Мк 5:</font>6-7!!</p> строка</div>";
 
-            var result = _parahraphParserService.ParseParagraph(input, null);
+            //var input = "<div>Это тестовая Ин 3:16 строка<BR/>с переводом строки. Лк<br />5:6 - это первая ссылка, <p>Лк<font>7</font>:<font>8 и ещё </font><font>Мк 5:</font>6-7!!</p> - это вторая<p><font></font></p><p></p></div>";
+            var expected = "<div>Это тестовая Ин 3:16 строка<br/>с переводом строки. Лк<br />5:6 - это первая ссылка, <p>Лк 7:8<font></font><font></font></p> - это вторая</div>";
+            
             CheckVerses(expected, result, "Лк 7:8");
         }
 
@@ -58,9 +65,8 @@ namespace BibleNote.Tests.Analytics
         {
             var input = "тест Лк 1:16, 10:13-17;18-19; 11:1-2 тест";
             var expected = "тест Лк 1:16, 10:13-17; 18-19; 11:1-2 тест";
-
-            var result = _parahraphParserService.ParseParagraph(input, null);
-            CheckVerses(expected, result, "Лк 1:16", "Лк 10:13", "Лк 10:14", "Лк 10:15", "Лк 10:16",
+            
+            CheckVerses(input, expected, "Лк 1:16", "Лк 10:13", "Лк 10:14", "Лк 10:15", "Лк 10:16",
                 "Лк 10:17", "Лк 18", "Лк 19", "Лк 11:1", "Лк 11:2");            
         }
 

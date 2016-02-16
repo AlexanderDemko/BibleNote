@@ -58,13 +58,13 @@ namespace BibleNote.Analytics.Services.VerseParsing
             return Result;
         }
 
-        public ParagraphParseResult ParseParagraph(string text, DocumentParseContext docParseContext)
-        {
-            var htmlDoc = new HtmlDocument();
-            htmlDoc.LoadHtml(text);
+        //public ParagraphParseResult ParseParagraph(string text, DocumentParseContext docParseContext)
+        //{
+        //    var htmlDoc = new HtmlDocument();
+        //    htmlDoc.LoadHtml(text);
 
-            return ParseParagraph(htmlDoc.DocumentNode, docParseContext);
-        }
+        //    return ParseParagraph(htmlDoc.DocumentNode, docParseContext);
+        //}
 
         private void ParseNode(HtmlNode htmlNode)
         {   
