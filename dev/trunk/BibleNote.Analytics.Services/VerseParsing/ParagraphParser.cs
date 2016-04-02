@@ -98,31 +98,34 @@ namespace BibleNote.Analytics.Services.VerseParsing
 
             var index = 0;         // чтобы анализировать с первого символа, так как теперь поддерживаем ещё и такие ссылки, как "5:6 - ..."
             var verseEntry = StringParser.TryGetVerse(parseString.Value, index);
-
-            var htmlResultLength = Result.OutputHTML.Length;
+            
             var skipNodes = 0;
             while (verseEntry.VersePointerFound)
             {
                 var versePointer = VerseRecognitionService.TryRecognizeVerse(verseEntry, DocParseContext);
                 if (versePointer != null)
                 {
+                    TextNodeEntry verseNode = null;
+                    string verseLink = null;
                     if (!DocumentProvider.IsReadonly)
                     {
-                        var verseNode = MoveVerseTextInOneNode(parseString, verseEntry, ref skipNodes);
-                        var verseLink = DocumentProvider.GetVersePointerLink(verseEntry.VersePointer);
+                        verseNode = MoveVerseTextInOneNode(parseString, verseEntry, ref skipNodes);
+                        verseLink = DocumentProvider.GetVersePointerLink(verseEntry.VersePointer);
                         verseNode.Node.InnerHtml = string.Concat(
                             verseNode.Node.InnerHtml.Substring(0, verseNode.StartIndex),
                             verseLink,
                             verseNode.EndIndex > verseNode.Node.InnerHtml.Length ? verseNode.Node.InnerHtml.Substring(verseNode.EndIndex + 1) : string.Empty);
                     }
+                    else
+                        verseNode = parseString.NodesInfo.First();
 
                     //Result.OutputHTML += // эм...
                     Result.TextParts.Add(new ParagraphTextPart()
                     {
                         Type = ParagraphTextPart.ParagraphTextPartType.Verse,
                         Verse = versePointer,
-                        StartIndex = htmlResultLength + verseEntry.StartIndex,
-                        EndIndex = htmlResultLength + verseEntry.EndIndex   // подождите, но ведь мы сгенерировали html по обычной ссылке - она ведь теперь стала длиннее. 
+                        StartIndex = verseNode.Node.LinePosition - 1 + verseEntry.StartIndex,
+                        EndIndex = verseNode.Node.LinePosition - 1 + (string.IsNullOrEmpty(verseLink) ? verseEntry.EndIndex : (verseEntry.StartIndex + verseLink.Length - 1))
                     });
                     Result.Verses.Add(versePointer);
                 }
