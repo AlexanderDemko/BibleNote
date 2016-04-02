@@ -10,7 +10,6 @@ namespace BibleNote.Analytics.Contracts.VerseParsing
 {
     public interface IParagraphParser
     {
-        ParagraphParseResult ParseParagraph(HtmlNode node, DocumentParseContext docParseContext);
-        //ParagraphParseResult ParseParagraph(string text, DocumentParseContext docParseContext);
+        ParagraphParseResult ParseParagraph(HtmlNode node, DocumentParseContext docParseContext);     
     }
 }
