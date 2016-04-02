@@ -7,16 +7,14 @@ using System.Threading.Tasks;
 namespace BibleNote.Analytics.Models.Common
 {
     public class ParagraphParseResult
-    {
-        public string OutputHTML { get; set; }
+    {   
         public List<VersePointer> Verses { get; set; }
         public List<ParagraphTextPart> TextParts { get; set; }
 
         public ParagraphParseResult()
         {
             Verses = new List<VersePointer>();
-            TextParts = new List<ParagraphTextPart>();
-            OutputHTML = string.Empty;
+            TextParts = new List<ParagraphTextPart>();            
         }        
     }
 
