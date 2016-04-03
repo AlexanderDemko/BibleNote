@@ -222,10 +222,11 @@ namespace BibleNote.Analytics.Models.Common
         public string ModuleName { get; set; }
 
         /// <summary>
-        /// первоначально переданная строка в конструктор. Может быть пустой.
+        /// первоначально переданная строка. Может быть пустой.
         /// </summary>
         public string OriginalVerseName { get; set; }
-        public string OriginalBookName { get; set; }
+
+        //public string OriginalBookName { get; set; }
 
         /// <summary>
         /// Передали "Иуд 2". Исправили ли на "Иуд 1:2"
@@ -249,13 +250,17 @@ namespace BibleNote.Analytics.Models.Common
             if (!string.IsNullOrEmpty(this.OriginalVerseName))
                 return this.OriginalVerseName;
 
-            
-            return string.Concat(
-                        Book != null ? string.Format("{0} ", Book.FriendlyShortName): string.Empty, 
-                        GetFullVerseNumberString());
-        }                                
+            return ToFullString();
+        }
 
-        public virtual VersesListInfo<VersePointer> ExpandMultiVerse()
+        public string ToFullString()
+        {
+            return string.Concat(
+                        Book != null ? string.Format("{0} ", Book.FriendlyShortName) : string.Empty,
+                        GetFullVerseNumberString());
+        }
+
+        public new virtual VersesListInfo<VersePointer> ExpandMultiVerse()
         {
             throw new NotImplementedException();
         }
@@ -368,7 +373,7 @@ namespace BibleNote.Analytics.Models.Common
             }
         }        
 
-        public virtual VersesListInfo<ModuleVersePointer> ExpandMultiVerse()
+        public new virtual VersesListInfo<ModuleVersePointer> ExpandMultiVerse()
         {
             var result = new VersesListInfo<ModuleVersePointer>();
 

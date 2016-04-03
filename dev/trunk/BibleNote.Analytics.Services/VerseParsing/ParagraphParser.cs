@@ -42,6 +42,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
         public ParagraphParseResult Result { get; private set; }
         public IDocumentProvider DocumentProvider { get; private set; }
 
+        private int _shift;
 
         public ParagraphParser(IDocumentProvider documentProvider)
         {   
@@ -51,7 +52,8 @@ namespace BibleNote.Analytics.Services.VerseParsing
 
         public ParagraphParseResult ParseParagraph(HtmlNode node, DocumentParseContext docParseContext)
         {
-            DocParseContext = docParseContext;            
+            DocParseContext = docParseContext;
+            _shift = 0;
 
             ParseNode(node);
 
@@ -107,31 +109,31 @@ namespace BibleNote.Analytics.Services.VerseParsing
                 {
                     TextNodeEntry verseNode = null;
                     string verseLink = null;
+                    verseNode = FindNodeAndMoveVerseTextInOneNodeIfNotReadonly(parseString, verseEntry, ref skipNodes);
+
                     if (!DocumentProvider.IsReadonly)
-                    {
-                        verseNode = MoveVerseTextInOneNode(parseString, verseEntry, ref skipNodes);
+                    {                        
                         verseLink = DocumentProvider.GetVersePointerLink(verseEntry.VersePointer);
                         verseNode.Node.InnerHtml = string.Concat(
                             verseNode.Node.InnerHtml.Substring(0, verseNode.StartIndex),
                             verseLink,
                             verseNode.EndIndex > verseNode.Node.InnerHtml.Length ? verseNode.Node.InnerHtml.Substring(verseNode.EndIndex + 1) : string.Empty);
-                    }
-                    else
-                        verseNode = parseString.NodesInfo.First();
+                    }   
 
-                    //Result.OutputHTML += // эм...
                     Result.TextParts.Add(new ParagraphTextPart()
                     {
                         Type = ParagraphTextPart.ParagraphTextPartType.Verse,
                         Verse = versePointer,
-                        StartIndex = verseNode.Node.LinePosition - 1 + verseEntry.StartIndex,
-                        EndIndex = verseNode.Node.LinePosition - 1 + (string.IsNullOrEmpty(verseLink) ? verseEntry.EndIndex : (verseEntry.StartIndex + verseLink.Length - 1))
+                        StartIndex = verseNode.Node.LinePosition - 1 + verseEntry.StartIndex + _shift,
+                        EndIndex = verseNode.Node.LinePosition - 1 + (string.IsNullOrEmpty(verseLink) ? verseEntry.EndIndex : (verseEntry.StartIndex + verseLink.Length - 1)) + _shift
                     });
                     Result.Verses.Add(versePointer);
+
+                    if (!string.IsNullOrEmpty(verseLink))
+                        _shift += verseLink.Length - verseEntry.VersePointer.OriginalVerseName.Length;
                 }
 
-                // А уже, наверное, здесь дополним DocumentParseContex. Или лучше научим DocumentParseContex самому себя наполнять найденными стихами.
-                // а потом - проверить (спросить у провайдера), можно ли преобразовать в ссылку. И если да - то преобразовать.
+                // А уже, наверное, здесь дополним DocumentParseContex. Или лучше научим DocumentParseContex самому себя наполнять найденными стихами.                
 
                 index = verseEntry.EndIndex + 1;
                 if (index < parseString.Value.Length - 2)
@@ -148,7 +150,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
         /// <param name="verseEntryInfo"></param>
         /// <param name="skipNodes">Чтобы не проверять строку с начала</param>
         /// <returns></returns>
-        private TextNodeEntry MoveVerseTextInOneNode(TextNodesString parseString, VerseEntryInfo verseEntryInfo, ref int skipNodes)
+        private TextNodeEntry FindNodeAndMoveVerseTextInOneNodeIfNotReadonly(TextNodesString parseString, VerseEntryInfo verseEntryInfo, ref int skipNodes)
         {
             var result = new TextNodeEntry();
 
@@ -158,11 +160,14 @@ namespace BibleNote.Analytics.Services.VerseParsing
                 {
                     if (result.Node == null)
                     {
-                        if (nodeEntry.StartIndex <= verseEntryInfo.StartIndex)
+                        if (nodeEntry.StartIndex <= verseEntryInfo.StartIndex && verseEntryInfo.StartIndex <= nodeEntry.EndIndex)
                         {
                             result.Node = nodeEntry.Node;
                             result.StartIndex = verseEntryInfo.StartIndex - nodeEntry.StartIndex;
                             result.EndIndex = (nodeEntry.EndIndex >= verseEntryInfo.EndIndex ? verseEntryInfo.EndIndex : nodeEntry.EndIndex) - nodeEntry.StartIndex;
+
+                            if (DocumentProvider.IsReadonly)
+                                break;
 
                             if (nodeEntry.EndIndex >= verseEntryInfo.EndIndex)                            
                                 break;
@@ -173,6 +178,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
                         var moveCharsCount = (verseEntryInfo.EndIndex > nodeEntry.EndIndex ? nodeEntry.EndIndex : verseEntryInfo.EndIndex) - nodeEntry.StartIndex + 1;
                         var verseTextPart = nodeEntry.Node.InnerText.Substring(0, moveCharsCount);
                         result.EndIndex += moveCharsCount;
+                        nodeEntry.StartIndex += moveCharsCount;     // здесь может быть ситуация, когда Startindex > EndIndex. Когда нода была из одного символа. Похоже, что это нормально. Так как мы больше нигде не используем эти ноды.
 
 #if DEBUG
                         if (result.Node.InnerHtml != result.Node.InnerText)
@@ -183,7 +189,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
 #endif
 
                         result.Node.InnerHtml += verseTextPart;
-                        nodeEntry.Node.InnerHtml = nodeEntry.Node.InnerHtml.Remove(0, moveCharsCount);
+                        nodeEntry.Node.InnerHtml = nodeEntry.Node.InnerHtml.Remove(0, moveCharsCount);                        
 
                         if (verseEntryInfo.EndIndex < nodeEntry.EndIndex)
                             break;

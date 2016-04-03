@@ -70,18 +70,22 @@ namespace BibleNote.Analytics.Services.VerseParsing
                 return new VerseEntryInfo() { EntryType = VerseEntryType.None };
 
             var entryStartIndex = bookEntry != null ? bookEntry.StartIndex : verseNumberEntry.StartIndex;
-            var entryEndIndex = verseNumberEntry != null ? (topVerseNumberEntry ?? verseNumberEntry).EndIndex : indexOfDigit;            
+            var entryEndIndex = verseNumberEntry != null ? (topVerseNumberEntry ?? verseNumberEntry).EndIndex : indexOfDigit;
+            var originalVerse = text.Substring(entryStartIndex, entryEndIndex - entryStartIndex + 1);
 
             var result = new VerseEntryInfo()
-            {
+            {                
+                EntryType = GetEntryType(bookEntry, verseNumberEntry),  // нужно заново пересчитать, так как могло измениться в verseNumberEntry.CanBeJustNumber
+                VerseEntryOptions = GetVerseEntryOptions(text, entryStartIndex, entryEndIndex),
                 StartIndex = entryStartIndex,
                 EndIndex = entryEndIndex,
                 VersePointer = new VersePointer(
                     bookEntry != null ? bookEntry.BookInfo : null, bookEntry != null ? bookEntry.ModuleName : null,
-                    verseNumberEntry.VerseNumber,  
-                    topVerseNumberEntry != null ? topVerseNumberEntry.VerseNumber : (VerseNumber?)null),
-                EntryType = GetEntryType(bookEntry, verseNumberEntry),  // нужно заново пересчитать, так как могло измениться в verseNumberEntry.CanBeJustNumber
-                VerseEntryOptions = GetVerseEntryOptions(text, entryStartIndex, entryEndIndex)
+                    verseNumberEntry.VerseNumber,
+                    topVerseNumberEntry != null ? topVerseNumberEntry.VerseNumber : (VerseNumber?)null)
+                {
+                    OriginalVerseName = originalVerse
+                }                
             };
 
             return result;
