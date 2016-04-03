@@ -60,22 +60,37 @@ namespace BibleNote.Tests.Analytics
         public void TestScenario0()
         {
             var input = "<div>Это <p>тестовая <font>Мк 5:</font>6-7!!</p> строка</div>";
-            var expected = "<div>Это <p>тестовая <a href='bnVerse:Марка 5:6-7'>Марка 5:6-7</a><font></font>!!</p> строка</div>";
+            var expected = "<div>Это <p>тестовая <a href='bnVerse:Марка 5:6-7'>Мк 5:6-7</a><font></font>!!</p> строка</div>";
             
             var result = CheckVerses(input, expected, "Мк 5:6-7");
 
             var verseEntry = result.Result.TextParts.First();
             var verseString = result.HtmlDoc.DocumentNode.InnerHtml.Substring(verseEntry.StartIndex, verseEntry.EndIndex - verseEntry.StartIndex + 1);
-            Assert.AreEqual("<a href='bnVerse:Марка 5:6-7'>Марка 5:6-7</a>", verseString);
+            Assert.AreEqual("<a href='bnVerse:Марка 5:6-7'>Мк 5:6-7</a>", verseString);
         }
 
         [TestMethod]
         public void TestScenario00()
         {
-            var input = "<div>Это тестовая Ин 3:16 строка<BR/>с переводом строки. Лк<br />5:6 - это первая ссылка, <p>Лк<font>7</font>:<font>8 и ещё </font><font class='test'>Мк 5:</font>6-7!!</p> - это вторая<p><font></font></p><p>1</p></div>";
-            var expected = "<div>Это тестовая <a href='bnVerse:Иоанна 3:16'>Иоанна 3:16</a><br>с переводом строки. Лк<br>5:6 - это первая ссылка, <p><a href='bnVerse:Луки 7:8'>Луки 7:8</a><font></font><font> и ещё </font><font class='test'><a href='bnVerse:Марка 5:6-7'>Марка 5:6-7</a></font>!!</p> - это вторая<p><font></font></p><p>1<p/></div>";
-            Остановился здесь. Выходной html почти совпадает. Есть некоторые расхождения.
+            var input = "<div>Это тестовая Ин 3:16 строка<BR/>с переводом строки. Лк<br />5:6 - это первая ссылка, <p>Лк<font>7</font>:<font>8 и ещё </font><font class='test'>Мк 5:</font>6-7!!</p> - это вторая<p><font></font></p><p>1</p></div>";            
+            var expected = "<div>Это тестовая <a href='bnVerse:Иоанна 3:16'>Ин 3:16</a><br>с переводом строки. Лк<br>5:6 - это первая ссылка, <p><a href='bnVerse:Луки 7:8'>Лк7:8</a><font></font><font> и ещё </font><font class='test'><a href='bnVerse:Марка 5:6-7'>Мк 5:6-7</a></font>!!</p> - это вторая<p><font></font></p><p>1</p></div>";
+            
             var result = CheckVerses(input, expected, "Ин 3:16", "Лк 7:8", "Мк 5:6-7");
+
+            var verseEntry = result.Result.TextParts[0];
+            var verseString = result.HtmlDoc.DocumentNode.InnerHtml.Substring(verseEntry.StartIndex, verseEntry.EndIndex - verseEntry.StartIndex + 1);
+            Assert.AreEqual("<a href='bnVerse:Иоанна 3:16'>Ин 3:16</a>", verseString);
+
+
+            вот эти ниже проверки не работают :( Добавил "_shift += verseLink.Length - verseEntry.VersePointer.OriginalVerseName.Length;", но видимо всё равно "verseNode.Node.LinePosition - 1" - неверно. Да и ещё единицу зачем-то отнимаю.
+
+            verseEntry = result.Result.TextParts[1];
+            verseString = result.HtmlDoc.DocumentNode.InnerHtml.Substring(verseEntry.StartIndex, verseEntry.EndIndex - verseEntry.StartIndex + 1);
+            Assert.AreEqual("<a href='bnVerse:Луки 7:8'>Лк7:8</a>", verseString);
+
+            verseEntry = result.Result.TextParts[2];
+            verseString = result.HtmlDoc.DocumentNode.InnerHtml.Substring(verseEntry.StartIndex, verseEntry.EndIndex - verseEntry.StartIndex + 1);
+            Assert.AreEqual("<a href='bnVerse:Марка 5:6-7'>Мк 5:6-7</a>", verseString);
         }
 
         //[TestMethod]

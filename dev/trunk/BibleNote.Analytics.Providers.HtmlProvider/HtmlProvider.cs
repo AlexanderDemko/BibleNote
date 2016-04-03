@@ -12,12 +12,12 @@ namespace BibleNote.Analytics.Providers.HtmlProvider
     {
         public bool IsReadonly
         {
-            get { return false; }
+            get { return true; }
         }
 
         public string GetVersePointerLink(VersePointer versePointer)
         {
-            return string.Format("<a href='bnVerse:{0}'>{0}</a>", versePointer.ToString());
+            return string.Format("<a href='bnVerse:{0}'>{1}</a>", versePointer.ToFullString(), versePointer.ToString());
         }
     }
 }
