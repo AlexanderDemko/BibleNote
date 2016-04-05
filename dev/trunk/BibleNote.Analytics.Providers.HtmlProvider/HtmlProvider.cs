@@ -12,7 +12,7 @@ namespace BibleNote.Analytics.Providers.HtmlProvider
     {
         public bool IsReadonly
         {
-            get { return true; }
+            get { return false; }  // а почему вообще localHtmlProvider должен отличаться от webHtmlProvider? Локальные html файлы лучше тоже не менять, а преобразовывать при отбражении только.
         }
 
         public string GetVersePointerLink(VersePointer versePointer)

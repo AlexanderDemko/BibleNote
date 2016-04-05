@@ -47,10 +47,12 @@ namespace BibleNote.Tests.Analytics
             
             Assert.AreEqual(expectedOutput, htmlDoc.DocumentNode.InnerHtml, "The output html is wrong.");
 
-            Assert.IsTrue(result.Verses.Count == verses.Length, "Verses length is not the same. Expected: {0}. Found: {1}", verses.Length, result.Verses.Count);
+            var verseEntries = result.GetAllVerses().ToList();
+
+            Assert.IsTrue(verseEntries.Count == verses.Length, "Verses length is not the same. Expected: {0}. Found: {1}", verses.Length, verseEntries.Count);
 
             foreach (var verse in verses)
-                Assert.IsTrue(result.Verses.Contains(_verseParserService.CreateVersePointer(verse)), "Can not find the verse: '{0}'", verse);
+                Assert.IsTrue(verseEntries.Contains(_verseParserService.CreateVersePointer(verse)), "Can not find the verse: '{0}'", verse);
 
             return new TestResult() { HtmlDoc = htmlDoc, Result = result };
         }
@@ -60,48 +62,30 @@ namespace BibleNote.Tests.Analytics
         public void TestScenario0()
         {
             var input = "<div>Это <p>тестовая <font>Мк 5:</font>6-7!!</p> строка</div>";
-            var expected = "<div>Это <p>тестовая <a href='bnVerse:Марка 5:6-7'>Мк 5:6-7</a><font></font>!!</p> строка</div>";
-            
+            var expected = "<div>Это <p>тестовая <font><a href='bnVerse:Марка 5:6-7'>Мк 5:6-7</a></font>!!</p> строка</div>";            
             var result = CheckVerses(input, expected, "Мк 5:6-7");
 
-            var verseEntry = result.Result.TextParts.First();
-            var verseString = result.HtmlDoc.DocumentNode.InnerHtml.Substring(verseEntry.StartIndex, verseEntry.EndIndex - verseEntry.StartIndex + 1);
-            Assert.AreEqual("<a href='bnVerse:Марка 5:6-7'>Мк 5:6-7</a>", verseString);
+            var textPart = result.Result.TextParts[1];
+            Assert.AreEqual("тестовая Мк 5:6-7!!", textPart.Text);
+            var verseEntry = textPart.VerseEntries[0];
+            Assert.AreEqual("Мк 5:6-7", textPart.Text.Substring(verseEntry.StartIndex, verseEntry.EndIndex - verseEntry.StartIndex + 1));
+
+            input = "<div>Это тестовая Ин 3:16 строка<BR/>с переводом строки. Лк<br />5:6 - это первая ссылка, <p>Лк<font>7</font>:<font>8 и ещё </font><font class='test'>Мк 5:</font>6-7!!</p> - это вторая<p><font></font></p><p>1</p></div>";
+            expected = "<div>Это тестовая <a href='bnVerse:Иоанна 3:16'>Ин 3:16</a> строка<br>с переводом строки. Лк<br>5:6 - это первая ссылка, <p><a href='bnVerse:Луки 7:8'>Лк7:8</a><font></font><font> и ещё </font><font class='test'><a href='bnVerse:Марка 5:6-7'>Мк 5:6-7</a></font>!!</p> - это вторая<p><font></font></p><p>1</p></div>";                       
+            result = CheckVerses(input, expected, "Ин 3:16", "Лк 7:8", "Мк 5:6-7");
+
+            Assert.AreEqual(6, result.Result.TextParts.Count);
         }
 
         [TestMethod]
-        public void TestScenario00()
+        public void TestScenario1()
         {
-            var input = "<div>Это тестовая Ин 3:16 строка<BR/>с переводом строки. Лк<br />5:6 - это первая ссылка, <p>Лк<font>7</font>:<font>8 и ещё </font><font class='test'>Мк 5:</font>6-7!!</p> - это вторая<p><font></font></p><p>1</p></div>";            
-            var expected = "<div>Это тестовая <a href='bnVerse:Иоанна 3:16'>Ин 3:16</a><br>с переводом строки. Лк<br>5:6 - это первая ссылка, <p><a href='bnVerse:Луки 7:8'>Лк7:8</a><font></font><font> и ещё </font><font class='test'><a href='bnVerse:Марка 5:6-7'>Мк 5:6-7</a></font>!!</p> - это вторая<p><font></font></p><p>1</p></div>";
-            
-            var result = CheckVerses(input, expected, "Ин 3:16", "Лк 7:8", "Мк 5:6-7");
+            var input = "тест Лк 1:16, 10:13-17;18-19; 11:1-2 тест";
+            var expected = "тест Лк 1:16, 10:13-17; 18-19; 11:1-2 тест";
 
-            var verseEntry = result.Result.TextParts[0];
-            var verseString = result.HtmlDoc.DocumentNode.InnerHtml.Substring(verseEntry.StartIndex, verseEntry.EndIndex - verseEntry.StartIndex + 1);
-            Assert.AreEqual("<a href='bnVerse:Иоанна 3:16'>Ин 3:16</a>", verseString);
-
-
-            вот эти ниже проверки не работают :( Добавил "_shift += verseLink.Length - verseEntry.VersePointer.OriginalVerseName.Length;", но видимо всё равно "verseNode.Node.LinePosition - 1" - неверно. Да и ещё единицу зачем-то отнимаю.
-
-            verseEntry = result.Result.TextParts[1];
-            verseString = result.HtmlDoc.DocumentNode.InnerHtml.Substring(verseEntry.StartIndex, verseEntry.EndIndex - verseEntry.StartIndex + 1);
-            Assert.AreEqual("<a href='bnVerse:Луки 7:8'>Лк7:8</a>", verseString);
-
-            verseEntry = result.Result.TextParts[2];
-            verseString = result.HtmlDoc.DocumentNode.InnerHtml.Substring(verseEntry.StartIndex, verseEntry.EndIndex - verseEntry.StartIndex + 1);
-            Assert.AreEqual("<a href='bnVerse:Марка 5:6-7'>Мк 5:6-7</a>", verseString);
+            CheckVerses(input, expected, "Лк 1:16", "Лк 10:13", "Лк 10:14", "Лк 10:15", "Лк 10:16",
+                "Лк 10:17", "Лк 18", "Лк 19", "Лк 11:1", "Лк 11:2");
         }
-
-        //[TestMethod]
-        //public void TestScenario1()
-        //{
-        //    var input = "тест Лк 1:16, 10:13-17;18-19; 11:1-2 тест";
-        //    var expected = "тест Лк 1:16, 10:13-17; 18-19; 11:1-2 тест";
-
-        //    CheckVerses(input, expected, "Лк 1:16", "Лк 10:13", "Лк 10:14", "Лк 10:15", "Лк 10:16",
-        //        "Лк 10:17", "Лк 18", "Лк 19", "Лк 11:1", "Лк 11:2");            
-        //}
 
         //[TestMethod]
         //public void TestScenario2()

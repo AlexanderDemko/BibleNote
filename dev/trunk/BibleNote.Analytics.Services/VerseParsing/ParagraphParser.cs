@@ -38,26 +38,25 @@ namespace BibleNote.Analytics.Services.VerseParsing
         [Dependency]
         public IVerseRecognitionService VerseRecognitionService { get; set; }
 
-        public DocumentParseContext DocParseContext { get; private set; }
-        public ParagraphParseResult Result { get; private set; }
-        public IDocumentProvider DocumentProvider { get; private set; }
+        public DocumentParseContext DocParseContext { get; private set; }        
 
-        private int _shift;
+        public IDocumentProvider DocumentProvider { get; private set; }
+        
+        private ParagraphParseResult _result { get; set; }
 
         public ParagraphParser(IDocumentProvider documentProvider)
         {   
-            Result = new ParagraphParseResult();
             DocumentProvider = documentProvider;
         }
 
         public ParagraphParseResult ParseParagraph(HtmlNode node, DocumentParseContext docParseContext)
         {
-            DocParseContext = docParseContext;
-            _shift = 0;
+            DocParseContext = docParseContext;            
+            _result = new ParagraphParseResult();
 
             ParseNode(node);
 
-            return Result;
+            return _result;
         }
 
         private void ParseNode(HtmlNode htmlNode)
@@ -98,14 +97,17 @@ namespace BibleNote.Analytics.Services.VerseParsing
             if (string.IsNullOrEmpty(parseString.Value))
                 return;
 
+            var paragraphTextPart = new ParagraphTextPart(parseString.Value);
+            _result.TextParts.Add(paragraphTextPart); // todo: сейчас мы всё добавляем. Но в будущем надо перед сохранением будет удалять лишние текстПарты. То есть сохранять только те, в которых есть стихи и около их.
+
             var index = 0;         // чтобы анализировать с первого символа, так как теперь поддерживаем ещё и такие ссылки, как "5:6 - ..."
             var verseEntry = StringParser.TryGetVerse(parseString.Value, index);
             
             var skipNodes = 0;
             while (verseEntry.VersePointerFound)
             {
-                var versePointer = VerseRecognitionService.TryRecognizeVerse(verseEntry, DocParseContext);
-                if (versePointer != null)
+                verseEntry.VersePointer = VerseRecognitionService.TryRecognizeVerse(verseEntry, DocParseContext);
+                if (verseEntry.VersePointer != null)
                 {
                     TextNodeEntry verseNode = null;
                     string verseLink = null;
@@ -117,20 +119,10 @@ namespace BibleNote.Analytics.Services.VerseParsing
                         verseNode.Node.InnerHtml = string.Concat(
                             verseNode.Node.InnerHtml.Substring(0, verseNode.StartIndex),
                             verseLink,
-                            verseNode.EndIndex > verseNode.Node.InnerHtml.Length ? verseNode.Node.InnerHtml.Substring(verseNode.EndIndex + 1) : string.Empty);
-                    }   
+                            verseNode.EndIndex < verseNode.Node.InnerHtml.Length ? verseNode.Node.InnerHtml.Substring(verseNode.EndIndex + 1) : string.Empty);
+                    }
 
-                    Result.TextParts.Add(new ParagraphTextPart()
-                    {
-                        Type = ParagraphTextPart.ParagraphTextPartType.Verse,
-                        Verse = versePointer,
-                        StartIndex = verseNode.Node.LinePosition - 1 + verseEntry.StartIndex + _shift,
-                        EndIndex = verseNode.Node.LinePosition - 1 + (string.IsNullOrEmpty(verseLink) ? verseEntry.EndIndex : (verseEntry.StartIndex + verseLink.Length - 1)) + _shift
-                    });
-                    Result.Verses.Add(versePointer);
-
-                    if (!string.IsNullOrEmpty(verseLink))
-                        _shift += verseLink.Length - verseEntry.VersePointer.OriginalVerseName.Length;
+                    paragraphTextPart.VerseEntries.Add(verseEntry);                       
                 }
 
                 // А уже, наверное, здесь дополним DocumentParseContex. Или лучше научим DocumentParseContex самому себя наполнять найденными стихами.                

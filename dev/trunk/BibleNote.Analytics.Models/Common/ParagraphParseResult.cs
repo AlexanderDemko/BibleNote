@@ -8,30 +8,28 @@ namespace BibleNote.Analytics.Models.Common
 {
     public class ParagraphParseResult
     {   
-        public List<VersePointer> Verses { get; set; }
         public List<ParagraphTextPart> TextParts { get; set; }
 
         public ParagraphParseResult()
-        {
-            Verses = new List<VersePointer>();
+        {            
             TextParts = new List<ParagraphTextPart>();            
-        }        
+        }
+        public IEnumerable<VersePointer> GetAllVerses()
+        {
+            return TextParts.SelectMany(tp => tp.VerseEntries.Select(ve => ve.VersePointer));
+        }
     }
 
 
     public class ParagraphTextPart
-    {
-        public enum ParagraphTextPartType
-        {
-            Verse,
-            Text
-        }
-
+    {   
         public string Text { get; set; }
-        public ParagraphTextPartType Type { get; set; }
-        public VersePointer Verse { get; set; }
+        public List<VerseEntryInfo> VerseEntries { get; set; }        
 
-        public int StartIndex { get; set; }
-        public int EndIndex { get; set; }
+        public ParagraphTextPart(string text)
+        {
+            Text = text;
+            VerseEntries = new List<VerseEntryInfo>();
+        }
     }
 }
