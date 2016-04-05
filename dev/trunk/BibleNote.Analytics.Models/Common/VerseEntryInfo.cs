@@ -10,16 +10,22 @@ namespace BibleNote.Analytics.Models.Common
     public class BookEntry
     {
         public BibleBookInfo BookInfo { get; set; }
+
         public string ModuleName { get; set; }
+
         public int StartIndex { get; set; }
+
         public int EndIndex { get; set; }
     }
 
     public class VerseNumberEntry
     {
         public VerseNumber VerseNumber { get; set; }
+
         public int StartIndex { get; set; }
+
         public int EndIndex { get; set; }
+
         public bool IsVerse { get; set; }
 
         public bool CanBeJustNumber(string text, VerseNumberEntry topVerseNumberEntry)
@@ -67,10 +73,15 @@ namespace BibleNote.Analytics.Models.Common
     public class VerseEntryInfo
     {
         public VersePointer VersePointer { get; set; }
+
         public VerseEntryType EntryType { get; set; }
+
         public int StartIndex { get; set; }
+
         public int EndIndex { get; set; }
+
         public VerseEntryOptions VerseEntryOptions { get; set; }
+
         //public bool IsExcluded { get; set; }        
 
         public bool VersePointerFound
