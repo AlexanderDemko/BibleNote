@@ -7,6 +7,7 @@ using BibleNote.Analytics.Contracts.Environment;
 using Microsoft.Practices.Unity;
 using BibleNote.Analytics.Providers.HtmlProvider;
 using HtmlAgilityPack;
+using BibleNote.Analytics.Core.Helpers;
 
 namespace BibleNote.Tests.Analytics
 {
@@ -46,10 +47,10 @@ namespace BibleNote.Tests.Analytics
             var result = _parahraphParserService.ParseParagraph(htmlDoc.DocumentNode, null);
             
             Assert.AreEqual(expectedOutput, htmlDoc.DocumentNode.InnerHtml, "The output html is wrong.");
+            Assert.AreEqual(StringUtils.GetText(input), string.Join(string.Empty, result.TextParts.Select(tp => tp.Text)), "Text parts do not contain the full input string.");
 
             var verseEntries = result.GetAllVerses().ToList();
-
-            Assert.IsTrue(verseEntries.Count == verses.Length, "Verses length is not the same. Expected: {0}. Found: {1}", verses.Length, verseEntries.Count);
+            Assert.AreEqual(verses.Length, verseEntries.Count, "Verses length is not the same. Expected: {0}. Found: {1}", verses.Length, verseEntries.Count);            
 
             foreach (var verse in verses)
                 Assert.IsTrue(verseEntries.Contains(_verseParserService.CreateVersePointer(verse)), "Can not find the verse: '{0}'", verse);

@@ -14,6 +14,7 @@ namespace BibleNote.Analytics.Models.Common
         {            
             TextParts = new List<ParagraphTextPart>();            
         }
+
         public IEnumerable<VersePointer> GetAllVerses()
         {
             return TextParts.SelectMany(tp => tp.VerseEntries.Select(ve => ve.VersePointer));
@@ -24,6 +25,7 @@ namespace BibleNote.Analytics.Models.Common
     public class ParagraphTextPart
     {   
         public string Text { get; set; }
+
         public List<VerseEntryInfo> VerseEntries { get; set; }        
 
         public ParagraphTextPart(string text)
