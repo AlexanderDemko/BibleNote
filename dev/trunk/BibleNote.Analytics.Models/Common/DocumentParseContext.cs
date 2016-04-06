@@ -35,7 +35,6 @@ namespace BibleNote.Analytics.Models.Common
 
         public void EnterCell()
         {
-
         }
     }
 }
