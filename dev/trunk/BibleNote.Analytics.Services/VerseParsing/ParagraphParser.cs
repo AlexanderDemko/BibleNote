@@ -119,7 +119,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
                         verseNode.Node.InnerHtml = string.Concat(
                             verseNode.Node.InnerHtml.Substring(0, verseNode.StartIndex),
                             verseLink,
-                            verseNode.EndIndex < verseNode.Node.InnerHtml.Length ? verseNode.Node.InnerHtml.Substring(verseNode.EndIndex + 1) : string.Empty);
+                            verseNode.EndIndex + 1 < verseNode.Node.InnerHtml.Length ? verseNode.Node.InnerHtml.Substring(verseNode.EndIndex + 1) : string.Empty);
                     }
 
                     paragraphTextPart.VerseEntries.Add(verseEntry);                       
