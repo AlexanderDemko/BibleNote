@@ -1,12 +1,10 @@
-﻿using BibleNote.Analytics.Contracts.VerseParsing;
+﻿using BibleNote.Analytics.Contracts.Environment;
+using BibleNote.Analytics.Contracts.VerseParsing;
 using BibleNote.Analytics.Models.Common;
 using BibleNote.Analytics.Services.Unity;
+using BibleNote.Tests.Analytics.Mocks;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Microsoft.Practices.Unity;
 
 namespace BibleNote.Tests.Analytics
 {
@@ -19,6 +17,8 @@ namespace BibleNote.Tests.Analytics
         public void Init()
         {
             DIContainer.InitWithDefaults();
+            DIContainer.Container.RegisterInstance<IConfigurationManager>(new MockConfigurationManager());
+
             _stringParser = DIContainer.Resolve<IStringParser>();
         }
 
