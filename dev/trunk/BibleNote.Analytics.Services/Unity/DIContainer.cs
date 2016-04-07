@@ -55,7 +55,7 @@ namespace BibleNote.Analytics.Services.Unity
 
             Container
                 .RegisterContextType<AnalyticsContext>()
-                .RegisterTracingType<IConfigurationManager, ConfigurationManager>(new ContainerControlledLifetimeManager(), new InjectionConstructor(true))
+                .RegisterTracingType<IConfigurationManager, ConfigurationManager>(new ContainerControlledLifetimeManager())
                 .RegisterTracingType<IModulesManager, ModulesManager>(new ContainerControlledLifetimeManager())                
                 .RegisterTracingType<IBibleParallelTranslationConnectorManager, BibleParallelTranslationConnectorManager>(new ContainerControlledLifetimeManager())
                 .RegisterTracingType<IBibleParallelTranslationManager, BibleParallelTranslationManager>(new ContainerControlledLifetimeManager())

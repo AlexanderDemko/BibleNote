@@ -5,17 +5,19 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BibleNote.Analytics.Services.Environment
+namespace BibleNote.Tests.Analytics.Mocks
 {
-    public class ConfigurationManager : IConfigurationManager
-    {   
+    class MockConfigurationManager : IConfigurationManager
+    {
         public string ModuleShortName { get; set; }
-        public bool UseCommaDelimiter { get; set; }        
+        public bool UseCommaDelimiter { get; set; }
 
-        public ConfigurationManager()
-        {            
-            throw new NotImplementedException();
+        public MockConfigurationManager()
+        {           
+            ModuleShortName = "rst";
+            UseCommaDelimiter = true;          
         }
+
 
         public void SaveChanges()
         {
