@@ -5,9 +5,9 @@ using BibleNote.Analytics.Models.Common;
 using BibleNote.Analytics.Contracts.VerseParsing;
 using BibleNote.Analytics.Contracts.Environment;
 using Microsoft.Practices.Unity;
-using BibleNote.Analytics.Providers.HtmlProvider;
 using HtmlAgilityPack;
 using BibleNote.Analytics.Core.Helpers;
+using BibleNote.Tests.Analytics.Mocks;
 
 namespace BibleNote.Tests.Analytics
 {
@@ -23,14 +23,18 @@ namespace BibleNote.Tests.Analytics
         private IParagraphParser _parahraphParserService;
         private IConfigurationManager _configurationManager;
         private IVersePointerFactory _verseParserService;
+        private MockDocumentProvider _mockDocumentProvider;
 
         [TestInitialize]
         public void Init()
         {
-            DIContainer.InitWithDefaults();            
-            _parahraphParserService = DIContainer.Resolve<IParagraphParser>(new ParameterOverrides { { "documentProvider", new LocalHtmlProvider() } });
+            DIContainer.InitWithDefaults();
+            DIContainer.Container.RegisterInstance<IConfigurationManager>(new MockConfigurationManager());
+
+            _mockDocumentProvider = new MockDocumentProvider();
+            _parahraphParserService = DIContainer.Resolve<IParagraphParser>(new ParameterOverrides { { "documentProvider", _mockDocumentProvider } });
             _configurationManager = DIContainer.Resolve<IConfigurationManager>();
-            _verseParserService = DIContainer.Resolve<IVersePointerFactory>();
+            _verseParserService = DIContainer.Resolve<IVersePointerFactory>();            
         }
 
         [TestCleanup]
@@ -41,6 +45,15 @@ namespace BibleNote.Tests.Analytics
 
         private TestResult CheckVerses(string input, string expectedOutput, params string[] verses)
         {
+            if (string.IsNullOrEmpty(expectedOutput))
+            {
+                _mockDocumentProvider.IsReadonly = true;
+                expectedOutput = input;
+            }
+            else
+                _mockDocumentProvider.IsReadonly = false;
+
+
             var htmlDoc = new HtmlDocument();
             htmlDoc.LoadHtml(input);
 
@@ -81,10 +94,9 @@ namespace BibleNote.Tests.Analytics
         [TestMethod]
         public void TestScenario1()
         {
-            var input = "тест Лк 1:16, 10:13-17;18-19; 11:1-2 тест";
-            var expected = "тест Лк 1:16, 10:13-17; 18-19; 11:1-2 тест";
+            var input = "тест Лк 1:16, 10:13-17;18-19; 11:1-2 тест";            
 
-            CheckVerses(input, expected, "Лк 1:16", "Лк 10:13", "Лк 10:14", "Лк 10:15", "Лк 10:16",
+            CheckVerses(input, null, "Лк 1:16", "Лк 10:13", "Лк 10:14", "Лк 10:15", "Лк 10:16",
                 "Лк 10:17", "Лк 18", "Лк 19", "Лк 11:1", "Лк 11:2");
         }
 

@@ -92,6 +92,8 @@
   </Choose>
   <ItemGroup>
     <Compile Include="Analytics\DBTests.cs" />
+    <Compile Include="Analytics\Mocks\MockConfigurationManager.cs" />
+    <Compile Include="Analytics\Mocks\MockDocumentProvider.cs" />
     <Compile Include="Analytics\ParagraphParserTests.cs" />
     <Compile Include="Analytics\StringParserTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
