@@ -1,8 +1,10 @@
-﻿using System;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using BibleNote.Analytics.Models.Common;
 using BibleNote.Analytics.Contracts.VerseParsing;
 using BibleNote.Analytics.Services.Unity;
+using Microsoft.Practices.Unity;
+using BibleNote.Analytics.Contracts.Environment;
+using BibleNote.Tests.Analytics.Mocks;
 
 namespace BibleNote.Tests.Analytics
 {
@@ -15,7 +17,9 @@ namespace BibleNote.Tests.Analytics
         public void Init()
         {
             DIContainer.InitWithDefaults();
-            _versePointerFactory = DIContainer.Resolve<IVersePointerFactory>();
+            DIContainer.Container.RegisterInstance<IConfigurationManager>(new MockConfigurationManager());
+
+            _versePointerFactory = DIContainer.Resolve<IVersePointerFactory>();            
         }
 
         private void TestVerseParsing(string originalVerse, SimpleVersePointer expectedVerse)

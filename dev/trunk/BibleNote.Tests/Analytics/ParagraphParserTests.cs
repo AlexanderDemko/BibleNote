@@ -20,9 +20,8 @@ namespace BibleNote.Tests.Analytics
             public ParagraphParseResult Result { get; set; }
         }
 
-        private IParagraphParser _parahraphParserService;
-        private IConfigurationManager _configurationManager;
-        private IVersePointerFactory _verseParserService;
+        private IParagraphParser _parahraphParserService;        
+        private IVersePointerFactory _versePointerFactory;
         private MockDocumentProvider _mockDocumentProvider;
 
         [TestInitialize]
@@ -32,9 +31,8 @@ namespace BibleNote.Tests.Analytics
             DIContainer.Container.RegisterInstance<IConfigurationManager>(new MockConfigurationManager());
 
             _mockDocumentProvider = new MockDocumentProvider();
-            _parahraphParserService = DIContainer.Resolve<IParagraphParser>(new ParameterOverrides { { "documentProvider", _mockDocumentProvider } });
-            _configurationManager = DIContainer.Resolve<IConfigurationManager>();
-            _verseParserService = DIContainer.Resolve<IVersePointerFactory>();            
+            _parahraphParserService = DIContainer.Resolve<IParagraphParser>(new ParameterOverrides { { "documentProvider", _mockDocumentProvider } });            
+            _versePointerFactory = DIContainer.Resolve<IVersePointerFactory>();            
         }
 
         [TestCleanup]
@@ -66,7 +64,7 @@ namespace BibleNote.Tests.Analytics
             Assert.AreEqual(verses.Length, verseEntries.Count, "Verses length is not the same. Expected: {0}. Found: {1}", verses.Length, verseEntries.Count);            
 
             foreach (var verse in verses)
-                Assert.IsTrue(verseEntries.Contains(_verseParserService.CreateVersePointer(verse)), "Can not find the verse: '{0}'", verse);
+                Assert.IsTrue(verseEntries.Contains(_versePointerFactory.CreateVersePointer(verse)), "Can not find the verse: '{0}'", verse);
 
             return new TestResult() { HtmlDoc = htmlDoc, Result = result };
         }
