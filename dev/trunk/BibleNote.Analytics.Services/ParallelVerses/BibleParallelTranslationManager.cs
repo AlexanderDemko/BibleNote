@@ -14,8 +14,12 @@ namespace BibleNote.Analytics.Services.ParallelVerses
 {
     public class BibleParallelTranslationManager : IBibleParallelTranslationManager
     {
-        [Dependency]
-        public ILog Log { get; set; }
+        private ILog _log;
+
+        public BibleParallelTranslationManager(ILog log)
+        {
+            _log = log;
+        }
 
         public bool MergeModuleWithMainBible(ModuleInfo baseModuleInfo, ModuleInfo parallelModuleInfo)
         {
@@ -57,7 +61,7 @@ namespace BibleNote.Analytics.Services.ParallelVerses
                 }
                 catch (ModuleNotFoundException e) 
                 {
-                    Log.Write(LogLevel.Warning, e.ToString());
+                    _log.Write(LogLevel.Warning, e.ToString());
                 }
             }
 
@@ -80,7 +84,7 @@ namespace BibleNote.Analytics.Services.ParallelVerses
                 }
                 catch (ModuleNotFoundException e) 
                 {
-                    Log.Write(LogLevel.Warning, e.ToString());
+                    _log.Write(LogLevel.Warning, e.ToString());
                 }
             }
         }

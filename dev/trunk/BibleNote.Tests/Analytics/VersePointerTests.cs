@@ -22,10 +22,12 @@ namespace BibleNote.Tests.Analytics
             _versePointerFactory = DIContainer.Resolve<IVersePointerFactory>();            
         }
 
-        private void TestVerseParsing(string originalVerse, SimpleVersePointer expectedVerse)
+        private VersePointer TestVerseParsing(string originalVerse, SimpleVersePointer expectedVerse)
         {
             var actualVerse = _versePointerFactory.CreateVersePointer(originalVerse);
             Assert.AreEqual(expectedVerse, actualVerse);
+
+            return actualVerse;
         }
 
         [TestMethod]
@@ -66,6 +68,12 @@ namespace BibleNote.Tests.Analytics
             var versesListInfo = _versePointerFactory.CreateVersePointer("Ин 2:3-4:7").ExpandMultiVerse();
             Assert.AreEqual(66, versesListInfo.VersesCount);
             Assert.AreEqual(31, versesListInfo.VersePointers.Count);
+        }
+
+        [TestMethod]
+        public void TestMultiVerse()
+        {
+            TestVerseParsing("Ин 3:10-17", new SimpleVersePointer(43, new VerseNumber(3, 10), new VerseNumber(3, 17)));
         }
     }
 }

@@ -12,7 +12,8 @@ namespace BibleNote.Analytics.Services.VerseParsing
     {
         private static List<Func<VerseEntryInfo, DocumentParseContext, VersePointer>> _funcs = new List<Func<VerseEntryInfo, DocumentParseContext, VersePointer>>() 
         { 
-            FullVerseRule 
+            FullVerseRule,
+            ChapterVerseRule
         };
 
         public VersePointer TryRecognizeVerse(VerseEntryInfo verseEntry, DocumentParseContext docParseContext)
@@ -33,8 +34,27 @@ namespace BibleNote.Analytics.Services.VerseParsing
         private static VersePointer FullVerseRule(VerseEntryInfo verseEntry, DocumentParseContext docParseContext)
         {
             if (verseEntry.EntryType == VerseEntryType.BookChapter || verseEntry.EntryType == VerseEntryType.BookChapterVerse)
-                return verseEntry.VersePointer;   
-         
+                return verseEntry.VersePointer;               
+
+            return null;
+        }
+
+        private static VersePointer ChapterVerseRule(VerseEntryInfo verseEntry, DocumentParseContext docParseContext)
+        {
+            if (verseEntry.EntryType != VerseEntryType.ChapterVerse)
+                return null;
+
+            if (docParseContext.LatestVerseEntry != null)
+            {
+                verseEntry.VersePointer.Book = docParseContext.LatestVerseEntry.VersePointer.Book;
+                verseEntry.VersePointer.BookIndex = docParseContext.LatestVerseEntry.VersePointer.BookIndex;
+                return verseEntry.VersePointer;
+            }
+            else if (docParseContext.TitleVerse != null)
+            {
+
+            }
+
             return null;
         }
     }

@@ -8,7 +8,9 @@ namespace BibleNote.Analytics.Models.Common
 {
     public class DocumentParseContext
     {
-        public VerseEntryType LatestVerseEntry { get; set; }
+        public VersePointer TitleVerse { get; set; }
+
+        public VerseEntryInfo LatestVerseEntry { get; set; }
 
         public ParagraphTextPart CurrentParagraphTextPart { get; set; }
 
@@ -17,16 +19,19 @@ namespace BibleNote.Analytics.Models.Common
         //public CellInfo CurrentCell { get; set; }  // Если мы находимсяв таблице. А уже в CellInfo будет ссылка на текущую таблицу.
 
         
-        public void FoundVersePointer()
+        public void SetLatestVerseEntry(VerseEntryInfo verseEntry)            
         {
+            LatestVerseEntry = verseEntry;
         }
 
-        public void EnterParagraph()
+        public void SetCurrentParagraph(ParagraphParseResult paragraph)
         {
+            CurrentParagraph = paragraph;
         }
 
-        public void EnterParagraphTextPart()
+        public void SetCurrentParagraphTextPart(ParagraphTextPart paragraphTextPart)
         {
+            CurrentParagraphTextPart = paragraphTextPart;
         }
 
         public void EnterTable()

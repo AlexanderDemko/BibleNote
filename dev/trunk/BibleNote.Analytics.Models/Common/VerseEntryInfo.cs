@@ -61,13 +61,13 @@ namespace BibleNote.Analytics.Models.Common
         Verse = 5,
         ChapterOrVerse = 6
     }
-
-    //todo: что за IsExcluded? И зачем InSquareBrackets?
+    
     public enum VerseEntryOptions
     {
         None = 0,
         ImportantVerse = 1,
-        InSquareBrackets = 2
+        IsExcluded = 2,             // ссылка сохраняется как detailedVerse.
+        InSquareBrackets = 3        // исключаемая глава. То есть стихи этой главы на данной странице (если глава в заголовке) или в подпунктах (если глава - в parentNode списка) сохраняются как detailedVerse.
     }
 
     public class VerseEntryInfo

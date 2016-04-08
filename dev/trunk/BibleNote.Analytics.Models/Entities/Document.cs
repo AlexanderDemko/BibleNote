@@ -7,7 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 namespace BibleNote.Analytics.Models.Entities
-{
+{    
     public class Document
     {
         [Key, DatabaseGenerated(DatabaseGeneratedOption.Identity)] 

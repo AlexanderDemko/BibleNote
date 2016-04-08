@@ -12,8 +12,12 @@ namespace BibleNote.Analytics.Services.ParallelVerses
 {
     public class BibleParallelTranslationConnectorManager : IBibleParallelTranslationConnectorManager
     {
-        [Dependency]
-        public IModulesManager ModulesManager { get; set; }
+        private IModulesManager _modulesManager;
+
+        public BibleParallelTranslationConnectorManager(IModulesManager modulesManager)
+        {
+            _modulesManager = modulesManager;
+        }
 
         private Dictionary<string, ParallelBibleInfo> _cache = new Dictionary<string, ParallelBibleInfo>();
         private string GetKey(string baseModuleShortName, string parallelModuleShortName)
@@ -47,8 +51,8 @@ namespace BibleNote.Analytics.Services.ParallelVerses
                 return _cache[key];
             else
             {
-                var baseModuleInfo = ModulesManager.GetModuleInfo(baseModuleShortName);
-                var parallelModuleInfo = ModulesManager.GetModuleInfo(parallelModuleShortName);
+                var baseModuleInfo = _modulesManager.GetModuleInfo(baseModuleShortName);
+                var parallelModuleInfo = _modulesManager.GetModuleInfo(parallelModuleShortName);
 
                 return GetParallelBibleInfo(baseModuleShortName, parallelModuleShortName,
                     baseModuleInfo.BibleTranslationDifferences, parallelModuleInfo.BibleTranslationDifferences, refreshCache);

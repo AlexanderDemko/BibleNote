@@ -20,9 +20,9 @@ namespace BibleNote.Tests.Analytics
             public ParagraphParseResult Result { get; set; }
         }
 
-        private IParagraphParser _parahraphParserService;        
-        private IVersePointerFactory _versePointerFactory;
         private MockDocumentProvider _mockDocumentProvider;
+        private IParagraphParser _parahraphParserService;        
+        private IVersePointerFactory _versePointerFactory;        
 
         [TestInitialize]
         public void Init()
@@ -55,7 +55,7 @@ namespace BibleNote.Tests.Analytics
             var htmlDoc = new HtmlDocument();
             htmlDoc.LoadHtml(input);
 
-            var result = _parahraphParserService.ParseParagraph(htmlDoc.DocumentNode, null);
+            var result = _parahraphParserService.ParseParagraph(htmlDoc.DocumentNode);
             
             Assert.AreEqual(expectedOutput, htmlDoc.DocumentNode.InnerHtml, "The output html is wrong.");
             Assert.AreEqual(StringUtils.GetText(input), string.Join(string.Empty, result.TextParts.Select(tp => tp.Text)), "Text parts do not contain the full input string.");
@@ -156,7 +156,7 @@ namespace BibleNote.Tests.Analytics
         //        public void TestScenario8()
         //        {
         //            var input = ":1-2 как и в :3,4-5";
-
+                            // здесь надо переносить тестовый сценарий из старого проекта с заголовком!!
         //            var result = ParseParagraph(input, null);
         //            CheckVerses(input, result, "1Кор 1", "1Кор 1:1", "1Кор 1:2", "1Кор 1:3", "1Кор 1:4", "1Кор 1:5");
         //        }
