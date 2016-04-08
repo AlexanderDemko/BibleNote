@@ -78,6 +78,7 @@
     <Compile Include="Environment\IConfigurationManager.cs" />
     <Compile Include="Logging\ILog.cs" />
     <Compile Include="Environment\IModulesManager.cs" />
+    <Compile Include="VerseParsing\IDocumentParser.cs" />
     <Compile Include="VerseParsing\IParagraphParser.cs" />
     <Compile Include="VerseParsing\IVersePointerFactory.cs" />
     <Compile Include="VerseParsing\IStringParser.cs" />

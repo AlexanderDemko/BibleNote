@@ -11,12 +11,16 @@ namespace BibleNote.Analytics.Services.VerseParsing
 {
     public class VersePointerFactory : IVersePointerFactory
     {
-        [Dependency]
-        public IStringParser StringParser { get; set; }
+        private IStringParser _stringParser;
+
+        public VersePointerFactory(IStringParser stringParser)
+        {
+            _stringParser = stringParser;
+        }
 
         public VersePointer CreateVersePointer(string text)
         {
-            var verseEntry = StringParser.TryGetVerse(text, 0);
+            var verseEntry = _stringParser.TryGetVerse(text, 0);
             if (verseEntry.VersePointerFound
                 && (verseEntry.EntryType == VerseEntryType.BookChapter || verseEntry.EntryType == VerseEntryType.BookChapterVerse)
                 && verseEntry.StartIndex == 0

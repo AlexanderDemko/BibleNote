@@ -21,34 +21,38 @@ namespace BibleNote.Analytics.Services.Environment
 {
     public class ModulesManager : IModulesManager
     {
-        [Dependency]
-        public ILog Log { get; set; }
+        private IBibleParallelTranslationManager _bibleParallelTranslationManager;
 
-        [Dependency]
-        public IConfigurationManager ConfigurationManager { get; set; }
+        private IConfigurationManager _configurationManager;
 
-        [Dependency]
-        public IBibleParallelTranslationManager BibleParallelTranslationManager { get; set; }
+        private ILog _log;
+
+        public ModulesManager(IBibleParallelTranslationManager bibleParallelTranslationManager, IConfigurationManager configurationManager, ILog log)
+        {
+            _bibleParallelTranslationManager = bibleParallelTranslationManager;
+            _configurationManager = configurationManager;
+            _log = log;
+        }
 
         public ModuleInfo GetCurrentModuleInfo()
         {
-            if (!string.IsNullOrEmpty(ConfigurationManager.ModuleShortName))
-                return GetModuleInfo(ConfigurationManager.ModuleShortName);
+            if (!string.IsNullOrEmpty(_configurationManager.ModuleShortName))
+                return GetModuleInfo(_configurationManager.ModuleShortName);
 
             throw new ModuleIsUndefinedException("Current Module is undefined.");
         }
 
         public XMLBIBLE GetCurrentBibleContent()
         {
-            if (!string.IsNullOrEmpty(ConfigurationManager.ModuleShortName))
-                return GetModuleBibleInfo(ConfigurationManager.ModuleShortName);
+            if (!string.IsNullOrEmpty(_configurationManager.ModuleShortName))
+                return GetModuleBibleInfo(_configurationManager.ModuleShortName);
 
             throw new ModuleIsUndefinedException("Current Module is undefined.");
         }
 
         public string GetCurrentModuleDirectiory()
         {
-            return GetModuleDirectory(ConfigurationManager.ModuleShortName);
+            return GetModuleDirectory(_configurationManager.ModuleShortName);
         }
 
         public string GetModuleDirectory(string moduleShortName)
@@ -232,13 +236,13 @@ namespace BibleNote.Analytics.Services.Environment
 
                 if (module.Type == ModuleType.Bible || module.Type == ModuleType.Strong)
                 {
-                    var baseModule = GetModuleInfo(ConfigurationManager.ModuleShortName);
+                    var baseModule = GetModuleInfo(_configurationManager.ModuleShortName);
 
-                    if (BibleParallelTranslationManager.MergeModuleWithMainBible(baseModule, module))
+                    if (_bibleParallelTranslationManager.MergeModuleWithMainBible(baseModule, module))
                         UpdateModuleManifest(baseModule);
                     else
-                        BibleParallelTranslationManager.MergeAllModulesWithMainBible(baseModule, 
-                                GetModules(true).Where(m => m.ShortName != ConfigurationManager.ModuleShortName));
+                        _bibleParallelTranslationManager.MergeAllModulesWithMainBible(baseModule, 
+                                GetModules(true).Where(m => m.ShortName != _configurationManager.ModuleShortName));
                 }
 
                 return module;
@@ -288,22 +292,22 @@ namespace BibleNote.Analytics.Services.Environment
                 }
                 catch (UnauthorizedAccessException ex)
                 {
-                    Log.Write(LogLevel.Error, ex.ToString());
+                    _log.Write(LogLevel.Error, ex.ToString());
                 }
             }
 
-            var baseModule =  GetModuleInfo(ConfigurationManager.ModuleShortName);
-            BibleParallelTranslationManager.RemoveBookAbbreviationsFromMainBible(baseModule, moduleShortName, false);
+            var baseModule =  GetModuleInfo(_configurationManager.ModuleShortName);
+            _bibleParallelTranslationManager.RemoveBookAbbreviationsFromMainBible(baseModule, moduleShortName, false);
             UpdateModuleManifest(baseModule);
 
-            BibleParallelTranslationManager.MergeAllModulesWithMainBible(baseModule,
-                    GetModules(true).Where(m => m.ShortName != ConfigurationManager.ModuleShortName));   // например, у меня основной модуль KJV. Я добавил RST, а потом - UBIO. Когда я удалю RST - надо добавить в основной модуль сокращения из UBIO (ведь раньше они не были добавлены, так как они повторялись с RST)
+            _bibleParallelTranslationManager.MergeAllModulesWithMainBible(baseModule,
+                    GetModules(true).Where(m => m.ShortName != _configurationManager.ModuleShortName));   // например, у меня основной модуль KJV. Я добавил RST, а потом - UBIO. Когда я удалю RST - надо добавить в основной модуль сокращения из UBIO (ведь раньше они не были добавлены, так как они повторялись с RST)
         }
 
         public void SetCurrentModule(string moduleShortName)
         {
-            ConfigurationManager.ModuleShortName = moduleShortName;
-            ConfigurationManager.SaveChanges();
+            _configurationManager.ModuleShortName = moduleShortName;
+            _configurationManager.SaveChanges();
         }
 
         private void DeleteDirectory(object directoryPath)
@@ -314,7 +318,7 @@ namespace BibleNote.Analytics.Services.Environment
                 if (Directory.Exists((string)directoryPath))
                     Directory.Delete((string)directoryPath, true);
             }
-            catch (Exception ex) { Log.Write(LogLevel.Error, ex.ToString()); }                
+            catch (Exception ex) { _log.Write(LogLevel.Error, ex.ToString()); }                
         }
 
         private static T Dessirialize<T>(string xmlFilePath)
@@ -338,7 +342,7 @@ namespace BibleNote.Analytics.Services.Environment
             }
             catch (Exception ex)
             {
-                Log.Write(LogLevel.Error, ex.ToString());
+                _log.Write(LogLevel.Error, ex.ToString());
 
                 if (ex is IOException
                     || ex is UnauthorizedAccessException)
