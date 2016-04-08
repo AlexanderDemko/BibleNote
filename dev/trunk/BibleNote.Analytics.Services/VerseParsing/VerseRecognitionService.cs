@@ -10,10 +10,11 @@ namespace BibleNote.Analytics.Services.VerseParsing
 {
     public class VerseRecognitionService : IVerseRecognitionService
     {
-        private static List<Func<VerseEntryInfo, DocumentParseContext, VersePointer>> _funcs = new List<Func<VerseEntryInfo, DocumentParseContext, VersePointer>>() 
-        { 
+        private static List<Func<VerseEntryInfo, DocumentParseContext, VersePointer>> _funcs = new List<Func<VerseEntryInfo, DocumentParseContext, VersePointer>>()
+        {
             FullVerseRule,
-            ChapterVerseRule
+            ChapterVerseRule,
+            VerseRule
         };
 
         public VersePointer TryRecognizeVerse(VerseEntryInfo verseEntry, DocumentParseContext docParseContext)
@@ -24,8 +25,8 @@ namespace BibleNote.Analytics.Services.VerseParsing
             foreach (var func in _funcs)
             {
                 var recognizedVerse = func(verseEntry, docParseContext);
-                if (recognizedVerse != null)                                    
-                    return recognizedVerse;                
+                if (recognizedVerse != null)
+                    return recognizedVerse;
             }
 
             return null;
@@ -34,7 +35,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
         private static VersePointer FullVerseRule(VerseEntryInfo verseEntry, DocumentParseContext docParseContext)
         {
             if (verseEntry.EntryType == VerseEntryType.BookChapter || verseEntry.EntryType == VerseEntryType.BookChapterVerse)
-                return verseEntry.VersePointer;               
+                return verseEntry.VersePointer;
 
             return null;
         }
@@ -56,6 +57,15 @@ namespace BibleNote.Analytics.Services.VerseParsing
             }
 
             return null;
+        }
+
+        private static VersePointer VerseRule(VerseEntryInfo verseEntry, DocumentParseContext docParseContext)
+        {
+            if (verseEntry.EntryType != VerseEntryType.Verse)
+                return null;
+
+
+
         }
     }
 }
