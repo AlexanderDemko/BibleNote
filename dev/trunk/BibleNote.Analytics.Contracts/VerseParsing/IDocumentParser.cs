@@ -1,4 +1,5 @@
-﻿using HtmlAgilityPack;
+﻿using BibleNote.Analytics.Contracts.Providers;
+using HtmlAgilityPack;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,6 +15,7 @@ namespace BibleNote.Analytics.Contracts.VerseParsing
 
     public interface IDocumentParser: IDisposable
     {
+        void Init(IDocumentProvider documentProvider);
         void ParseTitle(HtmlNode node);
         IParseContext ParseParagraph(HtmlNode node);
         IParseContext ParseTable(HtmlNode node);        

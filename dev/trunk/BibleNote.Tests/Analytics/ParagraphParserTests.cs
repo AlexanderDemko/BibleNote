@@ -8,6 +8,7 @@ using Microsoft.Practices.Unity;
 using HtmlAgilityPack;
 using BibleNote.Analytics.Core.Helpers;
 using BibleNote.Tests.Analytics.Mocks;
+using System;
 
 namespace BibleNote.Tests.Analytics
 {
@@ -22,7 +23,8 @@ namespace BibleNote.Tests.Analytics
 
         private MockDocumentProvider _mockDocumentProvider;
         private IParagraphParser _parahraphParserService;        
-        private IVersePointerFactory _versePointerFactory;        
+        private IVersePointerFactory _versePointerFactory;
+        private DocumentParseContext _documentParseContext;
 
         [TestInitialize]
         public void Init()
@@ -31,8 +33,11 @@ namespace BibleNote.Tests.Analytics
             DIContainer.Container.RegisterInstance<IConfigurationManager>(new MockConfigurationManager());
 
             _mockDocumentProvider = new MockDocumentProvider();
-            _parahraphParserService = DIContainer.Resolve<IParagraphParser>(new ParameterOverrides { { "documentProvider", _mockDocumentProvider } });            
-            _versePointerFactory = DIContainer.Resolve<IVersePointerFactory>();            
+            _documentParseContext = new DocumentParseContext();
+
+            _versePointerFactory = DIContainer.Resolve<IVersePointerFactory>();
+            _parahraphParserService = DIContainer.Resolve<IParagraphParser>();
+            _parahraphParserService.Init(_mockDocumentProvider, _documentParseContext);                        
         }
 
         [TestCleanup]
@@ -41,9 +46,9 @@ namespace BibleNote.Tests.Analytics
             
         }
 
-        private TestResult CheckVerses(string input, string expectedOutput, params string[] verses)
+        private TestResult CheckVerses(string input, string expectedOutput, Action<DocumentParseContext> initDocParseContext, params string[] verses)
         {
-            if (string.IsNullOrEmpty(expectedOutput))
+            if (string.IsNullOrEmpty(expectedOutput) || input == expectedOutput)
             {
                 _mockDocumentProvider.IsReadonly = true;
                 expectedOutput = input;
@@ -51,12 +56,17 @@ namespace BibleNote.Tests.Analytics
             else
                 _mockDocumentProvider.IsReadonly = false;
 
+            if (initDocParseContext != null)
+            {
+                _documentParseContext.ClearContext();
+                initDocParseContext(_documentParseContext);
+            }
 
             var htmlDoc = new HtmlDocument();
             htmlDoc.LoadHtml(input);
 
-            var result = _parahraphParserService.ParseParagraph(htmlDoc.DocumentNode);
-            
+            var result = _parahraphParserService.ParseParagraph(htmlDoc.DocumentNode);          
+
             Assert.AreEqual(expectedOutput, htmlDoc.DocumentNode.InnerHtml, "The output html is wrong.");
             Assert.AreEqual(StringUtils.GetText(input), string.Join(string.Empty, result.TextParts.Select(tp => tp.Text)), "Text parts do not contain the full input string.");
 
@@ -71,30 +81,59 @@ namespace BibleNote.Tests.Analytics
         
 
         [TestMethod]
-        public void TestScenario0()
+        public void TestScenario1()
         {
             var input = "<div>Это <p>тестовая <font>Мк 5:</font>6-7!!</p> строка</div>";
             var expected = "<div>Это <p>тестовая <font><a href='bnVerse:Марка 5:6-7'>Мк 5:6-7</a></font>!!</p> строка</div>";            
-            var result = CheckVerses(input, expected, "Мк 5:6-7");
+            var result = CheckVerses(input, expected, null, "Мк 5:6-7");
 
             var textPart = result.Result.TextParts[1];
             Assert.AreEqual("тестовая Мк 5:6-7!!", textPart.Text);
             var verseEntry = textPart.VerseEntries[0];
             Assert.AreEqual("Мк 5:6-7", textPart.Text.Substring(verseEntry.StartIndex, verseEntry.EndIndex - verseEntry.StartIndex + 1));
+        }
 
-            input = "<div>Это тестовая Ин 3:16 строка<BR/>с переводом строки. Лк<br />5:6 - это первая ссылка, <p>Лк<font>7</font>:<font>8 и ещё </font><font class='test'>Мк 5:</font>6-7!!</p> - это вторая<p><font></font></p><p>1</p></div>";
-            expected = "<div>Это тестовая <a href='bnVerse:Иоанна 3:16'>Ин 3:16</a> строка<br>с переводом строки. Лк<br>5:6 - это первая ссылка, <p><a href='bnVerse:Луки 7:8'>Лк7:8</a><font></font><font> и ещё </font><font class='test'><a href='bnVerse:Марка 5:6-7'>Мк 5:6-7</a></font>!!</p> - это вторая<p><font></font></p><p>1</p></div>";                       
-            result = CheckVerses(input, expected, "Ин 3:16", "Лк 7:8", "Мк 5:6-7");
+        [TestMethod]
+        public void TestScenario2()
+        {
+            var input = "<div>Это тестовая Ин 3:16 строка<BR/>с переводом строки. Лк<br />5:6 - это первая ссылка, <p>Лк<font>7</font>:<font>8 и ещё </font><font class='test'>Мк 5:</font>6-7!!</p> - это вторая<p><font></font></p><p>1</p></div>";
+            var expected = "<div>Это тестовая <a href='bnVerse:Иоанна 3:16'>Ин 3:16</a> строка<br>с переводом строки. Лк<br>5:6 - это первая ссылка, <p><a href='bnVerse:Луки 7:8'>Лк7:8</a><font></font><font> и ещё </font><font class='test'><a href='bnVerse:Марка 5:6-7'>Мк 5:6-7</a></font>!!</p> - это вторая<p><font></font></p><p>1</p></div>";
+            var result = CheckVerses(input, expected, null, "Ин 3:16", "Лк 7:8", "Мк 5:6-7");
 
             Assert.AreEqual(6, result.Result.TextParts.Count);
         }
 
         [TestMethod]
-        public void TestScenario1()
+        public void TestScenario3()
+        {
+            var input = @"<span
+        lang=ru>&quot;С учением об уподоблении (отождествлении) связаны важные богословские истины. Верующий отождествляется с Христом в Его смерти (Рим. 6:1-</span><span
+        style='font-weight:bold' lang=ru>11</span><span lang=ru>); погребении (Рим. 6:</span><span
+        style='font-weight:bold' lang=ru>4</span><span style='font-weight:bold'
+        lang=en-US>-6</span><span lang=ru>); в Его воскресении (Кол. </span><span
+        style='background:yellow;mso-highlight:yellow' lang=ru>3:1</span><span lang=ru>); вознесении (Е</span><span
+        style='color:#E84C22' lang=ru>ф. 2:6</span><span lang=ru>); в Его царстве (2 </span><span
+        style='font-style:italic' lang=ru>Тим. 2:12</span><span lang=ru>) и в Его славе (</span><span
+        style='text-decoration:underline' lang=ru>Рим. 8:17</span><span lang=ru>)</span><span
+        lang=en-US> </span><span lang=ru>и </span><span style='font-weight:bold'
+        lang=ru>*</span><span lang=ru>2Пет </span><span style='background:yellow;
+        mso-highlight:yellow' lang=ru>1</span><span style='color:#E84C22' lang=ru>:</span><span
+        style='font-weight:bold' lang=ru>5</span><span style='font-style:italic'
+        lang=ru>-8</span><span style='font-weight:bold;font-style:italic' lang=ru>*</span><span
+        lang=ru>&quot; (Джон Уолвурд)</span>";
+
+            var expected = "<span lang=\"ru\">&quot;С учением об уподоблении (отождествлении) связаны важные богословские истины. Верующий отождествляется с Христом в Его смерти (<a href='bnVerse:Римлянам 6:1-11'>Рим. 6:1-11</a></span><span style='font-weight:bold' lang=\"ru\"></span><span lang=\"ru\">); погребении (<a href='bnVerse:Римлянам 6:4-6'>Рим. 6:4-6</a></span><span style='font-weight:bold' lang=\"ru\"></span><span style='font-weight:bold' lang=\"en-US\"></span><span lang=\"ru\">); в Его воскресении (<a href='bnVerse:Колоссянам 3:1'>Кол. 3:1</a></span><span style='background:yellow;mso-highlight:yellow' lang=\"ru\"></span><span lang=\"ru\">); вознесении (<a href='bnVerse:Ефесянам 2:6'>Еф. 2:6</a></span><span style='color:#E84C22' lang=\"ru\"></span><span lang=\"ru\">); в Его царстве (<a href='bnVerse:2Тимофею 2:12'>2 Тим. 2:12</a></span><span style='font-style:italic' lang=\"ru\"></span><span lang=\"ru\">) и в Его славе (</span><span style='text-decoration:underline' lang=\"ru\"><a href='bnVerse:Римлянам 8:17'>Рим. 8:17</a></span><span lang=\"ru\">)</span><span lang=\"en-US\"> </span><span lang=\"ru\">и </span><span style='font-weight:bold' lang=\"ru\">*</span><span lang=\"ru\"><a href='bnVerse:2Петра 1:5-8'>2Пет 1:5-8</a></span><span style='background:yellow;\r\n        mso-highlight:yellow' lang=\"ru\"></span><span style='color:#E84C22' lang=\"ru\"></span><span style='font-weight:bold' lang=\"ru\"></span><span style='font-style:italic' lang=\"ru\"></span><span style='font-weight:bold;font-style:italic' lang=\"ru\">*</span><span lang=\"ru\">&quot; (Джон Уолвурд)</span>";
+
+            var result = CheckVerses(input, expected, null, "Рим. 6:1-11", "Рим. 6:4-6", "Кол. 3:1", "Еф. 2:6", "2 Тим. 2:12", "Рим. 8:17", "2Пет 1:5-8");
+            Assert.IsTrue(result.Result.TextParts[0].VerseEntries.Last().VerseEntryOptions == VerseEntryOptions.ImportantVerse);
+        }
+
+        [TestMethod]
+        public void TestScenario4()
         {
             var input = "тест Лк 1:16, 10:13-17;18-19; 11:1-2 тест";            
 
-            CheckVerses(input, null, "Лк 1:16", "Лк 10:13", "Лк 10:14", "Лк 10:15", "Лк 10:16",
+            CheckVerses(input, null, null, "Лк 1:16", "Лк 10:13", "Лк 10:14", "Лк 10:15", "Лк 10:16",
                 "Лк 10:17", "Лк 18", "Лк 19", "Лк 11:1", "Лк 11:2");
         }
 
@@ -348,32 +387,6 @@ namespace BibleNote.Tests.Analytics
         //                    ? new string[] { "Исх 19:11" }
         //                    : new string[] { "Исх 19", "Исх 11" });
         //        }
-
-        [TestMethod]
-        public void TestScenario24()
-        {
-            var input = @"<span
-        lang=ru>&quot;С учением об уподоблении (отождествлении) связаны важные богословские истины. Верующий отождествляется с Христом в Его смерти (Рим. 6:1-</span><span
-        style='font-weight:bold' lang=ru>11</span><span lang=ru>); погребении (Рим. 6:</span><span
-        style='font-weight:bold' lang=ru>4</span><span style='font-weight:bold'
-        lang=en-US>-6</span><span lang=ru>); в Его воскресении (Кол. </span><span
-        style='background:yellow;mso-highlight:yellow' lang=ru>3:1</span><span lang=ru>); вознесении (Е</span><span
-        style='color:#E84C22' lang=ru>ф. 2:6</span><span lang=ru>); в Его царстве (2 </span><span
-        style='font-style:italic' lang=ru>Тим. 2:12</span><span lang=ru>) и в Его славе (</span><span
-        style='text-decoration:underline' lang=ru>Рим. 8:17</span><span lang=ru>)</span><span
-        lang=en-US> </span><span lang=ru>и </span><span style='font-weight:bold'
-        lang=ru>*</span><span lang=ru>2Пет </span><span style='background:yellow;
-        mso-highlight:yellow' lang=ru>1</span><span style='color:#E84C22' lang=ru>:</span><span
-        style='font-weight:bold' lang=ru>5</span><span style='font-style:italic'
-        lang=ru>-8</span><span style='font-weight:bold;font-style:italic' lang=ru>*</span><span
-        lang=ru>&quot; (Джон Уолвурд)</span>";
-
-            var expected = "<span lang=\"ru\">&quot;С учением об уподоблении (отождествлении) связаны важные богословские истины. Верующий отождествляется с Христом в Его смерти (<a href='bnVerse:Римлянам 6:1-11'>Рим. 6:1-11</a></span><span style='font-weight:bold' lang=\"ru\"></span><span lang=\"ru\">); погребении (<a href='bnVerse:Римлянам 6:4-0'>Рим. 6:4-6</a></span><span style='font-weight:bold' lang=\"ru\"></span><span style='font-weight:bold' lang=\"en-US\"></span><span lang=\"ru\">); в Его воскресении (<a href='bnVerse:Колоссянам 3:1'>Кол. 3:1</a></span><span style='background:yellow;mso-highlight:yellow' lang=\"ru\"></span><span lang=\"ru\">); вознесении (<a href='bnVerse:Ефесянам 2:6'>Еф. 2:6</a></span><span style='color:#E84C22' lang=\"ru\"></span><span lang=\"ru\">); в Его царстве (<a href='bnVerse:2Тимофею 2:12'>2 Тим. 2:12</a></span><span style='font-style:italic' lang=\"ru\"></span><span lang=\"ru\">) и в Его славе (</span><span style='text-decoration:underline' lang=\"ru\"><a href='bnVerse:Римлянам 8:17'>Рим. 8:17</a></span><span lang=\"ru\">)</span><span lang=\"en-US\"> </span><span lang=\"ru\">и </span><span style='font-weight:bold' lang=\"ru\">*</span><span lang=\"ru\"><a href='bnVerse:2Петра 1:5-8'>2Пет 1:5-8</a></span><span style='background:yellow;\r\n        mso-highlight:yellow' lang=\"ru\"></span><span style='color:#E84C22' lang=\"ru\"></span><span style='font-weight:bold' lang=\"ru\"></span><span style='font-style:italic' lang=\"ru\"></span><span style='font-weight:bold;font-style:italic' lang=\"ru\">*</span><span lang=\"ru\">&quot; (Джон Уолвурд)</span>";
-
-            var result = CheckVerses(input, expected, "Рим. 6:1-11", "Рим. 6:4-6", "Кол. 3:1", "Еф. 2:6", "2 Тим. 2:12", "Рим. 8:17", "2Пет 1:5-8");
-            Assert.IsTrue(result.Result.TextParts[0].VerseEntries.Last().VerseEntryOptions == VerseEntryOptions.ImportantVerse);
-        }
-
         //        [TestMethod]
         //        public void TestScenario25()
         //        {

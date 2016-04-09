@@ -9,17 +9,18 @@ using System.Threading.Tasks;
 using BibleNote.Analytics.Core.Extensions;
 using BibleNote.Analytics.Contracts.VerseParsing;
 using BibleNote.Analytics.Contracts.Providers;
+using BibleNote.Analytics.Core.Exceptions;
 
 namespace BibleNote.Analytics.Services.VerseParsing
 {
-    public class TextNodeEntry
+    internal class TextNodeEntry
     {
         public HtmlNode Node { get; set; }
         public int StartIndex { get; set; }
         public int EndIndex { get; set; }
     }
 
-    public class TextNodesString
+    internal class TextNodesString
     {
         public string Value { get; set; }
         public List<TextNodeEntry> NodesInfo { get; set; }
@@ -42,17 +43,26 @@ namespace BibleNote.Analytics.Services.VerseParsing
         
         private ParagraphParseResult _result { get; set; }
 
-        public ParagraphParser(IDocumentProvider documentProvider, DocumentParseContext docParseContext, 
-            IStringParser stringParser, IVerseRecognitionService verseRecognitionService)
-        {   
-            _documentProvider = documentProvider;
+        public ParagraphParser(IStringParser stringParser, IVerseRecognitionService verseRecognitionService)
+        {               
             _stringParser = stringParser;
-            _verseRecognitionService = verseRecognitionService;
+            _verseRecognitionService = verseRecognitionService;            
+        }
+
+        public void Init(IDocumentProvider documentProvider, DocumentParseContext docParseContext)
+        {
+            _documentProvider = documentProvider;
             _docParseContext = docParseContext;
-        }        
+        }
 
         public ParagraphParseResult ParseParagraph(HtmlNode node)
-        {            
+        {
+            if (_documentProvider == null)
+                throw new NotInitializedException();
+
+            if (_docParseContext == null)
+                throw new NotInitializedException();
+
             _result = new ParagraphParseResult();
             _docParseContext.SetCurrentParagraph(_result);
 

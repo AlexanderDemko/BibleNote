@@ -20,14 +20,16 @@ namespace BibleNote.Analytics.Services.VerseParsing
 
         private DocumentParseContext _documentParseContext;
 
-        public DocumentParser(IDocumentProvider documentProvider)
+        public DocumentParser()
         {
             _documentParseContext = new DocumentParseContext();
+            _paragraphParser = DIContainer.Resolve<IParagraphParser>();
+        }
 
-            _documentProvider = documentProvider;
-            _paragraphParser = DIContainer.Resolve<IParagraphParser>(
-                new ParameterOverrides { { "documentProvider", documentProvider } },
-                new ParameterOverrides { { "docParseContext", _documentParseContext } });                      
+        public void Init(IDocumentProvider documentProvider)
+        {
+            _documentProvider = documentProvider;            
+            _paragraphParser.Init(documentProvider, _documentParseContext);
         }
 
         public void ParseTitle(HtmlNode node)
