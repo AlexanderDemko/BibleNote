@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using BibleNote.Analytics.Core.Extensions;
+using System.Text.RegularExpressions;
 
 namespace BibleNote.Analytics.Core.Helpers
 {
@@ -12,6 +13,12 @@ namespace BibleNote.Analytics.Core.Helpers
         public HtmlNode Node { get; set; }
         public int StartIndex { get; set; }
         public int EndIndex { get; set; }
+
+        public void MoveBy(int shift)
+        {
+            StartIndex += shift;
+            EndIndex += shift;
+        }
     }
 
     public class TextNodesString
@@ -29,13 +36,20 @@ namespace BibleNote.Analytics.Core.Helpers
     {
         private List<TextNodesString> _parseStrings;
 
-        public HtmlToTextConverter()
+        private static readonly Regex htmlPattern = new Regex(@"<(.|\n)*?>", RegexOptions.Compiled);             
+
+        public static string SimpleConvert(string htmlString)
         {
-            _parseStrings = new List<TextNodesString>();
+            if (string.IsNullOrEmpty(htmlString))
+                return htmlString;
+
+            return htmlPattern.Replace(htmlString, string.Empty);
         }
 
         public TextNodesString Convert(HtmlNode node)
         {
+            _parseStrings = new List<TextNodesString>();
+
             FindParseStrings(node);
 
             var result = new TextNodesString();
@@ -45,18 +59,12 @@ namespace BibleNote.Analytics.Core.Helpers
 
             foreach (var textNodesString in _parseStrings)
             {
-                if (cursor > 0)
-                {
-                    textNodesString.NodesInfo.ForEach(e =>
-                    {
-                        e.StartIndex += cursor;
-                        e.EndIndex += cursor;
-                    });
-                }
+                if (cursor > 0)                
+                    textNodesString.NodesInfo.ForEach(e => e.MoveBy(cursor));                
 
                 sb.Append(textNodesString.Value);
                 result.NodesInfo.AddRange(textNodesString.NodesInfo);
-                cursor = sb.Length;     // todo: посмотреть исходный код StringBuilder. Долго ли идёт обращение к sb.Length. Может нам не надо хранить отдельно cursor.                
+                cursor = sb.Length;
             }
 
             result.Value = sb.ToString();
