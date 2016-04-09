@@ -32,7 +32,7 @@ namespace BibleNote.Tests.Analytics
 
         }
 
-        [TestMethod]
+        //todo: [TestMethod]
         public void ParseLocalHtmlFile()
         {
             using (var fs = new FileStream("", FileMode.Open))

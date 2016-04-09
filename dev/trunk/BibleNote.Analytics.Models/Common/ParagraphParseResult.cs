@@ -8,6 +8,8 @@ namespace BibleNote.Analytics.Models.Common
 {
     public class ParagraphParseResult
     {   
+        public ParagraphParseResult ParentParagraph { get; set; }
+
         public List<ParagraphTextPart> TextParts { get; set; }
 
         public ParagraphParseResult()
