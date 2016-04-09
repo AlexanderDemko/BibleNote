@@ -64,7 +64,22 @@ namespace BibleNote.Analytics.Services.VerseParsing
             if (verseEntry.EntryType != VerseEntryType.Verse)
                 return null;
 
+            if (docParseContext.LatestVerseEntry != null)
+            {
+                verseEntry.VersePointer.Book = docParseContext.LatestVerseEntry.VersePointer.Book;
+                verseEntry.VersePointer.BookIndex = docParseContext.LatestVerseEntry.VersePointer.BookIndex;
+                verseEntry.VersePointer.VerseNumber = new VerseNumber(docParseContext.LatestVerseEntry.VersePointer.Chapter, verseEntry.VersePointer.VerseNumber.Verse);
+                return verseEntry.VersePointer;
+            }
+            else if (docParseContext.CurrentParagraph.ParentParagraph != null)
+            {
+            }
+            else if (docParseContext.TitleVerse != null)
+            {
 
+            }
+
+            return null;
 
         }
     }
