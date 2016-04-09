@@ -49,7 +49,9 @@ namespace BibleNote.Analytics.Services.VerseParsing
             _result = new ParagraphParseResult();
             _docParseContext.SetCurrentParagraph(_result);      // todo: сейчас мы всё добавляем. Но в будущем надо перед сохранением будет удалять лишние параграфы. То есть сохранять только те, в которых есть стихи и около их.
 
-            ParseTextNodes(new HtmlToTextConverter().Convert(node));
+            var parseString = new HtmlToTextConverter().Convert(node);
+            _result.Text = parseString.Value;
+            ParseTextNodes(parseString);           
 
             return _result;
         }
@@ -79,7 +81,6 @@ namespace BibleNote.Analytics.Services.VerseParsing
                     }
 
                     _result.VerseEntries.Add(verseEntry);
-
                     _docParseContext.SetLatestVerseEntry(verseEntry);
                 }
 

@@ -9,16 +9,6 @@ namespace BibleNote.Analytics.Core.Helpers
 {
     public static class StringUtils
     {
-        private static readonly Regex htmlPattern = new Regex(@"<(.|\n)*?>", RegexOptions.Compiled);
-
-        public static string GetText(string htmlString)
-        {
-            if (string.IsNullOrEmpty(htmlString))
-                return htmlString;
-
-            return htmlPattern.Replace(htmlString, string.Empty);
-        }
-
         /// <summary>
         /// Делает первую букву заглавной. Для строки "1кор" вернёт "1Кор"
         /// </summary>
