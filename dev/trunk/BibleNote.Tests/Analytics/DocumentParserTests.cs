@@ -39,8 +39,9 @@ namespace BibleNote.Tests.Analytics
             {
                 using (var sr = new StreamReader(fs))
                 {
-                    using (var docParser = DIContainer.Resolve<IDocumentParser>(new ParameterOverrides { { "documentProvider", _mockDocumentProvider } }))
+                    using (var docParser = DIContainer.Resolve<IDocumentParser>())
                     {
+                        docParser.Init(_mockDocumentProvider);
                         //using (docParser.ParseParagraph())
                         //{
 

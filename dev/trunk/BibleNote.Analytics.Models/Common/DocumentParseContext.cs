@@ -18,6 +18,10 @@ namespace BibleNote.Analytics.Models.Common
 
         //public CellInfo CurrentCell { get; set; }  // Если мы находимсяв таблице. А уже в CellInfo будет ссылка на текущую таблицу.
 
+        public void SetTitleVerse(VersePointer versePointer)
+        {
+            TitleVerse = versePointer;
+        }
         
         public void SetLatestVerseEntry(VerseEntryInfo verseEntry)            
         {
@@ -40,6 +44,17 @@ namespace BibleNote.Analytics.Models.Common
 
         public void EnterCell()
         {
+        }
+
+        /// <summary>
+        /// For testing purposes
+        /// </summary>
+        public void ClearContext()
+        {
+            this.TitleVerse = null;
+            this.LatestVerseEntry = null;
+            this.CurrentParagraph = null;
+            this.CurrentParagraphTextPart = null;
         }
     }
 }

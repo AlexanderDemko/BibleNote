@@ -1,4 +1,5 @@
-﻿using BibleNote.Analytics.Models.Common;
+﻿using BibleNote.Analytics.Contracts.Providers;
+using BibleNote.Analytics.Models.Common;
 using HtmlAgilityPack;
 using System;
 using System.Collections.Generic;
@@ -9,7 +10,8 @@ using System.Threading.Tasks;
 namespace BibleNote.Analytics.Contracts.VerseParsing
 {
     public interface IParagraphParser
-    {        
-        ParagraphParseResult ParseParagraph(HtmlNode node);             
+    {
+        void Init(IDocumentProvider documentProvider, DocumentParseContext docParseContext);
+        ParagraphParseResult ParseParagraph(HtmlNode node);        
     }
 }
