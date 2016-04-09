@@ -10,27 +10,10 @@ using BibleNote.Analytics.Core.Extensions;
 using BibleNote.Analytics.Contracts.VerseParsing;
 using BibleNote.Analytics.Contracts.Providers;
 using BibleNote.Analytics.Core.Exceptions;
+using BibleNote.Analytics.Core.Helpers;
 
 namespace BibleNote.Analytics.Services.VerseParsing
 {
-    internal class TextNodeEntry
-    {
-        public HtmlNode Node { get; set; }
-        public int StartIndex { get; set; }
-        public int EndIndex { get; set; }
-    }
-
-    internal class TextNodesString
-    {
-        public string Value { get; set; }
-        public List<TextNodeEntry> NodesInfo { get; set; }
-
-        public TextNodesString()
-        {
-            NodesInfo = new List<TextNodeEntry>();
-        }
-    }
-
     public class ParagraphParser : IParagraphParser
     {
         private IDocumentProvider _documentProvider;
@@ -41,7 +24,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
 
         private DocumentParseContext _docParseContext;
         
-        private ParagraphParseResult _result { get; set; }
+        private ParagraphParseResult _result { get; set; }        
 
         public ParagraphParser(IStringParser stringParser, IVerseRecognitionService verseRecognitionService)
         {               
@@ -64,56 +47,15 @@ namespace BibleNote.Analytics.Services.VerseParsing
                 throw new NotInitializedException();
 
             _result = new ParagraphParseResult();
-            _docParseContext.SetCurrentParagraph(_result);
+            _docParseContext.SetCurrentParagraph(_result);      // todo: сейчас мы всё добавляем. Но в будущем надо перед сохранением будет удалять лишние параграфы. То есть сохранять только те, в которых есть стихи и около их.
 
-            ParseNode(node);
+            ParseTextNodes(new HtmlToTextConverter().Convert(node));
 
             return _result;
         }
 
-        private void ParseNode(HtmlNode htmlNode)
-        {   
-            if (!htmlNode.IsHierarchyNode())
-            {
-                ParseTextNodesSingleLevelArray(BuildParseString(htmlNode.ChildNodes));
-            }
-            else
-            {
-                var nodes = new List<HtmlNode>();
-
-                foreach (var childNode in htmlNode.ChildNodes)
-                {
-                    if (childNode.IsTextNode())
-                    {
-                        nodes.Add(childNode);
-                        continue;
-                    }
-
-                    if ((childNode.HasChildNodes() || childNode.Name == "br") && nodes.Count > 0)
-                    {
-                        ParseTextNodesSingleLevelArray(BuildParseString(nodes));
-                        nodes.Clear();
-                    }
-
-                    if (childNode.HasChildNodes())
-                        ParseNode(childNode);
-                }
-
-                if (nodes.Count > 0)
-                    ParseTextNodesSingleLevelArray(BuildParseString(nodes));
-            }           
-        }
-
-        private void ParseTextNodesSingleLevelArray(TextNodesString parseString)
+        private void ParseTextNodes(TextNodesString parseString)
         {
-            if (string.IsNullOrEmpty(parseString.Value))
-                return;
-
-            var paragraphTextPart = new ParagraphTextPart(parseString.Value);
-            _docParseContext.SetCurrentParagraphTextPart(paragraphTextPart);
-
-            _result.TextParts.Add(paragraphTextPart); // todo: сейчас мы всё добавляем. Но в будущем надо перед сохранением будет удалять лишние текстПарты. То есть сохранять только те, в которых есть стихи и около их.
-
             var index = 0;         // чтобы анализировать с первого символа, так как теперь поддерживаем ещё и такие ссылки, как "5:6 - ..."
             var verseEntry = _stringParser.TryGetVerse(parseString.Value, index);
             
@@ -136,7 +78,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
                             verseNode.EndIndex + 1 < verseNode.Node.InnerHtml.Length ? verseNode.Node.InnerHtml.Substring(verseNode.EndIndex + 1) : string.Empty);
                     }
 
-                    paragraphTextPart.VerseEntries.Add(verseEntry);
+                    _result.VerseEntries.Add(verseEntry);
 
                     _docParseContext.SetLatestVerseEntry(verseEntry);
                 }
@@ -211,30 +153,6 @@ namespace BibleNote.Analytics.Services.VerseParsing
             }
 
             return result;
-        }
-
-        private TextNodesString BuildParseString(IEnumerable<HtmlNode> nodes)
-        {
-            var result = new TextNodesString();
-            var sb = new StringBuilder();
-
-            foreach (var node in nodes)
-            {
-                var textNode = node.GetTextNode();
-                if (string.IsNullOrEmpty(textNode.InnerText))
-                    continue;                
-                
-                result.NodesInfo.Add(new TextNodeEntry() 
-                                        { 
-                                            Node = textNode, 
-                                            StartIndex = sb.Length, 
-                                            EndIndex = sb.Length + textNode.InnerText.Length - 1
-                                        });
-                sb.Append(textNode.InnerText);
-            }
-
-            result.Value = sb.ToString();
-            return result;
-        }        
+        }  
     }
 }

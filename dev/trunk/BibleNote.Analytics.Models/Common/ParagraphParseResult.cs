@@ -10,29 +10,12 @@ namespace BibleNote.Analytics.Models.Common
     {   
         public ParagraphParseResult ParentParagraph { get; set; }
 
-        public List<ParagraphTextPart> TextParts { get; set; }
-
-        public ParagraphParseResult()
-        {            
-            TextParts = new List<ParagraphTextPart>();            
-        }
-
-        public IEnumerable<VersePointer> GetAllVerses()
-        {
-            return TextParts.SelectMany(tp => tp.VerseEntries.Select(ve => ve.VersePointer));
-        }
-    }
-
-
-    public class ParagraphTextPart
-    {   
         public string Text { get; set; }
 
-        public List<VerseEntryInfo> VerseEntries { get; set; }        
+        public List<VerseEntryInfo> VerseEntries { get; set; }
 
-        public ParagraphTextPart(string text)
+        public ParagraphParseResult()
         {
-            Text = text;
             VerseEntries = new List<VerseEntryInfo>();
         }
     }
