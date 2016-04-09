@@ -10,9 +10,7 @@ namespace BibleNote.Analytics.Models.Common
     {
         public VersePointer TitleVerse { get; set; }
 
-        public VerseEntryInfo LatestVerseEntry { get; set; }
-
-        public ParagraphTextPart CurrentParagraphTextPart { get; set; }
+        public VerseEntryInfo LatestVerseEntry { get; set; }        
 
         public ParagraphParseResult CurrentParagraph { get; set; }
 
@@ -33,11 +31,6 @@ namespace BibleNote.Analytics.Models.Common
             CurrentParagraph = paragraph;
         }
 
-        public void SetCurrentParagraphTextPart(ParagraphTextPart paragraphTextPart)
-        {
-            CurrentParagraphTextPart = paragraphTextPart;
-        }
-
         public void EnterTable()
         {
         }
@@ -53,8 +46,7 @@ namespace BibleNote.Analytics.Models.Common
         {
             this.TitleVerse = null;
             this.LatestVerseEntry = null;
-            this.CurrentParagraph = null;
-            this.CurrentParagraphTextPart = null;
+            this.CurrentParagraph = null;            
         }
     }
 }
