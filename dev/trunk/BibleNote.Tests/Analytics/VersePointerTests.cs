@@ -37,6 +37,8 @@ namespace BibleNote.Tests.Analytics
             TestVerseParsing("2Петр 3:1", new SimpleVersePointer(61, new VerseNumber(3, 1)));           
             TestVerseParsing("2Петр 3:1-2", new SimpleVersePointer(61, new VerseNumber(3, 1), new VerseNumber(3, 2)));
             TestVerseParsing("2Петр 1-3", new SimpleVersePointer(61, new VerseNumber(1), new VerseNumber(3)));
+            TestVerseParsing("2Петр 1:1-2:2", new SimpleVersePointer(61, new VerseNumber(1, 1), new VerseNumber(2, 2)));
+            TestVerseParsing("2Петр 1-2:2", new SimpleVersePointer(61, new VerseNumber(1), new VerseNumber(2, 2)));
             TestVerseParsing("2Петр 2 -3:1", new SimpleVersePointer(61, new VerseNumber(2), new VerseNumber(3, 1)));
             TestVerseParsing("2 Петр1:4- 3:2", new SimpleVersePointer(61, new VerseNumber(1, 4), new VerseNumber(3, 2)));
             TestVerseParsing("2 Петр1 : 4- 3 : 2", new SimpleVersePointer(61, new VerseNumber(1, 4), new VerseNumber(3, 2)));

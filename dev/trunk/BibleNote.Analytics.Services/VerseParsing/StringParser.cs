@@ -80,7 +80,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
             var result = new VerseEntryInfo()
             {                
                 EntryType = GetEntryType(bookEntry, verseNumberEntry),  // нужно заново пересчитать, так как могло измениться в verseNumberEntry.CanBeJustNumber
-                VerseEntryOptions = GetVerseEntryOptions(text, entryStartIndex, entryEndIndex),
+                EntryOptions = GetVerseEntryOptions(text, entryStartIndex, entryEndIndex),
                 StartIndex = entryStartIndex,
                 EndIndex = entryEndIndex,
                 VersePointer = new VersePointer(
@@ -120,6 +120,9 @@ namespace BibleNote.Analytics.Services.VerseParsing
             {
                 if (verseNumberEntry.IsVerse)
                     return VerseEntryType.Verse;
+
+                if (verseNumberEntry.IsChapter)
+                    return VerseEntryType.Chapter;
 
                 return verseNumberEntry.VerseNumber.IsChapter ? VerseEntryType.ChapterOrVerse : VerseEntryType.ChapterVerse;
             }

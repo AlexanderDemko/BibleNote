@@ -30,7 +30,7 @@ namespace BibleNote.Tests.Analytics
             Assert.AreEqual(verseEntryType, verseEntryInfo.EntryType);
 
             if (verseEntryOptions.HasValue)
-                Assert.AreEqual(verseEntryOptions.Value, verseEntryInfo.VerseEntryOptions);
+                Assert.AreEqual(verseEntryOptions.Value, verseEntryInfo.EntryOptions);
         }
 
         [TestMethod]

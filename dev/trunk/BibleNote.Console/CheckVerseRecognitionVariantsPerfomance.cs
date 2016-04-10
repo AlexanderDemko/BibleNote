@@ -26,7 +26,7 @@ namespace BibleNoteConsole
         private ModuleInfo _moduleInfo;        
         private string _inputText;
         private string _variant1Result;
-        private string _variant2Result;
+        //private string _variant2Result;
         private string _variant3Result;
 
         private List<BookAbbreviation> _allBooksAbbreviations;

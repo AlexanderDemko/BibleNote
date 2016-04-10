@@ -66,7 +66,7 @@ namespace BibleNote.Tests.Analytics
             var result = _parahraphParserService.ParseParagraph(htmlDoc.DocumentNode);          
 
             Assert.AreEqual(expectedOutput, htmlDoc.DocumentNode.InnerHtml, "The output html is wrong.");
-            Assert.AreEqual(HtmlToTextConverter.SimpleConvert(input), result.Text, "Text parts do not contain the full input string.");
+            Assert.AreEqual(new HtmlToTextConverter().SimpleConvert(input), result.Text, "Text parts do not contain the full input string.");
             
             Assert.AreEqual(verses.Length, result.VerseEntries.Count, "Verses length is not the same. Expected: {0}. Found: {1}", verses.Length, result.VerseEntries.Count);
 
@@ -124,16 +124,24 @@ namespace BibleNote.Tests.Analytics
             var expected = "<span lang=\"ru\">&quot;С учением об уподоблении (отождествлении) связаны важные богословские истины. Верующий отождествляется с Христом в Его смерти (<a href='bnVerse:Римлянам 6:1-11'>Рим. 6:1-11</a></span><span style='font-weight:bold' lang=\"ru\"></span><span lang=\"ru\">); погребении (<a href='bnVerse:Римлянам 6:4-6'>Рим. 6:4-6</a></span><span style='font-weight:bold' lang=\"ru\"></span><span style='font-weight:bold' lang=\"en-US\"></span><span lang=\"ru\">); в Его воскресении (<a href='bnVerse:Колоссянам 3:1'>Кол. 3:1</a></span><span style='background:yellow;mso-highlight:yellow' lang=\"ru\"></span><span lang=\"ru\">); вознесении (<a href='bnVerse:Ефесянам 2:6'>Еф. 2:6</a></span><span style='color:#E84C22' lang=\"ru\"></span><span lang=\"ru\">); в Его царстве (<a href='bnVerse:2Тимофею 2:12'>2 Тим. 2:12</a></span><span style='font-style:italic' lang=\"ru\"></span><span lang=\"ru\">) и в Его славе (</span><span style='text-decoration:underline' lang=\"ru\"><a href='bnVerse:Римлянам 8:17'>Рим. 8:17</a></span><span lang=\"ru\">)</span><span lang=\"en-US\"> </span><span lang=\"ru\">и </span><span style='font-weight:bold' lang=\"ru\">*</span><span lang=\"ru\"><a href='bnVerse:2Петра 1:5-8'>2Пет 1:5-8</a></span><span style='background:yellow;\r\n        mso-highlight:yellow' lang=\"ru\"></span><span style='color:#E84C22' lang=\"ru\"></span><span style='font-weight:bold' lang=\"ru\"></span><span style='font-style:italic' lang=\"ru\"></span><span style='font-weight:bold;font-style:italic' lang=\"ru\">*</span><span lang=\"ru\">&quot; (Джон Уолвурд)</span>";
 
             var result = CheckVerses(input, expected, null, "Рим. 6:1-11", "Рим. 6:4-6", "Кол. 3:1", "Еф. 2:6", "2 Тим. 2:12", "Рим. 8:17", "2Пет 1:5-8");
-            Assert.IsTrue(result.Result.VerseEntries.Last().VerseEntryOptions == VerseEntryOptions.ImportantVerse);
+            Assert.IsTrue(result.Result.VerseEntries.Last().EntryOptions == VerseEntryOptions.ImportantVerse);
         }
 
         [TestMethod]
         public void TestScenario4()
         {
-            var input = "тест Лк 1:16, 10:13-17;18-19; 11:1-2 тест";            
+            var input = "<span>test <font>Лк 5: </font>6<font>-</font></span><span> 7<font>,</font> и ещё <font>:</font>8</span><span><font>,</font><font>9</font></span>";
+            var expected = "test";
 
-            CheckVerses(input, null, null, "Лк 1:16", "Лк 10:13", "Лк 10:14", "Лк 10:15", "Лк 10:16",
-                "Лк 10:17", "Лк 18", "Лк 19", "Лк 11:1", "Лк 11:2");
+            CheckVerses(input, expected, null, "Лк 5:6-7", "Лк 5:8", "Лк 5:9");
+        }
+
+        [TestMethod]
+        public void TestScenario5()
+        {
+            var input = "тест Лк 1:16, и 17 и 10:13-17;17-18; 19-20;  21-22;   23-24,11:1-2,3,  4-5,   6, и 7 тест и Мк 1:5 , 6  ,7 ,  8";
+
+            CheckVerses(input, null, null, "Лк 1:16", "Лк 10:13-17", "Лк 17-18", "Лк 19-20", "Лк 21-22", "Лк 11:1-2", "Лк 11:3", "Лк 11:4-5", "Мк 1:5", "Мк 1:6", "Мк 1:7");
         }
 
         //[TestMethod]
@@ -194,7 +202,7 @@ namespace BibleNote.Tests.Analytics
         //        public void TestScenario8()
         //        {
         //            var input = ":1-2 как и в :3,4-5";
-                            // здесь надо переносить тестовый сценарий из старого проекта с заголовком!!
+        // здесь надо переносить тестовый сценарий из старого проекта с заголовком!!
         //            var result = ParseParagraph(input, null);
         //            CheckVerses(input, result, "1Кор 1", "1Кор 1:1", "1Кор 1:2", "1Кор 1:3", "1Кор 1:4", "1Кор 1:5");
         //        }
