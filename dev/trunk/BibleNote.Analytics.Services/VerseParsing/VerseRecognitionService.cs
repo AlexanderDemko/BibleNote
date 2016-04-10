@@ -11,7 +11,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
 {
     public class VerseRecognitionService : IVerseRecognitionService
     {
-        private class RuleList : List<Func<VerseEntryInfo, DocumentParseContext, VersePointer>> { }
+        private class RuleList : List<Func<VerseEntryInfo, DocumentParseContext, bool>> { }
 
         private static Dictionary<VerseEntryType, RuleList> _funcs = new Dictionary<VerseEntryType, RuleList>()
         {
@@ -19,70 +19,72 @@ namespace BibleNote.Analytics.Services.VerseParsing
             { VerseEntryType.BookChapter,      new RuleList() { FullVerseRule } },
             { VerseEntryType.ChapterOrVerse,   new RuleList() { ChapterOrVerseRule } },
             { VerseEntryType.Verse,            new RuleList() { VerseRule } },
+            { VerseEntryType.Chapter,          new RuleList() { ChapterRule } },
             { VerseEntryType.ChapterVerse,     new RuleList() { ChapterVerseRule } }
         };
 
-        public VersePointer TryRecognizeVerse(VerseEntryInfo verseEntry, DocumentParseContext docParseContext)
+        public bool TryRecognizeVerse(VerseEntryInfo verseEntry, DocumentParseContext docParseContext)
         {
             if (!verseEntry.VersePointerFound)
-                return null;
+                return false;
 
             foreach (var func in _funcs[verseEntry.EntryType])
-            {                
-                var recognizedVerse = func(verseEntry, docParseContext);
-                if (recognizedVerse != null)
-                    return recognizedVerse;
+            {   
+                if (func(verseEntry, docParseContext))
+                    return true;
             }
 
-            return null;
+            return false;
         }
 
-        private static VersePointer FullVerseRule(VerseEntryInfo verseEntry, DocumentParseContext docParseContext)
+        private static bool FullVerseRule(VerseEntryInfo verseEntry, DocumentParseContext docParseContext)
         {
-            return verseEntry.VersePointer;
+            return true;
         }
 
-        private static VersePointer ChapterOrVerseRule(VerseEntryInfo verseEntry, DocumentParseContext docParseContext)
+        private static bool ChapterOrVerseRule(VerseEntryInfo verseEntry, DocumentParseContext docParseContext)
         {
             if (docParseContext.LatestVerseEntry != null
                 && StringUtils.CheckDivergence(docParseContext.CurrentParagraph.Text, docParseContext.LatestVerseEntry.EndIndex, verseEntry.StartIndex, 2, ','))
             {
                 verseEntry.VersePointer.Book = docParseContext.LatestVerseEntry.VersePointer.Book;
                 verseEntry.VersePointer.BookIndex = docParseContext.LatestVerseEntry.VersePointer.BookIndex;
-                if (!docParseContext.LatestVerseEntry.VersePointer.VerseNumber.IsChapter)
-                    verseEntry.VersePointer.VerseNumber = new VerseNumber(docParseContext.LatestVerseEntry.VersePointer.Chapter, verseEntry.VersePointer.VerseNumber.Verse);
-                return verseEntry.VersePointer;
+
+                verseEntry.EntryType = docParseContext.LatestVerseEntry.VersePointer.VerseNumber.IsChapter ? VerseEntryType.Chapter : VerseEntryType.Verse;
+                if (verseEntry.EntryType == VerseEntryType.Verse)
+                    verseEntry.VersePointer.VerseNumber = new VerseNumber(docParseContext.LatestVerseEntry.VersePointer.Chapter, verseEntry.VersePointer.VerseNumber.Chapter);                
+                                
+                return true;
             }
 
-            return null;
+            return false;
         }
 
 
-        private static VersePointer ChapterVerseRule(VerseEntryInfo verseEntry, DocumentParseContext docParseContext)
+        private static bool ChapterVerseRule(VerseEntryInfo verseEntry, DocumentParseContext docParseContext)
         {
             if (docParseContext.LatestVerseEntry != null)
             {
                 verseEntry.VersePointer.Book = docParseContext.LatestVerseEntry.VersePointer.Book;
                 verseEntry.VersePointer.BookIndex = docParseContext.LatestVerseEntry.VersePointer.BookIndex;
-                return verseEntry.VersePointer;
+                return true;
             }
             else if (docParseContext.TitleVerse != null)
             {
 
             }
 
-            return null;
+            return false;
         }
 
-        private static VersePointer VerseRule(VerseEntryInfo verseEntry, DocumentParseContext docParseContext)
-        {
-            
+        private static bool VerseRule(VerseEntryInfo verseEntry, DocumentParseContext docParseContext)
+        {            
             if (docParseContext.LatestVerseEntry != null)
             {
                 verseEntry.VersePointer.Book = docParseContext.LatestVerseEntry.VersePointer.Book;
                 verseEntry.VersePointer.BookIndex = docParseContext.LatestVerseEntry.VersePointer.BookIndex;
                 verseEntry.VersePointer.VerseNumber = new VerseNumber(docParseContext.LatestVerseEntry.VersePointer.Chapter, verseEntry.VersePointer.VerseNumber.Verse);
-                return verseEntry.VersePointer;
+                return true;
             }
             else if (docParseContext.CurrentParagraph.ParentParagraph != null)
             {
@@ -92,8 +94,19 @@ namespace BibleNote.Analytics.Services.VerseParsing
 
             }
 
-            return null;
+            return false;
+        }
 
+        private static bool ChapterRule(VerseEntryInfo verseEntry, DocumentParseContext docParseContext)
+        {
+            if (docParseContext.LatestVerseEntry != null)
+            {
+                verseEntry.VersePointer.Book = docParseContext.LatestVerseEntry.VersePointer.Book;
+                verseEntry.VersePointer.BookIndex = docParseContext.LatestVerseEntry.VersePointer.BookIndex;                
+                return true;
+            }            
+
+            return false;
         }
     }
 }

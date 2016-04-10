@@ -63,10 +63,9 @@ namespace BibleNote.Analytics.Services.VerseParsing
             
             var skipNodes = 0;
             while (verseEntry.VersePointerFound)
-            {
-                verseEntry.VersePointer = _verseRecognitionService.TryRecognizeVerse(verseEntry, _docParseContext);
-                if (verseEntry.VersePointer != null)
-                {
+            {                
+                if (_verseRecognitionService.TryRecognizeVerse(verseEntry, _docParseContext))
+                {   
                     TextNodeEntry verseNode = null;
                     string verseLink = null;
                     verseNode = FindNodeAndMoveVerseTextInOneNodeIfNotReadonly(parseString, verseEntry, ref skipNodes);
@@ -85,7 +84,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
                 }
 
                 index = verseEntry.EndIndex + 1;
-                if (index < parseString.Value.Length - 2)
+                if (index < parseString.Value.Length - 1)
                     verseEntry = _stringParser.TryGetVerse(parseString.Value, index);
                 else 
                     break;

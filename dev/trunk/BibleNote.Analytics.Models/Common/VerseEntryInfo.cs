@@ -92,9 +92,7 @@ namespace BibleNote.Analytics.Models.Common
 
         public int EndIndex { get; set; }
 
-        public VerseEntryOptions EntryOptions { get; set; }
-
-        //public bool IsExcluded { get; set; }        
+        public VerseEntryOptions EntryOptions { get; set; }        
 
         public bool VersePointerFound
         {
