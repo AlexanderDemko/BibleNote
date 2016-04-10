@@ -38,6 +38,7 @@ namespace BibleNote.Analytics.Models.Common
             if (prevChar == ':' && !char.IsDigit(prevPrevChar)) 
             {
                 IsVerse = true;
+                VerseNumber = new VerseNumber(0, VerseNumber.Chapter);
                 StartIndex--;
                 return true;
             }

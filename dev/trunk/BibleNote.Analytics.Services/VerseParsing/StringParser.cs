@@ -62,7 +62,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
         private VerseEntryInfo TryGetVerseEntry(string text, int startIndex, int indexOfDigit)
         {
             var bookEntry = TryGetBookName(text, startIndex, indexOfDigit);
-            var verseNumberEntry = TryGetVerseNumber(text, indexOfDigit, _configurationManager.UseCommaDelimiter);
+            var verseNumberEntry = TryGetVerseNumber(text, indexOfDigit, bookEntry != null ? _configurationManager.UseCommaDelimiter : false);      // запятую в качестве разделителя можно использовать только для BookChapterVerse
             var topVerseNumberEntry = TryGetTopVerseNumber(text, verseNumberEntry.EndIndex + 1, verseNumberEntry.VerseNumber);
 
             var entryType = GetEntryType(bookEntry, verseNumberEntry);
@@ -75,12 +75,12 @@ namespace BibleNote.Analytics.Services.VerseParsing
 
             var entryStartIndex = bookEntry != null ? bookEntry.StartIndex : verseNumberEntry.StartIndex;
             var entryEndIndex = verseNumberEntry != null ? (topVerseNumberEntry ?? verseNumberEntry).EndIndex : indexOfDigit;
-            var originalVerse = text.Substring(entryStartIndex, entryEndIndex - entryStartIndex + 1);
+            var originalVerse = text.Substring(entryStartIndex, entryEndIndex - entryStartIndex + 1);            
 
             var result = new VerseEntryInfo()
             {                
                 EntryType = GetEntryType(bookEntry, verseNumberEntry),  // нужно заново пересчитать, так как могло измениться в verseNumberEntry.CanBeJustNumber
-                EntryOptions = GetVerseEntryOptions(text, entryStartIndex, entryEndIndex),
+                EntryOptions = GetEntryOptions(text, entryStartIndex, entryEndIndex),
                 StartIndex = entryStartIndex,
                 EndIndex = entryEndIndex,
                 VersePointer = new VersePointer(
@@ -95,7 +95,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
             return result;
         }
 
-        private VerseEntryOptions GetVerseEntryOptions(string text, int entryStartIndex, int entryEndIndex)
+        private VerseEntryOptions GetEntryOptions(string text, int entryStartIndex, int entryEndIndex)
         {
             var prevChar = StringUtils.GetChar(text, entryStartIndex - 1);
             var nextChar = StringUtils.GetChar(text, entryEndIndex + 1);
