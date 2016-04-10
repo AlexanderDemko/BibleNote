@@ -31,7 +31,7 @@ namespace BibleNote.Analytics.Models.Common
         {
             get
             {
-                return Chapter == 0;
+                return Chapter == 0 && Verse == 0;
             }
         }
 
