@@ -130,5 +130,24 @@ namespace BibleNote.Analytics.Core.Helpers
 
             return result;
         }
+
+        public static bool CheckDivergence(string text, int firstIndex, int secondIndex, int maxSpaces, char allowedDelimiter)
+        {
+            for (var i = firstIndex + 1; i < secondIndex; i++)
+            {
+                var symbol = GetChar(text, i);
+                if (char.IsWhiteSpace(symbol))
+                {
+                    if (maxSpaces-- == 0)
+                        return false;
+
+                    break;
+                }
+                else if (allowedDelimiter != symbol)
+                    return false;
+            }
+
+            return true;
+        }
     }
 }

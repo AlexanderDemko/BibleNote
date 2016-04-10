@@ -38,7 +38,7 @@ namespace BibleNote.Analytics.Core.Helpers
 
         private static readonly Regex htmlPattern = new Regex(@"<(.|\n)*?>", RegexOptions.Compiled);             
 
-        public static string SimpleConvert(string htmlString)
+        public string SimpleConvert(string htmlString)
         {
             if (string.IsNullOrEmpty(htmlString))
                 return htmlString;

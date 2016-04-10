@@ -28,6 +28,8 @@ namespace BibleNote.Analytics.Models.Common
 
         public bool IsVerse { get; set; }
 
+        public bool IsChapter { get; set; }
+
         public bool CanBeJustNumber(string text, VerseNumberEntry topVerseNumberEntry)
         {
             var prevChar = StringUtils.GetChar(text, StartIndex - 1);
@@ -40,8 +42,17 @@ namespace BibleNote.Analytics.Models.Common
                 return true;
             }
 
-            if (prevChar == ',' && char.IsDigit(prevPrevChar))
-                return true;
+            if (char.IsDigit(prevPrevChar))
+            {
+                if (prevChar == ';')
+                {
+                    IsChapter = true;
+                    return true;
+                }
+
+                if (prevChar == ',')
+                    return true;
+            }
 
             //var nextChar = StringUtils.GetChar(text, StartIndex + 1);
             //if (VerseUtils.IsDash(nextChar) && topVerseNumberEntry != null && topVerseNumberEntry.VerseNumber.IsChapter)
@@ -80,7 +91,7 @@ namespace BibleNote.Analytics.Models.Common
 
         public int EndIndex { get; set; }
 
-        public VerseEntryOptions VerseEntryOptions { get; set; }
+        public VerseEntryOptions EntryOptions { get; set; }
 
         //public bool IsExcluded { get; set; }        
 
