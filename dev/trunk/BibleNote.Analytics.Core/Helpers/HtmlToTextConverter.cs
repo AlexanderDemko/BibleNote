@@ -49,11 +49,9 @@ namespace BibleNote.Analytics.Core.Helpers
         public TextNodesString Convert(HtmlNode node)
         {
             _parseStrings = new List<TextNodesString>();
-
             FindParseStrings(node);
 
             var result = new TextNodesString();
-
             var sb = new StringBuilder();            
             var cursor = 0;            
 

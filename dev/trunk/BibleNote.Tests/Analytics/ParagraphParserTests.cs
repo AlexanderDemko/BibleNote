@@ -131,7 +131,7 @@ namespace BibleNote.Tests.Analytics
         public void TestScenario4()
         {
             var input = "<span>test <font>Лк 5: </font>6<font>-</font></span><span> 7<font>,</font> и ещё <font>:</font>8</span><span><font>,</font><font>9</font></span>";
-            var expected = "test";
+            var expected = "<span>test <font><a href='bnVerse:Луки 5:6-7'>Лк 5: 6- 7</a></font><font></font></span><span><font>,</font> и ещё <font><a href='bnVerse:Луки 5:8'>:8</a></font></span><span><font>,</font><font><a href='bnVerse:Луки 5:9'>9</a></font></span>";
 
             CheckVerses(input, expected, null, "Лк 5:6-7", "Лк 5:8", "Лк 5:9");
         }
