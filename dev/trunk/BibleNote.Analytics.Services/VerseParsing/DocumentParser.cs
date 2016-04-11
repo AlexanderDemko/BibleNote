@@ -39,7 +39,8 @@ namespace BibleNote.Analytics.Services.VerseParsing
 
         public IParseContext ParseParagraph(HtmlNode node)
         {
-            throw new NotImplementedException();
+            _paragraphParser.ParseParagraph(node);
+            return null;
         }
 
         public IParseContext ParseTable(HtmlNode node)

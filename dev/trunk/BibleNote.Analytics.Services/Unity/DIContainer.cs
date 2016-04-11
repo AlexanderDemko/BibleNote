@@ -63,7 +63,8 @@ namespace BibleNote.Analytics.Services.Unity
                 .RegisterTracingType<IStringParser, StringParser>(new TransientLifetimeManager())
                 .RegisterTracingType<IVersePointerFactory, VersePointerFactory>(new TransientLifetimeManager())
                 .RegisterTracingType<IParagraphParser, ParagraphParser>(new TransientLifetimeManager())
-                .RegisterTracingType<IApplicationManager, ApplicationManager>(new ContainerControlledLifetimeManager());
+                .RegisterTracingType<IApplicationManager, ApplicationManager>(new ContainerControlledLifetimeManager())
+                .RegisterTracingType<IDocumentParser, DocumentParser>(new TransientLifetimeManager());
         }
         
         public static T Resolve<T>(params ResolverOverride[] overrides)

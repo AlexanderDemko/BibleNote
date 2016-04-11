@@ -136,6 +136,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Analytics\TestData\TestDocument1.html" />
     <Content Include="HTMLPage1.html" />
   </ItemGroup>
   <Choose>
