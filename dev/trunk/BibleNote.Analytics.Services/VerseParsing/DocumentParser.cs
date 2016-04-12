@@ -37,13 +37,13 @@ namespace BibleNote.Analytics.Services.VerseParsing
             _paragraphParser.ParseParagraph(node);
         }
 
-        public IParseContext ParseParagraph(HtmlNode node)
+        public IElementParseContext ParseParagraph(HtmlNode node)
         {
             _paragraphParser.ParseParagraph(node);
             return null;
         }
 
-        public IParseContext ParseTable(HtmlNode node)
+        public IElementParseContext ParseTable(HtmlNode node)
         {
             throw new NotImplementedException();
         }

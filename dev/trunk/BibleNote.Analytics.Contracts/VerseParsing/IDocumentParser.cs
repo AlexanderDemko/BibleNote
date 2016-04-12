@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace BibleNote.Analytics.Contracts.VerseParsing
 {
-    public interface IParseContext: IDisposable
+    public interface IElementParseContext: IDisposable
     {
 
     }
@@ -17,7 +17,7 @@ namespace BibleNote.Analytics.Contracts.VerseParsing
     {
         void Init(IDocumentProvider documentProvider);
         void ParseTitle(HtmlNode node);
-        IParseContext ParseParagraph(HtmlNode node);
-        IParseContext ParseTable(HtmlNode node);        
+        IElementParseContext ParseParagraph(HtmlNode node);
+        IElementParseContext ParseTable(HtmlNode node);        
     }
 }
