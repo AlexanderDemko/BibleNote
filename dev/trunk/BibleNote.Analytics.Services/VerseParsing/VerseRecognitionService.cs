@@ -11,7 +11,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
 {
     public class VerseRecognitionService : IVerseRecognitionService
     {
-        private class RuleList : List<Func<VerseEntryInfo, DocumentParseContext, bool>> { }
+        private class RuleList : List<Func<VerseEntryInfo, IDocumentParseContext, bool>> { }
 
         private static Dictionary<VerseEntryType, RuleList> _funcs = new Dictionary<VerseEntryType, RuleList>()
         {
@@ -23,7 +23,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
             { VerseEntryType.ChapterVerse,     new RuleList() { ChapterVerseRule } }
         };
 
-        public bool TryRecognizeVerse(VerseEntryInfo verseEntry, DocumentParseContext docParseContext)
+        public bool TryRecognizeVerse(VerseEntryInfo verseEntry, IDocumentParseContext docParseContext)
         {
             if (!verseEntry.VersePointerFound)
                 return false;
@@ -37,12 +37,12 @@ namespace BibleNote.Analytics.Services.VerseParsing
             return false;
         }
 
-        private static bool FullVerseRule(VerseEntryInfo verseEntry, DocumentParseContext docParseContext)
+        private static bool FullVerseRule(VerseEntryInfo verseEntry, IDocumentParseContext docParseContext)
         {
             return true;
         }
 
-        private static bool ChapterOrVerseRule(VerseEntryInfo verseEntry, DocumentParseContext docParseContext)
+        private static bool ChapterOrVerseRule(VerseEntryInfo verseEntry, IDocumentParseContext docParseContext)
         {
             if (docParseContext.LatestVerseEntry != null
                 && StringUtils.CheckDivergence(docParseContext.CurrentParagraph.Text, docParseContext.LatestVerseEntry.EndIndex, verseEntry.StartIndex, 2, ','))
@@ -52,7 +52,11 @@ namespace BibleNote.Analytics.Services.VerseParsing
 
                 verseEntry.EntryType = docParseContext.LatestVerseEntry.VersePointer.VerseNumber.IsChapter ? VerseEntryType.Chapter : VerseEntryType.Verse;
                 if (verseEntry.EntryType == VerseEntryType.Verse)
-                    verseEntry.VersePointer.VerseNumber = new VerseNumber(docParseContext.LatestVerseEntry.VersePointer.Chapter, verseEntry.VersePointer.VerseNumber.Chapter);                
+                {
+                    verseEntry.VersePointer.VerseNumber = new VerseNumber(docParseContext.LatestVerseEntry.VersePointer.Chapter, verseEntry.VersePointer.VerseNumber.Chapter);
+                    if (verseEntry.VersePointer.TopVerseNumber.HasValue && verseEntry.VersePointer.TopVerseNumber.Value.IsChapter)
+                        verseEntry.VersePointer.TopVerseNumber = new VerseNumber(docParseContext.LatestVerseEntry.VersePointer.Chapter, verseEntry.VersePointer.TopVerseNumber.Value.Chapter);
+                }
                                 
                 return true;
             }
@@ -61,7 +65,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
         }
 
 
-        private static bool ChapterVerseRule(VerseEntryInfo verseEntry, DocumentParseContext docParseContext)
+        private static bool ChapterVerseRule(VerseEntryInfo verseEntry, IDocumentParseContext docParseContext)
         {
             if (docParseContext.LatestVerseEntry != null)
             {
@@ -77,7 +81,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
             return false;
         }
 
-        private static bool VerseRule(VerseEntryInfo verseEntry, DocumentParseContext docParseContext)
+        private static bool VerseRule(VerseEntryInfo verseEntry, IDocumentParseContext docParseContext)
         {            
             if (docParseContext.LatestVerseEntry != null)
             {
@@ -97,7 +101,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
             return false;
         }
 
-        private static bool ChapterRule(VerseEntryInfo verseEntry, DocumentParseContext docParseContext)
+        private static bool ChapterRule(VerseEntryInfo verseEntry, IDocumentParseContext docParseContext)
         {
             if (docParseContext.LatestVerseEntry != null)
             {

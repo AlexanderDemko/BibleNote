@@ -18,11 +18,11 @@ namespace BibleNote.Analytics.Services.VerseParsing
 
         private IDocumentProvider _documentProvider;
 
-        private DocumentParseContext _documentParseContext;
+        private IDocumentParseContext _documentParseContext;
 
         public DocumentParser()
         {
-            _documentParseContext = new DocumentParseContext();
+            _documentParseContext = DIContainer.Resolve<IDocumentParseContext>();
             _paragraphParser = DIContainer.Resolve<IParagraphParser>();
         }
 

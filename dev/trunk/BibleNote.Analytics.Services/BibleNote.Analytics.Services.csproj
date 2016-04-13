@@ -90,6 +90,7 @@
     <Compile Include="Unity\DIContainer.cs" />
     <Compile Include="Logging\DiagnosticsLog.cs" />
     <Compile Include="Unity\LogCallHandler.cs" />
+    <Compile Include="VerseParsing\DocumentParseContext.cs" />
     <Compile Include="VerseParsing\DocumentParser.cs" />
     <Compile Include="VerseParsing\ParagraphParser.cs" />
     <Compile Include="VerseParsing\VersePointerFactory.cs" />

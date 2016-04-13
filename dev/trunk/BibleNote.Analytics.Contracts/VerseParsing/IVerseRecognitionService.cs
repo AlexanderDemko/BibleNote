@@ -9,6 +9,6 @@ namespace BibleNote.Analytics.Contracts.VerseParsing
 {
     public interface IVerseRecognitionService
     {
-        bool TryRecognizeVerse(VerseEntryInfo verseEntry, DocumentParseContext docParseContext);
+        bool TryRecognizeVerse(VerseEntryInfo verseEntry, IDocumentParseContext docParseContext);
     }
 }

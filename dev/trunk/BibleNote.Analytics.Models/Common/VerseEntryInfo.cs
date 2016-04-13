@@ -32,8 +32,10 @@ namespace BibleNote.Analytics.Models.Common
 
         public bool CanBeJustNumber(string text, VerseNumberEntry topVerseNumberEntry)
         {
-            var prevChar = StringUtils.GetChar(text, StartIndex - 1);
-            var prevPrevChar = StringUtils.GetChar(text, StartIndex - 2);
+            var maxSpaces = 2;
+            var prevIndex = StartIndex;
+            var prevChar = StringUtils.SearchFirstValuablePrevChar(text, ref prevIndex, ref maxSpaces);            
+            var prevPrevChar = StringUtils.SearchFirstValuablePrevChar(text, ref prevIndex, ref maxSpaces);
 
             if (prevChar == ':' && !char.IsDigit(prevPrevChar)) 
             {
@@ -53,7 +55,7 @@ namespace BibleNote.Analytics.Models.Common
 
                 if (prevChar == ',')
                     return true;
-            }
+            }            
 
             //var nextChar = StringUtils.GetChar(text, StartIndex + 1);
             //if (VerseUtils.IsDash(nextChar) && topVerseNumberEntry != null && topVerseNumberEntry.VerseNumber.IsChapter)
@@ -100,6 +102,11 @@ namespace BibleNote.Analytics.Models.Common
             {
                 return EntryType != VerseEntryType.None;
             }
+        }
+
+        public override string ToString()
+        {
+            return $"{VersePointer} at {StartIndex}-{EndIndex}";
         }
     }
 }
