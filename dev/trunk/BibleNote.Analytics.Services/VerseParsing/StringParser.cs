@@ -106,6 +106,9 @@ namespace BibleNote.Analytics.Services.VerseParsing
             if (prevChar == '[' && nextChar == ']')
                 return VerseEntryOptions.InSquareBrackets;
 
+            if (prevChar == '{' && nextChar == '}')
+                return VerseEntryOptions.IsExcluded;
+
             return VerseEntryOptions.None;
         }
 
@@ -207,8 +210,13 @@ namespace BibleNote.Analytics.Services.VerseParsing
                 return null;
 
             var result = TryGetVerseNumber(text, indexOfDigit, false);
-            if (result.VerseNumber.IsChapter && !verseNumber.IsChapter)
+            if (result.VerseNumber.IsChapter && !verseNumber.IsChapter) 
                 result.VerseNumber = new VerseNumber(verseNumber.Chapter, result.VerseNumber.Chapter);
+
+            if (result.VerseNumber.Chapter < verseNumber.Chapter
+                || (result.VerseNumber.IsChapter && result.VerseNumber.Chapter == verseNumber.Chapter)
+                || (result.VerseNumber.Chapter == verseNumber.Chapter && result.VerseNumber.Verse <= verseNumber.Verse))
+                return null;
 
             return result;
         }     

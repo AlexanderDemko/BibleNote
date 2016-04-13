@@ -124,7 +124,7 @@ namespace BibleNote.Tests.Analytics
             var expected = "<span lang=\"ru\">&quot;С учением об уподоблении (отождествлении) связаны важные богословские истины. Верующий отождествляется с Христом в Его смерти (<a href='bnVerse:Римлянам 6:1-11'>Рим. 6:1-11</a></span><span style='font-weight:bold' lang=\"ru\"></span><span lang=\"ru\">); погребении (<a href='bnVerse:Римлянам 6:4-6'>Рим. 6:4-6</a></span><span style='font-weight:bold' lang=\"ru\"></span><span style='font-weight:bold' lang=\"en-US\"></span><span lang=\"ru\">); в Его воскресении (<a href='bnVerse:Колоссянам 3:1'>Кол. 3:1</a></span><span style='background:yellow;mso-highlight:yellow' lang=\"ru\"></span><span lang=\"ru\">); вознесении (<a href='bnVerse:Ефесянам 2:6'>Еф. 2:6</a></span><span style='color:#E84C22' lang=\"ru\"></span><span lang=\"ru\">); в Его царстве (<a href='bnVerse:2Тимофею 2:12'>2 Тим. 2:12</a></span><span style='font-style:italic' lang=\"ru\"></span><span lang=\"ru\">) и в Его славе (</span><span style='text-decoration:underline' lang=\"ru\"><a href='bnVerse:Римлянам 8:17'>Рим. 8:17</a></span><span lang=\"ru\">)</span><span lang=\"en-US\"> </span><span lang=\"ru\">и </span><span style='font-weight:bold' lang=\"ru\">*</span><span lang=\"ru\"><a href='bnVerse:2Петра 1:5-8'>2Пет 1:5-8</a></span><span style='background:yellow;\r\n        mso-highlight:yellow' lang=\"ru\"></span><span style='color:#E84C22' lang=\"ru\"></span><span style='font-weight:bold' lang=\"ru\"></span><span style='font-style:italic' lang=\"ru\"></span><span style='font-weight:bold;font-style:italic' lang=\"ru\">*</span><span lang=\"ru\">&quot; (Джон Уолвурд)</span>";
 
             var result = CheckVerses(input, expected, null, "Рим. 6:1-11", "Рим. 6:4-6", "Кол. 3:1", "Еф. 2:6", "2 Тим. 2:12", "Рим. 8:17", "2Пет 1:5-8");
-            Assert.IsTrue(result.Result.VerseEntries.Last().EntryOptions == VerseEntryOptions.ImportantVerse);
+            Assert.AreEqual(VerseEntryOptions.ImportantVerse, result.Result.VerseEntries.Last().EntryOptions);
         }
 
         [TestMethod]
@@ -144,50 +144,51 @@ namespace BibleNote.Tests.Analytics
             CheckVerses(input, null, null, "Лк 1:16", "Лк 10:13-17", "Лк 17-18", "Лк 19-20", "Лк 21-22", "Лк 11:1-2", "Лк 11:3", "Лк 11:4-5", "Мк 1:5", "Мк 1:6", "Мк 1:7");
         }
 
-        //[TestMethod]
-        //public void TestScenario2()
-        //{
-        //    var input = "тест Лк 1:16, 10:13-17,18-19; 11:1-2 тест";
+        [TestMethod]
+        public void TestScenario6()
+        {
+            var input = "тест Лк 1:16, 10:13-17,18-19; 11:1-2 тест";
 
-        //    CheckVerses(input, input, "Лк 1:16", "Лк 10:13", "Лк 10:14",
-        //        "Лк 10:15", "Лк 10:16", "Лк 10:17", "Лк 10:18", "Лк 10:19", "Лк 11:1", "Лк 11:2");
-        //}
+            CheckVerses(input, null, null, "Лк 1:16", "Лк 10:13-17", "Лк 10:18-19", "Лк 11:1-2");
+        }
 
-        //[TestMethod]
-        //public void TestScenario3()
-        //{
-        //    var input = "Этот тест из 1 Ин 1 был подготвлен в (:2) и :3-4 и в :7-6, _:8_ стихах. А в 2-е Ин 1:3-5,6 тоже интересная инфа о {:7}. И о 2Тим 1:1,2-3";
+        [TestMethod]
+        public void TestScenario7()
+        {
+            var input = "Этот тест из 1 Ин 1 был подготвлен в (:2) и :3-4 и в :7-6, _:8_ стихах. А в 2-е Ин 1:3-5,6 тоже интересная инфа о {:7}. И о 2Тим 1:1,2-3";
 
-        //    CheckVerses(input, input, "1Ин 1", "1Ин 1:2", "1Ин 1:3", "1Ин 1:4", "1Ин 1:7", "1Ин 1:8",
-        //        "2Ин 1:3", "2Ин 1:4", "2Ин 1:5", "2Ин 1:6", "2Ин 1:7", "2Тим 1:1", "2Тим 1:2", "2Тим 1:3");
-        //}
+            var result = CheckVerses(input, null, null, "1Ин 1", "1Ин 1:2", "1Ин 1:3-4", "1Ин 1:7", "1Ин 1:8",
+                "2Ин 1:3-5", "2Ин 1:6", "2Ин 1:7", "2Тим 1:1", "2Тим 1:2-3");
 
-        //        [TestMethod]
-        //        public void TestScenario4()
-        //        {
-        //            var input = "1 Лк 1:1, 2";
-        //            var expected = "1 Лк 1:1,2";
+            Assert.AreEqual(VerseEntryOptions.IsExcluded, result.Result.VerseEntries[7].EntryOptions);
+        }
 
-        //            CheckVerses(input, result, "Лк 1:1", "Лк 1:2");
-        //        }
+        [TestMethod]
+        public void TestScenario8()
+        {
+            var input = "1 Лк 1:1, 2";
+            //var expected = "1 Лк 1:1,2";      // todo: а надо ли менять...
 
-        //        [TestMethod]
-        //        public void TestScenario5()
-        //        {
-        //            var input = "Ин 1: вот и Отк 5(синодальный перевод) и Деяния 1:5,6: вот";
+            CheckVerses(input, null, null, "Лк 1:1", "Лк 1:2");
+        }
 
-        //            var result = ParseParagraph(input, null);
-        //            CheckVerses(input, result, "Ин 1", "Отк 5", "Деян 1:5", "Деян 1:6");
-        //        }
+        [TestMethod]
+        public void TestScenario9()
+        {
+            var input = "Ин 1: вот и Отк 5(синодальный перевод) и Деяния 1:5,6: вот";
+            
+            CheckVerses(input, null, null, "Ин 1", "Отк 5", "Деян 1:5", "Деян 1:6");
+        }
 
-        //        [TestMethod]
-        //        public void TestScenario6()
-        //        {
-        //            var input = "Ин 1:50-2:2,3-4";
+        [TestMethod]
+        public void TestScenario10()
+        {
+            var input = "Ин 1:50-2:2,3-4";
+                        
+            CheckVerses(input, null, null, "Ин 1:50-2:2", "Ин 2:3-4");
 
-        //            var result = ParseParagraph(input, null);
-        //            CheckVerses(input, result, "Ин 1:50", "Ин 1:51", "Ин 2:1", "Ин 2:2", "Ин 2:3", "Ин 2:4");
-        //        }
+            // check expand multiverse: "Ин 1:50", "Ин 1:51", "Ин 2:1", "Ин 2:2", "Ин 2:3", "Ин 2:4"
+        }
 
         //        [TestMethod]
         //        public void TestScenario7()
