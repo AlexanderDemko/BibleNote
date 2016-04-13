@@ -199,9 +199,7 @@ namespace BibleNote.Analytics.Models.Common
         }
 
         protected virtual void CopyPropertiesTo(SimpleVersePointer verse)
-        {
-            
-        }
+        { }
 
         public virtual void ParseFromFullVerseNumber(string fullVerseNumber)
         {
@@ -212,12 +210,32 @@ namespace BibleNote.Analytics.Models.Common
         {
             throw new InvalidOperationException("Can be called only in derived class.");
         }
+
+        public virtual void SetChapterToVerse(int newChapter)           // когда изначально не было понятно, стих это или глава (например ",5-6");
+        {
+            VerseNumber = new VerseNumber(newChapter, VerseNumber.Chapter);
+            if (TopVerseNumber.HasValue && TopVerseNumber.Value.IsChapter)
+                TopVerseNumber = new VerseNumber(newChapter, TopVerseNumber.Value.Chapter);
+        }
     }  
 
     [Serializable]
     public class VersePointer : SimpleVersePointer
-    {        
-        public BibleBookInfo Book { get; set;}
+    {
+        private BibleBookInfo _book;
+        public BibleBookInfo Book
+        {
+            get
+            {
+                return _book;
+            }
+            set
+            {
+                _book = value;
+                if (_book != null)
+                    BookIndex = _book.Index;
+            }
+        }
 
         public string ModuleName { get; set; }
 

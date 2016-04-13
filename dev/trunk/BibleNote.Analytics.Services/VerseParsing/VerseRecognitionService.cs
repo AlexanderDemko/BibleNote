@@ -47,16 +47,11 @@ namespace BibleNote.Analytics.Services.VerseParsing
             if (docParseContext.LatestVerseEntry != null
                 && StringUtils.CheckDivergence(docParseContext.CurrentParagraph.Text, docParseContext.LatestVerseEntry.EndIndex, verseEntry.StartIndex, 2, ','))
             {
-                verseEntry.VersePointer.Book = docParseContext.LatestVerseEntry.VersePointer.Book;
-                verseEntry.VersePointer.BookIndex = docParseContext.LatestVerseEntry.VersePointer.BookIndex;
+                verseEntry.VersePointer.Book = docParseContext.LatestVerseEntry.VersePointer.Book;                
 
                 verseEntry.EntryType = docParseContext.LatestVerseEntry.VersePointer.VerseNumber.IsChapter ? VerseEntryType.Chapter : VerseEntryType.Verse;
-                if (verseEntry.EntryType == VerseEntryType.Verse)
-                {
-                    verseEntry.VersePointer.VerseNumber = new VerseNumber(docParseContext.LatestVerseEntry.VersePointer.Chapter, verseEntry.VersePointer.VerseNumber.Chapter);
-                    if (verseEntry.VersePointer.TopVerseNumber.HasValue && verseEntry.VersePointer.TopVerseNumber.Value.IsChapter)
-                        verseEntry.VersePointer.TopVerseNumber = new VerseNumber(docParseContext.LatestVerseEntry.VersePointer.Chapter, verseEntry.VersePointer.TopVerseNumber.Value.Chapter);
-                }
+                if (verseEntry.EntryType == VerseEntryType.Verse)                
+                    verseEntry.VersePointer.SetChapterToVerse(docParseContext.LatestVerseEntry.VersePointer.Chapter);                                    
                                 
                 return true;
             }
@@ -69,8 +64,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
         {
             if (docParseContext.LatestVerseEntry != null)
             {
-                verseEntry.VersePointer.Book = docParseContext.LatestVerseEntry.VersePointer.Book;
-                verseEntry.VersePointer.BookIndex = docParseContext.LatestVerseEntry.VersePointer.BookIndex;
+                verseEntry.VersePointer.Book = docParseContext.LatestVerseEntry.VersePointer.Book;                
                 return true;
             }
             else if (docParseContext.TitleVerse != null)
@@ -86,8 +80,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
             if (docParseContext.LatestVerseEntry != null)
             {
                 verseEntry.VersePointer.Book = docParseContext.LatestVerseEntry.VersePointer.Book;
-                verseEntry.VersePointer.BookIndex = docParseContext.LatestVerseEntry.VersePointer.BookIndex;
-                verseEntry.VersePointer.VerseNumber = new VerseNumber(docParseContext.LatestVerseEntry.VersePointer.Chapter, verseEntry.VersePointer.VerseNumber.Verse);
+                verseEntry.VersePointer.SetChapterToVerse(docParseContext.LatestVerseEntry.VersePointer.Chapter);                
                 return true;
             }
             else if (docParseContext.CurrentParagraph.ParentParagraph != null)
@@ -105,8 +98,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
         {
             if (docParseContext.LatestVerseEntry != null)
             {
-                verseEntry.VersePointer.Book = docParseContext.LatestVerseEntry.VersePointer.Book;
-                verseEntry.VersePointer.BookIndex = docParseContext.LatestVerseEntry.VersePointer.BookIndex;                
+                verseEntry.VersePointer.Book = docParseContext.LatestVerseEntry.VersePointer.Book;                
                 return true;
             }            
 
