@@ -11,7 +11,7 @@ namespace BibleNote.Analytics.Contracts.VerseParsing
 {
     public interface IParagraphParser
     {
-        void Init(IDocumentProvider documentProvider, DocumentParseContext docParseContext);
+        void Init(IDocumentProvider documentProvider, IDocumentParseContext docParseContext);
         ParagraphParseResult ParseParagraph(HtmlNode node);        
     }
 }

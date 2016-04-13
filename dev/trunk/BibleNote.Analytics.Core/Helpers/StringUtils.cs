@@ -105,10 +105,9 @@ namespace BibleNote.Analytics.Core.Helpers
 
         public static string GetDigit(string s, int index)
         {
-            int d;
-            if (index > -1 && index < s.Length)
-                if (int.TryParse(s[index].ToString(), out d))
-                    return d.ToString();
+            var value = char.GetNumericValue(GetChar(s, index));
+            if (value > -1)
+                return value.ToString();
 
             return string.Empty;
         }
@@ -140,14 +139,39 @@ namespace BibleNote.Analytics.Core.Helpers
                 {
                     if (maxSpaces-- == 0)
                         return false;
-
-                    break;
+                    
+                    continue;
                 }
                 else if (allowedDelimiter != symbol)
                     return false;
             }
 
             return true;
+        }        
+
+        public static char SearchFirstValuablePrevChar(string text, ref int index, ref int maxSpaces)
+        {
+            index--;
+
+            var lowLimit = index - maxSpaces;
+            if (lowLimit < 0)
+                lowLimit = 0;
+
+            for (; index >= lowLimit; index--)
+            {
+                var symbol = GetChar(text, index);
+                if (char.IsWhiteSpace(symbol))
+                {
+                    if (maxSpaces-- == 0)
+                        break;
+
+                    continue;
+                }
+                else
+                    return symbol;
+            }
+
+            return default(char);
         }
     }
 }

@@ -22,7 +22,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
 
         private IVerseRecognitionService _verseRecognitionService;
 
-        private DocumentParseContext _docParseContext;
+        private IDocumentParseContext _docParseContext;
         
         private ParagraphParseResult _result { get; set; }        
 
@@ -32,7 +32,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
             _verseRecognitionService = verseRecognitionService;            
         }
 
-        public void Init(IDocumentProvider documentProvider, DocumentParseContext docParseContext)
+        public void Init(IDocumentProvider documentProvider, IDocumentParseContext docParseContext)
         {
             _documentProvider = documentProvider;
             _docParseContext = docParseContext;

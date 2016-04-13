@@ -14,7 +14,7 @@ namespace BibleNote.Tests.Analytics.Mocks
 
         public string GetVersePointerLink(VersePointer versePointer)
         {
-            return string.Format("<a href='bnVerse:{0}'>{1}</a>", versePointer.ToFullString(), versePointer.ToString());
+            return string.Format($"<a href='bnVerse:{versePointer}'>{versePointer.GetOriginalVerseString()}</a>");
         }        
     }
 }

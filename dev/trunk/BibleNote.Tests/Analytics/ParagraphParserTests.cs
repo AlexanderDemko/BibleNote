@@ -24,7 +24,7 @@ namespace BibleNote.Tests.Analytics
         private MockDocumentProvider _mockDocumentProvider;
         private IParagraphParser _parahraphParserService;        
         private IVersePointerFactory _versePointerFactory;
-        private DocumentParseContext _documentParseContext;
+        private IDocumentParseContext _documentParseContext;
 
         [TestInitialize]
         public void Init()
@@ -33,7 +33,7 @@ namespace BibleNote.Tests.Analytics
             DIContainer.Container.RegisterInstance<IConfigurationManager>(new MockConfigurationManager());
 
             _mockDocumentProvider = new MockDocumentProvider();
-            _documentParseContext = new DocumentParseContext();
+            _documentParseContext = DIContainer.Resolve<IDocumentParseContext>();
 
             _versePointerFactory = DIContainer.Resolve<IVersePointerFactory>();
             _parahraphParserService = DIContainer.Resolve<IParagraphParser>();
@@ -46,7 +46,7 @@ namespace BibleNote.Tests.Analytics
             
         }
 
-        private TestResult CheckVerses(string input, string expectedOutput, Action<DocumentParseContext> initDocParseContext, params string[] verses)
+        private TestResult CheckVerses(string input, string expectedOutput, Action<IDocumentParseContext> initDocParseContext, params string[] verses)
         {
             if (string.IsNullOrEmpty(expectedOutput) || input == expectedOutput)
             {
@@ -139,7 +139,7 @@ namespace BibleNote.Tests.Analytics
         [TestMethod]
         public void TestScenario5()
         {
-            var input = "тест Лк 1:16, и 17 и 10:13-17;17-18; 19-20;  21-22;   23-24,11:1-2,3,  4-5,   6, и 7 тест и Мк 1:5 , 6  ,7 ,  8";
+            var input = "тест Лк 1:16, и 17 и 10:13-17;17-18; 19-20;  21-22;   23-24,11:1-2,3,  4-5,   6, и 7 тест и Мк 1:5 , 6  ,7 ,  8  , 9";
 
             CheckVerses(input, null, null, "Лк 1:16", "Лк 10:13-17", "Лк 17-18", "Лк 19-20", "Лк 21-22", "Лк 11:1-2", "Лк 11:3", "Лк 11:4-5", "Мк 1:5", "Мк 1:6", "Мк 1:7");
         }

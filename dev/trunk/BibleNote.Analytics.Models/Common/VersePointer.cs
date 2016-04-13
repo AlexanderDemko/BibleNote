@@ -247,17 +247,17 @@ namespace BibleNote.Analytics.Models.Common
 
         public override string ToString()
         {
-            if (!string.IsNullOrEmpty(this.OriginalVerseName))
-                return this.OriginalVerseName;
-
-            return ToFullString();
-        }
-
-        public string ToFullString()
-        {
             return string.Concat(
                         Book != null ? string.Format("{0} ", Book.FriendlyShortName) : string.Empty,
-                        GetFullVerseNumberString());
+                        GetFullVerseNumberString());            
+        }
+
+        public string GetOriginalVerseString()
+        {
+            if (!string.IsNullOrEmpty(OriginalVerseName))
+                return OriginalVerseName;
+
+            return ToString();
         }
 
         public new virtual VersesListInfo<VersePointer> ExpandMultiVerse()
