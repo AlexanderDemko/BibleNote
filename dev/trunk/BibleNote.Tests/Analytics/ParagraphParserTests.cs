@@ -284,34 +284,27 @@ namespace BibleNote.Tests.Analytics
             CheckVerses(input, expectedIfUseCommaDelimiter, null, "Исх 13:14", "Исх 13:15", "Исх 13:20");
         }
 
-        //        [TestMethod]
-        //        public void TestScenario16()
-        //        {
-        //            var input = "<span lang=ru>Вот Ин 1</span><span lang=en-US>:</span><span lang=ru>12 где в </span><span lang=ro>:</span><span lang=se-FI>13</span>";
-        //            var expected = "Вот Ин 1:12 где в :13";
+        [TestMethod]
+        public void TestScenario18()
+        {
+            var input = "<span lang=ru>Вот Ин 1</span><span lang=en-US>:</span><span lang=ru>12 где в </span><span lang=ro>:</span><span lang=se-FI>13</span>";
+            var expected = "<span lang=\"ru\">Вот <a href='bnVerse:Иоанна 1:12'>Ин 1:12</a></span><span lang=\"en-US\"></span><span lang=\"ru\"> где в </span><span lang=\"ro\"><a href='bnVerse:Иоанна 1:13'>:13</a></span><span lang=\"se-FI\"></span>";
+            
+            CheckVerses(input, expected, null, "Ин 1:12", "Ин 1:13");
+        }
 
-        //            var result = _parahraphParserService.ParseParagraph(input, null);
-        //            CheckVerses(expected, result, "Ин 1:12", "Ин 1:13");
-        //        }
 
+        [TestMethod]
+        public void TestScenario19()
+        {   
+            CheckVerses("Иуда 14,15", null, null, "Иуд 1:14", "Иуд 1:15");
+        }
 
-        //        [TestMethod]
-        //        public void TestScenario17()
-        //        {
-        //            var input = "Иуда 14,15";
-
-        //            var result = _parahraphParserService.ParseParagraph(input, null);
-        //            CheckVerses(input, result, "Иуд 1:14", "Иуд 1:15");
-        //        }
-
-        //        [TestMethod]
-        //        public void TestScenario18()
-        //        {
-        //            var input = "Ин 20:7-9, Л2";
-
-        //            var result = _parahraphParserService.ParseParagraph(input, null);
-        //            CheckVerses(input, result, "Ин 20:7", "Ин 20:8", "Ин 20:9");
-        //        }
+        [TestMethod]
+        public void TestScenario20()
+        {   
+            CheckVerses("Ин 20:7-9, Л2", null, null, "Ин 20:7-9");
+        }
 
         //        [TestMethod]
         //        public void TestScenario19()
