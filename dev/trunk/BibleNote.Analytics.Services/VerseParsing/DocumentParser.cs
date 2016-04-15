@@ -35,6 +35,8 @@ namespace BibleNote.Analytics.Services.VerseParsing
         public void ParseTitle(HtmlNode node)
         {
             _paragraphParser.ParseParagraph(node);
+
+            // только если указана одна глава - тогда _documentParseContext.SetTitleVerse();
         }
 
         public IElementParseContext ParseParagraph(HtmlNode node)

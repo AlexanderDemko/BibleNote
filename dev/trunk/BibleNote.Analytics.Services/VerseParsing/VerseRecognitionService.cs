@@ -42,6 +42,12 @@ namespace BibleNote.Analytics.Services.VerseParsing
             return true;
         }
 
+        /// <summary>
+        /// Например, ",5-6"
+        /// </summary>
+        /// <param name="verseEntry"></param>
+        /// <param name="docParseContext"></param>
+        /// <returns></returns>
         private static bool ChapterOrVerseRule(VerseEntryInfo verseEntry, IDocumentParseContext docParseContext)
         {
             if (docParseContext.LatestVerseEntry != null
@@ -60,40 +66,61 @@ namespace BibleNote.Analytics.Services.VerseParsing
         }
 
 
+        /// <summary>
+        /// Например, "5:6"
+        /// </summary>
+        /// <param name="verseEntry"></param>
+        /// <param name="docParseContext"></param>
+        /// <returns></returns>
         private static bool ChapterVerseRule(VerseEntryInfo verseEntry, IDocumentParseContext docParseContext)
-        {
-            if (docParseContext.LatestVerseEntry != null)
-            {
-                verseEntry.VersePointer.Book = docParseContext.LatestVerseEntry.VersePointer.Book;                
-                return true;
-            }
-            else if (docParseContext.TitleVerse != null)
-            {
-
-            }
-
-            return false;
-        }
-
-        private static bool VerseRule(VerseEntryInfo verseEntry, IDocumentParseContext docParseContext)
         {            
             if (docParseContext.LatestVerseEntry != null)
             {
                 verseEntry.VersePointer.Book = docParseContext.LatestVerseEntry.VersePointer.Book;
-                verseEntry.VersePointer.Chapter = docParseContext.LatestVerseEntry.VersePointer.TopChapter;
                 return true;
+            }                        
+
+            return false;
+        }
+
+        /// <summary>
+        /// Например, ":5"
+        /// </summary>
+        /// <param name="verseEntry"></param>
+        /// <param name="docParseContext"></param>
+        /// <returns></returns>
+        private static bool VerseRule(VerseEntryInfo verseEntry, IDocumentParseContext docParseContext)
+        {
+            VersePointer parentVerse = null;
+
+            if (docParseContext.LatestVerseEntry != null)
+            {
+                parentVerse = docParseContext.LatestVerseEntry.VersePointer;
             }
             else if (docParseContext.CurrentParagraph.ParentParagraph != null)
             {
             }
             else if (docParseContext.TitleVerse != null)
             {
+                parentVerse = docParseContext.TitleVerse;
+            }
 
+            if (parentVerse != null)
+            {
+                verseEntry.VersePointer.Book = parentVerse.Book;
+                verseEntry.VersePointer.Chapter = parentVerse.TopChapter;
+                return true;
             }
 
             return false;
         }
 
+        /// <summary>
+        /// Например, "; 5"
+        /// </summary>
+        /// <param name="verseEntry"></param>
+        /// <param name="docParseContext"></param>
+        /// <returns></returns>
         private static bool ChapterRule(VerseEntryInfo verseEntry, IDocumentParseContext docParseContext)
         {
             if (docParseContext.LatestVerseEntry != null)
