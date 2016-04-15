@@ -51,7 +51,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
 
                 verseEntry.EntryType = docParseContext.LatestVerseEntry.VersePointer.VerseNumber.IsChapter ? VerseEntryType.Chapter : VerseEntryType.Verse;
                 if (verseEntry.EntryType == VerseEntryType.Verse)                
-                    verseEntry.VersePointer.SetChapterToVerse(docParseContext.LatestVerseEntry.VersePointer.Chapter);                                    
+                    verseEntry.VersePointer.MoveChapterToVerse(docParseContext.LatestVerseEntry.VersePointer.TopChapter);                                    
                                 
                 return true;
             }
@@ -80,7 +80,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
             if (docParseContext.LatestVerseEntry != null)
             {
                 verseEntry.VersePointer.Book = docParseContext.LatestVerseEntry.VersePointer.Book;
-                verseEntry.VersePointer.SetChapterToVerse(docParseContext.LatestVerseEntry.VersePointer.Chapter);                
+                verseEntry.VersePointer.Chapter = docParseContext.LatestVerseEntry.VersePointer.TopChapter;
                 return true;
             }
             else if (docParseContext.CurrentParagraph.ParentParagraph != null)

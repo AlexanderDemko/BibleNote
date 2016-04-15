@@ -77,6 +77,13 @@ namespace BibleNote.Analytics.Services.VerseParsing
             var entryEndIndex = verseNumberEntry != null ? (topVerseNumberEntry ?? verseNumberEntry).EndIndex : indexOfDigit;
             var originalVerse = text.Substring(entryStartIndex, entryEndIndex - entryStartIndex + 1);            
 
+            if (verseNumberEntry.IsVerse)       // например, ":5-7"
+            {
+                verseNumberEntry.VerseNumber = new VerseNumber(0, verseNumberEntry.VerseNumber.Chapter);
+                if (topVerseNumberEntry != null)
+                    topVerseNumberEntry.VerseNumber = new VerseNumber(0, topVerseNumberEntry.VerseNumber.Chapter);
+            }
+
             var result = new VerseEntryInfo()
             {                
                 EntryType = GetEntryType(bookEntry, verseNumberEntry),  // нужно заново пересчитать, так как могло измениться в verseNumberEntry.CanBeJustNumber

@@ -99,11 +99,37 @@ namespace BibleNote.Analytics.Models.Common
         public readonly static char[] Dashes = new char[] { '-', '—', '‑', '–' };
 
         public int BookIndex { get; set; }        
+
         public VerseNumber VerseNumber { get; set; }
+
         public VerseNumber? TopVerseNumber { get; set; }
 
-        public int Chapter { get { return VerseNumber.Chapter; } }
+        public int Chapter
+        {
+            get
+            {
+                return VerseNumber.Chapter;
+            }
+            set
+            {
+                VerseNumber = new VerseNumber(value, VerseNumber.Verse);
+                if (TopVerseNumber.HasValue)
+                    TopVerseNumber = new VerseNumber(value, TopVerseNumber.Value.Verse);
+            }
+        }
+
         public int Verse { get { return VerseNumber.Verse; } }
+
+        public int TopChapter
+        {
+            get
+            {
+                if (TopVerseNumber.HasValue)
+                    return TopVerseNumber.Value.Chapter;
+
+                return Chapter;
+            }
+        }
 
         public MultiVerse IsMultiVerse
         {
@@ -145,6 +171,13 @@ namespace BibleNote.Analytics.Models.Common
             this.BookIndex = bookIndex;
             this.VerseNumber = verseNumber;
             this.TopVerseNumber = topVerseNumber;
+        }
+
+        public virtual void MoveChapterToVerse(int newChapter)           // когда изначально не было понятно, стих это или глава (например ",5-6");
+        {
+            VerseNumber = new VerseNumber(newChapter, VerseNumber.Chapter);
+            if (TopVerseNumber.HasValue && TopVerseNumber.Value.IsChapter)
+                TopVerseNumber = new VerseNumber(newChapter, TopVerseNumber.Value.Chapter);
         }
 
         public override bool Equals(object obj)
@@ -209,14 +242,7 @@ namespace BibleNote.Analytics.Models.Common
         public virtual VersesListInfo<SimpleVersePointer> ExpandMultiVerse()
         {
             throw new InvalidOperationException("Can be called only in derived class.");
-        }
-
-        public virtual void SetChapterToVerse(int newChapter)           // когда изначально не было понятно, стих это или глава (например ",5-6");
-        {
-            VerseNumber = new VerseNumber(newChapter, VerseNumber.Chapter);
-            if (TopVerseNumber.HasValue && TopVerseNumber.Value.IsChapter)
-                TopVerseNumber = new VerseNumber(newChapter, TopVerseNumber.Value.Chapter);
-        }
+        }       
     }  
 
     [Serializable]
