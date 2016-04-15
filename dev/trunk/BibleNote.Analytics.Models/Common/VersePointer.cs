@@ -131,6 +131,17 @@ namespace BibleNote.Analytics.Models.Common
             }
         }
 
+        public int TopVerse
+        {
+            get
+            {
+                if (TopVerseNumber.HasValue)
+                    return TopVerseNumber.Value.Verse;
+
+                return Verse;
+            }
+        }
+
         public MultiVerse IsMultiVerse
         {
             get
