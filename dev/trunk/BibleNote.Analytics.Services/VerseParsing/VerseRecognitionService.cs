@@ -54,10 +54,20 @@ namespace BibleNote.Analytics.Services.VerseParsing
                 && StringUtils.CheckDivergence(docParseContext.CurrentParagraph.Text, docParseContext.LatestVerseEntry.EndIndex, verseEntry.StartIndex, 2, ','))
             {
                 verseEntry.VersePointer.Book = docParseContext.LatestVerseEntry.VersePointer.Book;                
-
                 verseEntry.EntryType = docParseContext.LatestVerseEntry.VersePointer.VerseNumber.IsChapter ? VerseEntryType.Chapter : VerseEntryType.Verse;
-                if (verseEntry.EntryType == VerseEntryType.Verse)                
-                    verseEntry.VersePointer.MoveChapterToVerse(docParseContext.LatestVerseEntry.VersePointer.TopChapter);                                    
+
+                if (verseEntry.EntryType == VerseEntryType.Verse)
+                {   
+                    verseEntry.VersePointer.MoveChapterToVerse(docParseContext.LatestVerseEntry.VersePointer.TopChapter);
+
+                    if (verseEntry.VersePointer.Verse <= docParseContext.LatestVerseEntry.VersePointer.TopVerse)
+                        return false;
+                }
+                else
+                {
+                    if (verseEntry.VersePointer.Chapter <= docParseContext.LatestVerseEntry.VersePointer.TopChapter)
+                        return false;
+                }
                                 
                 return true;
             }
