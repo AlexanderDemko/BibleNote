@@ -11,8 +11,12 @@ namespace BibleNote.Analytics.Core.Helpers
     public class TextNodeEntry
     {
         public HtmlNode Node { get; set; }
-        public int StartIndex { get; set; }
+
+        public int StartIndex { get; set; }     // границы Node в TextNodesString.Value
+
         public int EndIndex { get; set; }
+
+        public int Shift { get; set; }          // сдвиг из-за вставленных ссылок
 
         public void MoveBy(int shift)
         {
@@ -24,6 +28,7 @@ namespace BibleNote.Analytics.Core.Helpers
     public class TextNodesString
     {
         public string Value { get; set; }
+
         public List<TextNodeEntry> NodesInfo { get; set; }
 
         public TextNodesString()

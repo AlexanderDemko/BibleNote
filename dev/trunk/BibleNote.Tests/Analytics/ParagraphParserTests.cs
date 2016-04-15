@@ -145,7 +145,7 @@ namespace BibleNote.Tests.Analytics
         public void TestScenario5()
         {
             var input = "тест Лк 1:16, и 17 и 10:13-17;17-18; 19-20;  21-22;   23-24,11:1-2,3,  4-5,   6, и 7 тест и Мк 1:5 , 6  ,7 ,  8  , 9";
-            var expected = "12";
+            var expected = "тест <a href='bnVerse:Луки 1:16'>Лк 1:16</a>, и 17 и <a href='bnVerse:Луки 10:13-17'>10:13-17</a>;<a href='bnVerse:Луки 17-18'>17-18</a>; <a href='bnVerse:Луки 19-20'>19-20</a>;  <a href='bnVerse:Луки 21-22'>21-22</a>;   23-24,<a href='bnVerse:Луки 11:1-2'>11:1-2</a>,<a href='bnVerse:Луки 11:3'>3</a>,  <a href='bnVerse:Луки 11:4-5'>4-5</a>,   6, и 7 тест и <a href='bnVerse:Марка 1:5'>Мк 1:5</a> , <a href='bnVerse:Марка 1:6'>6</a>  ,<a href='bnVerse:Марка 1:7'>7</a> ,  8  , 9";
 
             CheckVerses(input, null, null, "Лк 1:16", "Лк 10:13-17", "Лк 17-18", "Лк 19-20", "Лк 21-22", "Лк 11:1-2", "Лк 11:3", "Лк 11:4-5", "Мк 1:5", "Мк 1:6", "Мк 1:7");
             CheckVerses(input, expected, null, "Лк 1:16", "Лк 10:13-17", "Лк 17-18", "Лк 19-20", "Лк 21-22", "Лк 11:1-2", "Лк 11:3", "Лк 11:4-5", "Мк 1:5", "Мк 1:6", "Мк 1:7");
@@ -155,7 +155,7 @@ namespace BibleNote.Tests.Analytics
         public void TestScenario6()
         {
             var input = "тест Лк 1:16, 10:13-17,18-19; 11:1-2 тест Мк 5,6 и Мк 5;6 и 7:8";
-            var expected = "123";
+            var expected = "тест <a href='bnVerse:Луки 1:16'>Лк 1:16</a>, <a href='bnVerse:Луки 10:13-17'>10:13-17</a>,<a href='bnVerse:Луки 10:18-19'>18-19</a>; <a href='bnVerse:Луки 11:1-2'>11:1-2</a> тест <a href='bnVerse:Марка 5:6'>Мк 5,6</a> и <a href='bnVerse:Марка 5'>Мк 5</a>;<a href='bnVerse:Марка 6'>6</a> и <a href='bnVerse:Марка 7:8'>7:8</a>";
 
             CheckVerses(input, null, null, "Лк 1:16", "Лк 10:13-17", "Лк 10:18-19", "Лк 11:1-2", "Мк 5:6", "Мк 5", "Мк 6", "Мк 7:8");
             CheckVerses(input, expected, null, "Лк 1:16", "Лк 10:13-17", "Лк 10:18-19", "Лк 11:1-2", "Мк 5:6", "Мк 5", "Мк 6", "Мк 7:8");
@@ -250,15 +250,14 @@ namespace BibleNote.Tests.Analytics
         public void TestScenario15()
         {
             var input = "Ин 1,2,3 и ещё: Марка 1,2, 3: а потом Лк 1,2- 3";
-            //var expectedIfUseCommaDelimiter = "Ин 1:2,3 и ещё: Марка 1:2,3: а потом Лк 1:2-3";
-            //var expectedIfNotUseCommaDelimiter = "Ин 1, 2, 3 и ещё: Марка 1, 2, 3: а потом Лк 1, 2-3";
-
+            var expectedIfNotUseCommaDelimiter = "<a href='bnVerse:Иоанна 1'>Ин 1</a>,<a href='bnVerse:Иоанна 2'>2</a>,<a href='bnVerse:Иоанна 3'>3</a> и ещё: <a href='bnVerse:Марка 1'>Марка 1</a>,<a href='bnVerse:Марка 2'>2</a>, <a href='bnVerse:Марка 3'>3</a>: а потом <a href='bnVerse:Луки 1'>Лк 1</a>,<a href='bnVerse:Луки 2-3'>2- 3</a>";
+            var expectedIfUseCommaDelimiter = "<a href='bnVerse:Иоанна 1:2'>Ин 1,2</a>,<a href='bnVerse:Иоанна 1:3'>3</a> и ещё: <a href='bnVerse:Марка 1:2'>Марка 1,2</a>, <a href='bnVerse:Марка 1:3'>3</a>: а потом <a href='bnVerse:Луки 1:2-3'>Лк 1,2- 3</a>";
 
             _mockConfigurationManager.UseCommaDelimiter = false;
-            CheckVerses(input, null, null, "Ин 1", "Ин 2", "Ин 3", "Мк 1", "Мк 2", "Мк 3", "Лк 1", "Лк 2-3");
+            CheckVerses(input, expectedIfNotUseCommaDelimiter, null, "Ин 1", "Ин 2", "Ин 3", "Мк 1", "Мк 2", "Мк 3", "Лк 1", "Лк 2-3");
 
             _mockConfigurationManager.UseCommaDelimiter = true;
-            CheckVerses(input, null, null, "Ин 1:2", "Ин 1:3", "Мк 1:2", "Мк 1:3", "Лк 1:2-3");
+            CheckVerses(input, expectedIfUseCommaDelimiter, null, "Ин 1:2", "Ин 1:3", "Мк 1:2", "Мк 1:3", "Лк 1:2-3");
         }
 
         [TestMethod]
@@ -275,9 +274,8 @@ namespace BibleNote.Tests.Analytics
         public void TestScenario17()
         {
             var input = "<span lang=ru>Исх. 13,1</span><span lang=ro>4</span><span lang=ru>,</span><span lang=se-FI>15</span><span lang=ru>,20.</span>";
-            var expectedIfNotUseCommaDelimiter = "Исх. 13, 14, 15, 20.";
-            var expectedIfUseCommaDelimiter = "Исх. 13:14,15,20.";
-            //здесь какая-то лажа с outputHTML - ссылка в ссылке!!!!
+            var expectedIfNotUseCommaDelimiter = "<span lang=\"ru\"><a href='bnVerse:Исход 13'>Исх. 13</a>,<a href='bnVerse:Исход 14'>14</a></span><span lang=\"ro\"></span><span lang=\"ru\">,</span><span lang=\"se-FI\"><a href='bnVerse:Исход 15'>15</a></span><span lang=\"ru\">,<a href='bnVerse:Исход 20'>20</a>.</span>";
+            var expectedIfUseCommaDelimiter = "<span lang=\"ru\"><a href='bnVerse:Исход 13:14'>Исх. 13,14</a></span><span lang=\"ro\"></span><span lang=\"ru\">,</span><span lang=\"se-FI\"><a href='bnVerse:Исход 13:15'>15</a></span><span lang=\"ru\">,<a href='bnVerse:Исход 13:20'>20</a>.</span>";
 
             _mockConfigurationManager.UseCommaDelimiter = false;
             CheckVerses(input, expectedIfNotUseCommaDelimiter, null, "Исх 13", "Исх 14", "Исх 15", "Исх 20");
