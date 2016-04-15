@@ -9,6 +9,7 @@ using HtmlAgilityPack;
 using BibleNote.Analytics.Core.Helpers;
 using BibleNote.Tests.Analytics.Mocks;
 using System;
+using BibleNote.Analytics.Contracts.Providers;
 
 namespace BibleNote.Tests.Analytics
 {
@@ -22,6 +23,7 @@ namespace BibleNote.Tests.Analytics
         }
 
         private MockDocumentProvider _mockDocumentProvider;
+        private IConfigurationManager _mockConfigurationManager;
         private IParagraphParser _parahraphParserService;        
         private IVersePointerFactory _versePointerFactory;
         private IDocumentParseContext _documentParseContext;
@@ -30,13 +32,15 @@ namespace BibleNote.Tests.Analytics
         public void Init()
         {
             DIContainer.InitWithDefaults();
-            DIContainer.Container.RegisterInstance<IConfigurationManager>(new MockConfigurationManager());
 
-            _mockDocumentProvider = new MockDocumentProvider();
+            _mockConfigurationManager = new MockConfigurationManager();            
+            DIContainer.Container.RegisterInstance(_mockConfigurationManager);            
+
             _documentParseContext = DIContainer.Resolve<IDocumentParseContext>();
-
             _versePointerFactory = DIContainer.Resolve<IVersePointerFactory>();
             _parahraphParserService = DIContainer.Resolve<IParagraphParser>();
+
+            _mockDocumentProvider = new MockDocumentProvider();
             _parahraphParserService.Init(_mockDocumentProvider, _documentParseContext);                        
         }
 
@@ -147,9 +151,9 @@ namespace BibleNote.Tests.Analytics
         [TestMethod]
         public void TestScenario6()
         {
-            var input = "тест Лк 1:16, 10:13-17,18-19; 11:1-2 тест";
+            var input = "тест Лк 1:16, 10:13-17,18-19; 11:1-2 тест Мк 5,6 и Мк 5;6 и 7:8";
 
-            CheckVerses(input, null, null, "Лк 1:16", "Лк 10:13-17", "Лк 10:18-19", "Лк 11:1-2");
+            CheckVerses(input, null, null, "Лк 1:16", "Лк 10:13-17", "Лк 10:18-19", "Лк 11:1-2", "Мк 5:6", "Мк 5", "Мк 6", "Мк 7:8");
         }
 
         [TestMethod]
@@ -167,7 +171,8 @@ namespace BibleNote.Tests.Analytics
         public void TestScenario8()
         {
             var input = "1 Лк 1:1, 2";
-            //var expected = "1 Лк 1:1,2";      // todo: а надо ли менять...
+            //var expected = "1 Лк 1:1,2";      
+            // todo: а надо ли менять...
 
             CheckVerses(input, null, null, "Лк 1:1", "Лк 1:2");
         }
@@ -185,126 +190,96 @@ namespace BibleNote.Tests.Analytics
         {
             var input = "Ин 1:50-2:2,3-4";
                         
-            CheckVerses(input, null, null, "Ин 1:50-2:2", "Ин 2:3-4");
-
-            // check expand multiverse: "Ин 1:50", "Ин 1:51", "Ин 2:1", "Ин 2:2", "Ин 2:3", "Ин 2:4"
+            CheckVerses(input, null, null, "Ин 1:50-2:2", "Ин 2:3-4");            
         }
 
-        //        [TestMethod]
-        //        public void TestScenario7()
-        //        {
-        //            var input = "Ин 1:50-2:2,4-5";
 
-        //            var result = ParseParagraph(input, null);
-        //            CheckVerses(input, result, "Ин 1:50", "Ин 1:51", "Ин 2:1", "Ин 2:2", "Ин 2:4", "Ин 2:5");
-        //        }
+        [TestMethod]
+        public void TestScenario11()
+        {
+            var input = "2,3 и :1-2 как и в :3,4-5;6 и 7:8";            
+            
+            CheckVerses(input, null, 
+                docParseContext => docParseContext.SetTitleVerse(_versePointerFactory.CreateVersePointer("1Кор 1")), 
+                "1Кор 1:1-2", "1Кор 1:3", "1Кор 1:4-5", "1Кор 6", "1Кор 7:8");      // возможно, не надо поддерживать два последних VersePointer-a
+        }
 
-        //        [TestMethod]
-        //        public void TestScenario8()
-        //        {
-        //            var input = ":1-2 как и в :3,4-5";
-        // здесь надо переносить тестовый сценарий из старого проекта с заголовком!!
-        //            var result = ParseParagraph(input, null);
-        //            CheckVerses(input, result, "1Кор 1", "1Кор 1:1", "1Кор 1:2", "1Кор 1:3", "1Кор 1:4", "1Кор 1:5");
-        //        }
+        [TestMethod]
+        public void TestScenario12()
+        {   
+            CheckVerses("Ps 89:1-2", null, null, "Пс 88:1-3");
+            CheckVerses("I Cor 6:7, II Tim 2:3", null, null, "1Кор 6:7", "2 Тим 2:3");
+        }
 
-        //        [TestMethod]
-        //        public void TestScenario9()
-        //        {
-        //            var input = "Ps 89:1-2";
+        [TestMethod]
+        public void TestScenario13()
+        {
+            var input = "В Ин 1,1 написано. И в 1,3 веке про это писали! Про :4 - тоже";
 
-        //            var result = ParseParagraph(input, null);
-        //            CheckVerses(input, result, "Пс 88:1", "Пс 88:2", "Пс 88:3");
-        //        }
+            _mockConfigurationManager.UseCommaDelimiter = false;
+            CheckVerses(input, null, null, "Ин 1", "Ин 1", "Ин 1:4");
 
-        //        [TestMethod]
-        //        public void TestScenario10()
-        //        {
-        //            var input = "В Ин 1,1 написано. И в 1,2 веке про это писали! Про :2 - тоже";
-        //            var expectedIfUseCommaDelimiter = "В Ин 1:1 написано. И в 1,2 веке про это писали! Про :2 - тоже";
-        //            var expectedIfNotUseCommaDelimiter = "В Ин 1, 1 написано. И в 1,2 веке про это писали! Про :2 - тоже";
+            _mockConfigurationManager.UseCommaDelimiter = true;
+            CheckVerses(input, null, null, "Ин 1:1", "Ин 1:4");
+        }
 
-        //            var result = ParseParagraph(input, null);
-        //            CheckVerses(
-        //                _configurationManager.UseCommaDelimiter ? expectedIfUseCommaDelimiter : expectedIfNotUseCommaDelimiter,
-        //                result,
-        //                _configurationManager.UseCommaDelimiter
-        //                    ? new string[] { "Ин 1:1", "Ин 1:2" }
-        //                    : new string[] { "Ин 1", "Ин 1", "Ин 1:2" });
-        //        }
+        [TestMethod]
+        public void TestScenario14()
+        {
+            var input = "в 1 Ин 1,2-3 и в Иисуса Навина 2-3 было написано про 1-е Кор 1,2-3,4-5;6-7,8-9,10 и в :7";
 
-        //        [TestMethod]
-        //        public void TestScenario11()
-        //        {
-        //            var input = "в 1 Ин 1,2-3 и в Иисуса Навина 2-3 было написано про 1-е Кор 1,2-3,4-5;6-7,8-9,10 и в :7";
-        //            var expectedIfUseCommaDelimiter = "в 1 Ин 1:2-3 и в Иисуса Навина 2-3 было написано про 1-е Кор 1:2-3,4-5; 6-7, 8-9, 10 и в :7";
-        //            var expectedIfNotUseCommaDelimiter = "в 1 Ин 1, 2-3 и в Иисуса Навина 2-3 было написано про 1-е Кор 1, 2-3, 4-5; 6-7, 8-9, 10 и в :7";
+            // todo: а нужно ли всё таки менять написание стихов (добавлять/удалять пробелы)??
+            //var expectedIfUseCommaDelimiter = "в 1 Ин 1:2-3 и в Иисуса Навина 2-3 было написано про 1-е Кор 1:2-3,4-5; 6-7, 8-9, 10 и в :7";
+            //var expectedIfNotUseCommaDelimiter = "в 1 Ин 1, 2-3 и в Иисуса Навина 2-3 было написано про 1-е Кор 1, 2-3, 4-5; 6-7, 8-9, 10 и в :7";
 
-        //            var result = _parahraphParserService.ParseParagraph(input, null);
-        //            CheckVerses(
-        //                _configurationManager.UseCommaDelimiter ? expectedIfUseCommaDelimiter : expectedIfNotUseCommaDelimiter,
-        //                result,
-        //                _configurationManager.UseCommaDelimiter
-        //                    ? new string[] { 
-        //                        "1 Ин 1:2", "1 Ин 1:3", "Нав 2", "Нав 3", 
-        //                        "1Кор 1:2", "1Кор 1:3", "1Кор 1:4", "1Кор 1:5", "1Кор 6", 
-        //                        "1Кор 7", "1Кор 8", "1Кор 9", "1Кор 10", "1Кор 10:7" }
-        //                    : new string[] { 
-        //                        "1 Ин 1", "1 Ин 2", "1 Ин 3", "Нав 2", "Нав 3", "1Кор 1", "1Кор 2", "1Кор 3", 
-        //                        "1Кор 4", "1Кор 5", "1Кор 6", "1Кор 7", "1Кор 8", "1Кор 9", "1Кор 10", "1Кор 10:7" });
-        //        }
+            _mockConfigurationManager.UseCommaDelimiter = false;
+            CheckVerses(input, null, null, "1 Ин 1", "1 Ин 2-3", "Нав 2-3", "1Кор 1", "1Кор 2-3",
+                                "1Кор 4-5", "1Кор 6-7", "1Кор 8-9", "1Кор 10", "1Кор 10:7");
 
-        //        [TestMethod]
-        //        public void TestScenario12()
-        //        {
-        //            var input = "Ин 1,2,3 и ещё: Марка 1,2, 3: а потом Лк 1,2- 3";
-        //            var expectedIfUseCommaDelimiter = "Ин 1:2,3 и ещё: Марка 1:2,3: а потом Лк 1:2-3";
-        //            var expectedIfNotUseCommaDelimiter = "Ин 1, 2, 3 и ещё: Марка 1, 2, 3: а потом Лк 1, 2-3";
+            _mockConfigurationManager.UseCommaDelimiter = true;
+            CheckVerses(input, null, null, "1 Ин 1:2-3", "Нав 2-3",
+                                "1Кор 1:2-3", "1Кор 1:4-5", "1Кор 6-7", "1Кор 8-9", "1Кор 10", "1Кор 10:7");            
+        }
 
-        //            var result = _parahraphParserService.ParseParagraph(input, null);
+        [TestMethod]
+        public void TestScenario15()
+        {
+            var input = "Ин 1,2,3 и ещё: Марка 1,2, 3: а потом Лк 1,2- 3";
+            //var expectedIfUseCommaDelimiter = "Ин 1:2,3 и ещё: Марка 1:2,3: а потом Лк 1:2-3";
+            //var expectedIfNotUseCommaDelimiter = "Ин 1, 2, 3 и ещё: Марка 1, 2, 3: а потом Лк 1, 2-3";
 
-        //            CheckVerses(
-        //                _configurationManager.UseCommaDelimiter ? expectedIfUseCommaDelimiter : expectedIfNotUseCommaDelimiter,
-        //                result,
-        //                _configurationManager.UseCommaDelimiter
-        //                    ? new string[] { "Ин 1:2", "Ин 1:3", "Мк 1:2", "Мк 1:3", "Лк 1:2", "Лк 1:3" }
-        //                    : new string[] { "Ин 1", "Ин 2", "Ин 3", "Мк 1", "Мк 2", "Мк 3", "Лк 1", "Лк 2", "Лк 3" });
-        //        }
 
-        //        [TestMethod]
-        //        public void TestScenario13()
-        //        {
-        //            var input = "<span lang=en>1</span><span lang=ru>И</span><span lang=ru>н</span><span lang=ru> </span><span lang=ru>1</span><span lang=ru>:</span><span lang=ru>1</span> и <span lang=ru>:</span><span lang=ru>7</span>";
-        //            var expected = "1Ин 1:1 и :7";
+            _mockConfigurationManager.UseCommaDelimiter = false;
+            CheckVerses(input, null, null, "Ин 1", "Ин 2", "Ин 3", "Мк 1", "Мк 2", "Мк 3", "Лк 1", "Лк 2-3");
 
-        //            var result = _parahraphParserService.ParseParagraph(input, null);
-        //            CheckVerses(expected, result, "1Ин 1:1", "1Ин 1:7");
-        //        }
+            _mockConfigurationManager.UseCommaDelimiter = true;
+            CheckVerses(input, null, null, "Ин 1:2", "Ин 1:3", "Мк 1:2", "Мк 1:3", "Лк 1:2-3");
+        }
 
-        //        [TestMethod]
-        //        public void TestScenario14()
-        //        {
-        //            var input = "I Cor 6:7, II Tim 2:3";
+        [TestMethod]
+        public void TestScenario16()
+        {   
+            var input = "<span lang=\"en\">1</span><span lang=\"ru\">И</span><span lang=\"ru\">н</span><span lang=\"ru\"> </span><span lang=\"ru\">1</span><span lang=\"ru\">:</span><span lang=\"ru\">1</span> и <span lang=\"ru\">:</span><span lang=\"ru\">7</span>";
+            var expected = "<span lang=\"en\"><a href='bnVerse:1Иоанна 1:1'>1Ин 1:1</a></span><span lang=\"ru\"></span><span lang=\"ru\"></span><span lang=\"ru\"></span><span lang=\"ru\"></span><span lang=\"ru\"></span><span lang=\"ru\"></span> и <span lang=\"ru\"><a href='bnVerse:1Иоанна 1:7'>:7</a></span><span lang=\"ru\"></span>";
+            
+            CheckVerses(input, expected, null, "1Ин 1:1", "1Ин 1:7");
+            CheckVerses(input, null, null, "1Ин 1:1", "1Ин 1:7");
+        }
 
-        //            var result = _parahraphParserService.ParseParagraph(input, null);
-        //            CheckVerses(input, result, "1Кор 6:7", "2 Тим 2:3");
-        //        }
+        [TestMethod]
+        public void TestScenario17()
+        {
+            var input = "<span lang=ru>Исх. 13,1</span><span lang=ro>4</span><span lang=ru>,</span><span lang=se-FI>15</span><span lang=ru>,20.</span>";
+            var expectedIfNotUseCommaDelimiter = "Исх. 13, 14, 15, 20.";
+            var expectedIfUseCommaDelimiter = "Исх. 13:14,15,20.";
+            здесь какая-то лажа с outputHTML - ссылка в ссылке!!!!
 
-        //        [TestMethod]
-        //        public void TestScenario15()
-        //        {
-        //            var input = "<span lang=ru>Исх. 13,1</span><span lang=ro>4</span><span lang=ru>,</span><span lang=se-FI>15</span><span lang=ru>,20.</span>";
-        //            var expectedIfUseCommaDelimiter = "Исх. 13:14,15,20.";
-        //            var expectedIfNotUseCommaDelimiter = "Исх. 13, 14, 15, 20.";
+            _mockConfigurationManager.UseCommaDelimiter = false;
+            CheckVerses(input, expectedIfNotUseCommaDelimiter, null, "Исх 13", "Исх 14", "Исх 15", "Исх 20");
 
-        //            var result = _parahraphParserService.ParseParagraph(input, null);
-        //            CheckVerses(
-        //                _configurationManager.UseCommaDelimiter ? expectedIfUseCommaDelimiter : expectedIfNotUseCommaDelimiter,
-        //                result,
-        //                _configurationManager.UseCommaDelimiter
-        //                    ? new string[] { "Исх 13:14", "Исх 13:15", "Исх 13:20" }
-        //                    : new string[] { "Исх 13", "Исх 14", "Исх 15", "Исх 20" });
-        //        }
+            _mockConfigurationManager.UseCommaDelimiter = true;
+            CheckVerses(input, expectedIfUseCommaDelimiter, null, "Исх 13:14", "Исх 13:15", "Исх 13:20");
+        }
 
         //        [TestMethod]
         //        public void TestScenario16()
