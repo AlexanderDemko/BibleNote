@@ -16,6 +16,15 @@ namespace BibleNote.Analytics.Services.VerseParsing
 {
     public class ParagraphParser : IParagraphParser
     {
+        internal class VerseInNodeEntry
+        {
+            internal TextNodeEntry NodeEntry { get; set; }
+
+            internal int StartIndex { get; set; }        // границы стиха в рамках Node            
+            
+            internal int EndIndex { get; set; }            
+        }
+
         private IDocumentProvider _documentProvider;
 
         private IStringParser _stringParser;
@@ -61,22 +70,16 @@ namespace BibleNote.Analytics.Services.VerseParsing
             var index = 0;         // чтобы анализировать с первого символа, так как теперь поддерживаем ещё и такие ссылки, как "5:6 - ..."
             var verseEntry = _stringParser.TryGetVerse(parseString.Value, index);
             
-            var skipNodes = 0;
+            var skipNodes = 0;            
             while (verseEntry.VersePointerFound)
             {                
                 if (_verseRecognitionService.TryRecognizeVerse(verseEntry, _docParseContext))
-                {   
-                    TextNodeEntry verseNode = null;
-                    string verseLink = null;
-                    verseNode = FindNodeAndMoveVerseTextInOneNodeIfNotReadonly(parseString, verseEntry, ref skipNodes);
+                {
+                    var verseNode = FindNodeAndMoveVerseTextInOneNodeIfNotReadonly(parseString, verseEntry, ref skipNodes);
 
                     if (!_documentProvider.IsReadonly)
-                    {                        
-                        verseLink = _documentProvider.GetVersePointerLink(verseEntry.VersePointer);
-                        verseNode.Node.InnerHtml = string.Concat(
-                            verseNode.Node.InnerHtml.Substring(0, verseNode.StartIndex),
-                            verseLink,
-                            verseNode.EndIndex + 1 < verseNode.Node.InnerHtml.Length ? verseNode.Node.InnerHtml.Substring(verseNode.EndIndex + 1) : string.Empty);
+                    {
+                        InsertVerseLink(verseNode, verseEntry);
                     }
 
                     _result.VerseEntries.Add(verseEntry);
@@ -91,6 +94,24 @@ namespace BibleNote.Analytics.Services.VerseParsing
             }
         }
 
+        private void InsertVerseLink(VerseInNodeEntry verseInNodeEntry, VerseEntryInfo verseEntry)
+        {   
+            var verseLink = _documentProvider.GetVersePointerLink(verseEntry.VersePointer);
+
+            var verseInNodeStartIndex = verseInNodeEntry.StartIndex + verseInNodeEntry.NodeEntry.Shift;
+            var verseInNodeEndIndex = verseInNodeEntry.EndIndex + verseInNodeEntry.NodeEntry.Shift + 1;
+            
+            verseInNodeEntry.NodeEntry.Node.InnerHtml = string.Concat(
+                verseInNodeEntry.NodeEntry.Node.InnerHtml.Substring(0, verseInNodeStartIndex),
+                verseLink,
+                verseInNodeEndIndex < verseInNodeEntry.NodeEntry.Node.InnerHtml.Length 
+                    ? verseInNodeEntry.NodeEntry.Node.InnerHtml.Substring(verseInNodeEndIndex) 
+                    : string.Empty);
+
+            var shift = verseLink.Length - verseEntry.VersePointer.OriginalVerseName.Length;
+            verseInNodeEntry.NodeEntry.Shift += shift;            
+        }        
+
         /// <summary>
         /// 
         /// </summary>
@@ -98,19 +119,19 @@ namespace BibleNote.Analytics.Services.VerseParsing
         /// <param name="verseEntryInfo"></param>
         /// <param name="skipNodes">Чтобы не проверять строку с начала</param>
         /// <returns></returns>
-        private TextNodeEntry FindNodeAndMoveVerseTextInOneNodeIfNotReadonly(TextNodesString parseString, VerseEntryInfo verseEntryInfo, ref int skipNodes)
+        private VerseInNodeEntry FindNodeAndMoveVerseTextInOneNodeIfNotReadonly(TextNodesString parseString, VerseEntryInfo verseEntryInfo, ref int skipNodes)
         {
-            var result = new TextNodeEntry();
+            var result = new VerseInNodeEntry();
 
             if (parseString.NodesInfo.Count > 1)
             {                
                 foreach (var nodeEntry in parseString.NodesInfo.Skip(skipNodes))
                 {
-                    if (result.Node == null)
+                    if (result.NodeEntry == null)
                     {
                         if (nodeEntry.StartIndex <= verseEntryInfo.StartIndex && verseEntryInfo.StartIndex <= nodeEntry.EndIndex)
                         {
-                            result.Node = nodeEntry.Node;
+                            result.NodeEntry = nodeEntry;
                             result.StartIndex = verseEntryInfo.StartIndex - nodeEntry.StartIndex;
                             result.EndIndex = (nodeEntry.EndIndex >= verseEntryInfo.EndIndex ? verseEntryInfo.EndIndex : nodeEntry.EndIndex) - nodeEntry.StartIndex;
 
@@ -129,14 +150,14 @@ namespace BibleNote.Analytics.Services.VerseParsing
                         nodeEntry.StartIndex += moveCharsCount;     // здесь может быть ситуация, когда Startindex > EndIndex. Когда нода была из одного символа. Похоже, что это нормально. Так как мы больше нигде не используем эти ноды.
 
 #if DEBUG
-                        if (result.Node.InnerHtml != result.Node.InnerText)
+                        if (result.NodeEntry.Node.InnerHtml != result.NodeEntry.Node.InnerText)
                             throw new InvalidOperationException("firstVerseNode.InnerHtml != firstVerseNode.InnerText");
 
                         if (nodeEntry.Node.InnerHtml != nodeEntry.Node.InnerText)
                             throw new InvalidOperationException("nodeEntry.Node.InnerHtml != nodeEntry.Node.InnerText");
 #endif
 
-                        result.Node.InnerHtml += verseTextPart;
+                        result.NodeEntry.Node.InnerHtml += verseTextPart;
                         nodeEntry.Node.InnerHtml = nodeEntry.Node.InnerHtml.Remove(0, moveCharsCount);                        
 
                         if (verseEntryInfo.EndIndex < nodeEntry.EndIndex)
@@ -147,11 +168,11 @@ namespace BibleNote.Analytics.Services.VerseParsing
             }
             else
             {
-                result.Node = parseString.NodesInfo.First().Node;
+                result.NodeEntry = parseString.NodesInfo.First();
                 result.StartIndex = verseEntryInfo.StartIndex;
                 result.EndIndex = verseEntryInfo.EndIndex;
             }
-
+         
             return result;
         }  
     }
