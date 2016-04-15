@@ -137,6 +137,7 @@ namespace BibleNote.Tests.Analytics
             var input = "<span>test <font>Лк 5: </font>6<font>-</font></span><span> 7<font>,</font> и ещё <font>:</font>8</span><span><font>,</font><font>9</font></span>";
             var expected = "<span>test <font><a href='bnVerse:Луки 5:6-7'>Лк 5: 6- 7</a></font><font></font></span><span><font>,</font> и ещё <font><a href='bnVerse:Луки 5:8'>:8</a></font></span><span><font>,</font><font><a href='bnVerse:Луки 5:9'>9</a></font></span>";
 
+            CheckVerses(input, null, null, "Лк 5:6-7", "Лк 5:8", "Лк 5:9");
             CheckVerses(input, expected, null, "Лк 5:6-7", "Лк 5:8", "Лк 5:9");
         }
 
@@ -144,16 +145,20 @@ namespace BibleNote.Tests.Analytics
         public void TestScenario5()
         {
             var input = "тест Лк 1:16, и 17 и 10:13-17;17-18; 19-20;  21-22;   23-24,11:1-2,3,  4-5,   6, и 7 тест и Мк 1:5 , 6  ,7 ,  8  , 9";
+            var expected = "12";
 
             CheckVerses(input, null, null, "Лк 1:16", "Лк 10:13-17", "Лк 17-18", "Лк 19-20", "Лк 21-22", "Лк 11:1-2", "Лк 11:3", "Лк 11:4-5", "Мк 1:5", "Мк 1:6", "Мк 1:7");
+            CheckVerses(input, expected, null, "Лк 1:16", "Лк 10:13-17", "Лк 17-18", "Лк 19-20", "Лк 21-22", "Лк 11:1-2", "Лк 11:3", "Лк 11:4-5", "Мк 1:5", "Мк 1:6", "Мк 1:7");
         }
 
         [TestMethod]
         public void TestScenario6()
         {
             var input = "тест Лк 1:16, 10:13-17,18-19; 11:1-2 тест Мк 5,6 и Мк 5;6 и 7:8";
+            var expected = "123";
 
             CheckVerses(input, null, null, "Лк 1:16", "Лк 10:13-17", "Лк 10:18-19", "Лк 11:1-2", "Мк 5:6", "Мк 5", "Мк 6", "Мк 7:8");
+            CheckVerses(input, expected, null, "Лк 1:16", "Лк 10:13-17", "Лк 10:18-19", "Лк 11:1-2", "Мк 5:6", "Мк 5", "Мк 6", "Мк 7:8");
         }
 
         [TestMethod]
@@ -272,7 +277,7 @@ namespace BibleNote.Tests.Analytics
             var input = "<span lang=ru>Исх. 13,1</span><span lang=ro>4</span><span lang=ru>,</span><span lang=se-FI>15</span><span lang=ru>,20.</span>";
             var expectedIfNotUseCommaDelimiter = "Исх. 13, 14, 15, 20.";
             var expectedIfUseCommaDelimiter = "Исх. 13:14,15,20.";
-            здесь какая-то лажа с outputHTML - ссылка в ссылке!!!!
+            //здесь какая-то лажа с outputHTML - ссылка в ссылке!!!!
 
             _mockConfigurationManager.UseCommaDelimiter = false;
             CheckVerses(input, expectedIfNotUseCommaDelimiter, null, "Исх 13", "Исх 14", "Исх 15", "Исх 20");
