@@ -36,7 +36,18 @@ namespace BibleNote.Tests.Analytics
             DIContainer.InitWithDefaults();
 
             _mockConfigurationManager = new MockConfigurationManager();            
-            DIContainer.Container.RegisterInstance(_mockConfigurationManager);            
+            DIContainer.Container.RegisterInstance(_mockConfigurationManager);
+
+            _modulesManager = DIContainer.Resolve<IModulesManager>();
+            try
+            {
+                _modulesManager.GetCurrentModuleInfo();
+            }
+            catch (ModuleNotFoundException)
+            {
+                _modulesManager.UploadModule(@"..\..\..\Data\Modules\rst\rst.bnm", "rst");
+                _modulesManager.UploadModule(@"..\..\..\Data\Modules\kjv\kjv.bnm", "kjv");
+            }
 
             _documentParseContext = DIContainer.Resolve<IDocumentParseContext>();
             _versePointerFactory = DIContainer.Resolve<IVersePointerFactory>();
@@ -44,16 +55,6 @@ namespace BibleNote.Tests.Analytics
 
             _mockDocumentProvider = new MockDocumentProvider();
             _parahraphParserService.Init(_mockDocumentProvider, _documentParseContext);
-
-            _modulesManager = DIContainer.Resolve<IModulesManager>();
-            try
-            {
-                _modulesManager.GetCurrentModuleInfo();
-            }
-            catch (ModuleIsUndefinedException)
-            {
-                _modulesManager.UploadModule(@"..\..\..\Data\Modules\rst\rst.bnm", "rst");
-            }
         }
 
         [TestCleanup]
