@@ -1,0 +1,534 @@
+<?xml version="1.0"?>
+<IStudyBibleTools_Module xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" Version="2.3" ShortName="kjv" Name="King James Version" Locale="en">
+  <NotebooksStructure>
+    <Notebook Type="Bible" Name="Bible.onepkg" Nickname="Bible">
+      <SectionGroup Type="OldTestament" Name="1. Old Testament" CheckSectionsCount="true" SectionsCount="39" />
+      <SectionGroup Type="NewTestament" Name="2. New Testament" CheckSectionsCount="true" SectionsCount="27" />
+    </Notebook>
+    <Notebook Type="BibleStudy" Name="Bible Study.onepkg" Nickname="Bible Study" />
+    <Notebook Type="BibleComments" Name="Comments to the Bible.onepkg" Nickname="Comments to the Bible">
+      <SectionGroup Type="OldTestament" Name="1. Old Testament" CheckSectionsCount="true" SectionsCountMax="3" />
+      <SectionGroup Type="NewTestament" Name="2. New Testament" CheckSectionsCount="true" SectionsCountMax="3" />
+    </Notebook>
+    <Notebook Type="BibleNotesPages" Name="Summary of Notes.onepkg" Nickname="Summary of Notes">
+      <SectionGroup Type="OldTestament" Name="1. Old Testament" CheckSectionsCount="true" SectionsCountMax="3" />
+      <SectionGroup Type="NewTestament" Name="2. New Testament" CheckSectionsCount="true" SectionsCountMax="3" />
+    </Notebook>
+  </NotebooksStructure>
+  <BibleTranslationDifferences />
+  <BibleStructure Alphabet="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz" ChapterPageNameTemplate="{0} chapter. {1}">
+    <BibleBook Index="1" Name="Genesis" SectionName="01. Genesis">
+      <Abbreviation>ge</Abbreviation>
+      <Abbreviation>gen</Abbreviation>
+      <Abbreviation>gn</Abbreviation>
+      <Abbreviation>genesis</Abbreviation>
+    </BibleBook>
+    <BibleBook Index="2" Name="Exodus" SectionName="02. Exodus">
+      <Abbreviation>ex</Abbreviation>
+      <Abbreviation>exo</Abbreviation>
+      <Abbreviation>exod</Abbreviation>
+      <Abbreviation>exodus</Abbreviation>
+    </BibleBook>
+    <BibleBook Index="3" Name="Leviticus" SectionName="03. Leviticus">
+      <Abbreviation>lev</Abbreviation>
+      <Abbreviation>le</Abbreviation>
+      <Abbreviation>lv</Abbreviation>
+      <Abbreviation>levit</Abbreviation>
+      <Abbreviation>leviticus</Abbreviation>
+    </BibleBook>
+    <BibleBook Index="4" Name="Numbers" SectionName="04. Numbers">
+      <Abbreviation>nu</Abbreviation>
+      <Abbreviation>num</Abbreviation>
+      <Abbreviation>nm</Abbreviation>
+      <Abbreviation>numb</Abbreviation>
+      <Abbreviation>numbers</Abbreviation>
+      <Abbreviation>nb</Abbreviation>
+    </BibleBook>
+    <BibleBook Index="5" Name="Deuteronomy" SectionName="05. Deuteronomy">
+      <Abbreviation>de</Abbreviation>
+      <Abbreviation>deut</Abbreviation>
+      <Abbreviation>deu</Abbreviation>
+      <Abbreviation>dt</Abbreviation>
+      <Abbreviation>deuteron</Abbreviation>
+      <Abbreviation>deuteronomy</Abbreviation>
+    </BibleBook>
+    <BibleBook Index="6" Name="Joshua" SectionName="06. Joshua">
+      <Abbreviation>jos</Abbreviation>
+      <Abbreviation>josh</Abbreviation>
+      <Abbreviation>joshua</Abbreviation>
+      <Abbreviation>jsh</Abbreviation>
+    </BibleBook>
+    <BibleBook Index="7" Name="Judges" SectionName="07. Judges">
+      <Abbreviation>jdg</Abbreviation>
+      <Abbreviation>judg</Abbreviation>
+      <Abbreviation>judge</Abbreviation>
+      <Abbreviation>judges</Abbreviation>
+      <Abbreviation>jg</Abbreviation>
+      <Abbreviation>jdgs</Abbreviation>
+    </BibleBook>
+    <BibleBook Index="8" Name="Ruth" SectionName="08. Ruth">
+      <Abbreviation>ru</Abbreviation>
+      <Abbreviation>ruth</Abbreviation>
+      <Abbreviation>rth</Abbreviation>
+      <Abbreviation>rt</Abbreviation>
+      <Abbreviation>rut</Abbreviation>
+    </BibleBook>
+    <BibleBook Index="9" Name="1 Samuel" ShortName="1samuel" SectionName="09. 1 Samuel">
+      <Abbreviation>1sa</Abbreviation>
+      <Abbreviation>1s</Abbreviation>
+      <Abbreviation>1sam</Abbreviation>
+      <Abbreviation>1sm</Abbreviation>
+      <Abbreviation>Isa</Abbreviation>
+      <Abbreviation>Isam</Abbreviation>
+      <Abbreviation>Isamuel</Abbreviation>
+      <Abbreviation>1sml</Abbreviation>
+      <Abbreviation IsFullBookName="true">1samuel</Abbreviation>
+    </BibleBook>
+    <BibleBook Index="10" Name="2 Samuel" ShortName="2samuel" SectionName="10. 2 Samuel">
+      <Abbreviation>2sa</Abbreviation>
+      <Abbreviation>2s</Abbreviation>
+      <Abbreviation>2sam</Abbreviation>
+      <Abbreviation>IIsa</Abbreviation>
+      <Abbreviation>IIsam</Abbreviation>
+      <Abbreviation>IIsamuel</Abbreviation>
+      <Abbreviation>2sm</Abbreviation>
+      <Abbreviation>2sml</Abbreviation>
+      <Abbreviation IsFullBookName="true">2samuel</Abbreviation>
+    </BibleBook>
+    <BibleBook Index="11" Name="1 Kings" ShortName="1kings" SectionName="11. 1 Kings">
+      <Abbreviation>1ki</Abbreviation>
+      <Abbreviation>Iki</Abbreviation>
+      <Abbreviation>1k</Abbreviation>
+      <Abbreviation>1kn</Abbreviation>
+      <Abbreviation>1kg</Abbreviation>
+      <Abbreviation>1king</Abbreviation>
+      <Abbreviation>Ikgs</Abbreviation>
+      <Abbreviation>1kgs</Abbreviation>
+      <Abbreviation>1kng</Abbreviation>
+      <Abbreviation>1kin</Abbreviation>
+      <Abbreviation IsFullBookName="true">1kings</Abbreviation>
+      <Abbreviation IsFullBookName="true">Ikings</Abbreviation>
+    </BibleBook>
+    <BibleBook Index="12" Name="2 Kings" ShortName="2kings" SectionName="12. 2 Kings">
+      <Abbreviation>2ki</Abbreviation>
+      <Abbreviation>IIki</Abbreviation>
+      <Abbreviation>2k</Abbreviation>
+      <Abbreviation>2kn</Abbreviation>
+      <Abbreviation>2kg</Abbreviation>
+      <Abbreviation>2king</Abbreviation>
+      <Abbreviation>IIkgs</Abbreviation>
+      <Abbreviation>2kgs</Abbreviation>
+      <Abbreviation>2kng</Abbreviation>
+      <Abbreviation>2kin</Abbreviation>
+      <Abbreviation IsFullBookName="true">2kings</Abbreviation>
+      <Abbreviation IsFullBookName="true">IIkings</Abbreviation>
+    </BibleBook>
+    <BibleBook Index="13" Name="1 Chronicles" ShortName="1chronicles" SectionName="13. 1 Chronicles">
+      <Abbreviation>1chr</Abbreviation>
+      <Abbreviation>Ichr</Abbreviation>
+      <Abbreviation>1ch</Abbreviation>
+      <Abbreviation>Ich</Abbreviation>
+      <Abbreviation>1chron</Abbreviation>
+      <Abbreviation>Ichron</Abbreviation>
+      <Abbreviation IsFullBookName="true">1chronicles</Abbreviation>
+      <Abbreviation IsFullBookName="true">Ichronicles</Abbreviation>
+    </BibleBook>
+    <BibleBook Index="14" Name="2 Chronicles" ShortName="2chronicles" SectionName="14. 2 Chronicles">
+      <Abbreviation>2chr</Abbreviation>
+      <Abbreviation>IIchr</Abbreviation>
+      <Abbreviation>2ch</Abbreviation>
+      <Abbreviation>IIch</Abbreviation>
+      <Abbreviation>2chron</Abbreviation>
+      <Abbreviation>IIchron</Abbreviation>
+      <Abbreviation IsFullBookName="true">2chronicles</Abbreviation>
+      <Abbreviation IsFullBookName="true">IIchronicles</Abbreviation>
+    </BibleBook>
+    <BibleBook Index="15" Name="Ezra" SectionName="15. Ezra">
+      <Abbreviation>ezr</Abbreviation>
+      <Abbreviation>ezra</Abbreviation>
+      <Abbreviation>esr</Abbreviation>
+      <Abbreviation>1ezr</Abbreviation>
+    </BibleBook>
+    <BibleBook Index="16" Name="Nehemiah" SectionName="16. Nehemiah">
+      <Abbreviation>ne</Abbreviation>
+      <Abbreviation>neh</Abbreviation>
+      <Abbreviation>nehem</Abbreviation>
+      <Abbreviation>nehemiah</Abbreviation>
+    </BibleBook>
+    <BibleBook Index="17" Name="Esther" SectionName="17. Esther">
+      <Abbreviation>esth</Abbreviation>
+      <Abbreviation>est</Abbreviation>
+      <Abbreviation>esther</Abbreviation>
+      <Abbreviation>es</Abbreviation>
+    </BibleBook>
+    <BibleBook Index="18" Name="Job" SectionName="18. Job">
+      <Abbreviation>job</Abbreviation>
+      <Abbreviation>jb</Abbreviation>
+    </BibleBook>
+    <BibleBook Index="19" Name="Psalms" SectionName="19. Psalms">
+      <Abbreviation>ps</Abbreviation>
+      <Abbreviation>psa</Abbreviation>
+      <Abbreviation>psal</Abbreviation>
+      <Abbreviation>pss</Abbreviation>
+      <Abbreviation>psalm</Abbreviation>
+      <Abbreviation>psalms</Abbreviation>
+      <Abbreviation>psm</Abbreviation>
+      <Abbreviation>pslm</Abbreviation>
+    </BibleBook>
+    <BibleBook Index="20" Name="Proverbs" SectionName="20. Proverbs">
+      <Abbreviation>pr</Abbreviation>
+      <Abbreviation>prv</Abbreviation>
+      <Abbreviation>prov</Abbreviation>
+      <Abbreviation>pro</Abbreviation>
+      <Abbreviation>proverb</Abbreviation>
+      <Abbreviation>proverbs</Abbreviation>
+    </BibleBook>
+    <BibleBook Index="21" Name="Ecclesiastes" SectionName="21. Ecclesiastes">
+      <Abbreviation>ec</Abbreviation>
+      <Abbreviation>eccl</Abbreviation>
+      <Abbreviation>ecc</Abbreviation>
+      <Abbreviation>ecclesia</Abbreviation>
+      <Abbreviation>eccles</Abbreviation>
+      <Abbreviation>qoh</Abbreviation>
+      <Abbreviation>qoheleth</Abbreviation>
+    </BibleBook>
+    <BibleBook Index="22" Name="Song of Solomon" ShortName="song" SectionName="22. Song of Solomon">
+      <Abbreviation IsFullBookName="true">song</Abbreviation>
+      <Abbreviation>so</Abbreviation>
+      <Abbreviation IsFullBookName="true">songs</Abbreviation>
+      <Abbreviation>sng</Abbreviation>
+      <Abbreviation>cant</Abbreviation>
+      <Abbreviation>ss</Abbreviation>
+      <Abbreviation>sol</Abbreviation>
+      <Abbreviation>son</Abbreviation>
+      <Abbreviation>sos</Abbreviation>
+      <Abbreviation IsFullBookName="true">canticles</Abbreviation>
+    </BibleBook>
+    <BibleBook Index="23" Name="Isaiah" SectionName="23. Isaiah">
+      <Abbreviation>isa</Abbreviation>
+      <Abbreviation>is</Abbreviation>
+      <Abbreviation>isaiah</Abbreviation>
+    </BibleBook>
+    <BibleBook Index="24" Name="Jeremiah" SectionName="24. Jeremiah">
+      <Abbreviation>je</Abbreviation>
+      <Abbreviation>jer</Abbreviation>
+      <Abbreviation>jerem</Abbreviation>
+      <Abbreviation>jeremiah</Abbreviation>
+      <Abbreviation>jr</Abbreviation>
+    </BibleBook>
+    <BibleBook Index="25" Name="Lamentations" SectionName="25. Lamentations">
+      <Abbreviation>la</Abbreviation>
+      <Abbreviation>lam</Abbreviation>
+      <Abbreviation>lament</Abbreviation>
+      <Abbreviation>lamentation</Abbreviation>
+      <Abbreviation>lamentations</Abbreviation>
+      <Abbreviation>lm</Abbreviation>
+    </BibleBook>
+    <BibleBook Index="26" Name="Ezekiel" SectionName="26. Ezekiel">
+      <Abbreviation>ez</Abbreviation>
+      <Abbreviation>eze</Abbreviation>
+      <Abbreviation>ezek</Abbreviation>
+      <Abbreviation>ezekiel</Abbreviation>
+      <Abbreviation>ezk</Abbreviation>
+    </BibleBook>
+    <BibleBook Index="27" Name="Daniel" SectionName="27. Daniel">
+      <Abbreviation>da</Abbreviation>
+      <Abbreviation>dan</Abbreviation>
+      <Abbreviation>daniel</Abbreviation>
+      <Abbreviation>dn</Abbreviation>
+    </BibleBook>
+    <BibleBook Index="28" Name="Hosea" SectionName="28. Hosea">
+      <Abbreviation>hos</Abbreviation>
+      <Abbreviation>ho</Abbreviation>
+      <Abbreviation>hosea</Abbreviation>
+    </BibleBook>
+    <BibleBook Index="29" Name="Joel" SectionName="29. Joel">
+      <Abbreviation>joel</Abbreviation>
+      <Abbreviation>joe</Abbreviation>
+      <Abbreviation>jl</Abbreviation>
+      <Abbreviation>jol</Abbreviation>
+    </BibleBook>
+    <BibleBook Index="30" Name="Amos" SectionName="30. Amos">
+      <Abbreviation>am</Abbreviation>
+      <Abbreviation>amos</Abbreviation>
+      <Abbreviation>amo</Abbreviation>
+    </BibleBook>
+    <BibleBook Index="31" Name="Obadiah" SectionName="31. Obadiah">
+      <Abbreviation>ob</Abbreviation>
+      <Abbreviation>obad</Abbreviation>
+      <Abbreviation>obadiah</Abbreviation>
+      <Abbreviation>oba</Abbreviation>
+      <Abbreviation>obd</Abbreviation>
+    </BibleBook>
+    <BibleBook Index="32" Name="Jonah" SectionName="32. Jonah">
+      <Abbreviation>jon</Abbreviation>
+      <Abbreviation>jnh</Abbreviation>
+      <Abbreviation>jona</Abbreviation>
+      <Abbreviation>jonah</Abbreviation>
+    </BibleBook>
+    <BibleBook Index="33" Name="Micah" SectionName="33. Micah">
+      <Abbreviation>mi</Abbreviation>
+      <Abbreviation>mic</Abbreviation>
+      <Abbreviation>micah</Abbreviation>
+      <Abbreviation>mch</Abbreviation>
+    </BibleBook>
+    <BibleBook Index="34" Name="Nahum" SectionName="34. Nahum">
+      <Abbreviation>na</Abbreviation>
+      <Abbreviation>nah</Abbreviation>
+      <Abbreviation>nahum</Abbreviation>
+      <Abbreviation>nam</Abbreviation>
+    </BibleBook>
+    <BibleBook Index="35" Name="Habakkuk" SectionName="35. Habakkuk">
+      <Abbreviation>hab</Abbreviation>
+      <Abbreviation>habak</Abbreviation>
+      <Abbreviation>habakkuk</Abbreviation>
+      <Abbreviation>ha</Abbreviation>
+    </BibleBook>
+    <BibleBook Index="36" Name="Zephaniah" SectionName="36. Zephaniah">
+      <Abbreviation>zeph</Abbreviation>
+      <Abbreviation>zep</Abbreviation>
+      <Abbreviation>zephaniah</Abbreviation>
+      <Abbreviation>zp</Abbreviation>
+    </BibleBook>
+    <BibleBook Index="37" Name="Haggai" SectionName="37. Haggai">
+      <Abbreviation>hag</Abbreviation>
+      <Abbreviation>haggai</Abbreviation>
+      <Abbreviation>hg</Abbreviation>
+      <Abbreviation>hagg</Abbreviation>
+    </BibleBook>
+    <BibleBook Index="38" Name="Zechariah" SectionName="38. Zechariah">
+      <Abbreviation>ze</Abbreviation>
+      <Abbreviation>zec</Abbreviation>
+      <Abbreviation>zech</Abbreviation>
+      <Abbreviation>zechariah</Abbreviation>
+      <Abbreviation>zc</Abbreviation>
+      <Abbreviation>zch</Abbreviation>
+    </BibleBook>
+    <BibleBook Index="39" Name="Malachi" SectionName="39. Malachi">
+      <Abbreviation>mal</Abbreviation>
+      <Abbreviation>malachi</Abbreviation>
+      <Abbreviation>ml</Abbreviation>
+    </BibleBook>
+    <BibleBook Index="40" Name="Matthew" SectionName="01. Matthew">
+      <Abbreviation>mt</Abbreviation>
+      <Abbreviation>ma</Abbreviation>
+      <Abbreviation>matt</Abbreviation>
+      <Abbreviation>mat</Abbreviation>
+      <Abbreviation>matthew</Abbreviation>
+    </BibleBook>
+    <BibleBook Index="41" Name="Mark" SectionName="02. Mark">
+      <Abbreviation>mk</Abbreviation>
+      <Abbreviation>mar</Abbreviation>
+      <Abbreviation>mr</Abbreviation>
+      <Abbreviation>mrk</Abbreviation>
+      <Abbreviation>mark</Abbreviation>
+    </BibleBook>
+    <BibleBook Index="42" Name="Luke" SectionName="03. Luke">
+      <Abbreviation>lk</Abbreviation>
+      <Abbreviation>lu</Abbreviation>
+      <Abbreviation>luk</Abbreviation>
+      <Abbreviation>luke</Abbreviation>
+    </BibleBook>
+    <BibleBook Index="43" Name="John" SectionName="04. John">
+      <Abbreviation>jn</Abbreviation>
+      <Abbreviation>jno</Abbreviation>
+      <Abbreviation>joh</Abbreviation>
+      <Abbreviation>john</Abbreviation>
+      <Abbreviation>jhn</Abbreviation>
+    </BibleBook>
+    <BibleBook Index="44" Name="Acts" SectionName="05. Acts">
+      <Abbreviation>ac</Abbreviation>
+      <Abbreviation>act</Abbreviation>
+      <Abbreviation>acts</Abbreviation>
+    </BibleBook>
+    <BibleBook Index="45" Name="Romans" SectionName="06. Romans">
+      <Abbreviation>ro</Abbreviation>
+      <Abbreviation>rom</Abbreviation>
+      <Abbreviation>roma</Abbreviation>
+      <Abbreviation>romans</Abbreviation>
+      <Abbreviation>rm</Abbreviation>
+    </BibleBook>
+    <BibleBook Index="46" Name="1 Corinthians" ShortName="1corinthians" SectionName="07. 1 Corinthians">
+      <Abbreviation>1co</Abbreviation>
+      <Abbreviation>Ico</Abbreviation>
+      <Abbreviation>1cor</Abbreviation>
+      <Abbreviation>Icor</Abbreviation>
+      <Abbreviation>1corinth</Abbreviation>
+      <Abbreviation IsFullBookName="true">Icorinthians</Abbreviation>
+      <Abbreviation IsFullBookName="true">1corinthians</Abbreviation>
+    </BibleBook>
+    <BibleBook Index="47" Name="2 Corinthians" ShortName="2corinthians" SectionName="08. 2 Corinthians">
+      <Abbreviation>2co</Abbreviation>
+      <Abbreviation>IIco</Abbreviation>
+      <Abbreviation>2cor</Abbreviation>
+      <Abbreviation>IIcor</Abbreviation>
+      <Abbreviation>2corinth</Abbreviation>
+      <Abbreviation IsFullBookName="true">IIcorinthians</Abbreviation>
+      <Abbreviation IsFullBookName="true">2corinthians</Abbreviation>
+    </BibleBook>
+    <BibleBook Index="48" Name="Galatians" SectionName="09. Galatians">
+      <Abbreviation>ga</Abbreviation>
+      <Abbreviation>gal</Abbreviation>
+      <Abbreviation>galat</Abbreviation>
+      <Abbreviation>galatians</Abbreviation>
+    </BibleBook>
+    <BibleBook Index="49" Name="Ephesians" SectionName="10. Ephesians">
+      <Abbreviation>eph</Abbreviation>
+      <Abbreviation>ep</Abbreviation>
+      <Abbreviation>ephes</Abbreviation>
+      <Abbreviation>ephesians</Abbreviation>
+    </BibleBook>
+    <BibleBook Index="50" Name="Philippians" SectionName="11. Philippians">
+      <Abbreviation>php</Abbreviation>
+      <Abbreviation>ph</Abbreviation>
+      <Abbreviation>phil</Abbreviation>
+      <Abbreviation>phi</Abbreviation>
+      <Abbreviation>phili</Abbreviation>
+      <Abbreviation>philip</Abbreviation>
+      <Abbreviation>philippians</Abbreviation>
+    </BibleBook>
+    <BibleBook Index="51" Name="Colossians" SectionName="12. Colossians">
+      <Abbreviation>col</Abbreviation>
+      <Abbreviation>colos</Abbreviation>
+      <Abbreviation>colossians</Abbreviation>
+    </BibleBook>
+    <BibleBook Index="52" Name="1 Thessalonians" ShortName="1thessalonians" SectionName="13. 1 Thessalonians">
+      <Abbreviation>1th</Abbreviation>
+      <Abbreviation>1thes</Abbreviation>
+      <Abbreviation>1thess</Abbreviation>
+      <Abbreviation IsFullBookName="true">1thessalonians</Abbreviation>
+      <Abbreviation>Ith</Abbreviation>
+      <Abbreviation>Ithes</Abbreviation>
+      <Abbreviation>Ithess</Abbreviation>
+      <Abbreviation IsFullBookName="true">Ithessalonians</Abbreviation>
+    </BibleBook>
+    <BibleBook Index="53" Name="2 Thessalonians" ShortName="2thessalonians" SectionName="14. 2 Thessalonians">
+      <Abbreviation>2th</Abbreviation>
+      <Abbreviation>2thes</Abbreviation>
+      <Abbreviation>2thess</Abbreviation>
+      <Abbreviation IsFullBookName="true">2thessalonians</Abbreviation>
+      <Abbreviation>IIth</Abbreviation>
+      <Abbreviation>IIthes</Abbreviation>
+      <Abbreviation>IIthess</Abbreviation>
+      <Abbreviation IsFullBookName="true">IIthessalonians</Abbreviation>
+    </BibleBook>
+    <BibleBook Index="54" Name="1 Timothy" ShortName="1timothy" SectionName="15. 1 Timothy">
+      <Abbreviation>1ti</Abbreviation>
+      <Abbreviation>1tim</Abbreviation>
+      <Abbreviation>1tm</Abbreviation>
+      <Abbreviation IsFullBookName="true">1timothy</Abbreviation>
+      <Abbreviation>Iti</Abbreviation>
+      <Abbreviation>Itim</Abbreviation>
+      <Abbreviation IsFullBookName="true">Itimothy</Abbreviation>
+    </BibleBook>
+    <BibleBook Index="55" Name="2 Timothy" ShortName="2timothy" SectionName="16. 2 Timothy">
+      <Abbreviation>2ti</Abbreviation>
+      <Abbreviation>2tim</Abbreviation>
+      <Abbreviation>2tm</Abbreviation>
+      <Abbreviation IsFullBookName="true">2timothy</Abbreviation>
+      <Abbreviation>IIti</Abbreviation>
+      <Abbreviation>IItim</Abbreviation>
+      <Abbreviation IsFullBookName="true">IItimothy</Abbreviation>
+    </BibleBook>
+    <BibleBook Index="56" Name="Titus" SectionName="17. Titus">
+      <Abbreviation>tit</Abbreviation>
+      <Abbreviation>ti</Abbreviation>
+      <Abbreviation>titus</Abbreviation>
+      <Abbreviation>tt</Abbreviation>
+    </BibleBook>
+    <BibleBook Index="57" Name="Philemon" SectionName="18. Philemon">
+      <Abbreviation>phm</Abbreviation>
+      <Abbreviation>phile</Abbreviation>
+      <Abbreviation>phlm</Abbreviation>
+      <Abbreviation>philemon</Abbreviation>
+      <Abbreviation>philem</Abbreviation>
+    </BibleBook>
+    <BibleBook Index="58" Name="Hebrews" SectionName="19. Hebrews">
+      <Abbreviation>he</Abbreviation>
+      <Abbreviation>heb</Abbreviation>
+      <Abbreviation>hebr</Abbreviation>
+      <Abbreviation>hebre</Abbreviation>
+      <Abbreviation>hebrews</Abbreviation>
+      <Abbreviation>hbr</Abbreviation>
+    </BibleBook>
+    <BibleBook Index="59" Name="James" SectionName="20. James">
+      <Abbreviation>jas</Abbreviation>
+      <Abbreviation>ja</Abbreviation>
+      <Abbreviation>jam</Abbreviation>
+      <Abbreviation>jms</Abbreviation>
+      <Abbreviation>james</Abbreviation>
+      <Abbreviation>jm</Abbreviation>
+    </BibleBook>
+    <BibleBook Index="60" Name="1 Peter" ShortName="1peter" SectionName="21. 1 Peter">
+      <Abbreviation>1pe</Abbreviation>
+      <Abbreviation>1pet</Abbreviation>
+      <Abbreviation>1pt</Abbreviation>
+      <Abbreviation IsFullBookName="true">1peter</Abbreviation>
+      <Abbreviation>Ipe</Abbreviation>
+      <Abbreviation>Ipet</Abbreviation>
+      <Abbreviation>Ipt</Abbreviation>
+      <Abbreviation IsFullBookName="true">Ipeter</Abbreviation>
+    </BibleBook>
+    <BibleBook Index="61" Name="2 Peter" ShortName="2peter" SectionName="22. 2 Peter">
+      <Abbreviation>2pe</Abbreviation>
+      <Abbreviation>2pet</Abbreviation>
+      <Abbreviation>2pt</Abbreviation>
+      <Abbreviation IsFullBookName="true">2peter</Abbreviation>
+      <Abbreviation>IIpe</Abbreviation>
+      <Abbreviation>IIpet</Abbreviation>
+      <Abbreviation>IIpt</Abbreviation>
+      <Abbreviation IsFullBookName="true">IIpeter</Abbreviation>
+    </BibleBook>
+    <BibleBook Index="62" Name="1 John" ShortName="1john" SectionName="23. 1 John">
+      <Abbreviation>1jn</Abbreviation>
+      <Abbreviation>1jo</Abbreviation>
+      <Abbreviation>1joh</Abbreviation>
+      <Abbreviation>1jno</Abbreviation>
+      <Abbreviation>1jhn</Abbreviation>
+      <Abbreviation IsFullBookName="true">1john</Abbreviation>
+      <Abbreviation>Ijn</Abbreviation>
+      <Abbreviation>Ijo</Abbreviation>
+      <Abbreviation>Ijoh</Abbreviation>
+      <Abbreviation>Ijhn</Abbreviation>
+      <Abbreviation IsFullBookName="true">Ijohn</Abbreviation>
+    </BibleBook>
+    <BibleBook Index="63" Name="2 John" ShortName="2john" SectionName="24. 2 John">
+      <Abbreviation>2jn</Abbreviation>
+      <Abbreviation>2jo</Abbreviation>
+      <Abbreviation>2joh</Abbreviation>
+      <Abbreviation>2jno</Abbreviation>
+      <Abbreviation>2jhn</Abbreviation>
+      <Abbreviation IsFullBookName="true">2john</Abbreviation>
+      <Abbreviation>IIjn</Abbreviation>
+      <Abbreviation>IIjo</Abbreviation>
+      <Abbreviation>IIjoh</Abbreviation>
+      <Abbreviation>IIjhn</Abbreviation>
+      <Abbreviation IsFullBookName="true">IIjohn</Abbreviation>
+    </BibleBook>
+    <BibleBook Index="64" Name="3 John" ShortName="3john" SectionName="25. 3 John">
+      <Abbreviation>3jn</Abbreviation>
+      <Abbreviation>3jo</Abbreviation>
+      <Abbreviation>3joh</Abbreviation>
+      <Abbreviation>3jno</Abbreviation>
+      <Abbreviation>3jhn</Abbreviation>
+      <Abbreviation IsFullBookName="true">3john</Abbreviation>
+      <Abbreviation>IIIjn</Abbreviation>
+      <Abbreviation>IIIjo</Abbreviation>
+      <Abbreviation>IIIjoh</Abbreviation>
+      <Abbreviation>IIIjhn</Abbreviation>
+      <Abbreviation IsFullBookName="true">IIIjohn</Abbreviation>
+    </BibleBook>
+    <BibleBook Index="65" Name="Jude" SectionName="26. Jude">
+      <Abbreviation>jud</Abbreviation>
+      <Abbreviation>jude</Abbreviation>
+      <Abbreviation>jd</Abbreviation>
+    </BibleBook>
+    <BibleBook Index="66" Name="Revelation" SectionName="27. Revelation">
+      <Abbreviation>rev</Abbreviation>
+      <Abbreviation>re</Abbreviation>
+      <Abbreviation>rv</Abbreviation>
+      <Abbreviation>revel</Abbreviation>
+      <Abbreviation>revelation</Abbreviation>
+    </BibleBook>
+  </BibleStructure>
+</IStudyBibleTools_Module>
