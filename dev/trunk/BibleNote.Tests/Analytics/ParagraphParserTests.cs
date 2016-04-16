@@ -10,6 +10,7 @@ using BibleNote.Analytics.Core.Helpers;
 using BibleNote.Tests.Analytics.Mocks;
 using System;
 using BibleNote.Analytics.Contracts.Providers;
+using BibleNote.Analytics.Models.Exceptions;
 
 namespace BibleNote.Tests.Analytics
 {
@@ -27,6 +28,7 @@ namespace BibleNote.Tests.Analytics
         private IParagraphParser _parahraphParserService;        
         private IVersePointerFactory _versePointerFactory;
         private IDocumentParseContext _documentParseContext;
+        private IModulesManager _modulesManager;
 
         [TestInitialize]
         public void Init()
@@ -41,7 +43,17 @@ namespace BibleNote.Tests.Analytics
             _parahraphParserService = DIContainer.Resolve<IParagraphParser>();
 
             _mockDocumentProvider = new MockDocumentProvider();
-            _parahraphParserService.Init(_mockDocumentProvider, _documentParseContext);                        
+            _parahraphParserService.Init(_mockDocumentProvider, _documentParseContext);
+
+            _modulesManager = DIContainer.Resolve<IModulesManager>();
+            try
+            {
+                _modulesManager.GetCurrentModuleInfo();
+            }
+            catch (ModuleIsUndefinedException)
+            {
+                _modulesManager.UploadModule(@"..\..\..\Data\Modules\rst\rst.bnm", "rst");
+            }
         }
 
         [TestCleanup]

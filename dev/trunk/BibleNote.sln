@@ -1,6 +1,8 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2012
+# Visual Studio 14
+VisualStudioVersion = 14.0.24720.0
+MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BibleNote.Tests", "BibleNote.Tests\BibleNote.Tests.csproj", "{3B9DA479-AD87-41A3-944F-C434A741137F}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BibleNote.Console", "BibleNote.Console\BibleNote.Console.csproj", "{85ACCAD6-36D8-4C9A-8384-1DFA134B68E9}"
@@ -9,6 +11,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Providers", "Providers", "{
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Data", "Data", "{0A5BED81-6EA7-4535-B7C6-C6481F8E5311}"
 	ProjectSection(SolutionItems) = preProject
+		Data\Modules\kjv\kjv.bnm = Data\Modules\kjv\kjv.bnm
 		Data\Modules\rst\rst.bnm = Data\Modules\rst\rst.bnm
 	EndProjectSection
 EndProject
@@ -41,66 +44,6 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BibleNote.Analytics.Providers.FolderNavigationProvider", "BibleNote.Analytics.Providers.FolderNavigationProvider\BibleNote.Analytics.Providers.FolderNavigationProvider.csproj", "{A2538A2F-EA54-4F42-B1EB-CF4B2E3ED503}"
 EndProject
 Global
-	GlobalSection(TeamFoundationVersionControl) = preSolution
-		SccNumberOfProjects = 15
-		SccEnterpriseProvider = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
-		SccTeamFoundationServer = https://demko.visualstudio.com/defaultcollection
-		SccLocalPath0 = .
-		SccProjectUniqueName1 = BibleNote.Tests\\BibleNote.Tests.csproj
-		SccProjectName1 = BibleNote.Tests
-		SccLocalPath1 = BibleNote.Tests
-		SccProjectUniqueName2 = BibleNote.Console\\BibleNote.Console.csproj
-		SccProjectName2 = BibleNote.Console
-		SccLocalPath2 = BibleNote.Console
-		SccProjectUniqueName3 = BibleNote.Analytics.Data\\BibleNote.Analytics.Data.csproj
-		SccProjectTopLevelParentUniqueName3 = BibleNote.sln
-		SccProjectName3 = BibleNote.Analytics.Data
-		SccLocalPath3 = BibleNote.Analytics.Data
-		SccProjectUniqueName4 = BibleNote.Analytics.Models\\BibleNote.Analytics.Models.csproj
-		SccProjectTopLevelParentUniqueName4 = BibleNote.sln
-		SccProjectName4 = BibleNote.Analytics.Models
-		SccLocalPath4 = BibleNote.Analytics.Models
-		SccProjectUniqueName5 = BibleNote.Analytics.Contracts\\BibleNote.Analytics.Contracts.csproj
-		SccProjectTopLevelParentUniqueName5 = BibleNote.sln
-		SccProjectName5 = BibleNote.Analytics.Contracts
-		SccLocalPath5 = BibleNote.Analytics.Contracts
-		SccProjectUniqueName6 = BibleNote.Analytics.Services\\BibleNote.Analytics.Services.csproj
-		SccProjectTopLevelParentUniqueName6 = BibleNote.sln
-		SccProjectName6 = BibleNote.Analytics.Services
-		SccLocalPath6 = BibleNote.Analytics.Services
-		SccProjectUniqueName7 = BibleNote.Analytics.Core\\BibleNote.Analytics.Core.csproj
-		SccProjectTopLevelParentUniqueName7 = BibleNote.sln
-		SccProjectName7 = BibleNote.Analytics.Core
-		SccLocalPath7 = BibleNote.Analytics.Core
-		SccProjectUniqueName8 = BibleNote.UI.Core\\BibleNote.UI.Core.csproj
-		SccProjectTopLevelParentUniqueName8 = BibleNote.sln
-		SccProjectName8 = BibleNote.UI.Core
-		SccLocalPath8 = BibleNote.UI.Core
-		SccProjectUniqueName9 = BibleNote.UI.Data\\BibleNote.UI.Data.csproj
-		SccProjectTopLevelParentUniqueName9 = BibleNote.sln
-		SccProjectName9 = BibleNote.UI.Data
-		SccLocalPath9 = BibleNote.UI.Data
-		SccProjectUniqueName10 = BibleNote.UI.Models\\BibleNote.UI.Models.csproj
-		SccProjectTopLevelParentUniqueName10 = BibleNote.sln
-		SccProjectName10 = BibleNote.UI.Models
-		SccLocalPath10 = BibleNote.UI.Models
-		SccProjectUniqueName11 = BibleNote.UI.Contracts\\BibleNote.UI.Contracts.csproj
-		SccProjectTopLevelParentUniqueName11 = BibleNote.sln
-		SccProjectName11 = BibleNote.UI.Contracts
-		SccLocalPath11 = BibleNote.UI.Contracts
-		SccProjectUniqueName12 = BibleNote.UI.Services\\BibleNote.UI.Services.csproj
-		SccProjectTopLevelParentUniqueName12 = BibleNote.sln
-		SccProjectName12 = BibleNote.UI.Services
-		SccLocalPath12 = BibleNote.UI.Services
-		SccProjectUniqueName13 = BibleNote.Analytics.Providers.HtmlProvider\\BibleNote.Analytics.Providers.HtmlProvider.csproj
-		SccProjectTopLevelParentUniqueName13 = BibleNote.sln
-		SccProjectName13 = BibleNote.Analytics.Providers.HtmlProvider
-		SccLocalPath13 = BibleNote.Analytics.Providers.HtmlProvider
-		SccProjectUniqueName14 = BibleNote.Analytics.Providers.FolderNavigationProvider\\BibleNote.Analytics.Providers.FolderNavigationProvider.csproj
-		SccProjectTopLevelParentUniqueName14 = BibleNote.sln
-		SccProjectName14 = BibleNote.Analytics.Providers.FolderNavigationProvider
-		SccLocalPath14 = BibleNote.Analytics.Providers.FolderNavigationProvider
-	EndGlobalSection
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
@@ -173,12 +116,72 @@ Global
 		{A47192D6-2DC9-40D5-B28C-AD55E298F68F} = {75EA2CBB-D373-49D9-B812-CC4B82429AA1}
 		{38AF7691-09FA-4373-AEA2-52F6D3D50C85} = {75EA2CBB-D373-49D9-B812-CC4B82429AA1}
 		{72939EBB-2258-4EE9-9645-4944A6450192} = {75EA2CBB-D373-49D9-B812-CC4B82429AA1}
-		{84381C15-F3E9-4EB5-9D98-FE29352F2627} = {C9C9F0C2-C0E7-4303-B28A-AF13A00BAB0A}
-		{A2538A2F-EA54-4F42-B1EB-CF4B2E3ED503} = {C9C9F0C2-C0E7-4303-B28A-AF13A00BAB0A}
 		{8E78EB0B-41CB-460A-BB21-A08733A31D54} = {4878DD17-95DF-4BAB-AB68-4A9789B84D56}
 		{614C2528-C151-49E4-A500-C5440D90EAD7} = {4878DD17-95DF-4BAB-AB68-4A9789B84D56}
 		{88387860-F319-4293-8C21-86154FEC6791} = {4878DD17-95DF-4BAB-AB68-4A9789B84D56}
 		{05345883-462D-48F0-8F19-B8B711870314} = {4878DD17-95DF-4BAB-AB68-4A9789B84D56}
 		{4F5E6A82-BBCE-42DC-ADE6-8C672D806AB9} = {4878DD17-95DF-4BAB-AB68-4A9789B84D56}
+		{84381C15-F3E9-4EB5-9D98-FE29352F2627} = {C9C9F0C2-C0E7-4303-B28A-AF13A00BAB0A}
+		{A2538A2F-EA54-4F42-B1EB-CF4B2E3ED503} = {C9C9F0C2-C0E7-4303-B28A-AF13A00BAB0A}
+	EndGlobalSection
+	GlobalSection(TeamFoundationVersionControl) = preSolution
+		SccNumberOfProjects = 15
+		SccEnterpriseProvider = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
+		SccTeamFoundationServer = https://demko.visualstudio.com/defaultcollection
+		SccLocalPath0 = .
+		SccProjectUniqueName1 = BibleNote.Tests\\BibleNote.Tests.csproj
+		SccProjectName1 = BibleNote.Tests
+		SccLocalPath1 = BibleNote.Tests
+		SccProjectUniqueName2 = BibleNote.Console\\BibleNote.Console.csproj
+		SccProjectName2 = BibleNote.Console
+		SccLocalPath2 = BibleNote.Console
+		SccProjectUniqueName3 = BibleNote.Analytics.Data\\BibleNote.Analytics.Data.csproj
+		SccProjectTopLevelParentUniqueName3 = BibleNote.sln
+		SccProjectName3 = BibleNote.Analytics.Data
+		SccLocalPath3 = BibleNote.Analytics.Data
+		SccProjectUniqueName4 = BibleNote.Analytics.Models\\BibleNote.Analytics.Models.csproj
+		SccProjectTopLevelParentUniqueName4 = BibleNote.sln
+		SccProjectName4 = BibleNote.Analytics.Models
+		SccLocalPath4 = BibleNote.Analytics.Models
+		SccProjectUniqueName5 = BibleNote.Analytics.Contracts\\BibleNote.Analytics.Contracts.csproj
+		SccProjectTopLevelParentUniqueName5 = BibleNote.sln
+		SccProjectName5 = BibleNote.Analytics.Contracts
+		SccLocalPath5 = BibleNote.Analytics.Contracts
+		SccProjectUniqueName6 = BibleNote.Analytics.Services\\BibleNote.Analytics.Services.csproj
+		SccProjectTopLevelParentUniqueName6 = BibleNote.sln
+		SccProjectName6 = BibleNote.Analytics.Services
+		SccLocalPath6 = BibleNote.Analytics.Services
+		SccProjectUniqueName7 = BibleNote.Analytics.Core\\BibleNote.Analytics.Core.csproj
+		SccProjectTopLevelParentUniqueName7 = BibleNote.sln
+		SccProjectName7 = BibleNote.Analytics.Core
+		SccLocalPath7 = BibleNote.Analytics.Core
+		SccProjectUniqueName8 = BibleNote.UI.Core\\BibleNote.UI.Core.csproj
+		SccProjectTopLevelParentUniqueName8 = BibleNote.sln
+		SccProjectName8 = BibleNote.UI.Core
+		SccLocalPath8 = BibleNote.UI.Core
+		SccProjectUniqueName9 = BibleNote.UI.Data\\BibleNote.UI.Data.csproj
+		SccProjectTopLevelParentUniqueName9 = BibleNote.sln
+		SccProjectName9 = BibleNote.UI.Data
+		SccLocalPath9 = BibleNote.UI.Data
+		SccProjectUniqueName10 = BibleNote.UI.Models\\BibleNote.UI.Models.csproj
+		SccProjectTopLevelParentUniqueName10 = BibleNote.sln
+		SccProjectName10 = BibleNote.UI.Models
+		SccLocalPath10 = BibleNote.UI.Models
+		SccProjectUniqueName11 = BibleNote.UI.Contracts\\BibleNote.UI.Contracts.csproj
+		SccProjectTopLevelParentUniqueName11 = BibleNote.sln
+		SccProjectName11 = BibleNote.UI.Contracts
+		SccLocalPath11 = BibleNote.UI.Contracts
+		SccProjectUniqueName12 = BibleNote.UI.Services\\BibleNote.UI.Services.csproj
+		SccProjectTopLevelParentUniqueName12 = BibleNote.sln
+		SccProjectName12 = BibleNote.UI.Services
+		SccLocalPath12 = BibleNote.UI.Services
+		SccProjectUniqueName13 = BibleNote.Analytics.Providers.HtmlProvider\\BibleNote.Analytics.Providers.HtmlProvider.csproj
+		SccProjectTopLevelParentUniqueName13 = BibleNote.sln
+		SccProjectName13 = BibleNote.Analytics.Providers.HtmlProvider
+		SccLocalPath13 = BibleNote.Analytics.Providers.HtmlProvider
+		SccProjectUniqueName14 = BibleNote.Analytics.Providers.FolderNavigationProvider\\BibleNote.Analytics.Providers.FolderNavigationProvider.csproj
+		SccProjectTopLevelParentUniqueName14 = BibleNote.sln
+		SccProjectName14 = BibleNote.Analytics.Providers.FolderNavigationProvider
+		SccLocalPath14 = BibleNote.Analytics.Providers.FolderNavigationProvider
 	EndGlobalSection
 EndGlobal
