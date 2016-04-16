@@ -30,7 +30,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
 
             foreach (var func in _funcs[verseEntry.EntryType])
             {   
-                if (func(verseEntry, docParseContext))
+                if (func(verseEntry, docParseContext))                    
                     return true;
             }
 

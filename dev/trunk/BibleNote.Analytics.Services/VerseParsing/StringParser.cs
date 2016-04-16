@@ -91,12 +91,12 @@ namespace BibleNote.Analytics.Services.VerseParsing
                 StartIndex = entryStartIndex,
                 EndIndex = entryEndIndex,
                 VersePointer = new VersePointer(
-                    bookEntry != null ? bookEntry.BookInfo : null, bookEntry != null ? bookEntry.ModuleName : null,
+                    bookEntry != null ? bookEntry.BookInfo : null, 
+                    bookEntry != null ? bookEntry.ModuleName : null,
+                    originalVerse,
                     verseNumberEntry.VerseNumber,
                     topVerseNumberEntry != null ? topVerseNumberEntry.VerseNumber : (VerseNumber?)null)
-                {
-                    OriginalVerseName = originalVerse
-                }                
+                { }                
             };
 
             return result;
