@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<IStudyBibleTools_Module xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" Version="2.3" ShortName="kjv" Name="King James Version" Locale="en">
+<BibleNoteModule xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" Version="2.3" ShortName="kjv" Name="King James Version" Locale="en">
   <NotebooksStructure>
     <Notebook Type="Bible" Name="Bible.onepkg" Nickname="Bible">
       <SectionGroup Type="OldTestament" Name="1. Old Testament" CheckSectionsCount="true" SectionsCount="39" />
@@ -531,4 +531,4 @@
       <Abbreviation>revelation</Abbreviation>
     </BibleBook>
   </BibleStructure>
-</IStudyBibleTools_Module>
+</BibleNoteModule>
