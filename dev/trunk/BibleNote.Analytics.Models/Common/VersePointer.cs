@@ -293,11 +293,12 @@ namespace BibleNote.Analytics.Models.Common
         /// </summary>
         public VersePointer ParentVersePointer { get; set; }
 
-        public VersePointer(BibleBookInfo bookInfo, string moduleName, VerseNumber verseNumber, VerseNumber? topVerseNumber)
+        public VersePointer(BibleBookInfo bookInfo, string moduleName, string originalVerseName, VerseNumber verseNumber, VerseNumber? topVerseNumber)
             : base(bookInfo != null ? bookInfo.Index : 0, verseNumber, topVerseNumber)
         {
             Book = bookInfo;
             ModuleName = moduleName;
+            OriginalVerseName = originalVerseName;
         }
 
         public override string ToString()
@@ -350,19 +351,15 @@ namespace BibleNote.Analytics.Models.Common
         /// </summary>
         public bool HasValueEvenIfEmpty { get; set; }
 
-        public int? TopVerse
+        public new int? TopVerse
         {
             get
             {
                 if (TopVerseNumber.HasValue)
-                    return (int?)TopVerseNumber.Value.Verse;
+                    return TopVerseNumber.Value.Verse;
 
                 return null;
-            }
-            set
-            {
-                TopVerseNumber = new VerseNumber(Chapter, value);
-            }
+            }            
         }
 
         public ModuleVersePointer()
