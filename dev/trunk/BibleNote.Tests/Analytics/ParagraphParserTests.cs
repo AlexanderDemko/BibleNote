@@ -25,7 +25,7 @@ namespace BibleNote.Tests.Analytics
 
         private MockDocumentProvider _mockDocumentProvider;
         private IConfigurationManager _mockConfigurationManager;
-        private IParagraphParser _parahraphParserService;        
+        private IParagraphParser _parahraphParserService;
         private IVersePointerFactory _versePointerFactory;
         private IDocumentParseContext _documentParseContext;
         private IModulesManager _modulesManager;
@@ -35,7 +35,7 @@ namespace BibleNote.Tests.Analytics
         {
             DIContainer.InitWithDefaults();
 
-            _mockConfigurationManager = new MockConfigurationManager();            
+            _mockConfigurationManager = new MockConfigurationManager();
             DIContainer.Container.RegisterInstance(_mockConfigurationManager);
 
             _modulesManager = DIContainer.Resolve<IModulesManager>();
@@ -60,7 +60,7 @@ namespace BibleNote.Tests.Analytics
         [TestCleanup]
         public void Done()
         {
-            
+
         }
 
         private TestResult CheckVerses(string input, string expectedOutput, Action<IDocumentParseContext> initDocParseContext, params string[] verses)
@@ -75,16 +75,16 @@ namespace BibleNote.Tests.Analytics
 
             _documentParseContext.ClearContext();
             if (initDocParseContext != null)
-                initDocParseContext(_documentParseContext);            
+                initDocParseContext(_documentParseContext);
 
             var htmlDoc = new HtmlDocument();
             htmlDoc.LoadHtml(input);
 
-            var result = _parahraphParserService.ParseParagraph(htmlDoc.DocumentNode);          
+            var result = _parahraphParserService.ParseParagraph(htmlDoc.DocumentNode);
 
             Assert.AreEqual(expectedOutput, htmlDoc.DocumentNode.InnerHtml, "The output html is wrong.");
             Assert.AreEqual(new HtmlToTextConverter().SimpleConvert(input), result.Text, "Text parts do not contain the full input string.");
-            
+
             Assert.AreEqual(verses.Length, result.VerseEntries.Count, "Verses length is not the same. Expected: {0}. Found: {1}", verses.Length, result.VerseEntries.Count);
 
             var verseEntries = result.VerseEntries.Select(ve => ve.VersePointer);
@@ -93,13 +93,13 @@ namespace BibleNote.Tests.Analytics
 
             return new TestResult() { HtmlDoc = htmlDoc, Result = result };
         }
-        
+
 
         [TestMethod]
         public void TestScenario1()
         {
             var input = "<div>Это <p>тестовая <font>Мк 5:</font>6-7!!</p> строка</div>";
-            var expected = "<div>Это <p>тестовая <font><a href='bnVerse:Марка 5:6-7'>Мк 5:6-7</a></font>!!</p> строка</div>";            
+            var expected = "<div>Это <p>тестовая <font><a href='bnVerse:Марка 5:6-7'>Мк 5:6-7</a></font>!!</p> строка</div>";
             var result = CheckVerses(input, expected, null, "Мк 5:6-7");
 
             var verseEntry = result.Result.VerseEntries.First();
@@ -189,37 +189,37 @@ namespace BibleNote.Tests.Analytics
         public void TestScenario8()
         {
             CheckVerses("1 Лк 1:1, 2", /*"1 Лк 1:1,2"*/ null, null, "Лк 1:1", "Лк 1:2");
-            CheckVerses("Ин1, Ин1:20", /*"Ин 1, Ин 1:20"*/ null, null, "Ин 1", "Ин 1:20");            
+            CheckVerses("Ин1, Ин1:20", /*"Ин 1, Ин 1:20"*/ null, null, "Ин 1", "Ин 1:20");
         }
 
         [TestMethod]
         public void TestScenario9()
         {
             var input = "Ин 1: вот и Отк 5(синодальный перевод) и Деяния 1:5,6: вот";
-            
+
             CheckVerses(input, null, null, "Ин 1", "Отк 5", "Деян 1:5", "Деян 1:6");
         }
 
         [TestMethod]
         public void TestScenario10()
-        {   
-            CheckVerses("Ин 1:50-2:2,3-4", null, null, "Ин 1:50-2:2", "Ин 2:3-4");            
+        {
+            CheckVerses("Ин 1:50-2:2,3-4", null, null, "Ин 1:50-2:2", "Ин 2:3-4");
         }
 
 
         [TestMethod]
         public void TestScenario11()
         {
-            var input = "2,3 и :1-2 как и в :3,4-5;6 и 7:8";            
-            
-            CheckVerses(input, null, 
-                docParseContext => docParseContext.SetTitleVerse(_versePointerFactory.CreateVersePointer("1Кор 1")), 
+            var input = "2,3 и :1-2 как и в :3,4-5;6 и 7:8";
+
+            CheckVerses(input, null,
+                docParseContext => docParseContext.SetTitleVerse(_versePointerFactory.CreateVersePointer("1Кор 1")),
                 "1Кор 1:1-2", "1Кор 1:3", "1Кор 1:4-5", "1Кор 6", "1Кор 7:8");      // возможно, не надо поддерживать два последних VersePointer-a
         }
 
         [TestMethod]
         public void TestScenario12()
-        {   
+        {
             CheckVerses("Ps 89:1-2", null, null, "Пс 88:1-3");
             CheckVerses("I Cor 6:7, II Tim 2:3", null, null, "1Кор 6:7", "2 Тим 2:3");
         }
@@ -251,7 +251,7 @@ namespace BibleNote.Tests.Analytics
 
             _mockConfigurationManager.UseCommaDelimiter = true;
             CheckVerses(input, null, null, "1 Ин 1:2-3", "Нав 2-3",
-                                "1Кор 1:2-3", "1Кор 1:4-5", "1Кор 6-7", "1Кор 8-9", "1Кор 10", "1Кор 10:7");            
+                                "1Кор 1:2-3", "1Кор 1:4-5", "1Кор 6-7", "1Кор 8-9", "1Кор 10", "1Кор 10:7");
         }
 
         [TestMethod]
@@ -270,10 +270,10 @@ namespace BibleNote.Tests.Analytics
 
         [TestMethod]
         public void TestScenario16()
-        {   
+        {
             var input = "<span lang=\"en\">1</span><span lang=\"ru\">И</span><span lang=\"ru\">н</span><span lang=\"ru\"> </span><span lang=\"ru\">1</span><span lang=\"ru\">:</span><span lang=\"ru\">1</span> и <span lang=\"ru\">:</span><span lang=\"ru\">7</span>";
             var expected = "<span lang=\"en\"><a href='bnVerse:1Иоанна 1:1'>1Ин 1:1</a></span><span lang=\"ru\"></span><span lang=\"ru\"></span><span lang=\"ru\"></span><span lang=\"ru\"></span><span lang=\"ru\"></span><span lang=\"ru\"></span> и <span lang=\"ru\"><a href='bnVerse:1Иоанна 1:7'>:7</a></span><span lang=\"ru\"></span>";
-            
+
             CheckVerses(input, expected, null, "1Ин 1:1", "1Ин 1:7");
             CheckVerses(input, null, null, "1Ин 1:1", "1Ин 1:7");
         }
@@ -297,21 +297,21 @@ namespace BibleNote.Tests.Analytics
         {
             var input = "<span lang=ru>Вот Ин 1</span><span lang=en-US>:</span><span lang=ru>12 где в </span><span lang=ro>:</span><span lang=se-FI>13</span>";
             var expected = "<span lang=\"ru\">Вот <a href='bnVerse:Иоанна 1:12'>Ин 1:12</a></span><span lang=\"en-US\"></span><span lang=\"ru\"> где в </span><span lang=\"ro\"><a href='bnVerse:Иоанна 1:13'>:13</a></span><span lang=\"se-FI\"></span>";
-            
+
             CheckVerses(input, expected, null, "Ин 1:12", "Ин 1:13");
         }
 
 
         [TestMethod]
         public void TestScenario19()
-        {   
-            CheckVerses("Иуда 14,15", null, null, "Иуд 1:14", "Иуд 1:15");            
+        {
+            CheckVerses("Иуда 14,15", null, null, "Иуд 1:14", "Иуд 1:15");
             CheckVerses("2Ин2,3Ин3", /*"2Ин 2,3Ин 3"*/ null, null, "2Ин 1:2", "3Ин 1:3");
         }
 
         [TestMethod]
         public void TestScenario20()
-        {   
+        {
             CheckVerses("Ин 20:7-9, Л2", null, null, "Ин 20:7-9");
         }
 
@@ -321,7 +321,7 @@ namespace BibleNote.Tests.Analytics
             var input = "Ис 43,4,45,5,46,7";
             var expectedIfNotUseCommaDelimiter = "<a href='bnVerse:Исаия 43'>Ис 43</a>,4,45,5,46,7";
             var expectedIfUseCommaDelimiter = "<a href='bnVerse:Исаия 43:4'>Ис 43,4</a>,<a href='bnVerse:Исаия 43:45'>45</a>,5,46,7";
-            
+
 
             _mockConfigurationManager.UseCommaDelimiter = false;
             CheckVerses(input, expectedIfNotUseCommaDelimiter, null, "Ис 43");
@@ -342,7 +342,7 @@ namespace BibleNote.Tests.Analytics
         public void TestScenario23()
         {
             CheckVerses(".-5 Ин 1:5,6: вот", null, null, "Ин 1:5", "Ин 1:6");
-            CheckVerses(".:5 Ин.  (5 : 7), Лк.   (6:7)", null, null, "Ин 5:7", "Лк 6:7");            
+            CheckVerses(".:5 Ин.  (5 : 7), Лк.   (6:7)", null, null, "Ин 5:7", "Лк 6:7");
         }
 
         [TestMethod]
@@ -350,14 +350,50 @@ namespace BibleNote.Tests.Analytics
         {
             var input = "<b><b>Ин</b><b>3:16</b></b> <b>Лк<b>5:1<b/>6:2</b>";
             var expected = "<b><b><a href='bnVerse:Иоанна 3:16'>Ин3:16</a></b><b></b></b> <b><a href='bnVerse:Луки 5:16'>Лк5:16</a><b><b></b>:2</b></b>";
-            
+
             CheckVerses(input, expected, null, "Ин 3:16", "Лк 5:16");
         }
 
         //todo: [TestMethod]
         public void TestScenario25()
-        {   
+        {
             CheckVerses("Ин 5:6 и 7 стих, 8ст, ст9-11, ст.12,13", null, null, "Ин 5:6", "Ин 5:7", "Ин 5:8", "Ин 5:9-11", "Ин 5:12", "Ин 5:13");
+        }
+
+        [TestMethod]
+        public void TestScenario26()
+        {
+            var input = "<div>Это <p>тестовая <span class='test'></span><font><span></span>Мк <br/> 5:</font><span></span>6-<span data> </span>7!!</p> строка</div>";
+            var expected = "<div>Это <p>тестовая <span class='test'></span><font><span></span><a href='bnVerse:Марка 5:6-7'>Мк  5:6- 7</a><br></font><span></span><span data=\"\"></span>!!</p> строка</div>";
+            CheckVerses(input, expected, null, "Мк 5:6-7");
+
+            input = "<div><span></span><span></span><span></span>Ин 5:6</div>";
+            expected = "<div><span></span><span></span><span></span><a href='bnVerse:Иоанна 5:6'>Ин 5:6</a></div>";
+            CheckVerses(input, expected, null, "Ин 5:6");
+        }
+        [TestMethod]
+        public void TestScenario27()
+        {
+            var input = "<a href='bnVerse:Ин 5:6'>Ин 5:6</a>";
+            var expected = "<a href='bnVerse:Иоанна 5:6'>Ин 5:6</a>";
+            CheckVerses(input, expected, null, "Ин 5:6");
+
+            input = "<a href='bnVerse:Иоанна 5:6'>Ин 5:6</a>-7";
+            expected = "<a href='bnVerse:Иоанна 5:6-7'>Ин 5:6-7</a>";
+            CheckVerses(input, expected, null, "Ин 5:6-7");
+
+            //todo: это надо будет вынести в отдельную опцию на увроне DocumentProviderInstance - нужно ли менять чужие ссылки
+            input = "<a href='ya.ru'>Ин 5:6</a>-7";
+            expected = "<a href='bnVerse:Иоанна 5:6-7'>Ин 5:6-7</a>";
+            CheckVerses(input, expected, null, "Ин 5:6-7");
+
+            input = "<a class='test'>Ин 5:6</a>-7";
+            expected = "<a class='test' href=\"bnVerse:Иоанна 5:6-7\">Ин 5:6-7</a>";
+            CheckVerses(input, expected, null, "Ин 5:6-7");
+
+            input = "<a>Ин 5:6</a>-7";
+            expected = "<a href=\"bnVerse:Иоанна 5:6-7\">Ин 5:6-7</a>";
+            CheckVerses(input, expected, null, "Ин 5:6-7");
         }
     }
 }

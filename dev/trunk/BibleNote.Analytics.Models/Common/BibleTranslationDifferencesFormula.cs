@@ -17,7 +17,7 @@ namespace BibleNote.Analytics.Models.Common
 
             if (!string.IsNullOrEmpty(originalFormula))
             {
-                int indexOfColon = originalFormula.IndexOf(":");
+                var indexOfColon = originalFormula.IndexOf(":");
 
                 if (indexOfColon == -1)
                     throw new NotSupportedException(string.Format("Unknown formula: '{0}'", originalFormula));
@@ -75,7 +75,7 @@ namespace BibleNote.Analytics.Models.Common
 
 
         public BibleTranslationDifferencesBaseVersesFormula(int bookIndex, string baseVersesFormula, string parallelVersesFormula,
-            BibleBookDifference.CorrespondenceVerseType correspondenceType, bool skipCheck, bool emptyVerseContent)
+            BibleBookDifference.CorrespondenceVerseType correspondenceType, bool skipCheck, bool emptyVerseContent, Func<string, ModuleVersePointer> verseFactory)
             : base(baseVersesFormula)
         {
             this.BookIndex = bookIndex;
@@ -84,16 +84,16 @@ namespace BibleNote.Analytics.Models.Common
                 if (parallelVersesFormula.IndexOfAny(new char[] { 'X', '+' }) != -1)
                     throw new NotSupportedException(string.Format("For empty base verse must be defined concrete parallel verse: '{0}'", parallelVersesFormula));
 
-                int indexOfColon = OriginalFormula.IndexOf(":");
+                var indexOfColon = OriginalFormula.IndexOf(":");
                 if (indexOfColon != OriginalFormula.LastIndexOf(":"))
                     throw new NotSupportedException(
                         string.Format("The verses formula with two colons (':') is not supported yet: '{0}'", OriginalFormula));
 
-                Initialize(parallelVersesFormula);
+                Initialize(parallelVersesFormula, verseFactory);
                 IsEmpty = true;
             }
             else
-                Initialize(baseVersesFormula);
+                Initialize(baseVersesFormula, verseFactory);
 
             if (IsMultiVerse && correspondenceType != BibleBookDifference.CorrespondenceVerseType.All)
                 throw new NotSupportedException("Multi Base Verses are not supported for not strict processing (when correspondenceType != 'All').");
@@ -111,13 +111,12 @@ namespace BibleNote.Analytics.Models.Common
             return _allVerses;
         }
 
-        private void Initialize(string baseVersesFormula)
+        private void Initialize(string baseVersesFormula, Func<string, ModuleVersePointer> verseFactory)
         {
             if (baseVersesFormula.IndexOf('(') != -1)
                 throw new NotSupportedException(string.Format("Brackets in base formula is not supported yet: {0}", baseVersesFormula));
 
-            BaseVersePointer = new ModuleVersePointer();
-            BaseVersePointer.ParseFromFullVerseNumber(baseVersesFormula);
+            BaseVersePointer = verseFactory(baseVersesFormula);            
             _allVerses = null;
         }
     }
@@ -141,7 +140,7 @@ namespace BibleNote.Analytics.Models.Common
                 this.FormulaPart = formulaPart;
                 this.ParallelVersesFormula = parallelVersesFormula;
 
-                int indexOfX = formulaPart.IndexOf("X");
+                var indexOfX = formulaPart.IndexOf("X");
 
                 if (indexOfX == -1)
                 {
@@ -163,7 +162,7 @@ namespace BibleNote.Analytics.Models.Common
 
             protected virtual void ParseFormulaVerse()
             {
-                int? value = StringUtils.GetStringLastNumber(FormulaPart);
+                var value = StringUtils.GetStringLastNumber(FormulaPart);
 
                 if (!value.HasValue)
                 {
@@ -317,8 +316,8 @@ namespace BibleNote.Analytics.Models.Common
                 }
                 else                                                               // например в случае "1:1-2 -> 1:2-3" 
                 {
-                    int firstBaseVerse = ParallelVersesFormula.BaseVersesFormula.FirstVerse;
-                    int lastBaseVerse = ParallelVersesFormula.BaseVersesFormula.LastVerse;
+                    var firstBaseVerse = ParallelVersesFormula.BaseVersesFormula.FirstVerse;
+                    var lastBaseVerse = ParallelVersesFormula.BaseVersesFormula.LastVerse;
 
                     CalculateDeviationForMultiVerseFormula(firstBaseVerse, lastBaseVerse);
                 }
@@ -372,7 +371,7 @@ namespace BibleNote.Analytics.Models.Common
 
             if (!string.IsNullOrEmpty(OriginalFormula))
             {
-                int indexOfColon = OriginalFormula.IndexOf(":");
+                var indexOfColon = OriginalFormula.IndexOf(":");
 
                 if (indexOfColon != OriginalFormula.LastIndexOf(":"))
                 {
@@ -416,8 +415,8 @@ namespace BibleNote.Analytics.Models.Common
                 if (!ValueVersesCount.HasValue && CorrespondenceType != BibleBookDifference.CorrespondenceVerseType.All)
                     ValueVersesCount = 1;
 
-                int versePartIndex = prevVerse != null ? prevVerse.PartIndex.GetValueOrDefault(-1) + 1 : 0;
-                int verseIndex = 0;
+                var versePartIndex = prevVerse != null ? prevVerse.PartIndex.GetValueOrDefault(-1) + 1 : 0;
+                var verseIndex = 0;
                 foreach (var parallelVerse in parallelVerses)
                 {
                     var parallelVersePointer = new ModuleVersePointer(

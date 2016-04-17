@@ -11,6 +11,8 @@ namespace BibleNote.Analytics.Services.VerseParsing
 {
     public class VerseRecognitionService : IVerseRecognitionService
     {
+        private IVerseCorrectionService _verseCorrectionService;
+
         private class RuleList : List<Func<VerseEntryInfo, IDocumentParseContext, bool>> { }
 
         private static Dictionary<VerseEntryType, RuleList> _funcs = new Dictionary<VerseEntryType, RuleList>()
@@ -23,15 +25,20 @@ namespace BibleNote.Analytics.Services.VerseParsing
             { VerseEntryType.ChapterVerse,     new RuleList() { ChapterVerseRule } }
         };
 
+        public VerseRecognitionService(IVerseCorrectionService verseCorrectionService)
+        {
+            _verseCorrectionService = verseCorrectionService;
+        }
+
         public bool TryRecognizeVerse(VerseEntryInfo verseEntry, IDocumentParseContext docParseContext)
         {
             if (!verseEntry.VersePointerFound)
                 return false;
 
             foreach (var func in _funcs[verseEntry.EntryType])
-            {   
-                if (func(verseEntry, docParseContext))                    
-                    return true;
+            {
+                if (func(verseEntry, docParseContext))                
+                    return _verseCorrectionService.CheckAndCorrectVerse(verseEntry.VersePointer);                
             }
 
             return false;
@@ -58,14 +65,14 @@ namespace BibleNote.Analytics.Services.VerseParsing
 
                 if (verseEntry.EntryType == VerseEntryType.Verse)
                 {   
-                    verseEntry.VersePointer.MoveChapterToVerse(docParseContext.LatestVerseEntry.VersePointer.TopChapter);
+                    verseEntry.VersePointer.MoveChapterToVerse(docParseContext.LatestVerseEntry.VersePointer.MostTopChapter);
 
-                    if (verseEntry.VersePointer.Verse <= docParseContext.LatestVerseEntry.VersePointer.TopVerse)
+                    if (verseEntry.VersePointer.Verse <= docParseContext.LatestVerseEntry.VersePointer.MostTopVerse)
                         return false;
                 }
                 else
                 {
-                    if (verseEntry.VersePointer.Chapter <= docParseContext.LatestVerseEntry.VersePointer.TopChapter)
+                    if (verseEntry.VersePointer.Chapter <= docParseContext.LatestVerseEntry.VersePointer.MostTopChapter)
                         return false;
                 }
                                 
@@ -118,7 +125,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
             if (parentVerse != null)
             {
                 verseEntry.VersePointer.Book = parentVerse.Book;
-                verseEntry.VersePointer.Chapter = parentVerse.TopChapter;
+                verseEntry.VersePointer.SetChapter(parentVerse.MostTopChapter);
                 return true;
             }
 

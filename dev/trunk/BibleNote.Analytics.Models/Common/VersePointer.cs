@@ -91,6 +91,11 @@ namespace BibleNote.Analytics.Models.Common
     {
         public List<T> VersePointers { get; internal set; }
         public int VersesCount { get; internal set; }
+
+        public VersesListInfo()
+        {
+            this.VersePointers = new List<T>();
+        }
     }
 
     [Serializable]
@@ -110,17 +115,17 @@ namespace BibleNote.Analytics.Models.Common
             {
                 return VerseNumber.Chapter;
             }
-            set
-            {
-                VerseNumber = new VerseNumber(value, VerseNumber.Verse);
-                if (TopVerseNumber.HasValue)
-                    TopVerseNumber = new VerseNumber(value, TopVerseNumber.Value.Verse);
-            }
         }
 
-        public int Verse { get { return VerseNumber.Verse; } }
+        public int Verse
+        {
+            get
+            {
+                return VerseNumber.Verse;
+            }            
+        }
 
-        public int TopChapter
+        public int MostTopChapter
         {
             get
             {
@@ -131,7 +136,7 @@ namespace BibleNote.Analytics.Models.Common
             }
         }
 
-        public int TopVerse
+        public int MostTopVerse
         {
             get
             {
@@ -182,6 +187,14 @@ namespace BibleNote.Analytics.Models.Common
             this.BookIndex = bookIndex;
             this.VerseNumber = verseNumber;
             this.TopVerseNumber = topVerseNumber;
+        }
+
+
+        public void SetChapter(int newChapter)
+        {
+            VerseNumber = new VerseNumber(newChapter, VerseNumber.Verse);
+            if (TopVerseNumber.HasValue && TopVerseNumber.Value.Chapter == 0)
+                TopVerseNumber = new VerseNumber(newChapter, TopVerseNumber.Value.Verse);
         }
 
         public virtual void MoveChapterToVerse(int newChapter)           // когда изначально не было понятно, стих это или глава (например ",5-6");
@@ -244,11 +257,6 @@ namespace BibleNote.Analytics.Models.Common
 
         protected virtual void CopyPropertiesTo(SimpleVersePointer verse)
         { }
-
-        public virtual void ParseFromFullVerseNumber(string fullVerseNumber)
-        {
-            throw new NotImplementedException();
-        }
 
         public virtual VersesListInfo<SimpleVersePointer> ExpandMultiVerse()
         {
@@ -325,6 +333,20 @@ namespace BibleNote.Analytics.Models.Common
         {
             throw new NotImplementedException();
         }
+
+        public ModuleVersePointer ToModuleVersePointer()
+        {   
+
+            return new ModuleVersePointer(Book != null ? Book.Index : 0, Chapter, Verse);
+        }
+
+        public ModuleVersePointer ToModuleTopVersePointer()
+        {   
+            if (TopVerseNumber == null)
+                throw new InvalidOperationException($"Verse is not MultiVerse.");
+
+            return new ModuleVersePointer(Book != null ? Book.Index : 0, TopVerseNumber.Value.Chapter, TopVerseNumber.Value.Verse);
+        }
     }
 
  
@@ -351,7 +373,7 @@ namespace BibleNote.Analytics.Models.Common
         /// </summary>
         public bool HasValueEvenIfEmpty { get; set; }
 
-        public new int? TopVerse
+        public int? TopVerse
         {
             get
             {
@@ -439,6 +461,14 @@ namespace BibleNote.Analytics.Models.Common
             }
 
             result.VersesCount = result.VersePointers.Count();
+
+            return result;
+        }
+
+        public override object Clone()
+        {
+            var result = new ModuleVersePointer(this);
+            CopyPropertiesTo(result);
 
             return result;
         }

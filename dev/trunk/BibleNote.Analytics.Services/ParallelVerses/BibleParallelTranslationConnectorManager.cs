@@ -1,5 +1,6 @@
 ﻿using BibleNote.Analytics.Contracts.Environment;
 using BibleNote.Analytics.Contracts.ParallelVerses;
+using BibleNote.Analytics.Contracts.VerseParsing;
 using BibleNote.Analytics.Models.Common;
 using Microsoft.Practices.Unity;
 using System;
@@ -13,10 +14,12 @@ namespace BibleNote.Analytics.Services.ParallelVerses
     public class BibleParallelTranslationConnectorManager : IBibleParallelTranslationConnectorManager
     {
         private IModulesManager _modulesManager;
+        private IStringParser _stringParser;
 
-        public BibleParallelTranslationConnectorManager(IModulesManager modulesManager)
+        public BibleParallelTranslationConnectorManager(IModulesManager modulesManager, IStringParser stringParser)
         {
             _modulesManager = modulesManager;
+            _stringParser = stringParser;
         }
 
         private Dictionary<string, ParallelBibleInfo> _cache = new Dictionary<string, ParallelBibleInfo>();
@@ -75,8 +78,17 @@ namespace BibleNote.Analytics.Services.ParallelVerses
 
                 if (baseModuleShortName.ToLower() != parallelModuleShortName.ToLower())
                 {
-                    var baseTranslationDifferencesEx = new BibleTranslationDifferencesEx(baseBookTranslationDifferences);
-                    var parallelTranslationDifferencesEx = new BibleTranslationDifferencesEx(parallelBookTranslationDifferences);
+                    Func<string, ModuleVersePointer> verseFactory = s => 
+                    {
+                        var verseEntry = _stringParser.TryGetVerse(s, 0);
+                        if (verseEntry.VersePointerFound)
+                            return verseEntry.VersePointer.ToModuleVersePointer();
+                        else
+                            throw new NotSupportedException($"Verse formula is invalid: {s}");
+                    };
+
+                    var baseTranslationDifferencesEx = new BibleTranslationDifferencesEx(baseBookTranslationDifferences, verseFactory);
+                    var parallelTranslationDifferencesEx = new BibleTranslationDifferencesEx(parallelBookTranslationDifferences, verseFactory);
 
                     ProcessForBaseBookVerses(baseTranslationDifferencesEx, parallelTranslationDifferencesEx, result);
                     ProcessForParallelBookVerses(baseTranslationDifferencesEx, parallelTranslationDifferencesEx, result);
