@@ -79,7 +79,10 @@ namespace BibleNote.Analytics.Services.VerseParsing
 
                     if (!_documentProvider.IsReadonly)
                     {
-                        InsertVerseLink(verseNode, verseEntry);
+                        if (!NodeIsLink(verseNode.NodeEntry.Node.ParentNode))
+                            InsertVerseLink(verseNode, verseEntry);
+                        else
+                            UpdateLinkNode(verseNode.NodeEntry.Node.ParentNode, verseEntry);
                     }
 
                     _result.VerseEntries.Add(verseEntry);
@@ -92,6 +95,24 @@ namespace BibleNote.Analytics.Services.VerseParsing
                 else 
                     break;
             }
+        }
+
+        private void UpdateLinkNode(HtmlNode node, VerseEntryInfo verseEntry)
+        {
+            var hrefAttrName = "href";
+            var hrefAttrValue = $"bnVerse:{verseEntry.VersePointer}";           // todo: нужно вынести в сервис, который в том числе будут использовать все провайдеры
+
+            var hrefAttr = node.Attributes[hrefAttrName];
+
+            if (hrefAttr != null)
+                hrefAttr.Value = hrefAttrValue; 
+            else
+                node.Attributes.Add(hrefAttrName, hrefAttrValue);
+        }
+
+        private bool NodeIsLink(HtmlNode node)
+        {
+            return node.NodeType == HtmlNodeType.Element && node.Name == "a";
         }
 
         private void InsertVerseLink(VerseInNodeEntry verseInNodeEntry, VerseEntryInfo verseEntry)

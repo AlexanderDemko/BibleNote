@@ -6,44 +6,45 @@ using System.Text;
 using System.Threading.Tasks;
 using BibleNote.Analytics.Models.Common;
 using BibleNote.Analytics.Contracts.ParallelVerses;
+using BibleNote.Analytics.Contracts.Environment;
 
 namespace BibleNote.Analytics.Services.VerseParsing
 {
     public class VerseCorrectionService : IVerseCorrectionService
     {
         private IBibleParallelTranslationConnectorManager _bibleParallelTranslationConnectorManager;
+        private IConfigurationManager _configurationManager;
 
-        public VerseCorrectionService(IBibleParallelTranslationConnectorManager bibleParallelTranslationConnectorManager)
+        public VerseCorrectionService(IBibleParallelTranslationConnectorManager bibleParallelTranslationConnectorManager, IConfigurationManager configurationManager)
         {
             _bibleParallelTranslationConnectorManager = bibleParallelTranslationConnectorManager;
+            _configurationManager = configurationManager;
         }
 
-        public void ConvertToMainModuleVerse(VersePointer versePointer)
+        public bool CheckAndCorrectVerse(VersePointer versePointer)
         {
-            //if (!string.IsNullOrEmpty(versePointer.ModuleName))
-            //{
-            //    var parallelVersePointer = _bibleParallelTranslationConnectorManager.GetParallelVersePointer(
-            //                                    ToSimpleVersePointer(), moduleName, SettingsManager.Instance.ModuleShortName);
+            var verseIsCorrect = true;
 
-            //    versePointer.OriginalBookName = this.Book.Name;
-            //    this.Chapter = parallelVersePointer.Chapter;
-            //    this.Verse = parallelVersePointer.Verse;
+            if (!string.IsNullOrEmpty(versePointer.ModuleName))            
+                ConvertToMainModuleVerse(versePointer);                            
 
-            //    if (IsMultiVerse)
-            //    {
-            //        parallelVersePointer = _bibleParallelTranslationConnectorManager.GetParallelVersePointer(
-            //                                    new SimpleVersePointer(
-            //                                                        this.Book.Index,
-            //                                                        this.TopChapter.GetValueOrDefault(this.Chapter.Value),
-            //                                                        new VerseNumber(this.TopVerse.GetValueOrDefault(this.Verse.Value))),
-            //                                    moduleName, SettingsManager.Instance.ModuleShortName);
+            return verseIsCorrect;
+        }
 
-            //        if (TopChapter.HasValue)
-            //            _topChapter = parallelVersePointer.Chapter;
-            //        if (TopVerse.HasValue)
-            //            _topVerse = parallelVersePointer.Verse;
-            //    }
-            //}
+        private void ConvertToMainModuleVerse(VersePointer versePointer)
+        {
+            var parallelVersePointer = _bibleParallelTranslationConnectorManager.GetParallelVersePointer(
+                                                versePointer.ToModuleVersePointer(), versePointer.ModuleName, _configurationManager.ModuleShortName);
+
+            versePointer.VerseNumber = parallelVersePointer.VerseNumber;                
+
+            if (versePointer.IsMultiVerse != MultiVerse.None)
+            {
+                parallelVersePointer = _bibleParallelTranslationConnectorManager.GetParallelVersePointer(
+                                            versePointer.ToModuleTopVersePointer(), versePointer.ModuleName, _configurationManager.ModuleShortName);
+
+                versePointer.TopVerseNumber = parallelVersePointer.TopVerseNumber;
+            }
         }
     }
 }

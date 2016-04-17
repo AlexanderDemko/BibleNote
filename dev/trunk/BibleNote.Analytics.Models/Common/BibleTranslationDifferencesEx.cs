@@ -70,7 +70,7 @@ namespace BibleNote.Analytics.Models.Common
     {
         public ParallelBibleInfo BibleVersesDifferences { get; set; }
 
-        public BibleTranslationDifferencesEx(BibleTranslationDifferences translationDifferences)
+        public BibleTranslationDifferencesEx(BibleTranslationDifferences translationDifferences, Func<string, ModuleVersePointer> verseFactory)
         {
             BibleVersesDifferences = new ParallelBibleInfo();
 
@@ -80,17 +80,17 @@ namespace BibleNote.Analytics.Models.Common
 
                 foreach (var bookDifference in bookDifferences.Differences)
                 {
-                    ProcessBookDifference(bookDifferences.BookIndex, bookDifference);
+                    ProcessBookDifference(bookDifferences.BookIndex, bookDifference, verseFactory);
                 }
             }
         }
 
-        private void ProcessBookDifference(int bookIndex, BibleBookDifference bookDifference)
+        private void ProcessBookDifference(int bookIndex, BibleBookDifference bookDifference, Func<string, ModuleVersePointer> verseFactory)
         {
             int? valueVersesCount = string.IsNullOrEmpty(bookDifference.ValueVersesCount) ? (int?)null : int.Parse(bookDifference.ValueVersesCount);
 
             var baseVersesFormula = new BibleTranslationDifferencesBaseVersesFormula(bookIndex, bookDifference.BaseVerses, bookDifference.ParallelVerses,
-                                                    bookDifference.CorrespondenceType, bookDifference.SkipCheck, bookDifference.EmptyVerse);
+                                                    bookDifference.CorrespondenceType, bookDifference.SkipCheck, bookDifference.EmptyVerse, verseFactory);
             var parallelVersesFormula = new BibleTranslationDifferencesParallelVersesFormula(bookDifference.ParallelVerses, baseVersesFormula,
                 bookDifference.CorrespondenceType, valueVersesCount, bookDifference.SkipCheck, bookDifference.EmptyVerse);
 
