@@ -455,15 +455,14 @@ namespace BibleNote.Analytics.Models.Common
 
         public new virtual VersesListInfo<ModuleVersePointer> ExpandMultiVerse()
         {
-            var result = new VersesListInfo<ModuleVersePointer>();
+            Validate();
 
-            if (IsMultiVerse != MultiVerse.SeveralChapters)
+            var result = new VersesListInfo<ModuleVersePointer>();
+            
+            for (var i = Verse; i <= MostTopVerse; i++)
             {
-                for (var i = Verse; i <= MostTopVerse; i++)
-                {
-                    result.VersePointers.Add(new ModuleVersePointer(BookIndex, Chapter, i) 
-                                                    { IsEmpty = IsEmpty, SkipCheck = SkipCheck, EmptyVerseContent = EmptyVerseContent });
-                }
+                result.VersePointers.Add(new ModuleVersePointer(BookIndex, Chapter, i) 
+                                                { IsEmpty = IsEmpty, SkipCheck = SkipCheck, EmptyVerseContent = EmptyVerseContent });
             }
 
             result.VersesCount = result.VersePointers.Count();
