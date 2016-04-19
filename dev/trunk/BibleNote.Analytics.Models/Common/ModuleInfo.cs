@@ -283,18 +283,19 @@ namespace BibleNote.Analytics.Models.Common
 
         private Dictionary<string, Abbreviation> GetAllAbbreviations()
         {
-            var result = new Dictionary<string, Abbreviation>(StringComparer.OrdinalIgnoreCase);
-            var nameLower = Name.ToLowerInvariant();
-
-            result.Add(nameLower, new Abbreviation(nameLower) { IsFullBookName = true });
+            var result = new Dictionary<string, Abbreviation>(StringComparer.OrdinalIgnoreCase);           
 
             Abbreviations.ForEach(abbr => abbr.Value = abbr.Value.ToLowerInvariant());  // вдруг где-то в модуле случайно указали с большой буквы            
 
-            foreach (var abbr in Abbreviations.Where(abbr => abbr.Value != nameLower))
+            foreach (var abbr in Abbreviations)
             {
                 if (!result.ContainsKey(abbr.Value))
                     result.Add(abbr.Value, abbr);
-            }            
+            }
+
+            var nameLower = Name.ToLowerInvariant();
+            if (!result.ContainsKey(nameLower))
+                result.Add(nameLower, new Abbreviation(nameLower) { IsFullBookName = true });
 
             return result;
         }
