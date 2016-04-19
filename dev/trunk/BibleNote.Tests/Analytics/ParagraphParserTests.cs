@@ -220,7 +220,7 @@ namespace BibleNote.Tests.Analytics
         [TestMethod]
         public void TestScenario12()
         {
-            CheckVerses("Ps 89:1-2", null, null, "Пс 88:1-3");
+            CheckVerses("Ps 89:1-2, Lev 14:56-57, Lev 14:57, Ps 19:5", null, null, "Пс 88:1-3", "Лев 14:55-56", "Лев 14:56", "Пс 18:6");
             CheckVerses("I Cor 6:7, II Tim 2:3", null, null, "1Кор 6:7", "2 Тим 2:3");
         }
 
@@ -241,7 +241,7 @@ namespace BibleNote.Tests.Analytics
         {
             var input = "в 1 Ин 1,2-3 и в Иисуса Навина 2-3 было написано про 1-е Кор 1,2-3,4-5;6-7,8-9,10 и в :7";
 
-            // todo: а нужно ли всё таки менять написание стихов (добавлять/удалять пробелы)??
+            // todo: а нужно ли всё таки менять написание стихов (добавлять/удалять пробелы)?? - надо вынести в опцию на уровне IDocumentNavigationProviderInstance
             //var expectedIfUseCommaDelimiter = "в 1 Ин 1:2-3 и в Иисуса Навина 2-3 было написано про 1-е Кор 1:2-3,4-5; 6-7, 8-9, 10 и в :7";
             //var expectedIfNotUseCommaDelimiter = "в 1 Ин 1, 2-3 и в Иисуса Навина 2-3 было написано про 1-е Кор 1, 2-3, 4-5; 6-7, 8-9, 10 и в :7";
 
@@ -341,7 +341,7 @@ namespace BibleNote.Tests.Analytics
         [TestMethod]
         public void TestScenario23()
         {
-            CheckVerses(".-5 Ин 1:5,6: вот", null, null, "Ин 1:5", "Ин 1:6");
+            CheckVerses(".-5 ин 1:5,6: вот", null, null, "Ин 1:5", "Ин 1:6");
             CheckVerses(".:5 Ин.  (5 : 7), Лк.   (6:7)", null, null, "Ин 5:7", "Лк 6:7");
         }
 
@@ -371,6 +371,7 @@ namespace BibleNote.Tests.Analytics
             expected = "<div><span></span><span></span><span></span><a href='bnVerse:Иоанна 5:6'>Ин 5:6</a></div>";
             CheckVerses(input, expected, null, "Ин 5:6");
         }
+
         [TestMethod]
         public void TestScenario27()
         {
@@ -394,6 +395,18 @@ namespace BibleNote.Tests.Analytics
             input = "<a>Ин 5:6</a>-7";
             expected = "<a href=\"bnVerse:Иоанна 5:6-7\">Ин 5:6-7</a>";
             CheckVerses(input, expected, null, "Ин 5:6-7");
+        }
+
+        [TestMethod]
+        public void TestScenario28()
+        {
+            CheckVerses("Иов. 4:5", null, null, "Иов 4:5");
+        }
+
+        [TestMethod]
+        public void TestScenario29()
+        {
+            CheckVerses("Быт 1:60", null, null);
         }
     }
 }

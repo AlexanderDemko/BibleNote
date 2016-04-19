@@ -15,11 +15,13 @@ namespace BibleNote.Analytics.Services.ParallelVerses
     {
         private IModulesManager _modulesManager;
         private IStringParser _stringParser;
+        private IConfigurationManager _configurationManager;
 
-        public BibleParallelTranslationConnectorManager(IModulesManager modulesManager, IStringParser stringParser)
+        public BibleParallelTranslationConnectorManager(IModulesManager modulesManager, IStringParser stringParser, IConfigurationManager configurationManager)
         {
             _modulesManager = modulesManager;
             _stringParser = stringParser;
+            _configurationManager = configurationManager;
         }
 
         private Dictionary<string, ParallelBibleInfo> _cache = new Dictionary<string, ParallelBibleInfo>();
@@ -28,11 +30,11 @@ namespace BibleNote.Analytics.Services.ParallelVerses
             return string.Format("{0}_{1}", baseModuleShortName, parallelModuleShortName).ToLower();
         }
 
-        public ModuleVersePointer GetParallelVersePointer(ModuleVersePointer baseVersePointer, string baseModuleShortName, string parallelModuleShortName)
+        public ModuleVersePointer GetParallelVersePointer(ModuleVersePointer baseVersePointer, string parallelModuleShortName)
         {
             ModuleVersePointer result = null;
 
-            var parallelBibleInfo = GetParallelBibleInfo(baseModuleShortName, parallelModuleShortName);
+            var parallelBibleInfo = GetParallelBibleInfo(parallelModuleShortName, _configurationManager.ModuleShortName);
             var parallelBookInfo = parallelBibleInfo[baseVersePointer.BookIndex];
             if (parallelBookInfo != null)
             {
@@ -78,14 +80,14 @@ namespace BibleNote.Analytics.Services.ParallelVerses
 
                 if (baseModuleShortName.ToLower() != parallelModuleShortName.ToLower())
                 {
-                    Func<string, ModuleVersePointer> verseFactory = s => 
+                    var verseFactory = new BibleTranslationDifferencesBaseVersesFormula.VerseFactory((s, bookIndex) => 
                     {
                         var verseEntry = _stringParser.TryGetVerse(s, 0);
                         if (verseEntry.VersePointerFound)
-                            return verseEntry.VersePointer.ToModuleVersePointer();
+                            return verseEntry.VersePointer.ToModuleVersePointer(false, bookIndex);
                         else
                             throw new NotSupportedException($"Verse formula is invalid: {s}");
-                    };
+                    });
 
                     var baseTranslationDifferencesEx = new BibleTranslationDifferencesEx(baseBookTranslationDifferences, verseFactory);
                     var parallelTranslationDifferencesEx = new BibleTranslationDifferencesEx(parallelBookTranslationDifferences, verseFactory);
