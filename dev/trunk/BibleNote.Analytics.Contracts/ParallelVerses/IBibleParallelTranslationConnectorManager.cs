@@ -10,6 +10,6 @@ namespace BibleNote.Analytics.Contracts.ParallelVerses
 
         ParallelBibleInfo GetParallelBibleInfo(string baseModuleShortName, string parallelModuleShortName, bool refreshCache = false);
 
-        ModuleVersePointer GetParallelVersePointer(ModuleVersePointer baseVersePointer, string baseModuleShortName, string parallelModuleShortName);
+        ModuleVersePointer GetParallelVersePointer(ModuleVersePointer baseVersePointer, string parallelModuleShortName);
     }
 }

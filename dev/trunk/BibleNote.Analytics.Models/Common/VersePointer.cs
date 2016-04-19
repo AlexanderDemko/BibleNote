@@ -334,10 +334,13 @@ namespace BibleNote.Analytics.Models.Common
             throw new NotImplementedException();
         }
 
-        public ModuleVersePointer ToModuleVersePointer()
+        public ModuleVersePointer ToModuleVersePointer(bool onlyFirstVerse, int? bookIndex = null)
         {   
-
-            return new ModuleVersePointer(Book != null ? Book.Index : 0, Chapter, Verse);
+            return new ModuleVersePointer(
+                bookIndex ?? (Book != null ? Book.Index : 0), 
+                Chapter, 
+                Verse, 
+                !onlyFirstVerse && IsMultiVerse == MultiVerse.OneChapter ? (int?)TopVerseNumber.Value.Verse : null);
         }
 
         public ModuleVersePointer ToModuleTopVersePointer()
@@ -396,9 +399,12 @@ namespace BibleNote.Analytics.Models.Common
             Validate();
         }
 
-        public ModuleVersePointer(int bookIndex, int chapter, int verse)
+        public ModuleVersePointer(int bookIndex, int chapter, int verse, int? topVerse = null)
             : base(bookIndex, chapter, verse)
         {
+            if (topVerse.HasValue)
+                TopVerseNumber = new VerseNumber(chapter, topVerse);
+
             Validate();
         }
 
@@ -451,11 +457,11 @@ namespace BibleNote.Analytics.Models.Common
         {
             var result = new VersesListInfo<ModuleVersePointer>();
 
-            if (IsMultiVerse == MultiVerse.OneChapter)
+            if (IsMultiVerse != MultiVerse.SeveralChapters)
             {
-                for (var i = Verse; i <= TopVerse; i++)
+                for (var i = Verse; i <= MostTopVerse; i++)
                 {
-                    result.VersePointers.Add(new ModuleVersePointer(BookIndex, Chapter, Verse) 
+                    result.VersePointers.Add(new ModuleVersePointer(BookIndex, Chapter, i) 
                                                     { IsEmpty = IsEmpty, SkipCheck = SkipCheck, EmptyVerseContent = EmptyVerseContent });
                 }
             }

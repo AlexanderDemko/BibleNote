@@ -12,13 +12,11 @@ namespace BibleNote.Analytics.Services.VerseParsing
 {
     public class VerseCorrectionService : IVerseCorrectionService
     {
-        private IBibleParallelTranslationConnectorManager _bibleParallelTranslationConnectorManager;
-        private IConfigurationManager _configurationManager;
+        private IBibleParallelTranslationConnectorManager _bibleParallelTranslationConnectorManager;        
 
-        public VerseCorrectionService(IBibleParallelTranslationConnectorManager bibleParallelTranslationConnectorManager, IConfigurationManager configurationManager)
+        public VerseCorrectionService(IBibleParallelTranslationConnectorManager bibleParallelTranslationConnectorManager)
         {
-            _bibleParallelTranslationConnectorManager = bibleParallelTranslationConnectorManager;
-            _configurationManager = configurationManager;
+            _bibleParallelTranslationConnectorManager = bibleParallelTranslationConnectorManager;            
         }
 
         public bool CheckAndCorrectVerse(VersePointer versePointer)
@@ -34,16 +32,16 @@ namespace BibleNote.Analytics.Services.VerseParsing
         private void ConvertToMainModuleVerse(VersePointer versePointer)
         {
             var parallelVersePointer = _bibleParallelTranslationConnectorManager.GetParallelVersePointer(
-                                                versePointer.ToModuleVersePointer(), versePointer.ModuleName, _configurationManager.ModuleShortName);
+                                                versePointer.ToModuleVersePointer(true), versePointer.ModuleName);
 
             versePointer.VerseNumber = parallelVersePointer.VerseNumber;                
 
             if (versePointer.IsMultiVerse != MultiVerse.None)
             {
                 parallelVersePointer = _bibleParallelTranslationConnectorManager.GetParallelVersePointer(
-                                            versePointer.ToModuleTopVersePointer(), versePointer.ModuleName, _configurationManager.ModuleShortName);
+                                            versePointer.ToModuleTopVersePointer(), versePointer.ModuleName);
 
-                versePointer.TopVerseNumber = parallelVersePointer.TopVerseNumber;
+                versePointer.TopVerseNumber = parallelVersePointer.VerseNumber;
             }
         }
     }

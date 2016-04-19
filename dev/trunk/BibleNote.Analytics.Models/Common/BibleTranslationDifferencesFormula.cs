@@ -27,6 +27,16 @@ namespace BibleNote.Analytics.Models.Common
 
     public class BibleTranslationDifferencesBaseVersesFormula : BibleTranslationDifferencesFormulaBase
     {
+        public class VerseFactory
+        {
+            public Func<string, int, ModuleVersePointer> Func { get; private set; }
+
+            public VerseFactory(Func<string, int, ModuleVersePointer> func)
+            {
+                Func = func;
+            }
+        }
+
         public int BookIndex { get; set; }
         protected ModuleVersePointer BaseVersePointer { get; set; }
         protected bool IsEmpty { get; set; }
@@ -75,7 +85,7 @@ namespace BibleNote.Analytics.Models.Common
 
 
         public BibleTranslationDifferencesBaseVersesFormula(int bookIndex, string baseVersesFormula, string parallelVersesFormula,
-            BibleBookDifference.CorrespondenceVerseType correspondenceType, bool skipCheck, bool emptyVerseContent, Func<string, ModuleVersePointer> verseFactory)
+            BibleBookDifference.CorrespondenceVerseType correspondenceType, bool skipCheck, bool emptyVerseContent, VerseFactory verseFactory)
             : base(baseVersesFormula)
         {
             this.BookIndex = bookIndex;
@@ -111,12 +121,12 @@ namespace BibleNote.Analytics.Models.Common
             return _allVerses;
         }
 
-        private void Initialize(string baseVersesFormula, Func<string, ModuleVersePointer> verseFactory)
+        private void Initialize(string baseVersesFormula, VerseFactory verseFactory)
         {
             if (baseVersesFormula.IndexOf('(') != -1)
                 throw new NotSupportedException(string.Format("Brackets in base formula is not supported yet: {0}", baseVersesFormula));
 
-            BaseVersePointer = verseFactory(baseVersesFormula);            
+            BaseVersePointer = verseFactory.Func(baseVersesFormula, BookIndex);            
             _allVerses = null;
         }
     }

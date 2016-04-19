@@ -70,7 +70,7 @@ namespace BibleNote.Analytics.Models.Common
     {
         public ParallelBibleInfo BibleVersesDifferences { get; set; }
 
-        public BibleTranslationDifferencesEx(BibleTranslationDifferences translationDifferences, Func<string, ModuleVersePointer> verseFactory)
+        public BibleTranslationDifferencesEx(BibleTranslationDifferences translationDifferences, BibleTranslationDifferencesBaseVersesFormula.VerseFactory verseFactory)
         {
             BibleVersesDifferences = new ParallelBibleInfo();
 
@@ -85,7 +85,7 @@ namespace BibleNote.Analytics.Models.Common
             }
         }
 
-        private void ProcessBookDifference(int bookIndex, BibleBookDifference bookDifference, Func<string, ModuleVersePointer> verseFactory)
+        private void ProcessBookDifference(int bookIndex, BibleBookDifference bookDifference, BibleTranslationDifferencesBaseVersesFormula.VerseFactory verseFactory)
         {
             int? valueVersesCount = string.IsNullOrEmpty(bookDifference.ValueVersesCount) ? (int?)null : int.Parse(bookDifference.ValueVersesCount);
 
