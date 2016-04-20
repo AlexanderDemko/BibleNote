@@ -6,28 +6,54 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using BibleNote.Analytics.Models.Scheme;
 
 namespace BibleNote.Analytics.Services.Environment
 {
     public class ApplicationManager : IApplicationManager
     {
-        public IModulesManager ModulesManager { get; set; }
+        private readonly IModulesManager _modulesManager;
 
         private ModuleInfo _currentModuleInfo;
+
+        private XMLBIBLE _currentBibleContent;
+
+        private object _locker = new object();
+
         public ModuleInfo CurrentModuleInfo
         {
-            get { return _currentModuleInfo; }
+            get
+            {
+                return _currentModuleInfo;
+            }
+        }
+
+        public XMLBIBLE CurrentBibleContent
+        {
+            get
+            {
+                if (_currentBibleContent == null)
+                {
+                    lock (_locker)
+                    {
+                        if (_currentBibleContent == null)
+                            _currentBibleContent = _modulesManager.GetCurrentBibleContent();
+                    }
+                }
+
+                return _currentBibleContent;
+            }
         }
 
         public ApplicationManager(IModulesManager modulesManager)
         {
-            ModulesManager = modulesManager;
+            _modulesManager = modulesManager;
             ReloadInfo();
         }
 
         public void ReloadInfo()
         {
-            _currentModuleInfo = ModulesManager.GetCurrentModuleInfo();
+            _currentModuleInfo = _modulesManager.GetCurrentModuleInfo();            
         }
     }
 }

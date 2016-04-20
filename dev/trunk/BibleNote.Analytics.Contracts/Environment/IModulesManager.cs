@@ -14,8 +14,7 @@ namespace BibleNote.Analytics.Contracts.Environment
         void CheckModule(string moduleDirectoryName, BibleNote.Analytics.Models.Common.ModuleType? moduleType = null);
         void DeleteModule(string moduleShortName);
         int GetBibleChaptersCount(XMLBIBLE bibleInfo, bool addBooksCount);
-        int GetBibleChaptersCount(string moduleShortName, bool addBooksCount);
-        int? GetChapterVersesCount(XMLBIBLE bibleIndo, SimpleVersePointer chapterVersePointer);
+        int GetBibleChaptersCount(string moduleShortName, bool addBooksCount);        
         XMLBIBLE GetCurrentBibleContent();
         string GetCurrentModuleDirectiory();
         ModuleInfo GetCurrentModuleInfo();

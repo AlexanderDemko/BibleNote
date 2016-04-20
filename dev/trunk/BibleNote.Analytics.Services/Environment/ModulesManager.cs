@@ -62,22 +62,8 @@ namespace BibleNote.Analytics.Services.Environment
 
         public ModuleInfo GetModuleInfo(string moduleShortName)
         {   
-            return GetModuleFile<ModuleInfo>(moduleShortName, SystemConstants.ManifestFileName);            
-            
-        }
-
-        public int? GetChapterVersesCount(XMLBIBLE bibleIndo, SimpleVersePointer chapterVersePointer)
-        {
-            var bookInfo = bibleIndo.Books.FirstOrDefault(b => b.Index == chapterVersePointer.BookIndex);
-            if (bookInfo != null)
-            {
-                var chapterInfo = bookInfo.Chapters.FirstOrDefault(c => c.Index == chapterVersePointer.Chapter);
-                if (chapterInfo != null)
-                    return chapterInfo.Verses.Count;
-            }
-
-            return null;
-        }
+            return GetModuleFile<ModuleInfo>(moduleShortName, SystemConstants.ManifestFileName);                        
+        } 
 
         public int GetBibleChaptersCount(string moduleShortName, bool addBooksCount)
         {            

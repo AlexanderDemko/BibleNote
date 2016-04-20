@@ -112,6 +112,7 @@ namespace BibleNote.Tests.Analytics
             CheckVerseExpanding("Ин 1-2", 2, "Ин 1", "Ин 2");
             CheckVerseExpanding("Ин 1-2:2", 53, "Ин 1", "Ин 2:1", "Ин 2:2");
             CheckVerseExpanding("Ин 1:2-3", 2, "Ин 1:2", "Ин 1:3");
+            CheckVerseExpanding("Ин 3:30-40", 7, "Ин 3:30", "Ин 3:31", "Ин 3:32", "Ин 3:33", "Ин 3:34", "Ин 3:35", "Ин 3:36");
         }      
     }
 }

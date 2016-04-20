@@ -241,7 +241,7 @@ namespace BibleNote.Tests.Analytics
         {
             var input = "в 1 Ин 1,2-3 и в Иисуса Навина 2-3 было написано про 1-е Кор 1,2-3,4-5;6-7,8-9,10 и в :7";
 
-            // todo: а нужно ли всё таки менять написание стихов (добавлять/удалять пробелы)?? - надо вынести в опцию на уровне IDocumentNavigationProviderInstance
+            // todo: а нужно ли всё таки менять написание стихов (добавлять/удалять пробелы)?? - надо вынести в опцию на уровне INavigationProviderInstance
             //var expectedIfUseCommaDelimiter = "в 1 Ин 1:2-3 и в Иисуса Навина 2-3 было написано про 1-е Кор 1:2-3,4-5; 6-7, 8-9, 10 и в :7";
             //var expectedIfNotUseCommaDelimiter = "в 1 Ин 1, 2-3 и в Иисуса Навина 2-3 было написано про 1-е Кор 1, 2-3, 4-5; 6-7, 8-9, 10 и в :7";
 
@@ -318,16 +318,16 @@ namespace BibleNote.Tests.Analytics
         [TestMethod]
         public void TestScenario21()
         {
-            var input = "Ис 43,4,45,5,46,7";
-            var expectedIfNotUseCommaDelimiter = "<a href='bnVerse:Исаия 43'>Ис 43</a>,4,45,5,46,7";
-            var expectedIfUseCommaDelimiter = "<a href='bnVerse:Исаия 43:4'>Ис 43,4</a>,<a href='bnVerse:Исаия 43:45'>45</a>,5,46,7";
+            var input = "Ис 43,4,25,5,26,7";
+            var expectedIfNotUseCommaDelimiter = "<a href='bnVerse:Исаия 43'>Ис 43</a>,4,25,5,26,7";
+            var expectedIfUseCommaDelimiter = "<a href='bnVerse:Исаия 43:4'>Ис 43,4</a>,<a href='bnVerse:Исаия 43:25'>25</a>,5,26,7";
 
 
             _mockConfigurationManager.UseCommaDelimiter = false;
             CheckVerses(input, expectedIfNotUseCommaDelimiter, null, "Ис 43");
 
             _mockConfigurationManager.UseCommaDelimiter = true;
-            CheckVerses(input, expectedIfUseCommaDelimiter, null, "Ис 43:4", "Ис 43:45");
+            CheckVerses(input, expectedIfUseCommaDelimiter, null, "Ис 43:4", "Ис 43:25");
         }
 
         [TestMethod]
@@ -383,7 +383,7 @@ namespace BibleNote.Tests.Analytics
             expected = "<a href='bnVerse:Иоанна 5:6-7'>Ин 5:6-7</a>";
             CheckVerses(input, expected, null, "Ин 5:6-7");
 
-            //todo: это надо будет вынести в отдельную опцию на увроне DocumentProviderInstance - нужно ли менять чужие ссылки
+            //todo: это надо будет вынести в отдельную опцию на увроне INavigationProviderInstance - нужно ли менять чужие ссылки
             input = "<a href='ya.ru'>Ин 5:6</a>-7";
             expected = "<a href='bnVerse:Иоанна 5:6-7'>Ин 5:6-7</a>";
             CheckVerses(input, expected, null, "Ин 5:6-7");
@@ -401,12 +401,15 @@ namespace BibleNote.Tests.Analytics
         public void TestScenario28()
         {
             CheckVerses("Иов. 4:5", null, null, "Иов 4:5");
+            CheckVerses("Бытие. 4:5", null, null);
         }
 
         [TestMethod]
         public void TestScenario29()
         {
-            CheckVerses("Быт 1:60", null, null);
+            CheckVerses("Быт 1:60, Ин 3:37, Ин 22, Ин 22:1", null, null);
+            CheckVerses("Ин 3:1, Ин 3:36", null, null, "Ин 3:1", "Ин 3:36");
+            CheckVerses("Ин 3:30-40", null, null, "Ин 3:30-40");
         }
     }
 }
