@@ -306,7 +306,7 @@ namespace BibleNote.Tests.Analytics
         public void TestScenario19()
         {
             CheckVerses("Иуда 14,15", null, null, "Иуд 1:14", "Иуд 1:15");
-            CheckVerses("2Ин2,3Ин3", /*"2Ин 2,3Ин 3"*/ null, null, "2Ин 1:2", "3Ин 1:3");
+            CheckVerses("2Ин2-3,3Ин3", /*"2Ин 2,3Ин 3"*/ null, null, "2Ин 1:2-3", "3Ин 1:3");
         }
 
         [TestMethod]
