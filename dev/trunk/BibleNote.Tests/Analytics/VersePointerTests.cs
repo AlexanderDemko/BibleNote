@@ -84,12 +84,6 @@ namespace BibleNote.Tests.Analytics
         }
 
         [TestMethod]
-        public void TestOneChapteredBookVerseParsing()
-        {
-            CheckVerseParsing("Иуда 14", new SimpleVersePointer(65, 1, 14));
-        }
-
-        [TestMethod]
         public void TestMultiVerseParse()
         {
             CheckVerseParsing("Ин 3:10-17", new SimpleVersePointer(43, new VerseNumber(3, 10), new VerseNumber(3, 17)));

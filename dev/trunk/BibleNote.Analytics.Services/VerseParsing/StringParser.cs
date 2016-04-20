@@ -18,33 +18,38 @@ namespace BibleNote.Analytics.Services.VerseParsing
     /// </summary>
     public class StringParser : IStringParser
     {
-        private IConfigurationManager _configurationManager;
+        private readonly IModulesManager _modulesManager;
 
-        private IModulesManager _modulesManager;
+        private readonly IApplicationManager _applicationManager;
 
-        private IApplicationManager _applicationManager;
+        private readonly IConfigurationManager _configurationManager;
 
-        public StringParser(IConfigurationManager configurationManager, IModulesManager modulesManager, IApplicationManager applicationManager)
-        {
-            _configurationManager = configurationManager;
+        public StringParser(IModulesManager modulesManager, IApplicationManager applicationManager, IConfigurationManager configurationManager)
+        {            
             _modulesManager = modulesManager;
             _applicationManager = applicationManager;
+            _configurationManager = configurationManager;
         }
 
         public VerseEntryInfo TryGetVerse(string text, int startIndex)
+        {
+            return TryGetVerse(text, startIndex, _configurationManager.UseCommaDelimiter);
+        }
+
+        public VerseEntryInfo TryGetVerse(string text, int startIndex, bool useCommaDelimiter)
         {   
             VerseEntryInfo result = null;
 
             var indexOfDigit = StringUtils.GetNextIndexOfDigit(text, startIndex);
             while (indexOfDigit != -1)
             {
-                if (EntryIsLikeVerse(text, indexOfDigit))
+                if (EntryIsLikeVerse(text, indexOfDigit, useCommaDelimiter))
                 {
                     var actualStringStartIndex = indexOfDigit - _applicationManager.CurrentModuleInfo.MaxBookNameLength - 2;
                     if (actualStringStartIndex < startIndex) 
                         actualStringStartIndex = startIndex;
                     
-                    result = TryGetVerseEntry(text, actualStringStartIndex, indexOfDigit);                    
+                    result = TryGetVerseEntry(text, actualStringStartIndex, indexOfDigit, useCommaDelimiter);                    
                 }
 
                 if (result != null && result.VersePointerFound)
@@ -59,10 +64,10 @@ namespace BibleNote.Analytics.Services.VerseParsing
             return result;
         }
 
-        private VerseEntryInfo TryGetVerseEntry(string text, int startIndex, int indexOfDigit)
+        private VerseEntryInfo TryGetVerseEntry(string text, int startIndex, int indexOfDigit, bool useCommaDelimiter)
         {
             var bookEntry = TryGetBookName(text, startIndex, indexOfDigit);
-            var verseNumberEntry = TryGetVerseNumber(text, indexOfDigit, bookEntry != null ? _configurationManager.UseCommaDelimiter : false);      // запятую в качестве разделителя можно использовать только для BookChapterVerse
+            var verseNumberEntry = TryGetVerseNumber(text, indexOfDigit, bookEntry != null ? useCommaDelimiter : false);      // запятую в качестве разделителя можно использовать только для BookChapterVerse
             var topVerseNumberEntry = TryGetTopVerseNumber(text, verseNumberEntry.EndIndex + 1, verseNumberEntry.VerseNumber);
 
             var entryType = GetEntryType(bookEntry, verseNumberEntry);
@@ -95,8 +100,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
                     bookEntry != null ? bookEntry.ModuleName : null,
                     originalVerse,
                     verseNumberEntry.VerseNumber,
-                    topVerseNumberEntry != null ? topVerseNumberEntry.VerseNumber : (VerseNumber?)null)
-                { }                
+                    topVerseNumberEntry != null ? topVerseNumberEntry.VerseNumber : (VerseNumber?)null)                      
             };
 
             return result;
@@ -288,13 +292,13 @@ namespace BibleNote.Analytics.Services.VerseParsing
             return null;
         }
 
-        private bool EntryIsLikeVerse(string text, int indexOfDigit)
+        private bool EntryIsLikeVerse(string text, int indexOfDigit, bool useCommaDelimiter)
         {
             var prevChar = StringUtils.GetChar(text, indexOfDigit - 1);
             int indexOfChar;
             var nextChar = StringUtils.GetCharAfterNumber(text, indexOfDigit, out indexOfChar);
 
-            var result = (VerseUtils.IsStartVerseChar(prevChar, _configurationManager.UseCommaDelimiter) || char.IsLetter(prevChar))
+            var result = (VerseUtils.IsStartVerseChar(prevChar, useCommaDelimiter) || char.IsLetter(prevChar))
                  && (nextChar == default(char) || !(char.IsLetter(nextChar) || char.IsDigit(nextChar)));
 
             return result;

@@ -11,6 +11,7 @@ using BibleNote.Analytics.Contracts.VerseParsing;
 using BibleNote.Analytics.Contracts.Providers;
 using BibleNote.Analytics.Core.Exceptions;
 using BibleNote.Analytics.Core.Helpers;
+using BibleNote.Analytics.Contracts.Environment;
 
 namespace BibleNote.Analytics.Services.VerseParsing
 {
@@ -25,20 +26,23 @@ namespace BibleNote.Analytics.Services.VerseParsing
             internal int EndIndex { get; set; }            
         }
 
+        private readonly IStringParser _stringParser;
+
+        private readonly IVerseRecognitionService _verseRecognitionService;
+
+        private readonly IConfigurationManager _configurationManager;
+
         private IDocumentProvider _documentProvider;
-
-        private IStringParser _stringParser;
-
-        private IVerseRecognitionService _verseRecognitionService;
 
         private IDocumentParseContext _docParseContext;
         
         private ParagraphParseResult _result { get; set; }        
 
-        public ParagraphParser(IStringParser stringParser, IVerseRecognitionService verseRecognitionService)
+        public ParagraphParser(IStringParser stringParser, IVerseRecognitionService verseRecognitionService, IConfigurationManager configurationManager)
         {               
             _stringParser = stringParser;
-            _verseRecognitionService = verseRecognitionService;            
+            _verseRecognitionService = verseRecognitionService;
+            _configurationManager = configurationManager;
         }
 
         public void Init(IDocumentProvider documentProvider, IDocumentParseContext docParseContext)
@@ -72,8 +76,15 @@ namespace BibleNote.Analytics.Services.VerseParsing
             
             var skipNodes = 0;            
             while (verseEntry.VersePointerFound)
-            {                
-                if (_verseRecognitionService.TryRecognizeVerse(verseEntry, _docParseContext))
+            {
+                var verseWasRecognized = _verseRecognitionService.TryRecognizeVerse(verseEntry, _docParseContext);
+                if (!verseWasRecognized && _configurationManager.UseCommaDelimiter)
+                {
+                    verseEntry = _stringParser.TryGetVerse(parseString.Value, index, false);
+                    verseWasRecognized = _verseRecognitionService.TryRecognizeVerse(verseEntry, _docParseContext);
+                }
+
+                if (verseWasRecognized)
                 {
                     var verseNode = FindNodeAndMoveVerseTextInOneNodeIfNotReadonly(parseString, verseEntry, ref skipNodes);
 
