@@ -23,17 +23,14 @@ namespace BibleNote.Analytics.Services.VerseParsing
 
         public bool CheckAndCorrectVerse(VersePointer versePointer)
         {
-            var verseIsCorrect = true;
-
             if (!string.IsNullOrEmpty(versePointer.ModuleName))            
                 ConvertToMainModuleVerse(versePointer);
 
             if (!VerseExists(versePointer))
-                verseIsCorrect = false;
+                return false;            
 
-            return verseIsCorrect;
+            return true;
         }
-
 
         /// <summary>
         /// Проверяем только первый стих, если IsMultiVerse
@@ -51,6 +48,17 @@ namespace BibleNote.Analytics.Services.VerseParsing
                         || versePointer.Verse <= book.Chapters[versePointer.Chapter - 1].Verses.Count)
                         return true;
                 }                
+                else
+                {
+                    if (book.Chapters.Count == 1 && versePointer.VerseNumber.IsChapter)
+                    {
+                        if (versePointer.Chapter <= book.Chapters[0].Verses.Count)
+                        {
+                            versePointer.MoveChapterToVerse(1);
+                            return true;
+                        }
+                    }
+                }
             }
 
             return false;

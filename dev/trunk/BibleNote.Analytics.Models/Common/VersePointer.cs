@@ -197,7 +197,11 @@ namespace BibleNote.Analytics.Models.Common
                 TopVerseNumber = new VerseNumber(newChapter, TopVerseNumber.Value.Verse);
         }
 
-        public virtual void MoveChapterToVerse(int newChapter)           // когда изначально не было понятно, стих это или глава (например ",5-6");
+        /// <summary>
+        /// Когда изначально не было понятно, стих это или глава (например ",5-6"), или когда "Иуд 5-6".
+        /// </summary>
+        /// <param name="newChapter"></param>
+        public virtual void MoveChapterToVerse(int newChapter)           
         {
             VerseNumber = new VerseNumber(newChapter, VerseNumber.Chapter);
             if (TopVerseNumber.HasValue && TopVerseNumber.Value.IsChapter)
