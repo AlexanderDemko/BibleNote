@@ -14,16 +14,16 @@ namespace BibleNote.Analytics.Services.VerseParsing
 {
     public class DocumentParser : IDocumentParser
     {
-        private IParagraphParser _paragraphParser;
+        private readonly IParagraphParser _paragraphParser;
 
-        private IDocumentProvider _documentProvider;
+        private readonly IDocumentParseContext _documentParseContext;
 
-        private IDocumentParseContext _documentParseContext;
+        private IDocumentProvider _documentProvider;        
 
-        public DocumentParser()
-        {
-            _documentParseContext = DIContainer.Resolve<IDocumentParseContext>();
-            _paragraphParser = DIContainer.Resolve<IParagraphParser>();
+        public DocumentParser(IParagraphParser paragraphParser, IDocumentParseContext documentParseContext)
+        {            
+            _paragraphParser = paragraphParser;
+            _documentParseContext = documentParseContext;
         }
 
         public void Init(IDocumentProvider documentProvider)
