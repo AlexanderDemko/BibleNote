@@ -1,4 +1,5 @@
 ﻿using BibleNote.Analytics.Models.Common;
+using BibleNote.Analytics.Models.Scheme;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,6 +11,8 @@ namespace BibleNote.Analytics.Contracts.Environment
     public interface IApplicationManager
     {
         ModuleInfo CurrentModuleInfo { get; }
+
+        XMLBIBLE CurrentBibleContent { get; }
 
         void ReloadInfo();
     }
