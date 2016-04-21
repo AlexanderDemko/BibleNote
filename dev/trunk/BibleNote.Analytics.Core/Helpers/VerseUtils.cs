@@ -9,7 +9,7 @@ namespace BibleNote.Analytics.Core.Helpers
 {
     public static class VerseUtils
     {             
-        private static char[] _wordDelmiters = new char[] { ' ', ',', '.', ':', '-', '/', '\\', '>', '<', '=', '(', ')', '*' };
+        private static char[] _wordDelmiters = new char[] { ' ', ',', '.', ':', '-', '/', '\\', '>', '<', '=', '(', ')', '*', '\'', '"' };
         private static char[] _midVerseChars = new char[] { '.', ' ', '(' };  // допустимые символы между книгой и главой.
         private static char[] _dashes = new char[] { '-', '—', '‑', '–', '−' };
         private static char[] _startVerseAdditionalChars = new char[] { ',', ';', default(char) };
