@@ -80,7 +80,10 @@ namespace BibleNote.Analytics.Services.VerseParsing
 
             var entryStartIndex = bookEntry != null ? bookEntry.StartIndex : verseNumberEntry.StartIndex;
             var entryEndIndex = verseNumberEntry != null ? (topVerseNumberEntry ?? verseNumberEntry).EndIndex : indexOfDigit;
-            var originalVerse = text.Substring(entryStartIndex, entryEndIndex - entryStartIndex + 1);            
+
+            // Если проверок будет больше, надо будет, наверное, сделать StringParser TransientLifetimeManager и вынести эту логику отдельно.
+            if (StringUtils.GetChar(text, entryEndIndex + 1) == ')' && StringUtils.GetChar(text, indexOfDigit - 1) == '(')
+                entryEndIndex++;
 
             if (verseNumberEntry.IsVerse)       // например, ":5-7"
             {
@@ -88,7 +91,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
                 if (topVerseNumberEntry != null)
                     topVerseNumberEntry.VerseNumber = new VerseNumber(0, topVerseNumberEntry.VerseNumber.Chapter);
             }
-
+            
             var result = new VerseEntryInfo()
             {                
                 EntryType = GetEntryType(bookEntry, verseNumberEntry),  // нужно заново пересчитать, так как могло измениться в verseNumberEntry.CanBeJustNumber
@@ -98,7 +101,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
                 VersePointer = new VersePointer(
                     bookEntry != null ? bookEntry.BookInfo : null, 
                     bookEntry != null ? bookEntry.ModuleName : null,
-                    originalVerse,
+                    text.Substring(entryStartIndex, entryEndIndex - entryStartIndex + 1),
                     verseNumberEntry.VerseNumber,
                     topVerseNumberEntry != null ? topVerseNumberEntry.VerseNumber : (VerseNumber?)null)                      
             };
@@ -258,8 +261,10 @@ namespace BibleNote.Analytics.Services.VerseParsing
             while (endIndex > 0 && !char.IsLetter(text[endIndex]))
             {
                 if (VerseUtils.IsMidVerseChar(text[endIndex]) && indexOfDigit - endIndex <= (maxMidSymbols + 1))
+                {
                     endIndex--;
-                else 
+                }
+                else
                     break;
             }
 

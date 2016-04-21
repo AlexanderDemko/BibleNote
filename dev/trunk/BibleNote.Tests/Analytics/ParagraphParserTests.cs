@@ -335,7 +335,7 @@ namespace BibleNote.Tests.Analytics
         public void TestScenario22()
         {
             var input = "Не понимает 'Луки 21-я глава', '1Кор. 1:29 ; 3:21; 4:7', 'В Первом послании к Коринфянам (10:31)'";
-            var expected = "d";
+            var expected = "Не понимает '<a href='bnVerse:Луки 21'>Луки 21</a>-я глава', '<a href='bnVerse:1Коринфянам 1:29'>1Кор. 1:29</a> ; <a href='bnVerse:1Коринфянам 3:21'>3:21</a>; <a href='bnVerse:1Коринфянам 4:7'>4:7</a>', 'В <a href='bnVerse:1Коринфянам 10:31'>Первом послании к Коринфянам (10:31)</a>'";
             CheckVerses(input, expected, null, "Лк 21", "1Кор 1:29", "1Кор 3:21", "1Кор 4:7", "1Кор 10:31");
         }
 
