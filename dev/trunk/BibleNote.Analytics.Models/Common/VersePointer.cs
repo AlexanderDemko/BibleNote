@@ -90,11 +90,13 @@ namespace BibleNote.Analytics.Models.Common
     public class VersesListInfo<T> where T : SimpleVersePointer
     {
         public List<T> VersePointers { get; internal set; }
-        public int VersesCount { get; internal set; }
+        public List<T> NotFoundVersePointers { get; internal set; }
+        public int VersesCount { get; set; }
 
         public VersesListInfo()
         {
             this.VersePointers = new List<T>();
+            this.NotFoundVersePointers = new List<T>();
         }
     }
 
@@ -160,6 +162,14 @@ namespace BibleNote.Analytics.Models.Common
                 }
                 else
                     return MultiVerse.None;
+            }
+        }
+
+        public bool IsChapter
+        {
+            get
+            {
+                return VerseNumber.IsChapter && (!TopVerseNumber.HasValue || TopVerseNumber.Value.IsChapter);                    
             }
         }
         
@@ -260,12 +270,7 @@ namespace BibleNote.Analytics.Models.Common
         }
 
         protected virtual void CopyPropertiesTo(SimpleVersePointer verse)
-        { }
-
-        public virtual VersesListInfo<SimpleVersePointer> ExpandMultiVerse()
-        {
-            throw new InvalidOperationException("Can be called only in derived class.");
-        }       
+        { }           
     }  
 
     [Serializable]
@@ -305,7 +310,7 @@ namespace BibleNote.Analytics.Models.Common
         /// </summary>
         public VersePointer ParentVersePointer { get; set; }
 
-        public VersePointer(BibleBookInfo bookInfo, string moduleName, string originalVerseName, VerseNumber verseNumber, VerseNumber? topVerseNumber)
+        public VersePointer(BibleBookInfo bookInfo, string moduleName, string originalVerseName, VerseNumber verseNumber, VerseNumber? topVerseNumber = null)
             : base(bookInfo != null ? bookInfo.Index : 0, verseNumber, topVerseNumber)
         {
             Book = bookInfo;
@@ -326,12 +331,7 @@ namespace BibleNote.Analytics.Models.Common
                 return OriginalVerseName;
 
             return ToString();
-        }
-
-        public new virtual VersesListInfo<VersePointer> ExpandMultiVerse()
-        {
-            throw new NotImplementedException();
-        }
+        }        
 
         protected override void CopyPropertiesTo(SimpleVersePointer verse)
         {
@@ -457,7 +457,7 @@ namespace BibleNote.Analytics.Models.Common
             }
         }        
 
-        public new virtual VersesListInfo<ModuleVersePointer> ExpandMultiVerse()
+        public virtual VersesListInfo<ModuleVersePointer> ExpandMultiVerse()
         {
             Validate();
 
