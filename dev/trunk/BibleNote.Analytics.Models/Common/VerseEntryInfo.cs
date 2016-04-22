@@ -68,9 +68,9 @@ namespace BibleNote.Analytics.Models.Common
     {
         None = 0,
         BookChapter = 1,
-        BookChapterVerse = 2,                
-        Chapter = 3,
-        ChapterVerse = 4,
+        BookChapterVerse = 2,
+        ChapterVerse = 3,
+        Chapter = 4,        
         Verse = 5,
         ChapterOrVerse = 6
     }

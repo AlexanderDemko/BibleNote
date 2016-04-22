@@ -401,7 +401,7 @@ namespace BibleNote.Tests.Analytics
         [TestMethod]
         public void TestScenario28()
         {
-            CheckVerses("Иов. 4:5", null, null, "Иов 4:5");
+            CheckVerses("Иов. 4:5 и  Наум. 1:3", null, null, "Иов 4:5", "Наум 1:3");
             CheckVerses("Бытие. 4:5", null, null);
         }
 
@@ -411,6 +411,12 @@ namespace BibleNote.Tests.Analytics
             CheckVerses("Быт 1:60, Ин 3:37, Ин 22, Ин 22:1", null, null);
             CheckVerses("Ин 3:1, Ин 3:36", null, null, "Ин 3:1", "Ин 3:36");
             CheckVerses("Ин 3:30-40", null, null, "Ин 3:30-40");
+        }
+
+        [TestMethod]
+        public void TestScenario30()
+        {
+            CheckVerses("Иуд 9,1 Фесс. 4:16", null, null, "Иуд 1:9", "1Фес 4:16");
         }
     }
 }

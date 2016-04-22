@@ -11,6 +11,6 @@ namespace BibleNote.Analytics.Contracts.VerseParsing
     {
         VerseEntryInfo TryGetVerse(string text, int index);
 
-        VerseEntryInfo TryGetVerse(string text, int index, bool useCommaDelimiter);
+        VerseEntryInfo TryGetVerse(string text, int startIndex, int leftBoundary, bool useCommaDelimiter);
     }
 }

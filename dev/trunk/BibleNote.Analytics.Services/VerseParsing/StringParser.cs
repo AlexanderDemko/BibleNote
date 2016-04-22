@@ -33,10 +33,10 @@ namespace BibleNote.Analytics.Services.VerseParsing
 
         public VerseEntryInfo TryGetVerse(string text, int startIndex)
         {
-            return TryGetVerse(text, startIndex, _configurationManager.UseCommaDelimiter);
+            return TryGetVerse(text, startIndex, startIndex, _configurationManager.UseCommaDelimiter);
         }
 
-        public VerseEntryInfo TryGetVerse(string text, int startIndex, bool useCommaDelimiter)
+        public VerseEntryInfo TryGetVerse(string text, int startIndex, int leftBoundary, bool useCommaDelimiter)
         {   
             VerseEntryInfo result = null;
 
@@ -46,8 +46,8 @@ namespace BibleNote.Analytics.Services.VerseParsing
                 if (EntryIsLikeVerse(text, indexOfDigit, useCommaDelimiter))
                 {
                     var actualStringStartIndex = indexOfDigit - _applicationManager.CurrentModuleInfo.MaxBookNameLength - 2;
-                    if (actualStringStartIndex < startIndex) 
-                        actualStringStartIndex = startIndex;
+                    if (actualStringStartIndex < leftBoundary) 
+                        actualStringStartIndex = leftBoundary;
                     
                     result = TryGetVerseEntry(text, actualStringStartIndex, indexOfDigit, useCommaDelimiter);                    
                 }
