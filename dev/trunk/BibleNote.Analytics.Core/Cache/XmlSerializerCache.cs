@@ -10,7 +10,7 @@ namespace BibleNote.Analytics.Core.Cache
     public static class XmlSerializerCache
     {
         private static volatile Dictionary<Type, XmlSerializer> _cacheItems = new Dictionary<Type, XmlSerializer>();
-        private static object _locker = new object();
+        private static readonly object _locker = new object();
 
         public static Dictionary<Type, XmlSerializer> CacheItems
         {

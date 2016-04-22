@@ -273,15 +273,14 @@ namespace BibleNote.Analytics.Services.VerseParsing
 
         private BookEntry GetBookName(string text, bool endsWithDot)
         {
-            var index = -1;            
-            string moduleName;
+            var index = -1;                        
             var startIndex = 0;
 
             do
             {
-                var bibleBookInfo = _applicationManager.CurrentModuleInfo.GetBibleBook(text, endsWithDot, out moduleName);
-                if (bibleBookInfo != null)
-                    return new BookEntry() { BookInfo = bibleBookInfo, ModuleName = moduleName, StartIndex = startIndex };
+                var abbreviation = _applicationManager.CurrentModuleInfo.GetBibleBook(text, endsWithDot);
+                if (abbreviation != null)
+                    return new BookEntry() { BookInfo = abbreviation.BibleBook, ModuleName = abbreviation.ModuleName, StartIndex = startIndex };
                 else
                 {
                     index = text.IndexOfAny(VerseUtils.WordDelimiters);

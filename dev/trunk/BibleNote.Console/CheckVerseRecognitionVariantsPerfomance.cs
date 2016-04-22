@@ -104,9 +104,9 @@ namespace BibleNoteConsole
 
             do
             {
-                var bibleBookInfo = _moduleInfo.GetBibleBook(text, false, out moduleName);    
-                if (bibleBookInfo != null)                
-                    return bibleBookInfo.Name;
+                var abbreviation = _moduleInfo.GetBibleBook(text, false);    
+                if (abbreviation != null)                
+                    return abbreviation.BibleBook.Name;
                 else
                 {   
                     index = text.IndexOfAny(new char[] { ' ', ',', '.', ':', '-', '/', '\\', '>', '<', '=' });

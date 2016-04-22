@@ -125,63 +125,44 @@ namespace BibleNote.Analytics.Models.Common
         /// <param name="s">Строка, которая предположительно представляет собой название книги. Ни одного лишнего сивола не должно быть.</param>
         /// <param name="endsWithDot">Методу передаётся уже стримленная строка. Потому отдельно передаётся: заканчивалось ли название книги на точку. Если имя книги было полное (а не сокращённое) и оно окончивалось на точку, то не считаем это верной записью.</param>
         /// <returns></returns>
-        public BibleBookInfo GetBibleBook(string s, bool endsWithDot, out string moduleName)
+        public Abbreviation GetBibleBook(string s, bool endsWithDot)
         {
-            if (s.Length == 0)
-            {
-                moduleName = null;
-                return null;
-            }
+            if (s.Length == 0)               
+                return null;            
 
             s = s.ToLowerInvariant();
 
-            var result = GetBibleBookByExactMatch(s, endsWithDot, out moduleName);
-
+            var result = GetBibleBookByExactMatch(s, endsWithDot);
             if (result == null && s.Length > 0
-                && (char.IsDigit(s[0]) || s[0] == 'i' || s.Contains(". "))  // может быть "I Cor 4:6", "Иис. Нав 1:1"
-                )
+                && (char.IsDigit(s[0]) || s[0] == 'i' || s.Contains(". ")))  // может быть "I Cor 4:6", "Иис. Нав 1:1"                
             {
                 s = s.Replace(" ", string.Empty); // чтоб находил "1 John", когда в списке сокращений только "1John"
-                result = GetBibleBookByExactMatch(s, endsWithDot, out moduleName);
+                result = GetBibleBookByExactMatch(s, endsWithDot);
             }
 
             return result;
         }
 
-        private BibleBookInfo GetBibleBookByExactMatch(string s, bool endsWithDot, out string moduleName)
-        {
-            moduleName = null;
+        private Abbreviation GetBibleBookByExactMatch(string s, bool endsWithDot)
+        {   
+            Abbreviation abbreviation = null;
 
-            foreach (var book in BibleStructure.BibleBooks)
+            if (BibleStructure.AllAbbreviations.ContainsKey(s))
             {
-                Abbreviation abbreviation = null;
-
-                if (book.AllAbbreviations.ContainsKey(s))
-                {
-                    abbreviation = book.AllAbbreviations[s];
-                    if (endsWithDot && abbreviation.IsFullBookName)
-                        abbreviation = null;
-                }
-
-                //var abbreviation = book.AllAbbreviationsWithSectionName
-                //                             .FirstOrDefault(abbr =>
-                //                                 abbr.Value.Equals(s, StringComparison.OrdinalIgnoreCase)
-                //                                 && (!endsWithDot || !abbr.IsFullBookName));
-
-                if (abbreviation != null)
-                {
-                    moduleName = abbreviation.ModuleName;
-                    return book;
-                }
+                abbreviation = BibleStructure.AllAbbreviations[s];
+                if (endsWithDot && abbreviation.IsFullBookName)
+                    abbreviation = null;
             }
 
-            return null;
+            return abbreviation;            
         }               
     }    
 
     [Serializable]
     public class BibleStructureInfo
     {
+        private static readonly object _locker = new object();
+
         [XmlAttribute]
         [DefaultValue("")]
         //[Obsolete()]  если пометить - то перестанут значения считываться из XML файла
@@ -215,11 +196,47 @@ namespace BibleNote.Analytics.Models.Common
         {
             this.BibleBooks = new List<BibleBookInfo>();
         }
+
+        private Dictionary<string, Abbreviation> _allAbbreviations;
+        [XmlIgnore]
+        public Dictionary<string, Abbreviation> AllAbbreviations
+        {
+            get
+            {
+                if (_allAbbreviations == null)
+                {
+                    lock (_locker)
+                    {
+                        if (_allAbbreviations == null)
+                            _allAbbreviations = GetAllAbbreviations();
+                    }
+                }
+
+                return _allAbbreviations;
+            }
+        }
+
+        private Dictionary<string, Abbreviation> GetAllAbbreviations()
+        {
+            var result = new Dictionary<string, Abbreviation>();
+
+            foreach (var bibleBook in BibleBooks)
+            {
+                foreach (var abbKVP in bibleBook.AllAbbreviations)
+                {                    
+                    result.Add(abbKVP.Key, abbKVP.Value);
+                }
+            }
+
+            return result;
+        }
     }
 
     [Serializable]
     public class BibleBookInfo
     {
+        private static readonly object _locker = new object();
+
         [XmlAttribute]
         public int Index { get; set; }
 
@@ -275,7 +292,13 @@ namespace BibleNote.Analytics.Models.Common
             get
             {
                 if (_allAbbreviations == null)
-                    _allAbbreviations = GetAllAbbreviations();
+                {
+                    lock (_locker)
+                    {
+                        if (_allAbbreviations == null)
+                            _allAbbreviations = GetAllAbbreviations();
+                    }
+                }
 
                 return _allAbbreviations;
             }
@@ -285,7 +308,11 @@ namespace BibleNote.Analytics.Models.Common
         {
             var result = new Dictionary<string, Abbreviation>(StringComparer.OrdinalIgnoreCase);           
 
-            Abbreviations.ForEach(abbr => abbr.Value = abbr.Value.ToLowerInvariant());  // вдруг где-то в модуле случайно указали с большой буквы            
+            Abbreviations.ForEach(abbr =>
+            {
+                abbr.Value = abbr.Value.ToLowerInvariant();     // вдруг где-то в модуле случайно указали с большой буквы            
+                abbr.BibleBook = this;
+            });  
 
             foreach (var abbr in Abbreviations)
             {
@@ -295,7 +322,7 @@ namespace BibleNote.Analytics.Models.Common
 
             var nameLower = Name.ToLowerInvariant();
             if (!result.ContainsKey(nameLower))
-                result.Add(nameLower, new Abbreviation(nameLower) { IsFullBookName = true });
+                result.Add(nameLower, new Abbreviation(nameLower) { IsFullBookName = true, BibleBook = this });
 
             return result;
         }
@@ -313,7 +340,10 @@ namespace BibleNote.Analytics.Models.Common
 
         [XmlAttribute]
         [DefaultValue("")]
-        public string ModuleName { get; set; }        
+        public string ModuleName { get; set; }
+
+        [XmlIgnore]
+        public BibleBookInfo BibleBook { get; set; }
 
         public Abbreviation()
         {
