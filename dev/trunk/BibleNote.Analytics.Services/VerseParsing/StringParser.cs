@@ -303,7 +303,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
             var nextChar = StringUtils.GetCharAfterNumber(text, indexOfDigit, out indexOfChar);
 
             var result = (VerseUtils.IsStartVerseChar(prevChar, useCommaDelimiter) || char.IsLetter(prevChar))
-                 && (nextChar == default(char) || !(char.IsLetter(nextChar) || char.IsDigit(nextChar)));
+                 && (nextChar == default(char) || !char.IsDigit(nextChar));
 
             return result;
         }
