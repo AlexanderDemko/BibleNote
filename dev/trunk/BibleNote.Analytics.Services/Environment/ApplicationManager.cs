@@ -18,7 +18,7 @@ namespace BibleNote.Analytics.Services.Environment
 
         private XMLBIBLE _currentBibleContent;
 
-        private object _locker = new object();
+        private static readonly object _locker = new object();
 
         public ModuleInfo CurrentModuleInfo
         {

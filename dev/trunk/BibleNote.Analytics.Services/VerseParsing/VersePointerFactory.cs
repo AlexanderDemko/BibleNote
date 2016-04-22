@@ -24,7 +24,8 @@ namespace BibleNote.Analytics.Services.VerseParsing
             if (verseEntry.VersePointerFound
                 && (verseEntry.EntryType == VerseEntryType.BookChapter || verseEntry.EntryType == VerseEntryType.BookChapterVerse)
                 && verseEntry.StartIndex == 0
-                && verseEntry.EndIndex == text.Length - 1)
+                //&& verseEntry.EndIndex == text.Length - 1
+                )
             {
                 return verseEntry.VersePointer;
             }

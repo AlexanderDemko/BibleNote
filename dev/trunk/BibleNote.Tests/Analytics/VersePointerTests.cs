@@ -61,22 +61,20 @@ namespace BibleNote.Tests.Analytics
             CheckVerseParsing("Ин 1: 1", new SimpleVersePointer(43, 1, 1));
         }
 
-        //todo: [TestMethod]
+        [TestMethod]
         public void TestExtendedParse()
         {
             CheckVerseParsing("2Петр (3:1)", new SimpleVersePointer(61, new VerseNumber(3, 1)));
             CheckVerseParsing("2Петр ( 3:1)", new SimpleVersePointer(61, new VerseNumber(3, 1)));
             CheckVerseParsing("2Петр ( 3:1 )", new SimpleVersePointer(61, new VerseNumber(3, 1)));
             CheckVerseParsing("2Петр (1-3)", new SimpleVersePointer(61, new VerseNumber(1), new VerseNumber(3)));
-            CheckVerseParsing("2-e Петр1,4 - 3:2", new SimpleVersePointer(61, new VerseNumber(1, 4), new VerseNumber(3, 2)));
-            CheckVerseParsing("2-е Петр1,4 - 3,2", new SimpleVersePointer(61, new VerseNumber(1, 4), new VerseNumber(3, 2)));
-            CheckVerseParsing("2-е Петр1, 4 - 3,2", new SimpleVersePointer(61, new VerseNumber(1, 4), new VerseNumber(3, 2)));
-            CheckVerseParsing("2-е Петр1, 4 - 3 ,2", new SimpleVersePointer(61, new VerseNumber(1, 4), new VerseNumber(3, 2)));
-            CheckVerseParsing("2-е Петр1, 4 - 3 , 2", new SimpleVersePointer(61, new VerseNumber(1, 4), new VerseNumber(3, 2)));
-            CheckVerseParsing("2-е Петр(1,4 - 3,2)", new SimpleVersePointer(61, new VerseNumber(1, 4), new VerseNumber(3, 2)));
-            CheckVerseParsing("2-ое Петра1,4 -  3,2", new SimpleVersePointer(61, new VerseNumber(1, 4), new VerseNumber(3, 2)));
-            CheckVerseParsing("2-oe Петра  1,4  -  3,2", new SimpleVersePointer(61, new VerseNumber(1, 4), new VerseNumber(3, 2)));
-            CheckVerseParsing("2-oe Петра ( 1,4  -  3,2 )", new SimpleVersePointer(61, new VerseNumber(1, 4), new VerseNumber(3, 2)));
+            CheckVerseParsing("2-е Петр1,4 - 3:2", new SimpleVersePointer(61, new VerseNumber(1, 4), new VerseNumber(3, 2)));            
+            CheckVerseParsing("2-е Петр1, 4 - 3:2", new SimpleVersePointer(61, new VerseNumber(1, 4), new VerseNumber(3, 2)));
+            CheckVerseParsing("2-е Петр1, 4 - 3 :2", new SimpleVersePointer(61, new VerseNumber(1, 4), new VerseNumber(3, 2)));
+            CheckVerseParsing("2-е Петр1, 4 - 3 : 2", new SimpleVersePointer(61, new VerseNumber(1, 4), new VerseNumber(3, 2)));
+            CheckVerseParsing("2-е Петр(1,4 - 3:2)", new SimpleVersePointer(61, new VerseNumber(1, 4), new VerseNumber(3, 2)));            
+            CheckVerseParsing("2-ое Петра  1,4 - 3:2", new SimpleVersePointer(61, new VerseNumber(1, 4), new VerseNumber(3, 2)));
+            CheckVerseParsing("2-ое Петра ( 1,4 - 3:2 )", new SimpleVersePointer(61, new VerseNumber(1, 4), new VerseNumber(3, 2)));
             CheckVerseParsing("Первом послании к Коринфянам (10:31)", new SimpleVersePointer(46, new VerseNumber(10, 31)));
 
             CheckVerseParsing("Ин (1:1)", new SimpleVersePointer(43, 1, 1));            
@@ -89,7 +87,7 @@ namespace BibleNote.Tests.Analytics
             CheckVerseParsing("Ин 3:10-17", new SimpleVersePointer(43, new VerseNumber(3, 10), new VerseNumber(3, 17)));
         }
 
-        //todo: [TestMethod]
+        [TestMethod]
         public void TestVerseExpanding()
         {
             CheckVerseExpanding("Ин 2:3-4:7", 66,

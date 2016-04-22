@@ -221,7 +221,7 @@ namespace BibleNote.Tests.Analytics
         public void TestScenario12()
         {
             CheckVerses("Ps 89:1-2, Lev 14:56-57, Lev 14:57, Ps 19:5", null, null, "Пс 88:1-3", "Лев 14:55-56", "Лев 14:56", "Пс 18:6");
-            CheckVerses("I Cor 6:7, II Tim 2:3", null, null, "1Кор 6:7", "2 Тим 2:3");
+            CheckVerses("I Cor 6:7, II Tim 2:3, I Sa 3:5", null, null, "1Кор 6:7", "2 Тим 2:3", "1 Царств 3:5");
         }
 
         [TestMethod]
