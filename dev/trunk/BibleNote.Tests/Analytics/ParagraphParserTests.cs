@@ -239,7 +239,7 @@ namespace BibleNote.Tests.Analytics
         [TestMethod]
         public void TestScenario14()
         {
-            var input = "в 1 Ин 1,2-3 и в Иисуса Навина 2-3 было написано про 1-е Кор 1,2-3,4-5;6-7,8-9,10 и в :7";
+            var input = "в 1 Ин 1,2-3 и в Иисуса Навина 2-3 было написано про 1-е Кор 1,2-3,4-5;6-7,8-9,10 и в :7. Ин1,1 и Ин 2,1";
 
             // todo: а нужно ли всё таки менять написание стихов (добавлять/удалять пробелы)?? - надо вынести в опцию на уровне INavigationProviderInstance
             //var expectedIfUseCommaDelimiter = "в 1 Ин 1:2-3 и в Иисуса Навина 2-3 было написано про 1-е Кор 1:2-3,4-5; 6-7, 8-9, 10 и в :7";
@@ -247,11 +247,11 @@ namespace BibleNote.Tests.Analytics
 
             _mockConfigurationManager.UseCommaDelimiter = false;
             CheckVerses(input, null, null, "1 Ин 1", "1 Ин 2-3", "Нав 2-3", "1Кор 1", "1Кор 2-3",
-                                "1Кор 4-5", "1Кор 6-7", "1Кор 8-9", "1Кор 10", "1Кор 10:7");
+                                "1Кор 4-5", "1Кор 6-7", "1Кор 8-9", "1Кор 10", "1Кор 10:7", "Ин 1", "Ин 2");
 
             _mockConfigurationManager.UseCommaDelimiter = true;
             CheckVerses(input, null, null, "1 Ин 1:2-3", "Нав 2-3",
-                                "1Кор 1:2-3", "1Кор 1:4-5", "1Кор 6-7", "1Кор 8-9", "1Кор 10", "1Кор 10:7");
+                                "1Кор 1:2-3", "1Кор 1:4-5", "1Кор 6-7", "1Кор 8-9", "1Кор 10", "1Кор 10:7", "Ин 1:1", "Ин 2:1");
         }
 
         [TestMethod]
@@ -416,7 +416,13 @@ namespace BibleNote.Tests.Analytics
         [TestMethod]
         public void TestScenario30()
         {
-            CheckVerses("Иуд 9,1 Фесс. 4:16", null, null, "Иуд 1:9", "1Фес 4:16");
+            CheckVerses("Иуд 9,1 Фесс. 4:16", null, null, "Иуд 1:9", "1Фес 4:16");            
+        }
+
+        [TestMethod]
+        public void TestScenario31()
+        {
+            CheckVerses("а также в Гал. 2:1а; 3:8; 3:24а. и :7б", null, null, "Гал 2:1", "Гал 3:8", "Гал 3:24", "Гал 3:7");
         }
     }
 }
