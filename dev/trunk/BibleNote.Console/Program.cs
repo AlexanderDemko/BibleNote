@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace BibleNoteConsole
@@ -19,31 +20,48 @@ namespace BibleNoteConsole
     {
         public static IModulesManager ModulesManager { get; set; }
 
+        private static readonly Regex sWhitespace = new Regex(@"\s+");
+        public static string ReplaceWhitespace(string input, string replacement)
+        {
+            return sWhitespace.Replace(input, replacement);
+        }
+
         static void Main(string[] args)
         {
-            DIContainer.InitWithDefaults();
-            ModulesManager = DIContainer.Resolve<IModulesManager>();
+            //DIContainer.InitWithDefaults();
+            //ModulesManager = DIContainer.Resolve<IModulesManager>();
 
             var sw = new Stopwatch();
             sw.Start();
 
             try
             {   
-                var _moduleInfo = ModulesManager.UploadModule(@"C:\prj\BibleNote v4\dev\trunk\Data\Modules\rst\rst.bnm", "rst");
-                ModulesManager.SetCurrentModule("rst");
-                var bible = ModulesManager.GetCurrentBibleContent();
-                Console.WriteLine(bible.Books.Skip(39).First().Items.Count());
+                //var _moduleInfo = ModulesManager.UploadModule(@"C:\prj\BibleNote v4\dev\trunk\Data\Modules\rst\rst.bnm", "rst");
+                //ModulesManager.SetCurrentModule("rst");
+                //var bible = ModulesManager.GetCurrentBibleContent();
+                //Console.WriteLine(bible.Books.Skip(39).First().Items.Count());
 
-                Console.WriteLine(bible.Books.Skip(39).SelectMany(b => b.Chapters.SelectMany(c => c.Verses)).Count());
+                //Console.WriteLine(bible.Books.Skip(39).SelectMany(b => b.Chapters.SelectMany(c => c.Verses)).Count());
 
-                //new CheckVerseRecognitionVariantsPerfomance().RunTests();
-                //TestChar2IntPerfomance(VerseUtils.GetVerseNumber);                
+                for (int i = 0; i <= 10000000; i++)
+                {
+                    var s = "test" + " " + " " + "test";
+                    var r = s.Replace(" ", string.Empty).Replace(" ", string.Empty);
+                    //var r = ReplaceWhitespace(s, string.Empty);
+                    if (r != "testtest")
+                        throw new InvalidOperationException();
+                }
+        
 
-                //var service = DIContainer.Resolve<IVerseRecognitionService>();
-                //var verseEntryInfo = service.TryGetVerse("В этом тексте есть Ин 5:6 и ещё другие стихи, например :7.", 0);
-                                
-                
-            }
+
+        //new CheckVerseRecognitionVariantsPerfomance().RunTests();
+        //TestChar2IntPerfomance(VerseUtils.GetVerseNumber);                
+
+        //var service = DIContainer.Resolve<IVerseRecognitionService>();
+        //var verseEntryInfo = service.TryGetVerse("В этом тексте есть Ин 5:6 и ещё другие стихи, например :7.", 0);
+
+
+    }
             catch (Exception ex)
             {
                 Console.WriteLine(ex.ToString());
