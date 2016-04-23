@@ -215,6 +215,17 @@ namespace BibleNote.Tests.Analytics
             CheckVerses(input, null,
                 docParseContext => docParseContext.SetTitleVerse(_versePointerFactory.CreateVersePointer("1Кор 1")),
                 "1Кор 1:1-2", "1Кор 1:3", "1Кор 1:4-5", "1Кор 6", "1Кор 7:8");      // возможно, не надо поддерживать два последних VersePointer-a
+
+            CheckVerses(input, null,
+                docParseContext => docParseContext.SetTitleVerse(_versePointerFactory.CreateVersePointer("1Кор 1:1")),
+                "1Кор 1:1-2", "1Кор 1:3", "1Кор 1:4-5", "1Кор 6", "1Кор 7:8");      
+
+            CheckVerses(input, null,
+                docParseContext => docParseContext.SetTitleVerse(_versePointerFactory.CreateVersePointer("1Кор 1:1-2")),
+                "1Кор 1:1-2", "1Кор 1:3", "1Кор 1:4-5", "1Кор 6", "1Кор 7:8");      
+
+            CheckVerses(input, null,
+                docParseContext => docParseContext.SetTitleVerse(_versePointerFactory.CreateVersePointer("1Кор 1-2")));
         }
 
         [TestMethod]
@@ -424,5 +435,48 @@ namespace BibleNote.Tests.Analytics
         {
             CheckVerses("а также в Гал. 2:1а; 3:8; 3:24а. и :7б", null, null, "Гал 2:1", "Гал 3:8", "Гал 3:24", "Гал 3:7");
         }
+
+        [TestMethod]
+        public void TestScenario32()
+        {
+            CheckVerses("А в 1-м Ин. 5:20, 1-Тим 1:6, 1-Ин 1:1", null, null, "1Ин 5:20", "1Тим 1:6", "1Ин 1:1");
+        }
+
+        [TestMethod]
+        public void TestScenario33()
+        {
+            CheckVerses("Римлянам 1-3:20, Второе послание к Тимофею 3:16-17", null, null, "Рим 1-3:20", "2Тим 3:16-17");
+        }
+
+        [TestMethod]
+        public void TestScenario34()
+        {
+            CheckVerses("Мф 1:1 ; 2:1 и 3:1", null, null, "Мф 1:1", "Мф 2:1", "Мф 3:1");
+        }
+
+        [TestMethod]
+        public void TestScenario35()
+        {
+            CheckVerses("В Псалме (115:3) написано:", null, null, "Пс 115:3");
+        }
+
+        [TestMethod]
+        public void TestScenario36()
+        {
+            CheckVerses("(см. Ин. 13:25 и 21:20)", null, null, "Ин 13:25", "Ин 21:20");
+        }
+
+        [TestMethod]
+        public void TestScenario37()
+        {
+            CheckVerses("1-еКор.7:15, 1-Кор.7:12, Захарию 11:12-13, В Деяниях Апостолов 9:15", null, null, "1Кор 7:15", "1Кор 7:12", "Зах 11:12-13", "Деян 9:15");
+        }
+
+        [TestMethod]
+        public void TestScenario38()
+        {
+            CheckVerses("Ин 1:1 Ин 1:2", null, null, "Ин 1:1", "Ин 1:2");
+        }
+        
     }
 }
