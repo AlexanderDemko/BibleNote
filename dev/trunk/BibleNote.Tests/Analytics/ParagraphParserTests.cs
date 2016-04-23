@@ -195,9 +195,9 @@ namespace BibleNote.Tests.Analytics
         [TestMethod]
         public void TestScenario9()
         {
-            var input = "Ин 1: вот и Отк 5(синодальный перевод) и Деяния 1:5,6: вот";
+            var input = "Ин 1: вот и Отк 5(синодальный перевод) и Деяния 1:5,6: вот 1 Пет. 3:7";
 
-            CheckVerses(input, null, null, "Ин 1", "Отк 5", "Деян 1:5", "Деян 1:6");
+            CheckVerses(input, null, null, "Ин 1", "Отк 5", "Деян 1:5", "Деян 1:6", "1Пет 3:7");
         }
 
         [TestMethod]
@@ -469,7 +469,8 @@ namespace BibleNote.Tests.Analytics
         [TestMethod]
         public void TestScenario37()
         {
-            CheckVerses("1-еКор.7:15, 1-Кор.7:12, Захарию 11:12-13, В Деяниях Апостолов 9:15", null, null, "1Кор 7:15", "1Кор 7:12", "Зах 11:12-13", "Деян 9:15");
+            CheckVerses("1-еКор.7:15, 1-Кор.7:12, Захарию 11:12-13, В Деяниях Апостолов 9:15, в Исаие 55:8-9, отношение к Откровению 10:6", 
+                null, null, "1Кор 7:15", "1Кор 7:12", "Зах 11:12-13", "Деян 9:15", "Ис 55:8-9", "Отк 10:6");
         }
 
         [TestMethod]
@@ -477,6 +478,14 @@ namespace BibleNote.Tests.Analytics
         {
             CheckVerses("Ин 1:1 Ин 1:2", null, null, "Ин 1:1", "Ин 1:2");
         }
+
+        [TestMethod]
+        public void TestScenario39()
+        {
+            CheckVerses("Иуд 4,12,16,19", null, null, "Иуд 1:4", "Иуд 1:12", "Иуд 1:16", "Иуд 1:19");
+        }
+
+        
         
     }
 }
