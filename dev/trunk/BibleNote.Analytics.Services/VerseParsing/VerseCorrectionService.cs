@@ -23,18 +23,19 @@ namespace BibleNote.Analytics.Services.VerseParsing
 
         public bool CheckAndCorrectVerse(VersePointer versePointer)
         {
-            if (!string.IsNullOrEmpty(versePointer.ModuleShortName))            
-                ConvertToMainModuleVerse(versePointer);
+            ChangeIfOneChapterBook(versePointer);
 
-            if (VerseExists(versePointer))
-            {
-                ExpandVerse(versePointer, null);
-                versePointer.UpdateTopVerseNumber(versePointer.SubVerses.VersePointers);
+            if (!string.IsNullOrEmpty(versePointer.ModuleShortName))
+                if (!ConvertToMainModuleVerse(versePointer))
+                    return false;
 
-                return true;
-            }
+            ExpandVerse(versePointer, null);
+            if (versePointer.SubVerses.Verses.Count == 0)
+                return false;
 
-            return false;            
+            versePointer.UpdateTopVerseNumber(versePointer.SubVerses.Verses);
+
+            return true;
         }
 
         /// <summary>
@@ -43,33 +44,24 @@ namespace BibleNote.Analytics.Services.VerseParsing
         /// <param name="versePointer"></param>
         private void ExpandVerse(VersePointer versePointer, string moduleShortName)
         {
-            if (versePointer.SubVerses == null)
-                versePointer.SubVerses = new VersesListInfo<ModuleVersePointer>();            
-
-            if (versePointer.IsMultiVerse == MultiVerse.None)
-            {
-                versePointer.SubVerses.VersePointers.Add(versePointer.ToModuleVersePointer());      // мы до этого в методе VerseExists() проверили существование стиха
-                versePointer.SubVerses.VersesCount = 1;
-                return;
-            }
-
             var bibleContent = string.IsNullOrEmpty(moduleShortName) ? _applicationManager.CurrentBibleContent : _applicationManager.GetBibleContent(moduleShortName);
             var bookContent = bibleContent.BooksDictionary[versePointer.BookIndex];
             for (var chapterIndex = versePointer.Chapter; chapterIndex <= versePointer.MostTopChapter; chapterIndex++)
             {
                 if (bookContent.Chapters.Count < chapterIndex)
                 {
-                    versePointer.SubVerses.NotFoundVersePointers.Add(new ModuleVersePointer(versePointer.BookIndex, chapterIndex));
+                    versePointer.SubVerses.NotFoundVerses.Add(new ModuleVersePointer(versePointer.BookIndex, chapterIndex));
                     break;
                 }
 
                 var chapterContent = bookContent.Chapters[chapterIndex - 1];
                 if ((versePointer.Chapter < chapterIndex
                             || (versePointer.VerseNumber.IsChapter && versePointer.Chapter == chapterIndex))
-                    && (chapterIndex < versePointer.MostTopChapter
-                            || (versePointer.TopVerseNumber.Value.IsChapter && versePointer.MostTopChapter == chapterIndex)))
+                    && (!versePointer.TopVerseNumber.HasValue 
+                        || (chapterIndex < versePointer.MostTopChapter
+                                || (versePointer.TopVerseNumber.Value.IsChapter && versePointer.MostTopChapter == chapterIndex))))
                 {
-                    versePointer.SubVerses.VersePointers.Add(new ModuleVersePointer(versePointer.BookIndex, chapterIndex));
+                    versePointer.SubVerses.Verses.Add(new ModuleVersePointer(versePointer.BookIndex, chapterIndex));
                     versePointer.SubVerses.VersesCount += versePointer.IsChapter ? 1 : chapterContent.Verses.Count;
                 }
                 else
@@ -82,72 +74,54 @@ namespace BibleNote.Analytics.Services.VerseParsing
                         var verse = new ModuleVersePointer(versePointer.BookIndex, chapterIndex, verseIndex);
                         if (chapterContent.Verses.Count < verseIndex)
                         {
-                            versePointer.SubVerses.NotFoundVersePointers.Add(verse);
+                            versePointer.SubVerses.NotFoundVerses.Add(verse);
                             break;
                         }
 
-                        versePointer.SubVerses.VersePointers.Add(verse);
+                        versePointer.SubVerses.Verses.Add(verse);
                         versePointer.SubVerses.VersesCount++;
                     }
                 }
             }
         }
 
-        /// <summary>
-        /// Проверяем только первый стих, если IsMultiVerse
-        /// Метод важен не только для проверки существования стиха, но и для исправления, если стих типа "Иуд 5"
-        /// </summary>
-        /// <param name="versePointer"></param>
-        /// <returns></returns>
-        private bool VerseExists(VersePointer versePointer)
+        private void ChangeIfOneChapterBook(VersePointer versePointer)
         {
-            if (_applicationManager.CurrentBibleContent.BooksDictionary.ContainsKey(versePointer.BookIndex))
+            var bibleContent = string.IsNullOrEmpty(versePointer.ModuleShortName) ? _applicationManager.CurrentBibleContent : _applicationManager.GetBibleContent(versePointer.ModuleShortName);
+            var bookContent = bibleContent.BooksDictionary[versePointer.BookIndex];
+            
+            if (bookContent.Chapters.Count == 1 && versePointer.VerseNumber.IsChapter && versePointer.Chapter > 1)
             {
-                var book = _applicationManager.CurrentBibleContent.BooksDictionary[versePointer.BookIndex];
-                if (0 < versePointer.Chapter && versePointer.Chapter <= book.Chapters.Count)
-                {
-                    if (versePointer.VerseNumber.IsChapter 
-                        || versePointer.Verse <= book.Chapters[versePointer.Chapter - 1].Verses.Count)
-                        return true;
-                }                
-                else
-                {
-                    if (book.Chapters.Count == 1 && versePointer.VerseNumber.IsChapter)
-                    {
-                        if (versePointer.Chapter <= book.Chapters[0].Verses.Count)
-                        {
-                            versePointer.MoveChapterToVerse(1);
-                            return true;
-                        }
-                    }
-                }
+                if (versePointer.Chapter <= bookContent.Chapters[0].Verses.Count)
+                    versePointer.MoveChapterToVerse(1);
             }
-
-            return false;
         }
 
-        private void ConvertToMainModuleVerse(VersePointer versePointer)
+        private bool ConvertToMainModuleVerse(VersePointer versePointer)
         {
             ExpandVerse(versePointer, versePointer.ModuleShortName);
+            if (versePointer.SubVerses.Verses.Count == 0)
+                return false;
 
             var parallelVersePointers = _bibleParallelTranslationConnectorManager.GetParallelVersePointer(
-                                                versePointer.SubVerses.VersePointers.First(), versePointer.ModuleShortName);
+                                                versePointer.SubVerses.Verses.First(), versePointer.ModuleShortName);
 
             versePointer.VerseNumber = parallelVersePointers.First().VerseNumber;
 
-            if (versePointer.SubVerses.VersePointers.Count == 1)
+            if (versePointer.SubVerses.Verses.Count == 1)
             {
                 versePointer.UpdateTopVerseNumber(parallelVersePointers);                
             }
             else
             {
                 parallelVersePointers = _bibleParallelTranslationConnectorManager.GetParallelVersePointer(
-                                            versePointer.SubVerses.VersePointers.Last(), versePointer.ModuleShortName);
+                                            versePointer.SubVerses.Verses.Last(), versePointer.ModuleShortName);
 
                 versePointer.TopVerseNumber = parallelVersePointers.Last().VerseNumber;
             }
 
             versePointer.SubVerses.Clear();
+            return true;
         }
     }
 }

@@ -41,14 +41,14 @@ namespace BibleNote.Tests.Analytics
             _verseCorrectionService.CheckAndCorrectVerse(actualVerse);            
 
             Assert.AreEqual(versesCount, actualVerse.SubVerses.VersesCount, "Verses count is wrong.");
-            Assert.AreEqual(verses.Length, actualVerse.SubVerses.VersePointers.Count, "VersePointers count is wrong.");
-            Assert.AreEqual(notFoundVerses.Length, actualVerse.SubVerses.NotFoundVersePointers.Count, "NotFoundVersePointers count is wrong.");
+            Assert.AreEqual(verses.Length, actualVerse.SubVerses.Verses.Count, "VersePointers count is wrong.");
+            Assert.AreEqual(notFoundVerses.Length, actualVerse.SubVerses.NotFoundVerses.Count, "NotFoundVersePointers count is wrong.");
 
             foreach (var verse in verses)            
-                Assert.IsTrue(actualVerse.SubVerses.VersePointers.Contains(_versePointerFactory.CreateVersePointer(verse).ToModuleVersePointer()), "Can not find the verse: '{0}'", verse);
+                Assert.IsTrue(actualVerse.SubVerses.Verses.Contains(_versePointerFactory.CreateVersePointer(verse).ToModuleVersePointer()), "Can not find the verse: '{0}'", verse);
 
             foreach (var verse in notFoundVerses)
-                Assert.IsTrue(actualVerse.SubVerses.NotFoundVersePointers.Contains(_versePointerFactory.CreateVersePointer(verse).ToModuleVersePointer()), "Can not find the verse: '{0}'", verse);
+                Assert.IsTrue(actualVerse.SubVerses.NotFoundVerses.Contains(_versePointerFactory.CreateVersePointer(verse).ToModuleVersePointer()), "Can not find the verse: '{0}'", verse);
         }
 
         [TestMethod]

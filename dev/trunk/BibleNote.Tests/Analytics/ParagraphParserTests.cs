@@ -84,18 +84,17 @@ namespace BibleNote.Tests.Analytics
 
             var result = _parahraphParserService.ParseParagraph(htmlDoc.DocumentNode);
 
-            Assert.AreEqual(verses.Length, result.VerseEntries.Count, "Verses length is not the same. Expected: {0}. Found: {1}", verses.Length, result.VerseEntries.Count);
-
+            Assert.AreEqual(verses.Length, result.VerseEntries.Count, "Verses length is not the same. Expected: {0}. Found: {1}", verses.Length, result.VerseEntries.Count);            
             var verseEntries = result.VerseEntries.Select(ve => ve.VersePointer);
             foreach (var verse in verses)
-                Assert.IsTrue(verseEntries.Contains(_versePointerFactory.CreateVersePointer(verse)), "Can not find the verse: '{0}'", verse);
+                Assert.IsTrue(verseEntries.Contains(_versePointerFactory.CreateVersePointer(verse)), "Can not find the verse: '{0}'", verse);            
 
             Assert.AreEqual(expectedOutput, htmlDoc.DocumentNode.InnerHtml, "The output html is wrong.");
             Assert.AreEqual(new HtmlToTextConverter().SimpleConvert(input), result.Text, "Text parts do not contain the full input string.");
 
             if (notFoundVerses != null)
             {
-                var notFoundVerseEntries = result.VerseEntries.First().VersePointer.SubVerses.NotFoundVersePointers;
+                var notFoundVerseEntries = result.VerseEntries.First().VersePointer.SubVerses.NotFoundVerses;
                 Assert.AreEqual(notFoundVerses.Length, notFoundVerseEntries.Count);
                 foreach (var verse in notFoundVerses)
                     Assert.IsTrue(notFoundVerseEntries.Contains(_versePointerFactory.CreateVersePointer(verse).ToModuleVersePointer()));
@@ -246,6 +245,15 @@ namespace BibleNote.Tests.Analytics
         [TestMethod]
         public void TestScenario12()
         {
+            try
+            {
+                CheckVerses("Lev 28", null, null, new string[] { "Lev 28" }, null);
+            }
+            catch (Exception ex)
+            {
+                Assert.AreEqual("3 28", ex.Message);
+            }
+
             CheckVerses("Ps 75:10-11", "<a href='bnVerse:Псалтирь 74:11'>Ps 75:10-11</a>", null, new string[] { "Ps 75:11" }, "Псалтирь 74:11");
             CheckVerses("Ps 115:12-19", "<a href='bnVerse:Псалтирь 113:20-26'>Ps 115:12-19</a>", null, new string[] { "Ps 115:19" }, "Пс 113:20-26");
             CheckVerses("Ps 89:1-2, Lev 14:56-57, Lev 14:57, Ps 19:5", null, null, "Пс 88:1-3", "Лев 14:55-56", "Лев 14:56", "Пс 18:6");
@@ -257,7 +265,7 @@ namespace BibleNote.Tests.Analytics
             CheckVerses("Lev 14:54-58", null, null, new string[] { "Lev 14:58" }, "Лев 14:54-56");
             CheckVerses("Lev 26-28", null, null, new string[] { "Lev 28" }, "Лев 26-27");
             CheckVerses("Lev 27-28", null, null, new string[] { "Lev 28" }, "Лев 27");
-            CheckVerses("Lev 28", null, null, new string[] { "Lev 28" }, null);            
+            CheckVerses("Jude 20-26", null, null, new string[] { "Jude 1:26" }, "Jude 1:20-25");
         }
 
         [TestMethod]

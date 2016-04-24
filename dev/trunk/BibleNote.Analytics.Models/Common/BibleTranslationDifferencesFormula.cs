@@ -116,7 +116,7 @@ namespace BibleNote.Analytics.Models.Common
         public List<ModuleVersePointer> GetAllVerses()
         {
             if (_allVerses == null)            
-                _allVerses = BaseVersePointer.ExpandMultiVerse().VersePointers;            
+                _allVerses = BaseVersePointer.ExpandMultiVerse().Verses;            
 
             return _allVerses;
         }
