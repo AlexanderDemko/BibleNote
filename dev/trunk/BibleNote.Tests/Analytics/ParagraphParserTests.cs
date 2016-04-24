@@ -73,6 +73,9 @@ namespace BibleNote.Tests.Analytics
             else
                 _mockDocumentProvider.IsReadonly = false;
 
+            if (verses == null)
+                verses = new string[0];
+
             _documentParseContext.ClearContext();
             initDocParseContext?.Invoke(_documentParseContext);
 
