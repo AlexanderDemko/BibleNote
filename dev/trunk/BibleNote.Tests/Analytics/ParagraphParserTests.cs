@@ -452,9 +452,44 @@ namespace BibleNote.Tests.Analytics
         [TestMethod]
         public void TestScenario29()
         {
-            CheckVerses("Быт 1:60, Ин 3:37, Ин 22, Ин 22:1", null, null);
+            try
+            {
+                CheckVerses("Быт 1:60", null, null);
+            }
+            catch (Exception ex)
+            {
+                Assert.AreEqual("1 1:60", ex.Message);
+            }
+
+            try
+            {
+                CheckVerses("Ин 3:37", null, null);
+            }
+            catch (Exception ex)
+            {
+                Assert.AreEqual("43 3:37", ex.Message);
+            }
+
+            try
+            {
+                CheckVerses("Ин 22", null, null);
+            }
+            catch (Exception ex)
+            {
+                Assert.AreEqual("43 22", ex.Message);
+            }
+
+            try
+            {
+                CheckVerses("Ин 22:1", null, null);
+            }
+            catch (Exception ex)
+            {
+                Assert.AreEqual("43 22", ex.Message);
+            }
+
             CheckVerses("Ин 3:1, Ин 3:36", null, null, "Ин 3:1", "Ин 3:36");
-            CheckVerses("Ин 3:30-40", null, null, "Ин 3:30-36");
+            CheckVerses("Ин 3:30-40", null, null, new string[] { "Ин 3:37" }, "Ин 3:30-36");
         }
 
         [TestMethod]
