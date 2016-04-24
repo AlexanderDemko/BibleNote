@@ -89,19 +89,19 @@ namespace BibleNote.Analytics.Models.Common
 
     public class VersesListInfo<T> where T : SimpleVersePointer
     {
-        public List<T> VersePointers { get; internal set; }
-        public List<T> NotFoundVersePointers { get; internal set; }
+        public List<T> Verses { get; internal set; }
+        public List<T> NotFoundVerses { get; internal set; }
         public int VersesCount { get; set; }
 
         public VersesListInfo()
         {
-            VersePointers = new List<T>();
-            NotFoundVersePointers = new List<T>();
+            Verses = new List<T>();
+            NotFoundVerses = new List<T>();
         }
 
         public void Clear()
         {
-            VersePointers = new List<T>();
+            Verses = new List<T>();
             VersesCount = 0;
             // Сохраняем имеющиеся ненайденные стихи
         }
@@ -313,6 +313,7 @@ namespace BibleNote.Analytics.Models.Common
             Book = bookInfo;
             ModuleShortName = moduleName;
             OriginalVerseName = originalVerseName;
+            SubVerses = new VersesListInfo<ModuleVersePointer>();
         }
 
         public override string ToString()
@@ -462,11 +463,11 @@ namespace BibleNote.Analytics.Models.Common
             
             for (var i = Verse; i <= MostTopVerse; i++)
             {
-                result.VersePointers.Add(new ModuleVersePointer(BookIndex, Chapter, i) 
+                result.Verses.Add(new ModuleVersePointer(BookIndex, Chapter, i) 
                                                 { IsEmpty = IsEmpty, SkipCheck = SkipCheck, EmptyVerseContent = EmptyVerseContent });
             }
 
-            result.VersesCount = result.VersePointers.Count();
+            result.VersesCount = result.Verses.Count();
 
             return result;
         }
