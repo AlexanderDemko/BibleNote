@@ -248,6 +248,7 @@ namespace BibleNote.Tests.Analytics
             try
             {
                 CheckVerses("Lev 28", null, null, new string[] { "Lev 28" }, null);
+                Assert.Fail("3 28");
             }
             catch (Exception ex)
             {
@@ -455,6 +456,7 @@ namespace BibleNote.Tests.Analytics
             try
             {
                 CheckVerses("Быт 1:60", null, null);
+                Assert.Fail("1 1:60");
             }
             catch (Exception ex)
             {
@@ -464,6 +466,7 @@ namespace BibleNote.Tests.Analytics
             try
             {
                 CheckVerses("Ин 3:37", null, null);
+                Assert.Fail("43 3:37");
             }
             catch (Exception ex)
             {
@@ -473,6 +476,7 @@ namespace BibleNote.Tests.Analytics
             try
             {
                 CheckVerses("Ин 22", null, null);
+                Assert.Fail("43 22");
             }
             catch (Exception ex)
             {
@@ -482,6 +486,7 @@ namespace BibleNote.Tests.Analytics
             try
             {
                 CheckVerses("Ин 22:1", null, null);
+                Assert.Fail("43 22");
             }
             catch (Exception ex)
             {
