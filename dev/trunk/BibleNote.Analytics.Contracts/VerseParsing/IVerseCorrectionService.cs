@@ -9,6 +9,6 @@ namespace BibleNote.Analytics.Contracts.VerseParsing
 {
     public interface IVerseCorrectionService
     {
-        bool CheckAndCorrectVerse(VersePointer versePointer);
+        bool CheckAndCorrectVerse(VersePointer versePointer);        
     }
 }

@@ -18,7 +18,7 @@ namespace BibleNote.Analytics.Contracts.Environment
         XMLBIBLE GetCurrentBibleContent();
         string GetCurrentModuleDirectiory();
         ModuleInfo GetCurrentModuleInfo();
-        XMLBIBLE GetModuleBibleInfo(string moduleShortName);
+        XMLBIBLE GetModuleBibleContent(string moduleShortName);
         string GetModuleDirectory(string moduleShortName);
         ModuleInfo GetModuleInfo(string moduleShortName);
         List<ModuleInfo> GetModules(bool correctOnly);

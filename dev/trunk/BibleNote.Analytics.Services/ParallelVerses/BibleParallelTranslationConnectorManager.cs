@@ -30,20 +30,20 @@ namespace BibleNote.Analytics.Services.ParallelVerses
             return string.Format("{0}_{1}", baseModuleShortName, parallelModuleShortName).ToLower();
         }
 
-        public ModuleVersePointer GetParallelVersePointer(ModuleVersePointer baseVersePointer, string parallelModuleShortName)
+        public List<ModuleVersePointer> GetParallelVersePointer(ModuleVersePointer baseVersePointer, string parallelModuleShortName)
         {
-            ModuleVersePointer result = null;
+            List<ModuleVersePointer> result = null;
 
             var parallelBibleInfo = GetParallelBibleInfo(parallelModuleShortName, _configurationManager.ModuleShortName);
             var parallelBookInfo = parallelBibleInfo[baseVersePointer.BookIndex];
             if (parallelBookInfo != null)
             {
                 if (parallelBookInfo.ContainsKey(baseVersePointer))
-                    result = parallelBookInfo[baseVersePointer].FirstOrDefault();
+                    result = parallelBookInfo[baseVersePointer];
             }
 
             if (result == null)
-                result = (ModuleVersePointer)baseVersePointer.Clone();
+                result = new List<ModuleVersePointer>(1) { (ModuleVersePointer)baseVersePointer.Clone() };
 
             return result;
         }

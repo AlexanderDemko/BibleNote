@@ -63,7 +63,7 @@ namespace BibleNote.Tests.Analytics
 
         }
 
-        private TestResult CheckVerses(string input, string expectedOutput, Action<IDocumentParseContext> initDocParseContext, params string[] verses)
+        private TestResult CheckVerses(string input, string expectedOutput, Action<IDocumentParseContext> initDocParseContext, string[] notFoundVerses, params string[] verses)
         {
             if (string.IsNullOrEmpty(expectedOutput) || input == expectedOutput)
             {
@@ -74,15 +74,14 @@ namespace BibleNote.Tests.Analytics
                 _mockDocumentProvider.IsReadonly = false;
 
             _documentParseContext.ClearContext();
-            if (initDocParseContext != null)
-                initDocParseContext(_documentParseContext);
+            initDocParseContext?.Invoke(_documentParseContext);
 
             var htmlDoc = new HtmlDocument();
             htmlDoc.LoadHtml(input);
 
             var result = _parahraphParserService.ParseParagraph(htmlDoc.DocumentNode);
 
-            Assert.AreEqual(verses.Length, result.VerseEntries.Count, "Verses length is not the same. Expected: {0}. Found: {1}", verses.Length, result.VerseEntries.Count);            
+            Assert.AreEqual(verses.Length, result.VerseEntries.Count, "Verses length is not the same. Expected: {0}. Found: {1}", verses.Length, result.VerseEntries.Count);
 
             var verseEntries = result.VerseEntries.Select(ve => ve.VersePointer);
             foreach (var verse in verses)
@@ -91,7 +90,20 @@ namespace BibleNote.Tests.Analytics
             Assert.AreEqual(expectedOutput, htmlDoc.DocumentNode.InnerHtml, "The output html is wrong.");
             Assert.AreEqual(new HtmlToTextConverter().SimpleConvert(input), result.Text, "Text parts do not contain the full input string.");
 
+            if (notFoundVerses != null)
+            {
+                var notFoundVerseEntries = result.VerseEntries.First().VersePointer.SubVerses.NotFoundVersePointers;
+                Assert.AreEqual(notFoundVerses.Length, notFoundVerseEntries.Count);
+                foreach (var verse in notFoundVerses)
+                    Assert.IsTrue(notFoundVerseEntries.Contains(_versePointerFactory.CreateVersePointer(verse).ToModuleVersePointer()));
+            }
+
             return new TestResult() { HtmlDoc = htmlDoc, Result = result };
+        }
+
+        private TestResult CheckVerses(string input, string expectedOutput, Action<IDocumentParseContext> initDocParseContext, params string[] verses)
+        {
+            return CheckVerses(input, expectedOutput, initDocParseContext, null, verses);
         }
 
 
@@ -231,8 +243,18 @@ namespace BibleNote.Tests.Analytics
         [TestMethod]
         public void TestScenario12()
         {
+            CheckVerses("Ps 75:10-11", "<a href='bnVerse:Псалтирь 74:11'>Ps 75:10-11</a>", null, new string[] { "Ps 75:11" }, "Псалтирь 74:11");
+            CheckVerses("Ps 115:12-19", "<a href='bnVerse:Псалтирь 113:20-26'>Ps 115:12-19</a>", null, new string[] { "Ps 115:19" }, "Пс 113:20-26");
             CheckVerses("Ps 89:1-2, Lev 14:56-57, Lev 14:57, Ps 19:5", null, null, "Пс 88:1-3", "Лев 14:55-56", "Лев 14:56", "Пс 18:6");
-            CheckVerses("I Cor 6:7, II Tim 2:3, I Sa 3:5", null, null, "1Кор 6:7", "2 Тим 2:3", "1 Царств 3:5");
+            CheckVerses("I Cor 6:7, II Tim 2:3, I Sa 3:5", null, null, "1Кор 6:7", "2 Тим 2:3", "1 Царств 3:5");            
+            CheckVerses("Ps 75:1", "<a href='bnVerse:Псалтирь 74:1-2'>Ps 75:1</a>", null, "Пс 74:1-2");
+            CheckVerses("Ps 75:1", "<a href='bnVerse:Псалтирь 74:1-2'>Ps 75:1</a>", null, "Пс 74:1-2");            
+            CheckVerses("Lev 14:55-58", null, null, new string[] { "Lev 14:58" }, "Лев 14:55-56");
+            CheckVerses("Lev 14:56-58", null, null, new string[] { "Lev 14:58" }, "Лев 14:55-56");
+            CheckVerses("Lev 14:54-58", null, null, new string[] { "Lev 14:58" }, "Лев 14:54-56");
+            CheckVerses("Lev 26-28", null, null, new string[] { "Lev 28" }, "Лев 26-27");
+            CheckVerses("Lev 27-28", null, null, new string[] { "Lev 28" }, "Лев 27");
+            CheckVerses("Lev 28", null, null, new string[] { "Lev 28" }, null);            
         }
 
         [TestMethod]
@@ -421,7 +443,7 @@ namespace BibleNote.Tests.Analytics
         {
             CheckVerses("Быт 1:60, Ин 3:37, Ин 22, Ин 22:1", null, null);
             CheckVerses("Ин 3:1, Ин 3:36", null, null, "Ин 3:1", "Ин 3:36");
-            CheckVerses("Ин 3:30-40", null, null, "Ин 3:30-40");
+            CheckVerses("Ин 3:30-40", null, null, "Ин 3:30-36");
         }
 
         [TestMethod]
@@ -485,7 +507,14 @@ namespace BibleNote.Tests.Analytics
             CheckVerses("Иуд 4,12,16,19", null, null, "Иуд 1:4", "Иуд 1:12", "Иуд 1:16", "Иуд 1:19");
         }
 
-        
-        
+        [TestMethod]
+        public void TestScenario40()
+        {   
+            CheckVerses("Ин 3:35-37", "<a href='bnVerse:Иоанна 3:35-36'>Ин 3:35-37</a>", null, new string[] { "Ин 3:37" }, "Ин 3:35-36");
+            CheckVerses("Ин 3:36-37", "<a href='bnVerse:Иоанна 3:36'>Ин 3:36-37</a>", null, new string[] { "Ин 3:37" }, "Ин 3:36");
+            CheckVerses("Ин 21:24-23:3", "<a href='bnVerse:Иоанна 21:24-25'>Ин 21:24-23:3</a>", null, new string[] { "Ин 22" }, "Ин 21:24-25");
+            CheckVerses("Ин 20-22", "<a href='bnVerse:Иоанна 20-21'>Ин 20-22</a>", null, new string[] { "Ин 22" }, "Ин 20-21");
+            CheckVerses("Ин 21-22", "<a href='bnVerse:Иоанна 21'>Ин 21-22</a>", null, new string[] { "Ин 22" }, "Ин 21");
+        }
     }
 }

@@ -99,8 +99,7 @@ namespace BibleNoteConsole
 
         private string Variant1(string text) // the winner!
         {
-            var index = -1;
-            string moduleName;
+            var index = -1;            
 
             do
             {
