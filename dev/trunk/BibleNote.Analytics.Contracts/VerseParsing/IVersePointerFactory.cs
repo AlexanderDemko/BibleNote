@@ -9,7 +9,6 @@ namespace BibleNote.Analytics.Contracts.VerseParsing
 {
     public interface IVersePointerFactory
     {
-        VersePointer CreateVersePointer(string text);
-        VersesListInfo<VersePointer> ExpandMultiVerse(VersePointer versePointer);
+        VersePointer CreateVersePointer(string text);        
     }
 }

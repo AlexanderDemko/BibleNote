@@ -21,11 +21,11 @@ namespace BibleNote.Analytics.Services.Environment
 {
     public class ModulesManager : IModulesManager
     {
-        private IBibleParallelTranslationManager _bibleParallelTranslationManager;
+        private readonly IBibleParallelTranslationManager _bibleParallelTranslationManager;
 
-        private IConfigurationManager _configurationManager;
+        private readonly IConfigurationManager _configurationManager;
 
-        private ILog _log;
+        private readonly ILog _log;
 
         public ModulesManager(IBibleParallelTranslationManager bibleParallelTranslationManager, IConfigurationManager configurationManager, ILog log)
         {
@@ -45,7 +45,7 @@ namespace BibleNote.Analytics.Services.Environment
         public XMLBIBLE GetCurrentBibleContent()
         {
             if (!string.IsNullOrEmpty(_configurationManager.ModuleShortName))
-                return GetModuleBibleInfo(_configurationManager.ModuleShortName);
+                return GetModuleBibleContent(_configurationManager.ModuleShortName);
 
             throw new ModuleIsUndefinedException("Current Module is undefined.");
         }
@@ -70,7 +70,7 @@ namespace BibleNote.Analytics.Services.Environment
             int result;
             try
             {
-                var bibleInfo = GetModuleBibleInfo(moduleShortName);
+                var bibleInfo = GetModuleBibleContent(moduleShortName);
                 result = GetBibleChaptersCount(bibleInfo, addBooksCount);
             }
             catch (InvalidModuleException)
@@ -90,7 +90,7 @@ namespace BibleNote.Analytics.Services.Environment
             return result;
         }
 
-        public XMLBIBLE GetModuleBibleInfo(string moduleShortName)
+        public XMLBIBLE GetModuleBibleContent(string moduleShortName)
         {
             return GetModuleFile<XMLBIBLE>(moduleShortName, SystemConstants.BibleContentFileName);
         }

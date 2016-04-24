@@ -14,6 +14,8 @@ namespace BibleNote.Analytics.Contracts.Environment
 
         XMLBIBLE CurrentBibleContent { get; }
 
+        XMLBIBLE GetBibleContent(string moduleShortName);
+
         void ReloadInfo();
     }
 }

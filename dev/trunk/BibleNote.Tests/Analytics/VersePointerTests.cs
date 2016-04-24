@@ -11,7 +11,7 @@ namespace BibleNote.Tests.Analytics
     [TestClass]
     public class VersePointerTests
     {
-        private IVersePointerFactory _versePointerFactory;
+        private IVersePointerFactory _versePointerFactory;        
         private IVerseCorrectionService _verseCorrectionService;
 
         [TestInitialize]
@@ -38,18 +38,17 @@ namespace BibleNote.Tests.Analytics
                 notFoundVerses = new string[0];
 
             var actualVerse = _versePointerFactory.CreateVersePointer(originalVerse);
-            _verseCorrectionService.CheckAndCorrectVerse(actualVerse);
-            var versesList = _versePointerFactory.ExpandMultiVerse(actualVerse);
+            _verseCorrectionService.CheckAndCorrectVerse(actualVerse);            
 
-            Assert.AreEqual(versesCount, versesList.VersesCount, "Verses count is wrong.");
-            Assert.AreEqual(verses.Length, versesList.VersePointers.Count, "VersePointers count is wrong.");
-            Assert.AreEqual(notFoundVerses.Length, versesList.NotFoundVersePointers.Count, "NotFoundVersePointers count is wrong.");
+            Assert.AreEqual(versesCount, actualVerse.SubVerses.VersesCount, "Verses count is wrong.");
+            Assert.AreEqual(verses.Length, actualVerse.SubVerses.VersePointers.Count, "VersePointers count is wrong.");
+            Assert.AreEqual(notFoundVerses.Length, actualVerse.SubVerses.NotFoundVersePointers.Count, "NotFoundVersePointers count is wrong.");
 
             foreach (var verse in verses)            
-                Assert.IsTrue(versesList.VersePointers.Contains(_versePointerFactory.CreateVersePointer(verse)), "Can not find the verse: '{0}'", verse);
+                Assert.IsTrue(actualVerse.SubVerses.VersePointers.Contains(_versePointerFactory.CreateVersePointer(verse).ToModuleVersePointer()), "Can not find the verse: '{0}'", verse);
 
             foreach (var verse in notFoundVerses)
-                Assert.IsTrue(versesList.NotFoundVersePointers.Contains(_versePointerFactory.CreateVersePointer(verse)), "Can not find the verse: '{0}'", verse);
+                Assert.IsTrue(actualVerse.SubVerses.NotFoundVersePointers.Contains(_versePointerFactory.CreateVersePointer(verse).ToModuleVersePointer()), "Can not find the verse: '{0}'", verse);
         }
 
         [TestMethod]

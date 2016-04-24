@@ -95,8 +95,15 @@ namespace BibleNote.Analytics.Models.Common
 
         public VersesListInfo()
         {
-            this.VersePointers = new List<T>();
-            this.NotFoundVersePointers = new List<T>();
+            VersePointers = new List<T>();
+            NotFoundVersePointers = new List<T>();
+        }
+
+        public void Clear()
+        {
+            VersePointers = new List<T>();
+            VersesCount = 0;
+            // Сохраняем имеющиеся ненайденные стихи
         }
     }
 
@@ -291,30 +298,20 @@ namespace BibleNote.Analytics.Models.Common
             }
         }
 
-        public string ModuleName { get; set; }
+        public string ModuleShortName { get; set; }
 
         /// <summary>
         /// первоначально переданная строка. Может быть пустой.
         /// </summary>
         public string OriginalVerseName { get; set; }
-
-        //public string OriginalBookName { get; set; }
-
-        /// <summary>
-        /// Передали "Иуд 2". Исправили ли на "Иуд 1:2"
-        /// </summary>
-        public bool WasChangedVerseAsOneChapteredBook { get; set; }
-
-        /// <summary>
-        /// родительская ссылка. Например если мы имеем дело со стихом диапазона, то здесь хранится стих, являющийся диапазоном
-        /// </summary>
-        public VersePointer ParentVersePointer { get; set; }
+        
+        public VersesListInfo<ModuleVersePointer> SubVerses { get; set; }
 
         public VersePointer(BibleBookInfo bookInfo, string moduleName, string originalVerseName, VerseNumber verseNumber, VerseNumber? topVerseNumber = null)
             : base(bookInfo != null ? bookInfo.Index : 0, verseNumber, topVerseNumber)
         {
             Book = bookInfo;
-            ModuleName = moduleName;
+            ModuleShortName = moduleName;
             OriginalVerseName = originalVerseName;
         }
 
@@ -338,7 +335,7 @@ namespace BibleNote.Analytics.Models.Common
             throw new NotImplementedException();
         }
 
-        public ModuleVersePointer ToModuleVersePointer(bool onlyFirstVerse, int? bookIndex = null)
+        public ModuleVersePointer ToModuleVersePointer(bool onlyFirstVerse = false, int? bookIndex = null)
         {   
             return new ModuleVersePointer(
                 bookIndex ?? (Book != null ? Book.Index : 0), 
@@ -347,12 +344,12 @@ namespace BibleNote.Analytics.Models.Common
                 !onlyFirstVerse && IsMultiVerse == MultiVerse.OneChapter ? (int?)TopVerseNumber.Value.Verse : null);
         }
 
-        public ModuleVersePointer ToModuleTopVersePointer()
-        {   
-            if (TopVerseNumber == null)
-                throw new InvalidOperationException($"Verse is not MultiVerse.");
-
-            return new ModuleVersePointer(Book != null ? Book.Index : 0, TopVerseNumber.Value.Chapter, TopVerseNumber.Value.Verse);
+        public void UpdateTopVerseNumber(ICollection<ModuleVersePointer> subVerses)
+        {
+            if (subVerses.Count > 1)
+                TopVerseNumber = subVerses.Last().VerseNumber;
+            else
+                TopVerseNumber = null;
         }
     }
 

@@ -1,5 +1,6 @@
 ﻿using BibleNote.Analytics.Models.Common;
 using System;
+using System.Collections.Generic;
 
 namespace BibleNote.Analytics.Contracts.ParallelVerses
 {
@@ -10,6 +11,6 @@ namespace BibleNote.Analytics.Contracts.ParallelVerses
 
         ParallelBibleInfo GetParallelBibleInfo(string baseModuleShortName, string parallelModuleShortName, bool refreshCache = false);
 
-        ModuleVersePointer GetParallelVersePointer(ModuleVersePointer baseVersePointer, string parallelModuleShortName);
+        List<ModuleVersePointer> GetParallelVersePointer(ModuleVersePointer baseVersePointer, string parallelModuleShortName);
     }
 }
