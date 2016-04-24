@@ -103,7 +103,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
                 else if (verseEntry.VersePointer.SubVerses.NotFoundVerses.Count > 0)
                 {
                     throw new Exception(string.Join(", ", verseEntry.VersePointer.SubVerses.NotFoundVerses.Select(v => v.ToString())));
-                    //todo: надо как-то сохранять такие ненайденные стихи, чтобы потом их показат пользователю.
+                    //todo: надо как-то сохранять такие не найденные стихи, чтобы потом их показат пользователю.
                 }
 
 
