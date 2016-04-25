@@ -404,6 +404,9 @@ namespace BibleNote.Tests.Analytics
         public void TestScenario25()
         {
             CheckVerses("Ин 5:6 и 7 стих, 8ст, ст9-11, ст.12,13", null, null, "Ин 5:6", "Ин 5:7", "Ин 5:8", "Ин 5:9-11", "Ин 5:12", "Ин 5:13");
+            CheckVerses("ст. 22-23, стихи 23-24, стих 12, гл. 2-3, главы 3-4, глава 6", null,
+                docParseContext => docParseContext.SetTitleVerse(_versePointerFactory.CreateVersePointer("Ин 3")),
+                "Ин 3:22-23", "Ин 3:23-24", "Ин 3:12", "Ин 2-3", "Ин 3-4", "Ин 6");
         }
 
         [TestMethod]
@@ -549,7 +552,9 @@ namespace BibleNote.Tests.Analytics
         [TestMethod]
         public void TestScenario38()
         {
-            CheckVerses("Ин 1:1 Ин 1:2", null, null, "Ин 1:1", "Ин 1:2");
+            CheckVerses("1 Пет 5:1,2 Тим 2:2", null, null, "1 Пет 5:1", "2 Тим 2:2");
+            CheckVerses("1 Пет 5,1, 2 Тим 2,2", null, null, "1 Пет 5:1", "2 Тим 2:2");
+            CheckVerses("Ин 1:1 Ин 1:2", null, null, "Ин 1:1", "Ин 1:2");            
         }
 
         [TestMethod]
@@ -567,5 +572,55 @@ namespace BibleNote.Tests.Analytics
             CheckVerses("Ин 20-22", "<a href='bnVerse:Иоанна 20-21'>Ин 20-22</a>", null, new string[] { "Ин 22" }, "Ин 20-21");
             CheckVerses("Ин 21-22", "<a href='bnVerse:Иоанна 21'>Ин 21-22</a>", null, new string[] { "Ин 22" }, "Ин 21");
         }
+
+        [TestMethod]
+        public void TestScenario41()
+        {
+            var input = @"<span
+style='font-weight:bold;color:#333333' lang=ru>Рим&nbsp;</span><span
+style='font-weight:bold;color:#333333' lang=en-US>12:3</span><span
+style='color:#444444' lang=ru>&nbsp;</span>";
+            var expected = "a";
+            CheckVerses(input, expected, null, "Рим 12:3");
+        }
+
+        [TestMethod]
+        public void TestScenario42()
+        {
+            var input = @"<span
+style='font-family:Calibri'>, &quot;</span><span style='font-family:Arial;
+background:white'> (Рим.&nbsp;</span><span style='font-style:italic;font-family:
+Arial;background:white'>6:4);</span><span style='font-family:Arial;background:
+white'>&nbsp;в</span><span style='font-family:Calibri'>&quot;</span>";
+            var expected = "a";
+            CheckVerses(input, expected, null, "Рим 6:4");
+        }
+
+        [TestMethod]
+        public void TestScenario43()
+        {
+            var input = @"<span
+style='color:#444444' lang=ru>Когда Бог сотворил человека, Он предупредил его об опасности нарушения Его воли, сказав о дереве познания добра и зла: &quot;если вкусишь от него, смертью умрёшь&quot; (Быт&nbsp;</span><span
+style='color:#444444' lang=en-US>2:17). </span>
+<span lang=ru>И вас, мертвых по преступлениям и грехам вашим, в которых вы некогда жили, по обычаю мира сего, по воле князя, господствующего в воздухе, духа, действующего ныне в сынах противления, между которыми и мы все жили некогда по нашим плотским похотям, исполняя желания плоти и помыслов, и были по природе чадами гнева, как и прочие. (Еф&nbsp;</span><span
+lang=en-US>2:1-3)</span>
+<span lang=en-US>...</span><span lang=ru>как написано: нет праведного ни одного; нет разумевающего; никто не ищет Бога; все совратились с пути, до одного негодны; нет делающего добро, нет ни одного. (Рим&nbsp;</span><span
+lang=en-US>3:10-12)</span><span
+style='font-weight:bold;color:#333333' lang=ru>1 Петра&nbsp;</span><span
+style='font-weight:bold;color:#333333' lang=en-US>3:1-6</span><span
+style='color:#444444' lang=ru>&nbsp;</span><span
+style='font-weight:bold;color:#333333' lang=ru>Притчи&nbsp;</span><span
+style='font-weight:bold;color:#333333' lang=en-US>14:1</span><span
+style='color:#444444' lang=ru>&nbsp;</span><span
+style='color:#444444' lang=ru> (1</span><span style='color:#444444' lang=en-US>&nbsp;Фес 2:8). Именно за это, пастыри дадут особый отчет перед Богом (</span>
+<span style='color:#444444' lang=ru>и апостолами (1 Пет&nbsp;</span><span
+style='color:#444444' lang=en-US>5:1-3, 2</span><span style='color:#444444'
+lang=ru>&nbsp;Тим&nbsp;</span><span style='color:#444444' lang=en-US>2:2). </span>";
+            var expected = "a";
+            CheckVerses(input, expected, null, "Быт 2:17", "Еф 2:1-3", "Рим 3:10", "1Пет 3:1-6", "Притч 14:1", "1Фес 2:8", "1Пет 5:1-3", "2Тим 2:2");
+        }
+
+
+
     }
 }
