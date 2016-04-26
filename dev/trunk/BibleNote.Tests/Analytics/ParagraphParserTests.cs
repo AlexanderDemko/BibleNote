@@ -554,6 +554,7 @@ namespace BibleNote.Tests.Analytics
         {
             CheckVerses("1 Пет 5:1,2 Тим 2:2", null, null, "1 Пет 5:1", "2 Тим 2:2");
             CheckVerses("1 Пет 5,1, 2 Тим 2,2", null, null, "1 Пет 5:1", "2 Тим 2:2");
+            CheckVerses("1 Пет 5:1,:2 Тим 2:2", null, null, "1 Пет 5:1", "2 Тим 2:2");
             CheckVerses("Ин 1:1 Ин 1:2", null, null, "Ин 1:1", "Ин 1:2");            
         }
 
