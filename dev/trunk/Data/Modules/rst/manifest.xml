@@ -295,8 +295,7 @@
   <BibleStructure Alphabet="АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдеёжзийклмнопрстуфхцчшщъыьэюя" ChapterPageNameTemplate="{0} глава. {1}">
     <BibleBook Index="1" Name="Бытие" SectionName="01. Бытие">
       <Abbreviation>быт</Abbreviation>
-      <Abbreviation>бт</Abbreviation>
-      <Abbreviation>бытие</Abbreviation>
+      <Abbreviation>бт</Abbreviation>      
       <Abbreviation IsFullBookName="true">бытии</Abbreviation>
     </BibleBook>
     <BibleBook Index="2" Name="Исход" SectionName="02. Исход">
@@ -514,6 +513,7 @@
       <Abbreviation IsFullBookName="true">исайя</Abbreviation>
       <Abbreviation IsFullBookName="true">исайи</Abbreviation>
       <Abbreviation IsFullBookName="true">исаии</Abbreviation>
+      <Abbreviation IsFullBookName="true">исаие</Abbreviation>
     </BibleBook>
     <BibleBook Index="24" Name="Иеремия" SectionName="24. Иеремия">
       <Abbreviation>иер</Abbreviation>
@@ -610,6 +610,7 @@
       <Abbreviation>зхр</Abbreviation>
       <Abbreviation>захар</Abbreviation>
       <Abbreviation IsFullBookName="true">захарии</Abbreviation>
+      <Abbreviation IsFullBookName="true">захарию</Abbreviation>
     </BibleBook>
     <BibleBook Index="39" Name="Малахия" SectionName="39. Малахия">
       <Abbreviation>мал</Abbreviation>
@@ -661,6 +662,8 @@
       <Abbreviation IsFullBookName="true">деяниях</Abbreviation>
       <Abbreviation>деяния</Abbreviation>
       <Abbreviation IsFullBookName="true">деяния апостолов</Abbreviation>
+      <Abbreviation IsFullBookName="true">деяниях апостолов</Abbreviation>
+      <Abbreviation IsFullBookName="true">деяний апостолов</Abbreviation>
     </BibleBook>
     <BibleBook Index="59" Name="Иакова" SectionName="06. Иакова">
       <Abbreviation>иак</Abbreviation>
@@ -710,6 +713,7 @@
       <Abbreviation>1-е иоанн</Abbreviation>
       <Abbreviation>1-е иоан</Abbreviation>
       <Abbreviation>1-е ин</Abbreviation>
+      <Abbreviation>1-м ин</Abbreviation>
       <Abbreviation>1-ое иоанна</Abbreviation>
       <Abbreviation>1-ое иоанн</Abbreviation>
       <Abbreviation>1-ое иоан</Abbreviation>
@@ -776,16 +780,17 @@
       <Abbreviation>1-е коринфянам</Abbreviation>
       <Abbreviation>1-е коринф</Abbreviation>
       <Abbreviation>1-е кор</Abbreviation>
+      <Abbreviation>1-екор</Abbreviation>
       <Abbreviation>1-ое коринфянам</Abbreviation>
       <Abbreviation>1-ое коринф</Abbreviation>
       <Abbreviation>1-ое кор</Abbreviation>
       <Abbreviation IsFullBookName="true">1-коринфянам</Abbreviation>
       <Abbreviation>1-коринф</Abbreviation>
       <Abbreviation>1-кор</Abbreviation>
-	  <Abbreviation>первое послание к коринфянам</Abbreviation>
-	  <Abbreviation>первом послании к коринфянам</Abbreviation>
-	  <Abbreviation>первое послание к коринфской церкви</Abbreviation>
-	  <Abbreviation>первом послании к коринфской церкви</Abbreviation>
+      <Abbreviation IsFullBookName="true">первое послание к коринфянам</Abbreviation>
+      <Abbreviation IsFullBookName="true">первом послании к коринфянам</Abbreviation>
+      <Abbreviation IsFullBookName="true">первое послание к коринфской церкви</Abbreviation>
+      <Abbreviation IsFullBookName="true">первом послании к коринфской церкви</Abbreviation>
     </BibleBook>
     <BibleBook Index="47" Name="2-е Коринфянам" ShortName="2коринфянам" SectionName="15. 2-е Коринфянам">
       <Abbreviation>2кор</Abbreviation>
@@ -800,10 +805,10 @@
       <Abbreviation IsFullBookName="true">2-коринфянам</Abbreviation>
       <Abbreviation>2-коринф</Abbreviation>
       <Abbreviation>2-кор</Abbreviation>
-	  <Abbreviation>воторое послание к коринфянам</Abbreviation>
-	  <Abbreviation>вотором послании к коринфянам</Abbreviation>
-	  <Abbreviation>воторое послание к коринфской церкви</Abbreviation>
-	  <Abbreviation>вотором послании к коринфской церкви</Abbreviation>
+      <Abbreviation IsFullBookName="true">воторое послание к коринфянам</Abbreviation>
+      <Abbreviation IsFullBookName="true">вотором послании к коринфянам</Abbreviation>
+      <Abbreviation IsFullBookName="true">воторое послание к коринфской церкви</Abbreviation>
+      <Abbreviation IsFullBookName="true">вотором послании к коринфской церкви</Abbreviation>
     </BibleBook>
     <BibleBook Index="48" Name="К Галатам" ShortName="галатам" SectionName="16. К Галатам">
       <Abbreviation>гал</Abbreviation>
@@ -897,6 +902,7 @@
       <Abbreviation IsFullBookName="true">2-тимофею</Abbreviation>
       <Abbreviation>2-тимоф</Abbreviation>
       <Abbreviation>2-тим</Abbreviation>
+      <Abbreviation IsFullBookName="true">второе послание к тимофею</Abbreviation>
     </BibleBook>
     <BibleBook Index="56" Name="К Титу" ShortName="титу" SectionName="24. К Титу">
       <Abbreviation>тит</Abbreviation>
@@ -924,6 +930,7 @@
       <Abbreviation IsFullBookName="true">откровении</Abbreviation>
       <Abbreviation>откровение</Abbreviation>
       <Abbreviation IsFullBookName="true">апокалипсис</Abbreviation>
+      <Abbreviation IsFullBookName="true">откровению</Abbreviation>
     </BibleBook>
   </BibleStructure>
 </BibleNoteModule>
