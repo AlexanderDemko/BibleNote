@@ -12,12 +12,75 @@ using System.Threading.Tasks;
 
 namespace BibleNote.Analytics.Services.VerseParsing
 {
-    
     /// <summary>
     /// Класс оперирует только обычной строкой. Ничего не знает об html. Ищет стих только в пределах переданной строки. Ему неважно, нашёл он книгу, главу или только стих.
     /// </summary>
     public class StringParser : IStringParser
     {
+        internal class TextPointInfo
+        {
+            internal BookEntry BookEntry { get; set; }
+            internal VerseNumberEntry VerseNumberEntry { get; set; }
+            internal VerseNumberEntry TopVerseNumberEntry { get; set; }
+            internal VerseEntryType EntryType { get; private set; }
+
+            internal BibleBookInfo BibleBookInfo
+            {
+                get
+                {
+                    return BookEntry != null ? BookEntry.BookInfo : null;
+                }
+            }
+
+            internal string ModuleName
+            {
+                get
+                {
+                    return BookEntry != null ? BookEntry.ModuleName : null;
+                }
+            }
+
+            internal TextPointInfo(BookEntry bookEntry, VerseNumberEntry verseNumberEntry, VerseNumberEntry topVerseNumberEntry)
+            {
+                BookEntry = bookEntry;
+                VerseNumberEntry = verseNumberEntry;
+                TopVerseNumberEntry = topVerseNumberEntry;
+                EntryType = GetEntryType();
+            }
+
+            private VerseEntryType GetEntryType()
+            {
+                if (VerseNumberEntry.VerseNumber.IsEmpty)
+                    return VerseEntryType.None;
+
+                if (BookEntry != null)
+                    return VerseNumberEntry.VerseNumber.IsChapter ? VerseEntryType.BookChapter : VerseEntryType.BookChapterVerse;
+
+                if (VerseNumberEntry.IsVerse)
+                    return VerseEntryType.Verse;
+
+                if (VerseNumberEntry.IsChapter)
+                    return VerseEntryType.Chapter;
+
+                return VerseNumberEntry.VerseNumber.IsChapter ? VerseEntryType.ChapterOrVerse : VerseEntryType.ChapterVerse;
+            }
+
+            internal bool CanBeJustNumber(string text)
+            {
+                var result = VerseNumberEntry.CanBeJustNumber(text, TopVerseNumberEntry);       // здесь может измениться IsVerse
+
+                EntryType = GetEntryType();
+                if (VerseNumberEntry.IsVerse)       // например, ":5-7"
+                {
+                    VerseNumberEntry.VerseNumber = new VerseNumber(0, VerseNumberEntry.VerseNumber.Chapter);
+                    if (TopVerseNumberEntry != null)
+                        TopVerseNumberEntry.VerseNumber = new VerseNumber(0, TopVerseNumberEntry.VerseNumber.Chapter);
+                }
+
+                return result;
+            }
+        }
+
         private readonly IModulesManager _modulesManager;
 
         private readonly IApplicationManager _applicationManager;
@@ -25,7 +88,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
         private readonly IConfigurationManager _configurationManager;
 
         public StringParser(IModulesManager modulesManager, IApplicationManager applicationManager, IConfigurationManager configurationManager)
-        {            
+        {
             _modulesManager = modulesManager;
             _applicationManager = applicationManager;
             _configurationManager = configurationManager;
@@ -37,7 +100,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
         }
 
         public VerseEntryInfo TryGetVerse(string text, int startIndex, int leftBoundary, bool useCommaDelimiter)
-        {   
+        {
             VerseEntryInfo result = null;
 
             var indexOfDigit = StringUtils.GetNextIndexOfDigit(text, startIndex);
@@ -46,10 +109,10 @@ namespace BibleNote.Analytics.Services.VerseParsing
                 if (EntryIsLikeVerse(text, indexOfDigit, useCommaDelimiter))
                 {
                     var actualStringStartIndex = indexOfDigit - _applicationManager.CurrentModuleInfo.MaxBookNameLength - 2;
-                    if (actualStringStartIndex < leftBoundary) 
+                    if (actualStringStartIndex < leftBoundary)
                         actualStringStartIndex = leftBoundary;
-                    
-                    result = TryGetVerseEntry(text, actualStringStartIndex, indexOfDigit, useCommaDelimiter);                    
+
+                    result = TryGetVerseEntry(text, actualStringStartIndex, indexOfDigit, useCommaDelimiter);
                 }
 
                 if (result != null && result.VersePointerFound)
@@ -64,46 +127,61 @@ namespace BibleNote.Analytics.Services.VerseParsing
             return result;
         }
 
-        private VerseEntryInfo TryGetVerseEntry(string text, int startIndex, int indexOfDigit, bool useCommaDelimiter)
+        private TextPointInfo GetTextPointInfo(string text, int startIndex, int indexOfDigit, bool useCommaDelimiter)
         {
             var bookEntry = TryGetBookName(text, startIndex, indexOfDigit);
             var verseNumberEntry = TryGetVerseNumber(text, indexOfDigit, bookEntry != null ? useCommaDelimiter : false);      // запятую в качестве разделителя можно использовать только для BookChapterVerse
             var topVerseNumberEntry = TryGetTopVerseNumber(text, verseNumberEntry.EndIndex + 1, verseNumberEntry.VerseNumber);
 
-            var entryType = GetEntryType(bookEntry, verseNumberEntry);
-            if ((entryType == VerseEntryType.Chapter || entryType == VerseEntryType.ChapterOrVerse || entryType == VerseEntryType.Verse)
-                && !verseNumberEntry.CanBeJustNumber(text, topVerseNumberEntry))
-                verseNumberEntry.VerseNumber = new VerseNumber();
+            return new TextPointInfo(bookEntry, verseNumberEntry, topVerseNumberEntry);            
+        }
 
-            if (verseNumberEntry.VerseNumber.IsEmpty)
+        private VerseEntryInfo TryGetVerseEntry(string text, int startIndex, int indexOfDigit, bool useCommaDelimiter)
+        {
+            var textPointInfo = GetTextPointInfo(text, startIndex, indexOfDigit, useCommaDelimiter);
+                        
+            if (textPointInfo.EntryType > VerseEntryType.ChapterVerse)
+            {
+                if (!textPointInfo.CanBeJustNumber(text))
+                    textPointInfo.VerseNumberEntry.VerseNumber = new VerseNumber();
+                else
+                {
+                    var nextIndexOfDigit = StringUtils.GetNextIndexOfDigit(text, indexOfDigit + 1);
+                    if (nextIndexOfDigit != -1 && nextIndexOfDigit - indexOfDigit <= _applicationManager.CurrentModuleInfo.MaxBookNameLength)
+                    {
+                        var nextTextPointInfo = GetTextPointInfo(text, indexOfDigit, nextIndexOfDigit, useCommaDelimiter);
+                        if (nextTextPointInfo.EntryType == VerseEntryType.BookChapter || nextTextPointInfo.EntryType == VerseEntryType.BookChapterVerse)
+                        {
+                            if (nextTextPointInfo.BookEntry.StartIndex == indexOfDigit)
+                                textPointInfo.SetEmpty();
+                        }
+                    }
+                }
+            }
+
+            if (textPointInfo.IsEmpty)
+            if (textPointInfo.VerseNumberEntry.VerseNumber.IsEmpty)
                 return new VerseEntryInfo() { EntryType = VerseEntryType.None };
 
-            var entryStartIndex = bookEntry != null ? bookEntry.StartIndex : verseNumberEntry.StartIndex;
-            var entryEndIndex = verseNumberEntry != null ? (topVerseNumberEntry ?? verseNumberEntry).EndIndex : indexOfDigit;
+            var entryStartIndex = textPointInfo.BookEntry != null ? textPointInfo.BookEntry.StartIndex : textPointInfo.VerseNumberEntry.StartIndex;
+            var entryEndIndex = textPointInfo.VerseNumberEntry != null ? (textPointInfo.TopVerseNumberEntry ?? textPointInfo.VerseNumberEntry).EndIndex : indexOfDigit;
 
             // Если проверок будет больше, надо будет, наверное, сделать StringParser TransientLifetimeManager и вынести эту логику отдельно.
             if (StringUtils.GetChar(text, entryEndIndex + 1) == ')' && StringUtils.GetChar(text, indexOfDigit - 1) == '(')
                 entryEndIndex++;
 
-            if (verseNumberEntry.IsVerse)       // например, ":5-7"
-            {
-                verseNumberEntry.VerseNumber = new VerseNumber(0, verseNumberEntry.VerseNumber.Chapter);
-                if (topVerseNumberEntry != null)
-                    topVerseNumberEntry.VerseNumber = new VerseNumber(0, topVerseNumberEntry.VerseNumber.Chapter);
-            }
-            
             var result = new VerseEntryInfo()
-            {                
-                EntryType = GetEntryType(bookEntry, verseNumberEntry),  // нужно заново пересчитать, так как могло измениться в verseNumberEntry.CanBeJustNumber
+            {
+                EntryType = textPointInfo.EntryType, 
                 EntryOptions = GetEntryOptions(text, entryStartIndex, entryEndIndex),
                 StartIndex = entryStartIndex,
                 EndIndex = entryEndIndex,
                 VersePointer = new VersePointer(
-                    bookEntry != null ? bookEntry.BookInfo : null, 
-                    bookEntry != null ? bookEntry.ModuleName : null,
+                    textPointInfo.BibleBookInfo,
+                    textPointInfo.ModuleName,
                     text.Substring(entryStartIndex, entryEndIndex - entryStartIndex + 1),
-                    verseNumberEntry.VerseNumber,
-                    topVerseNumberEntry != null ? topVerseNumberEntry.VerseNumber : (VerseNumber?)null)                      
+                    textPointInfo.VerseNumberEntry.VerseNumber,
+                    textPointInfo.TopVerseNumberEntry != null ? textPointInfo.TopVerseNumberEntry.VerseNumber : (VerseNumber?)null)
             };
 
             return result;
@@ -126,25 +204,6 @@ namespace BibleNote.Analytics.Services.VerseParsing
             return VerseEntryOptions.None;
         }
 
-        private VerseEntryType GetEntryType(BookEntry bookEntry, VerseNumberEntry verseNumberEntry)
-        {
-            if (verseNumberEntry.VerseNumber.IsEmpty)
-                return VerseEntryType.None;
-
-            if (bookEntry != null)
-                return verseNumberEntry.VerseNumber.IsChapter ? VerseEntryType.BookChapter : VerseEntryType.BookChapterVerse;
-            else
-            {
-                if (verseNumberEntry.IsVerse)
-                    return VerseEntryType.Verse;
-
-                if (verseNumberEntry.IsChapter)
-                    return VerseEntryType.Chapter;
-
-                return verseNumberEntry.VerseNumber.IsChapter ? VerseEntryType.ChapterOrVerse : VerseEntryType.ChapterVerse;
-            }
-        }        
-
         private VerseNumberEntry TryGetVerseNumber(string text, int indexOfDigit, bool useCommaDelimiter)
         {
             char[] chapterDigits = new char[3];
@@ -156,7 +215,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
             var cursorIndex = indexOfDigit;
             var maxVerseNumberLength = 9;
             var lastValuableCharIndex = 0;
-            
+
             while (cursorIndex - indexOfDigit + 1 <= maxVerseNumberLength)
             {
                 var c = StringUtils.GetChar(text, cursorIndex);
@@ -186,10 +245,10 @@ namespace BibleNote.Analytics.Services.VerseParsing
                 cursorIndex++;
             }
 
-            var chapter = VerseUtils.GetVerseNumber(chapterDigits, chapterIndex);            
-            var verse = VerseUtils.GetVerseNumber(verseDigits, verseIndex);            
+            var chapter = VerseUtils.GetVerseNumber(chapterDigits, chapterIndex);
+            var verse = VerseUtils.GetVerseNumber(verseDigits, verseIndex);
 
-            return new VerseNumberEntry() { StartIndex = indexOfDigit, EndIndex = lastValuableCharIndex, VerseNumber = new VerseNumber(chapter, verse)};            
+            return new VerseNumberEntry() { StartIndex = indexOfDigit, EndIndex = lastValuableCharIndex, VerseNumber = new VerseNumber(chapter, verse) };
         }
 
         private VerseNumberEntry TryGetTopVerseNumber(string text, int startIndex, VerseNumber verseNumber)
@@ -224,7 +283,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
                 return null;
 
             var result = TryGetVerseNumber(text, indexOfDigit, false);
-            if (result.VerseNumber.IsChapter && !verseNumber.IsChapter) 
+            if (result.VerseNumber.IsChapter && !verseNumber.IsChapter)
                 result.VerseNumber = new VerseNumber(verseNumber.Chapter, result.VerseNumber.Chapter);
 
             if (result.VerseNumber.Chapter < verseNumber.Chapter
@@ -233,7 +292,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
                 return null;
 
             return result;
-        }     
+        }
 
         private BookEntry TryGetBookName(string text, int startIndex, int indexOfDigit)
         {
@@ -271,22 +330,22 @@ namespace BibleNote.Analytics.Services.VerseParsing
             return endIndex;
         }
 
-        private BookEntry GetBookName(string text, bool endsWithDot)
+        private BookEntry GetBookName(string bookPotentialString, bool endsWithDot)
         {
-            var index = -1;                        
+            var index = -1;
             var startIndex = 0;
 
             do
             {
-                var abbreviation = _applicationManager.CurrentModuleInfo.GetBibleBook(text, endsWithDot);
+                var abbreviation = _applicationManager.CurrentModuleInfo.GetBibleBook(bookPotentialString, endsWithDot);
                 if (abbreviation != null)
                     return new BookEntry() { BookInfo = abbreviation.BibleBook, ModuleName = abbreviation.ModuleName, StartIndex = startIndex };
                 else
                 {
-                    index = text.IndexOfAny(VerseUtils.WordDelimiters);
+                    index = bookPotentialString.IndexOfAny(VerseUtils.WordDelimiters);
                     if (index != -1)
                     {
-                        text = text.Substring(index + 1);
+                        bookPotentialString = bookPotentialString.Substring(index + 1);
                         startIndex += index + 1;
                     }
                 }
