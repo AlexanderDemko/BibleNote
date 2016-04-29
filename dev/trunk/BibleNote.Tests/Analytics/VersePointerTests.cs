@@ -65,6 +65,11 @@ namespace BibleNote.Tests.Analytics
             CheckVerseParsing("2 Петр1 : 4- 3 : 2", new SimpleVersePointer(61, new VerseNumber(1, 4), new VerseNumber(3, 2)));
 
             CheckVerseParsing("Ин 1:1", new SimpleVersePointer(43, 1, 1));
+            CheckVerseParsing("Ин  1:1", new SimpleVersePointer(43, 1, 1));
+            CheckVerseParsing("Ин   1:1", new SimpleVersePointer(43, 1, 1));
+            CheckVerseParsing("Ин    1:1", new SimpleVersePointer(43, 1, 1));
+            CheckVerseParsing("Ин 1 1 : 1 1", new SimpleVersePointer(43, 11, 11));
+            CheckVerseParsing("Ин 1  1 : 1 1", new SimpleVersePointer(43, 1));
             CheckVerseParsing("Ин 1,2", new SimpleVersePointer(43, 1, 2));            
             CheckVerseParsing("Ин 1", new SimpleVersePointer(43, 1));
             CheckVerseParsing("Ин 1: 1", new SimpleVersePointer(43, 1, 1));

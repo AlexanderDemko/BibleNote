@@ -577,6 +577,8 @@ namespace BibleNote.Tests.Analytics
         [TestMethod]
         public void TestScenario41()
         {
+            CheckVerses("начало &nbsp;Рим&nbsp;&nbsp;12&nbsp;:&nbsp;3&nbsp; - конец", null, null, "Рим 12:3");
+
             var input = @"<span
 style='font-weight:bold;color:#333333' lang=ru>Рим&nbsp;</span><span
 style='font-weight:bold;color:#333333' lang=en-US>12:3</span><span

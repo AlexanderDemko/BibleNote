@@ -135,7 +135,7 @@ namespace BibleNote.Analytics.Core.Helpers
                 sb.Append(textNode.InnerText);
             }
 
-            result.Value = sb.ToString();
+            result.Value = sb.ToString(); //.Replace("&nbsp;", " ");
             return result;
         }
     }
