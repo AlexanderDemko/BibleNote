@@ -46,8 +46,10 @@
   <ItemGroup>
     <Compile Include="Common\BibleTranslationDifferencesEx.cs" />
     <Compile Include="Common\BibleTranslationDifferencesFormula.cs" />
+    <Compile Include="Common\Boundaries.cs" />
     <Compile Include="Common\ModuleInfo.cs" />
     <Compile Include="Common\ParagraphParseResult.cs" />
+    <Compile Include="Common\TextFragmentInfo.cs" />
     <Compile Include="Common\VerseEntryInfo.cs" />
     <Compile Include="Common\VersePointer.cs" />
     <Compile Include="Entities\Document.cs" />
