@@ -174,7 +174,10 @@ namespace BibleNote.Analytics.Services.VerseParsing
                     {
                         if (nodeEntry.StartIndex <= verseEntryInfo.StartIndex && verseEntryInfo.StartIndex <= nodeEntry.EndIndex)
                         {
-                            result.NodeEntry = nodeEntry;
+                            if (!nodeEntry.WasCleaned)
+                                nodeEntry.Clean();  // то есть, если в этой ноде есть стих, тогда мы можем немного её почистить. Чтобы другие ноды не изменять.
+
+                            result.NodeEntry = nodeEntry;                            
                             result.StartIndex = verseEntryInfo.StartIndex - nodeEntry.StartIndex;
                             result.EndIndex = (nodeEntry.EndIndex >= verseEntryInfo.EndIndex ? verseEntryInfo.EndIndex : nodeEntry.EndIndex) - nodeEntry.StartIndex;
 
@@ -187,8 +190,11 @@ namespace BibleNote.Analytics.Services.VerseParsing
                     }
                     else
                     {
+                        if (!nodeEntry.WasCleaned)
+                            nodeEntry.Clean();  
+
                         var moveCharsCount = (verseEntryInfo.EndIndex > nodeEntry.EndIndex ? nodeEntry.EndIndex : verseEntryInfo.EndIndex) - nodeEntry.StartIndex + 1;
-                        var verseTextPart = nodeEntry.Node.InnerText.Substring(0, moveCharsCount);
+                        var verseTextPart = nodeEntry.Node.InnerHtml.Substring(0, moveCharsCount);
                         result.EndIndex += moveCharsCount;
                         nodeEntry.StartIndex += moveCharsCount;     // здесь может быть ситуация, когда Startindex > EndIndex. Когда нода была из одного символа. Похоже, что это нормально. Так как мы больше нигде не используем эти ноды.
 
@@ -203,7 +209,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
                         result.NodeEntry.Node.InnerHtml += verseTextPart;
                         nodeEntry.Node.InnerHtml = nodeEntry.Node.InnerHtml.Remove(0, moveCharsCount);
 
-                        if (verseEntryInfo.EndIndex < nodeEntry.EndIndex)
+                        if (verseEntryInfo.EndIndex <= nodeEntry.EndIndex)
                             break;
                     }
                     skipNodes++;
@@ -211,11 +217,14 @@ namespace BibleNote.Analytics.Services.VerseParsing
             }
             else
             {
-                result.NodeEntry = parseString.NodesInfo.First();
+                result.NodeEntry = parseString.NodesInfo.First();                
                 result.StartIndex = verseEntryInfo.StartIndex;
                 result.EndIndex = verseEntryInfo.EndIndex;
-            }
 
+                if (!result.NodeEntry.WasCleaned)
+                    result.NodeEntry.Clean();
+            }
+            
             return result;
         }
     }

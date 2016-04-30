@@ -12,11 +12,21 @@ namespace BibleNote.Analytics.Core.Helpers
     {
         public HtmlNode Node { get; set; }
 
+        internal string CleanedText { get; set; }
+
         public int StartIndex { get; set; }     // границы Node в TextNodesString.Value
 
         public int EndIndex { get; set; }
 
         public int Shift { get; set; }          // сдвиг из-за вставленных ссылок
+
+        public bool WasCleaned { get; private set; }
+
+        public void Clean()
+        {
+            Node.InnerHtml = CleanedText;
+            WasCleaned = true;
+        }
 
         public void MoveBy(int shift)
         {
@@ -92,13 +102,13 @@ namespace BibleNote.Analytics.Core.Helpers
                         continue;
                     }
 
-                    if ((childNode.HasChildNodes() || childNode.Name == "br") && nodes.Count > 0)
+                    if ((childNode.HasChildNodes || childNode.Name == "br") && nodes.Count > 0)
                     {
                         AddParseString(BuildParseString(nodes));
                         nodes.Clear();
                     }
 
-                    if (childNode.HasChildNodes())
+                    if (childNode.HasChildNodes)
                         FindParseStrings(childNode);
                 }
 
@@ -123,19 +133,21 @@ namespace BibleNote.Analytics.Core.Helpers
             foreach (var node in nodes)
             {
                 var textNode = node.GetTextNode();
-                if (string.IsNullOrEmpty(textNode.InnerText))
+                if (string.IsNullOrEmpty(textNode.InnerHtml))
                     continue;
 
+                var nodeText = textNode.InnerHtml.Replace("&nbsp;", " ");
                 result.NodesInfo.Add(new TextNodeEntry()
                 {
                     Node = textNode,
                     StartIndex = sb.Length,
-                    EndIndex = sb.Length + textNode.InnerText.Length - 1
+                    EndIndex = sb.Length + nodeText.Length - 1,
+                    CleanedText = nodeText
                 });
-                sb.Append(textNode.InnerText);
+                sb.Append(nodeText);
             }
 
-            result.Value = sb.ToString(); //.Replace("&nbsp;", " ");
+            result.Value = sb.ToString();
             return result;
         }
     }
