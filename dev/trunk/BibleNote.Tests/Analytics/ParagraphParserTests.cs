@@ -258,7 +258,7 @@ namespace BibleNote.Tests.Analytics
             CheckVerses("Ps 75:10-11", "<a href='bnVerse:Псалтирь 74:11'>Ps 75:10-11</a>", null, new string[] { "Ps 75:11" }, "Псалтирь 74:11");
             CheckVerses("Ps 115:12-19", "<a href='bnVerse:Псалтирь 113:20-26'>Ps 115:12-19</a>", null, new string[] { "Ps 115:19" }, "Пс 113:20-26");
             CheckVerses("Ps 89:1-2, Lev 14:56-57, Lev 14:57, Ps 19:5", null, null, "Пс 88:1-3", "Лев 14:55-56", "Лев 14:56", "Пс 18:6");
-            CheckVerses("I Cor 6:7, II Tim 2:3, I Sa 3:5", null, null, "1Кор 6:7", "2 Тим 2:3", "1 Царств 3:5");            
+            CheckVerses("I Cor 6:7, II Tim 2:3, I Sa 3:5, i Sa 3:6", null, null, "1Кор 6:7", "2 Тим 2:3", "1 Царств 3:5", "1 Царств 3:6");
             CheckVerses("Ps 75:1", "<a href='bnVerse:Псалтирь 74:1-2'>Ps 75:1</a>", null, "Пс 74:1-2");
             CheckVerses("Ps 75:1", "<a href='bnVerse:Псалтирь 74:1-2'>Ps 75:1</a>", null, "Пс 74:1-2");            
             CheckVerses("Lev 14:55-58", null, null, new string[] { "Lev 14:58" }, "Лев 14:55-56");

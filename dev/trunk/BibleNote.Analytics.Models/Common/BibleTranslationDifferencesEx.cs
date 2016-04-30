@@ -1,8 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using BibleNote.Analytics.Core.Extensions;
 
 namespace BibleNote.Analytics.Models.Common
 {
@@ -12,10 +10,7 @@ namespace BibleNote.Analytics.Models.Common
         {
             get
             {
-                if (base.ContainsKey(bookIndex))
-                    return base[bookIndex];
-
-                return null;
+                return this.Get(bookIndex);
             }
         }
     }
@@ -41,10 +36,11 @@ namespace BibleNote.Analytics.Models.Common
     {
         public new void Add(ModuleVersePointer key, ComparisonVersesInfo value)
         {
-            if (!this.ContainsKey(key))
+            ComparisonVersesInfo versesInfo;
+            if (!TryGetValue(key, out versesInfo))
                 base.Add(key, value);
             else
-                base[key].AddRange(value);
+                versesInfo.AddRange(value);
         }
 
         private Dictionary<ModuleVersePointer, ModuleVersePointer> _keys;
@@ -59,10 +55,7 @@ namespace BibleNote.Analytics.Models.Common
                 }
             }
 
-            if (_keys.ContainsKey(key))
-                return _keys[key];
-
-            return null;
+            return _keys.Get(key);           
         }
     }
 
@@ -107,10 +100,7 @@ namespace BibleNote.Analytics.Models.Common
 
         public ModuleVersePointersComparisonTable GetBibleVersesDifferences(int bookIndex)
         {
-            if (this.BibleVersesDifferences.ContainsKey(bookIndex))
-                return this.BibleVersesDifferences[bookIndex];
-
-            return null;
+            return BibleVersesDifferences.Get(bookIndex);            
         }
     }
 }

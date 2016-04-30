@@ -130,11 +130,9 @@ namespace BibleNote.Analytics.Models.Common
             if (s.Length == 0)               
                 return null;            
 
-            s = s.ToLowerInvariant();
-
             var result = GetBibleBookByExactMatch(s, endsWithDot);
             if (result == null && s.Length > 0
-                && (char.IsDigit(s[0]) || s[0] == 'i' || s.Contains(". ")))  // может быть "I Cor 4:6", "Иис. Нав 1:1"                
+                && (char.IsDigit(s[0]) || char.ToLowerInvariant(s[0]) == 'i' || s.Contains(". ")))  // может быть "I Cor 4:6", "Иис. Нав 1:1"                
             {
                 s = s.Replace(" ", string.Empty).Replace(" ", string.Empty); // чтоб находил "1 John", когда в списке сокращений только "1John"
                 result = GetBibleBookByExactMatch(s, endsWithDot);
@@ -145,11 +143,9 @@ namespace BibleNote.Analytics.Models.Common
 
         private Abbreviation GetBibleBookByExactMatch(string s, bool endsWithDot)
         {   
-            Abbreviation abbreviation = null;
-
-            if (BibleStructure.AllAbbreviations.ContainsKey(s))
-            {
-                abbreviation = BibleStructure.AllAbbreviations[s];
+            Abbreviation abbreviation;
+            if (BibleStructure.AllAbbreviations.TryGetValue(s, out abbreviation))
+            {   
                 if (endsWithDot && abbreviation.IsFullBookName)
                     abbreviation = null;
             }
@@ -218,7 +214,7 @@ namespace BibleNote.Analytics.Models.Common
 
         private Dictionary<string, Abbreviation> GetAllAbbreviations()
         {
-            var result = new Dictionary<string, Abbreviation>();
+            var result = new Dictionary<string, Abbreviation>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var bibleBook in BibleBooks)
             {
@@ -310,7 +306,7 @@ namespace BibleNote.Analytics.Models.Common
 
             Abbreviations.ForEach(abbr =>
             {
-                abbr.Value = abbr.Value.ToLowerInvariant();     // вдруг где-то в модуле случайно указали с большой буквы            
+                abbr.Value = abbr.Value;
                 abbr.BibleBook = this;
             });  
 
@@ -319,10 +315,9 @@ namespace BibleNote.Analytics.Models.Common
                 if (!result.ContainsKey(abbr.Value))
                     result.Add(abbr.Value, abbr);
             }
-
-            var nameLower = Name.ToLowerInvariant();
-            if (!result.ContainsKey(nameLower))
-                result.Add(nameLower, new Abbreviation(nameLower) { IsFullBookName = true, BibleBook = this });
+            
+            if (!result.ContainsKey(Name))
+                result.Add(Name, new Abbreviation(Name) { IsFullBookName = true, BibleBook = this });
 
             return result;
         }
