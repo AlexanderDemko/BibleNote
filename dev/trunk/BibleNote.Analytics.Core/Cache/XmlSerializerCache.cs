@@ -22,16 +22,20 @@ namespace BibleNote.Analytics.Core.Cache
 
         public static XmlSerializer GetXmlSerializer(Type type)
         {
-            if (!_cacheItems.ContainsKey(type))
+            XmlSerializer result;
+            if (!_cacheItems.TryGetValue(type, out result))
             {
                 lock (_locker)
                 {
-                    if (!_cacheItems.ContainsKey(type))
-                        _cacheItems.Add(type, new XmlSerializer(type));
+                    if (!_cacheItems.TryGetValue(type, out result))
+                    {
+                        result = new XmlSerializer(type);
+                        _cacheItems.Add(type, result);
+                    }
                 }
             }
 
-            return _cacheItems[type];
+            return result;
         }
     }
 }

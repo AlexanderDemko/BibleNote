@@ -63,16 +63,20 @@ namespace BibleNote.Analytics.Services.Environment
 
         public XMLBIBLE GetBibleContent(string moduleShortName)
         {
-            if (!_biblesContent.ContainsKey(moduleShortName))
+            XMLBIBLE bibleContent;
+            if (!_biblesContent.TryGetValue(moduleShortName, out bibleContent))
             {
                 lock (_locker)
                 {
-                    if (!_biblesContent.ContainsKey(moduleShortName))                    
-                        _biblesContent.Add(moduleShortName, _modulesManager.GetModuleBibleContent(moduleShortName));                    
+                    if (!_biblesContent.TryGetValue(moduleShortName, out bibleContent))
+                    {
+                        bibleContent = _modulesManager.GetModuleBibleContent(moduleShortName);
+                        _biblesContent.Add(moduleShortName, bibleContent);
+                    }
                 }
             }
 
-            return _biblesContent[moduleShortName];
+            return bibleContent;
         }
     }
 }

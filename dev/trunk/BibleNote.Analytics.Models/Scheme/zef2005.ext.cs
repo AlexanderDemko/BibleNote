@@ -283,10 +283,9 @@ namespace BibleNote.Analytics.Models.Scheme
 
             if (_versesDictionary == null)
                 LoadVersesDictionary(versePointer, moduleShortName);            
-
-            if (_versesDictionary.ContainsKey(versePointer.VerseNumber.Verse))
-            {
-                result = _versesDictionary[versePointer.VerseNumber.Verse];
+            
+            if (_versesDictionary.TryGetValue(versePointer.VerseNumber.Verse, out result))
+            {                
                 verseIndex = result.VerseIndex;
                 isPartOfBigVerse = verseIndex.IsSeveralVerses;
             }

@@ -13,9 +13,11 @@ namespace BibleNote.Analytics.Services.ParallelVerses
 {
     public class BibleParallelTranslationConnectorManager : IBibleParallelTranslationConnectorManager
     {
-        private IModulesManager _modulesManager;
-        private IStringParser _stringParser;
-        private IConfigurationManager _configurationManager;
+        private readonly IModulesManager _modulesManager;
+        private readonly IStringParser _stringParser;
+        private readonly IConfigurationManager _configurationManager;
+
+        private static readonly object _locker = new object();
 
         public BibleParallelTranslationConnectorManager(IModulesManager modulesManager, IStringParser stringParser, IConfigurationManager configurationManager)
         {
@@ -36,13 +38,11 @@ namespace BibleNote.Analytics.Services.ParallelVerses
 
             var parallelBibleInfo = GetParallelBibleInfo(parallelModuleShortName, _configurationManager.ModuleShortName);
             var parallelBookInfo = parallelBibleInfo[baseVersePointer.BookIndex];
-            if (parallelBookInfo != null)
-            {
-                if (parallelBookInfo.ContainsKey(baseVersePointer))
-                    result = parallelBookInfo[baseVersePointer];
-            }
 
-            if (result == null)
+            ComparisonVersesInfo verseInfo;
+            if (parallelBookInfo != null && parallelBookInfo.TryGetValue(baseVersePointer, out verseInfo))
+                result = verseInfo;
+            else
                 result = new List<ModuleVersePointer>(1) { (ModuleVersePointer)baseVersePointer.Clone() };
 
             return result;
@@ -51,17 +51,18 @@ namespace BibleNote.Analytics.Services.ParallelVerses
         public ParallelBibleInfo GetParallelBibleInfo(string baseModuleShortName, string parallelModuleShortName, bool refreshCache = false)
         {
             var key = GetKey(baseModuleShortName, parallelModuleShortName);
+            ParallelBibleInfo result;
 
-            if (_cache.ContainsKey(key) && !refreshCache)
-                return _cache[key];
-            else
+            if (refreshCache || !_cache.TryGetValue(key, out result))                          
             {
                 var baseModuleInfo = _modulesManager.GetModuleInfo(baseModuleShortName);
                 var parallelModuleInfo = _modulesManager.GetModuleInfo(parallelModuleShortName);
 
-                return GetParallelBibleInfo(baseModuleShortName, parallelModuleShortName,
+                result = GetParallelBibleInfo(baseModuleShortName, parallelModuleShortName,
                     baseModuleInfo.BibleTranslationDifferences, parallelModuleInfo.BibleTranslationDifferences, refreshCache);
             }
+
+            return result;
         }
 
         public ParallelBibleInfo GetParallelBibleInfo(string baseModuleShortName, string parallelModuleShortName,
@@ -72,15 +73,13 @@ namespace BibleNote.Analytics.Services.ParallelVerses
 
             ParallelBibleInfo result;
 
-            if (_cache.ContainsKey(key) && !refreshCache)
-                result = _cache[key];
-            else
+            if (refreshCache || !_cache.TryGetValue(key, out result))
             {
                 result = new ParallelBibleInfo();
 
                 if (baseModuleShortName.ToLower() != parallelModuleShortName.ToLower())
                 {
-                    var verseFactory = new BibleTranslationDifferencesBaseVersesFormula.VerseFactory((s, bookIndex) => 
+                    var verseFactory = new BibleTranslationDifferencesBaseVersesFormula.VerseFactory((s, bookIndex) =>
                     {
                         var verseEntry = _stringParser.TryGetVerse(s, 0);
                         if (verseEntry.VersePointerFound)
@@ -96,10 +95,13 @@ namespace BibleNote.Analytics.Services.ParallelVerses
                     ProcessForParallelBookVerses(baseTranslationDifferencesEx, parallelTranslationDifferencesEx, result);
                 }
 
-                if (!_cache.ContainsKey(key))
-                    _cache.Add(key, result);
-                else
-                    _cache[key] = result;
+                lock (_locker)
+                {
+                    if (!_cache.ContainsKey(key))
+                        _cache.Add(key, result);
+                    else
+                        _cache[key] = result;
+                }
             }
 
             return result;
@@ -120,10 +122,10 @@ namespace BibleNote.Analytics.Services.ParallelVerses
 
                 foreach (var baseVerseKey in baseBookVerses.Keys)
                 {
-                    if (parallelBookVerses != null && parallelBookVerses.ContainsKey(baseVerseKey))
+                    ComparisonVersesInfo parallelVerses;
+                    if (parallelBookVerses != null && parallelBookVerses.TryGetValue(baseVerseKey, out parallelVerses))
                     {
-                        var baseVerses = baseBookVerses[baseVerseKey];
-                        var parallelVerses = parallelBookVerses[baseVerseKey];
+                        var baseVerses = baseBookVerses[baseVerseKey];                        
 
                         JoinBaseAndParallelVerses(baseVerseKey, baseVerses, parallelVerses, bookVersePointersComparisonTables);
                     }
@@ -133,7 +135,7 @@ namespace BibleNote.Analytics.Services.ParallelVerses
                         int? versePartIndex = baseVerses.Count(v => !v.IsApocrypha && !v.IsEmpty) > 1 ? (int?)0 : null;
                         foreach (var baseVersePointer in baseVerses)
                         {
-                            var parallelVerses = ComparisonVersesInfo.FromVersePointer(
+                            parallelVerses = ComparisonVersesInfo.FromVersePointer(
                                 new ModuleVersePointer(baseVerseKey)
                                 {
                                     PartIndex = versePartIndex.HasValue ? versePartIndex++ : null,
@@ -281,22 +283,19 @@ namespace BibleNote.Analytics.Services.ParallelVerses
             foreach (int bookIndex in parallelTranslationDifferencesEx.BibleVersesDifferences.Keys)
             {
                 ModuleVersePointersComparisonTable bookVersePointersComparisonTables;
-
-                if (!result.ContainsKey(bookIndex))
+                if (!result.TryGetValue(bookIndex, out bookVersePointersComparisonTables))
                 {
                     bookVersePointersComparisonTables = new ModuleVersePointersComparisonTable();
                     result.Add(bookIndex, bookVersePointersComparisonTables);
-                }
-                else
-                    bookVersePointersComparisonTables = result[bookIndex];
+                }                
 
                 var baseBookVerses = baseTranslationDifferencesEx.GetBibleVersesDifferences(bookIndex);
                 var parallelBookVerses = parallelTranslationDifferencesEx.BibleVersesDifferences[bookIndex];
 
-                foreach (var parallelVerseKey in parallelBookVerses.Keys)
+                foreach (var parallelVerseKVP in parallelBookVerses)
                 {
-                    if (baseBookVerses == null || !baseBookVerses.ContainsKey(parallelVerseKey))   // вариант, когда и там, и там есть мы уже разобрали                    
-                        bookVersePointersComparisonTables.Add(parallelVerseKey, parallelBookVerses[parallelVerseKey]);
+                    if (baseBookVerses == null || !baseBookVerses.ContainsKey(parallelVerseKVP.Key))   // вариант, когда и там, и там есть, мы уже разобрали                    
+                        bookVersePointersComparisonTables.Add(parallelVerseKVP.Key, parallelVerseKVP.Value);
                 }
             }
         }
