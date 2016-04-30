@@ -18,12 +18,7 @@ namespace BibleNote.Analytics.Core.Extensions
         {
             return node.NodeType == HtmlNodeType.Text 
                 || (node.NodeType == HtmlNodeType.Element && node.ChildNodes.Count == 1 && node.ChildNodes[0].NodeType == HtmlNodeType.Text);
-        }
-
-        public static bool HasChildNodes(this HtmlNode node)
-        {
-            return node.ChildNodes.Count > 0;
-        }
+        }        
 
         public static HtmlNode GetTextNode(this HtmlNode node)
         {

@@ -90,7 +90,7 @@ namespace BibleNote.Tests.Analytics
                 Assert.IsTrue(verseEntries.Contains(_versePointerFactory.CreateVersePointer(verse)), "Can not find the verse: '{0}'", verse);            
 
             Assert.AreEqual(expectedOutput, htmlDoc.DocumentNode.InnerHtml, "The output html is wrong.");
-            Assert.AreEqual(new HtmlToTextConverter().SimpleConvert(input), result.Text, "Text parts do not contain the full input string.");
+            Assert.AreEqual(new HtmlToTextConverter().SimpleConvert(input).Replace("&nbsp;", " "), result.Text, "Text parts do not contain the full input string.");
 
             if (notFoundVerses != null)
             {
@@ -577,13 +577,18 @@ namespace BibleNote.Tests.Analytics
         [TestMethod]
         public void TestScenario41()
         {
-            CheckVerses("начало &nbsp;Рим&nbsp;&nbsp;12&nbsp;:&nbsp;3&nbsp; - конец", null, null, "Рим 12:3");
+            CheckVerses(
+                "начало &nbsp;Рим&nbsp;&nbsp;12&nbsp;:&nbsp;3&nbsp;,&nbsp;1&nbsp;Кор&nbsp;5&nbsp;:&nbsp;6&nbsp; - конец",
+                "начало  <a href='bnVerse:Римлянам 12:3'>Рим  12 : 3</a> , <a href='bnVerse:1Коринфянам 5:6'>1 Кор 5 : 6</a>  - конец",
+                null,
+                "Рим 12:3", "1Кор 5:6");
 
             var input = @"<span
+style='color:#444444' lang=ru>2&nbsp;</span><span
 style='font-weight:bold;color:#333333' lang=ru>Рим&nbsp;</span><span
 style='font-weight:bold;color:#333333' lang=en-US>12:3</span><span
 style='color:#444444' lang=ru>&nbsp;</span>";
-            var expected = "a";
+            var expected = "<span style='color:#444444' lang=\"ru\">2&nbsp;</span><span style='font-weight:bold;color:#333333' lang=\"ru\"><a href='bnVerse:Римлянам 12:3'>Рим 12:3</a></span><span style='font-weight:bold;color:#333333' lang=\"en-US\"></span><span style='color:#444444' lang=\"ru\">&nbsp;</span>";
             CheckVerses(input, expected, null, "Рим 12:3");
         }
 
@@ -595,7 +600,7 @@ style='font-family:Calibri'>, &quot;</span><span style='font-family:Arial;
 background:white'> (Рим.&nbsp;</span><span style='font-style:italic;font-family:
 Arial;background:white'>6:4);</span><span style='font-family:Arial;background:
 white'>&nbsp;в</span><span style='font-family:Calibri'>&quot;</span>";
-            var expected = "a";
+            var expected = "<span style='font-family:Calibri'>, &quot;</span><span style='font-family:Arial;\r\nbackground:white'> (<a href='bnVerse:Римлянам 6:4'>Рим. 6:4</a></span><span style='font-style:italic;font-family:\r\nArial;background:white'>);</span><span style='font-family:Arial;background:\r\nwhite'>&nbsp;в</span><span style='font-family:Calibri'>&quot;</span>";
             CheckVerses(input, expected, null, "Рим 6:4");
         }
 
@@ -619,8 +624,8 @@ style='color:#444444' lang=ru> (1</span><span style='color:#444444' lang=en-US>&
 <span style='color:#444444' lang=ru>и апостолами (1 Пет&nbsp;</span><span
 style='color:#444444' lang=en-US>5:1-3, 2</span><span style='color:#444444'
 lang=ru>&nbsp;Тим&nbsp;</span><span style='color:#444444' lang=en-US>2:2). </span>";
-            var expected = "a";
-            CheckVerses(input, expected, null, "Быт 2:17", "Еф 2:1-3", "Рим 3:10", "1Пет 3:1-6", "Притч 14:1", "1Фес 2:8", "1Пет 5:1-3", "2Тим 2:2");
+            var expected = "<span style='color:#444444' lang=\"ru\">Когда Бог сотворил человека, Он предупредил его об опасности нарушения Его воли, сказав о дереве познания добра и зла: &quot;если вкусишь от него, смертью умрёшь&quot; (<a href='bnVerse:Бытие 2:17'>Быт 2:17</a></span><span style='color:#444444' lang=\"en-US\">). </span>\r\n<span lang=\"ru\">И вас, мертвых по преступлениям и грехам вашим, в которых вы некогда жили, по обычаю мира сего, по воле князя, господствующего в воздухе, духа, действующего ныне в сынах противления, между которыми и мы все жили некогда по нашим плотским похотям, исполняя желания плоти и помыслов, и были по природе чадами гнева, как и прочие. (<a href='bnVerse:Ефесянам 2:1-3'>Еф 2:1-3</a></span><span lang=\"en-US\">)</span>\r\n<span lang=\"en-US\">...</span><span lang=\"ru\">как написано: нет праведного ни одного; нет разумевающего; никто не ищет Бога; все совратились с пути, до одного негодны; нет делающего добро, нет ни одного. (<a href='bnVerse:Римлянам 3:10-12'>Рим 3:10-12</a></span><span lang=\"en-US\">)</span><span style='font-weight:bold;color:#333333' lang=\"ru\"><a href='bnVerse:1Петра 3:1-6'>1 Петра 3:1-6</a></span><span style='font-weight:bold;color:#333333' lang=\"en-US\"></span><span style='color:#444444' lang=\"ru\">&nbsp;</span><span style='font-weight:bold;color:#333333' lang=\"ru\"><a href='bnVerse:Притчи 14:1'>Притчи 14:1</a></span><span style='font-weight:bold;color:#333333' lang=\"en-US\"></span><span style='color:#444444' lang=\"ru\">&nbsp;</span><span style='color:#444444' lang=\"ru\"> (<a href='bnVerse:1Фессалоникийцам 2:8'>1 Фес 2:8</a></span><span style='color:#444444' lang=\"en-US\">). Именно за это, пастыри дадут особый отчет перед Богом (</span>\r\n<span style='color:#444444' lang=\"ru\">и апостолами (<a href='bnVerse:1Петра 5:1-3'>1 Пет 5:1-3</a></span><span style='color:#444444' lang=\"en-US\">, <a href='bnVerse:2Тимофею 2:2'>2 Тим 2:2</a></span><span style='color:#444444' lang=\"ru\"></span><span style='color:#444444' lang=\"en-US\">). </span>";
+            CheckVerses(input, expected, null, "Быт 2:17", "Еф 2:1-3", "Рим 3:10-12", "1Пет 3:1-6", "Притч 14:1", "1Фес 2:8", "1Пет 5:1-3", "2Тим 2:2");
         }
 
 

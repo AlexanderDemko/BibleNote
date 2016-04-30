@@ -32,10 +32,10 @@ namespace BibleNoteConsole
             //ModulesManager = DIContainer.Resolve<IModulesManager>();
 
             var sw = new Stopwatch();
-            sw.Start();
+          
 
             try
-            {   
+            {
                 //var _moduleInfo = ModulesManager.UploadModule(@"C:\prj\BibleNote v4\dev\trunk\Data\Modules\rst\rst.bnm", "rst");
                 //ModulesManager.SetCurrentModule("rst");
                 //var bible = ModulesManager.GetCurrentBibleContent();
@@ -43,25 +43,44 @@ namespace BibleNoteConsole
 
                 //Console.WriteLine(bible.Books.Skip(39).SelectMany(b => b.Chapters.SelectMany(c => c.Verses)).Count());
 
-                for (int i = 0; i <= 10000000; i++)
+                //for (int i = 0; i <= 10000000; i++)
+                //{
+                //    var s = "test" + " " + " " + "test";
+                //    var r = s.Replace(" ", string.Empty).Replace(" ", string.Empty);
+                //    //var r = ReplaceWhitespace(s, string.Empty);
+                //    if (r != "testtest")
+                //        throw new InvalidOperationException();
+                //}
+
+                sw.Start();
+                for (var i = 0; i <= 100000; i++)
                 {
-                    var s = "test" + " " + " " + "test";
-                    var r = s.Replace(" ", string.Empty).Replace(" ", string.Empty);
-                    //var r = ReplaceWhitespace(s, string.Empty);
-                    if (r != "testtest")
-                        throw new InvalidOperationException();
+                    var sb = GetText(i);
+                    var q = sb.Replace("aab", " ").ToString();
                 }
-        
+
+                sw.Stop();
+                Console.WriteLine($"StringBuilder Replace: {sw.Elapsed.TotalSeconds}");
+
+                sw.Start();
+                for (var i = 0; i <= 100000; i++)
+                {
+                    var sb = GetText(i);
+                    var q = sb.ToString().Replace("aab", " ");
+                }
+
+                sw.Stop();
+                Console.WriteLine($"String Replace: {sw.Elapsed.TotalSeconds}");
 
 
-        //new CheckVerseRecognitionVariantsPerfomance().RunTests();
-        //TestChar2IntPerfomance(VerseUtils.GetVerseNumber);                
+                //new CheckVerseRecognitionVariantsPerfomance().RunTests();
+                //TestChar2IntPerfomance(VerseUtils.GetVerseNumber);                
 
-        //var service = DIContainer.Resolve<IVerseRecognitionService>();
-        //var verseEntryInfo = service.TryGetVerse("В этом тексте есть Ин 5:6 и ещё другие стихи, например :7.", 0);
+                //var service = DIContainer.Resolve<IVerseRecognitionService>();
+                //var verseEntryInfo = service.TryGetVerse("В этом тексте есть Ин 5:6 и ещё другие стихи, например :7.", 0);
 
 
-    }
+            }
             catch (Exception ex)
             {
                 Console.WriteLine(ex.ToString());
@@ -71,7 +90,16 @@ namespace BibleNoteConsole
 
             Console.WriteLine("Finish. Elapsed time: {0}", sw.Elapsed);
             Console.ReadKey();
-        }        
+        }
+
+        private static StringBuilder GetText(int length)
+        {
+            var sb = new StringBuilder();
+            for (var i = 0; i <= length; i++)
+                sb.Append(i % 50 == 0 ? "b" : "a");
+
+            return sb;
+        }
 
         static void TestChar2IntPerfomance(Func<char[], int, int> func)
         {
