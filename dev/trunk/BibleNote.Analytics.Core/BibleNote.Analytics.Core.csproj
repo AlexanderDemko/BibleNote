@@ -88,6 +88,9 @@
     <Compile Include="Helpers\XmlUtils.cs" />
     <Compile Include="Helpers\ZipLibHelper.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="..\VersionInfo.cs">
+      <Link>Properties\VersionInfo.cs</Link>
+    </Compile>
     <Compile Include="Resources\LocalizationConstants.Designer.cs">
       <DependentUpon>LocalizationConstants.resx</DependentUpon>
       <AutoGen>True</AutoGen>
