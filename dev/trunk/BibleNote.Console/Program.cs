@@ -1,6 +1,9 @@
 ﻿using BibleNote.Analytics.Contracts.Environment;
+using BibleNote.Analytics.Contracts.VerseParsing;
 using BibleNote.Analytics.Core.Helpers;
 using BibleNote.Analytics.Data;
+using BibleNote.Analytics.Models.Common;
+using BibleNote.Analytics.Models.Scheme;
 using BibleNote.Analytics.Services;
 using BibleNote.Analytics.Services.Environment;
 using BibleNote.Analytics.Services.Unity;
@@ -9,16 +12,21 @@ using HtmlAgilityPack;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Microsoft.Practices.Unity;
+using BibleNote.Tests.Analytics.Mocks;
 
 namespace BibleNoteConsole
 {    
     class Program
     {
-        public static IModulesManager ModulesManager { get; set; }
+        public static IVersePointerFactory VersePointerFactory { get; set; }
+
+        public static IModulesManager ModulesManager { get; set; }        
 
         private static readonly Regex sWhitespace = new Regex(@"\s+");
         public static string ReplaceWhitespace(string input, string replacement)
@@ -28,11 +36,16 @@ namespace BibleNoteConsole
 
         static void Main(string[] args)
         {
-            //DIContainer.InitWithDefaults();
-            //ModulesManager = DIContainer.Resolve<IModulesManager>();
+            DIContainer.InitWithDefaults();
+            DIContainer.Container.RegisterInstance<IConfigurationManager>(new MockConfigurationManager());
+            ModulesManager = DIContainer.Resolve<IModulesManager>();            
 
-            var sw = new Stopwatch();
-          
+            VersePointerFactory = DIContainer.Resolve<IVersePointerFactory>();
+
+            ConvertTextModule(@"C:\temp\NKRV.txt");
+            return;
+
+            var sw = new Stopwatch();          
 
             try
             {
@@ -90,6 +103,78 @@ namespace BibleNoteConsole
 
             Console.WriteLine("Finish. Elapsed time: {0}", sw.Elapsed);
             Console.ReadKey();
+        }
+
+        private static void ConvertTextModule(string filePath)
+        {
+            List<BIBLEBOOK> books = new List<BIBLEBOOK>();
+            List<CHAPTER> chapters = null;
+            List<VERS> verses = null;
+
+            BIBLEBOOK latestBook = null;
+            CHAPTER latestChapter = null;
+            
+            foreach (var line in File.ReadAllLines(filePath, Encoding.GetEncoding("EUC-KR")))
+            {
+                try
+                {
+                    string verseText;
+                    var verse = GetVerse(line, out verseText);
+                    if (verse == null)
+                    {
+                        verses.Last().Items[0] = (string)verses.Last().Items[0] + " " + line;
+                        continue;
+                    }
+
+                    if (latestChapter == null || latestBook == null
+                        || verse.Chapter.ToString() != latestChapter.cnumber || verse.BookIndex != latestBook.Index)
+                    {
+                        if (latestBook == null || verse.BookIndex != latestBook.Index)
+                        {
+                            if (latestBook != null)
+                                latestBook.Items = chapters.ToArray();
+
+                            latestBook = new BIBLEBOOK() { bnumber = verse.BookIndex.ToString() };
+                            books.Add(latestBook);
+
+                            chapters = new List<CHAPTER>();
+                        }
+
+                        if (latestChapter != null)
+                            latestChapter.Items = verses.ToArray();
+
+                        latestChapter = new CHAPTER() { cnumber = verse.Chapter.ToString() };
+                        chapters.Add(latestChapter);
+
+                        verses = new List<VERS>();
+                    }
+
+                    verses.Add(new VERS() { vnumber = verse.Verse.ToString(), Items = new string[] { verseText } });
+                }
+                catch (InvalidProgramException)
+                { }
+            }
+
+            latestBook.Items = chapters.ToArray();
+            latestChapter.Items = verses.ToArray();
+
+            var bible = new XMLBIBLE() { BIBLEBOOK = books.ToArray() };
+            
+            XmlUtils.SaveToXmlFile(bible, Path.Combine(Path.GetDirectoryName(filePath), Path.GetFileNameWithoutExtension(filePath) + ".xml"));
+        }
+
+        private static VersePointer GetVerse(string line, out string verseText)
+        {
+            verseText = null;
+
+            if (line.Length == 4 && line[3] == ' ')
+                throw new InvalidProgramException();
+
+            var i = line.IndexOf(' ', 4);
+            var verseString = line.Substring(0, i);            
+            verseText = line.Substring(i + 1);
+
+            return VersePointerFactory.CreateVersePointer(verseString);
         }
 
         private static StringBuilder GetText(int length)
