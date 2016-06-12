@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace BibleNote.Tests.Analytics.Mocks
 {
-    class MockConfigurationManager : IConfigurationManager
+    public class MockConfigurationManager : IConfigurationManager
     {
         public string ModuleShortName { get; set; }
         public bool UseCommaDelimiter { get; set; }

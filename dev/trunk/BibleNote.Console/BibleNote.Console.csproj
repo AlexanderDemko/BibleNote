@@ -113,6 +113,10 @@
       <Project>{38af7691-09fa-4373-aea2-52f6d3d50c85}</Project>
       <Name>BibleNote.Analytics.Services</Name>
     </ProjectReference>
+    <ProjectReference Include="..\BibleNote.Tests\BibleNote.Tests.csproj">
+      <Project>{3b9da479-ad87-41a3-944f-c434a741137f}</Project>
+      <Name>BibleNote.Tests</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <Content Include="HTMLPage1.html" />
