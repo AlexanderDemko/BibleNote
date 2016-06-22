@@ -21,12 +21,12 @@ using Microsoft.Practices.Unity;
 using BibleNote.Tests.Analytics.Mocks;
 
 namespace BibleNoteConsole
-{    
+{
     class Program
     {
         public static IVersePointerFactory VersePointerFactory { get; set; }
 
-        public static IModulesManager ModulesManager { get; set; }        
+        public static IModulesManager ModulesManager { get; set; }
 
         private static readonly Regex sWhitespace = new Regex(@"\s+");
         public static string ReplaceWhitespace(string input, string replacement)
@@ -38,14 +38,16 @@ namespace BibleNoteConsole
         {
             DIContainer.InitWithDefaults();
             DIContainer.Container.RegisterInstance<IConfigurationManager>(new MockConfigurationManager());
-            ModulesManager = DIContainer.Resolve<IModulesManager>();            
+            ModulesManager = DIContainer.Resolve<IModulesManager>();
 
             VersePointerFactory = DIContainer.Resolve<IVersePointerFactory>();
 
             ConvertTextModule(@"C:\temp\NKRV.txt");
+            //SaveTextModule(@"c:\temp\nkrv.txt");
+
             return;
 
-            var sw = new Stopwatch();          
+            var sw = new Stopwatch();
 
             try
             {
@@ -105,6 +107,18 @@ namespace BibleNoteConsole
             Console.ReadKey();
         }
 
+        private static void SaveTextModule(string filePath)
+        {
+            using (var sw = new StreamWriter(filePath + "_", false, Encoding.UTF8))
+            {
+                foreach (var line in File.ReadAllLines(filePath, Encoding.GetEncoding("EUC-KR")))
+                {
+                    sw.WriteLine(line);
+                }
+                sw.Close();
+            }
+        }
+
         private static void ConvertTextModule(string filePath)
         {
             List<BIBLEBOOK> books = new List<BIBLEBOOK>();
@@ -113,8 +127,8 @@ namespace BibleNoteConsole
 
             BIBLEBOOK latestBook = null;
             CHAPTER latestChapter = null;
-            
-            foreach (var line in File.ReadAllLines(filePath, Encoding.GetEncoding("EUC-KR")))
+
+            foreach (var line in File.ReadAllLines(filePath, Encoding.UTF8)) //GetEncoding("EUC-KR")
             {
                 try
                 {
@@ -159,7 +173,7 @@ namespace BibleNoteConsole
             latestChapter.Items = verses.ToArray();
 
             var bible = new XMLBIBLE() { BIBLEBOOK = books.ToArray() };
-            
+
             XmlUtils.SaveToXmlFile(bible, Path.Combine(Path.GetDirectoryName(filePath), Path.GetFileNameWithoutExtension(filePath) + ".xml"));
         }
 
@@ -171,7 +185,7 @@ namespace BibleNoteConsole
                 throw new InvalidProgramException();
 
             var i = line.IndexOf(' ', 4);
-            var verseString = line.Substring(0, i);            
+            var verseString = line.Substring(0, i);
             verseText = line.Substring(i + 1);
 
             return VersePointerFactory.CreateVersePointer(verseString);
@@ -190,7 +204,7 @@ namespace BibleNoteConsole
         {
             var r = new Random();
 
-            for(var i = 0; i < 1000000; i++)
+            for (var i = 0; i < 1000000; i++)
             {
                 var digits = new char[3];
                 var digitsCount = 1;
