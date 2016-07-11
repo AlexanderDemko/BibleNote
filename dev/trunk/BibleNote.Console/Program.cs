@@ -42,7 +42,7 @@ namespace BibleNoteConsole
 
             VersePointerFactory = DIContainer.Resolve<IVersePointerFactory>();
 
-            ConvertTextModule(@"C:\temp\KLB.txt");
+            ConvertTextModule(@"C:\temp\nrkv.txt");
             //SaveTextModule(@"c:\temp\nkrv.txt");
 
             return;
@@ -128,7 +128,7 @@ namespace BibleNoteConsole
             BIBLEBOOK latestBook = null;
             CHAPTER latestChapter = null;
 
-            foreach (var line in File.ReadAllLines(filePath, Encoding.GetEncoding("EUC-KR")))
+            foreach (var line in File.ReadAllLines(filePath, Encoding.UTF8)) //GetEncoding("EUC-KR")))
             {
                 try
                 {
