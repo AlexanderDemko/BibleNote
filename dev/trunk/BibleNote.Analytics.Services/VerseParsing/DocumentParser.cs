@@ -18,12 +18,23 @@ namespace BibleNote.Analytics.Services.VerseParsing
 
         private readonly IDocumentParseContext _documentParseContext;
 
-        private IDocumentProvider _documentProvider;        
+        private readonly DocumentParseResult _documentParseResult;
+
+        private IDocumentProvider _documentProvider;
+
+        public DocumentParseResult DocumentParseResult
+        {
+            get
+            {
+                return _documentParseResult;
+            }
+        }
 
         public DocumentParser(IParagraphParser paragraphParser, IDocumentParseContext documentParseContext)
         {            
             _paragraphParser = paragraphParser;
             _documentParseContext = documentParseContext;
+            _documentParseResult = new DocumentParseResult();
         }
 
         public void Init(IDocumentProvider documentProvider)
@@ -34,14 +45,14 @@ namespace BibleNote.Analytics.Services.VerseParsing
 
         public void ParseTitle(HtmlNode node)
         {
-            _paragraphParser.ParseParagraph(node);
+            _documentParseResult.ParagraphParseResults.Add(_paragraphParser.ParseParagraph(node));
 
             // только если указана одна глава - тогда _documentParseContext.SetTitleVerse();
         }
 
         public IElementParseContext ParseParagraph(HtmlNode node)
         {
-            _paragraphParser.ParseParagraph(node);
+            _documentParseResult.ParagraphParseResults.Add(_paragraphParser.ParseParagraph(node));
             return null;
         }
 

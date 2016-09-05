@@ -9,6 +9,8 @@ using HtmlAgilityPack;
 using BibleNote.Analytics.Core.Helpers;
 using BibleNote.Tests.Analytics.Mocks;
 using System.IO;
+using FluentAssertions;
+using System;
 
 namespace BibleNote.Tests.Analytics
 {
@@ -32,7 +34,7 @@ namespace BibleNote.Tests.Analytics
 
         }
 
-        // todo: [TestMethod]
+        [TestMethod]
         public void ParseLocalHtmlFile()
         {            
             using (var fs = new FileStream(@"..\..\Analytics\TestData\TestDocument1.html", FileMode.Open))
@@ -47,10 +49,12 @@ namespace BibleNote.Tests.Analytics
                         using (docParser.ParseParagraph(htmlDoc.DocumentNode))
                         {
 
-                        }
+                        }                        
                     }
                 }
             }
+
+            throw new NotImplementedException();
         }
     }
 }
