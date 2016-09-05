@@ -10,6 +10,9 @@ namespace BibleNote.Analytics.Contracts.Providers
     public interface IDocumentProvider
     {
         bool IsReadonly { get; }
+
         string GetVersePointerLink(VersePointer versePointer);
+
+
     }
 }
