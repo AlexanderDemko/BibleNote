@@ -16,6 +16,8 @@ namespace BibleNote.Analytics.Providers.HtmlProvider
     {
         private readonly IDocumentParserFactory _documentParserFactory;
 
+        private readonly IHtmlDocumentReader _htmlDocumentReader;
+
         public bool IsReadonly
         {
             get { return false; }  // а почему вообще localHtmlProvider должен отличаться от webHtmlProvider? Локальные html файлы лучше тоже не менять, а преобразовывать при отображении только.
@@ -33,14 +35,8 @@ namespace BibleNote.Analytics.Providers.HtmlProvider
 
         public DocumentParseResult ParseDocument(IDocumentId documentId)
         {
-            if (!(documentId is FileDocumentId))
-                throw new InvalidOperationException("Only FileDocumentId is supported for HtmlProvider.");
-
             var result = new DocumentParseResult();
-
-            var html = File.ReadAllText(((FileDocumentId)documentId).FilePath);
-            var htmlDoc = new HtmlDocument();
-            htmlDoc.LoadHtml(html);
+            var htmlDoc = _htmlDocumentReader.Read(documentId);
 
             using (var docParser = _documentParserFactory.Create(this))
             {
