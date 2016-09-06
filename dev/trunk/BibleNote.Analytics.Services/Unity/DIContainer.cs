@@ -56,17 +56,18 @@ namespace BibleNote.Analytics.Services.Unity
             Container
                 .RegisterContextType<AnalyticsContext>()
                 .RegisterTracingType<IConfigurationManager, ConfigurationManager>(new ContainerControlledLifetimeManager())
-                .RegisterTracingType<IModulesManager, ModulesManager>(new ContainerControlledLifetimeManager())                
+                .RegisterTracingType<IModulesManager, ModulesManager>(new ContainerControlledLifetimeManager())
                 .RegisterTracingType<IBibleParallelTranslationConnectorManager, BibleParallelTranslationConnectorManager>(new ContainerControlledLifetimeManager())
                 .RegisterTracingType<IBibleParallelTranslationManager, BibleParallelTranslationManager>(new ContainerControlledLifetimeManager())
-                .RegisterTracingType<IVerseRecognitionService, VerseRecognitionService>(new ContainerControlledLifetimeManager())                
+                .RegisterTracingType<IVerseRecognitionService, VerseRecognitionService>(new ContainerControlledLifetimeManager())
                 .RegisterTracingType<IVersePointerFactory, VersePointerFactory>(new ContainerControlledLifetimeManager())
                 .RegisterTracingType<IApplicationManager, ApplicationManager>(new ContainerControlledLifetimeManager())
                 .RegisterTracingType<IVerseCorrectionService, VerseCorrectionService>(new ContainerControlledLifetimeManager())
                 .RegisterTracingType<IStringParser, StringParser>(new TransientLifetimeManager())
-                .RegisterTracingType<IParagraphParser, ParagraphParser>(new TransientLifetimeManager())                
+                .RegisterTracingType<IParagraphParser, ParagraphParser>(new TransientLifetimeManager())
                 .RegisterTracingType<IDocumentParser, DocumentParser>(new TransientLifetimeManager())
-                .RegisterTracingType<IDocumentParseContext, DocumentParseContext>(new TransientLifetimeManager());
+                .RegisterTracingType<IDocumentParseContext, DocumentParseContext>(new TransientLifetimeManager())
+                .RegisterTracingType<IDocumentParserFactory, DocumentParserFactory>(new ContainerControlledLifetimeManager());
         }
         
         public static T Resolve<T>(params ResolverOverride[] overrides)

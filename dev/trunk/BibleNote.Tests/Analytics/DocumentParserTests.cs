@@ -11,13 +11,16 @@ using BibleNote.Tests.Analytics.Mocks;
 using System.IO;
 using FluentAssertions;
 using System;
+using BibleNote.Analytics.Providers.HtmlProvider;
+using BibleNote.Analytics.Contracts.Providers;
+using BibleNote.Analytics.Providers.FileNavigationProvider;
 
 namespace BibleNote.Tests.Analytics
 {
     [TestClass]
     public class DocumentParserTests
     {
-        private MockDocumentProvider _mockDocumentProvider;        
+        private IDocumentProvider _documentProvider;        
 
         [TestInitialize]
         public void Init()
@@ -25,7 +28,7 @@ namespace BibleNote.Tests.Analytics
             DIContainer.InitWithDefaults();
             DIContainer.Container.RegisterInstance<IConfigurationManager>(new MockConfigurationManager());
 
-            _mockDocumentProvider = new MockDocumentProvider() { IsReadonly = false };            
+            _documentProvider = new LocalHtmlProvider(DIContainer.Resolve<IDocumentParserFactory>());
         }
 
         [TestCleanup]
@@ -36,25 +39,10 @@ namespace BibleNote.Tests.Analytics
 
         [TestMethod]
         public void ParseLocalHtmlFile()
-        {            
-            using (var fs = new FileStream(@"..\..\Analytics\TestData\TestDocument1.html", FileMode.Open))
-            {
-                using (var sr = new StreamReader(fs))
-                {
-                    var htmlDoc = new HtmlDocument();
-                    htmlDoc.LoadHtml(sr.ReadToEnd());
-                    using (var docParser = DIContainer.Resolve<IDocumentParser>())
-                    {
-                        docParser.Init(_mockDocumentProvider);
-                        using (docParser.ParseParagraph(htmlDoc.DocumentNode))
-                        {
+        {
+            var parseResult = _documentProvider.ParseDocument(new FileDocumentId(@"..\..\Analytics\TestData\HtmlDoc.html"));
 
-                        }                        
-                    }
-                }
-            }
-
-            throw new NotImplementedException();
+            parseResult.ParagraphParseResults.Count().Should().Be(2);            
         }
     }
 }

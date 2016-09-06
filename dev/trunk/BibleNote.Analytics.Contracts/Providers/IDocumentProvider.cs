@@ -13,6 +13,6 @@ namespace BibleNote.Analytics.Contracts.Providers
 
         string GetVersePointerLink(VersePointer versePointer);
 
-
+        DocumentParseResult ParseDocument(IDocumentId documentId);
     }
 }

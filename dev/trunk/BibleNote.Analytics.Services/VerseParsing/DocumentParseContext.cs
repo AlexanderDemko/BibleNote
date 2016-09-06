@@ -1,5 +1,7 @@
-﻿using BibleNote.Analytics.Contracts.VerseParsing;
+﻿using System;
+using BibleNote.Analytics.Contracts.VerseParsing;
 using BibleNote.Analytics.Models.Common;
+using System.Collections.Generic;
 
 namespace BibleNote.Analytics.Services.VerseParsing
 {
@@ -9,7 +11,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
 
         public VerseEntryInfo LatestVerseEntry { get; private set; }        
 
-        public ParagraphParseResult CurrentParagraph { get; private set; }
+        public ParagraphParseResult CurrentParagraph { get; private set; }        
 
         //public CellInfo CurrentCell { get; private set; }  // Если мы находимсяв таблице. А уже в CellInfo будет ссылка на текущую таблицу.
 
@@ -26,7 +28,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
         public void SetCurrentParagraph(ParagraphParseResult paragraph)
         {
             CurrentParagraph = paragraph;
-        }
+        }        
 
         public void EnterTable()
         {
@@ -44,6 +46,6 @@ namespace BibleNote.Analytics.Services.VerseParsing
             TitleVerse = null;
             LatestVerseEntry = null;
             CurrentParagraph = null;            
-        }
+        }      
     }
 }

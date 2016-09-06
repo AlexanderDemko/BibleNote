@@ -48,6 +48,7 @@
     <Compile Include="Common\BibleTranslationDifferencesFormula.cs" />
     <Compile Include="Common\Boundaries.cs" />
     <Compile Include="Common\DocumentParseResult.cs" />
+    <Compile Include="Common\ParagraphContext.cs" />
     <Compile Include="Common\ModuleInfo.cs" />
     <Compile Include="Common\ParagraphParseResult.cs" />
     <Compile Include="Common\TextFragmentInfo.cs" />

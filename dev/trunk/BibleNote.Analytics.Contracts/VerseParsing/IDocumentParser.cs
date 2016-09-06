@@ -24,6 +24,10 @@ namespace BibleNote.Analytics.Contracts.VerseParsing
 
         IElementParseContext ParseParagraph(HtmlNode node);
 
-        IElementParseContext ParseTable(HtmlNode node);        
+        IElementParseContext ParseTable(HtmlNode node);
+
+        IElementParseContext ParseList(HtmlNode node);
+
+        IElementParseContext ParseListElement(HtmlNode node);
     }
 }

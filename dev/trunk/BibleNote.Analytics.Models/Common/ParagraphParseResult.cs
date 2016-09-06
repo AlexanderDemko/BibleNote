@@ -7,16 +7,19 @@ using System.Threading.Tasks;
 namespace BibleNote.Analytics.Models.Common
 {
     public class ParagraphParseResult
-    {   
-        public ParagraphParseResult ParentParagraph { get; set; }
-
+    {
         public string Text { get; set; }
 
+        public ParagraphContext ParagraphContext { get; set; }        
+
         public List<VerseEntryInfo> VerseEntries { get; set; }
+
+        public List<SimpleVersePointer> NotFoundVerses { get; set; }
 
         public ParagraphParseResult()
         {
             VerseEntries = new List<VerseEntryInfo>();
+            NotFoundVerses = new List<SimpleVersePointer>();
         }
     }
 }

@@ -114,8 +114,9 @@ namespace BibleNote.Analytics.Services.VerseParsing
             {
                 parentVerse = docParseContext.LatestVerseEntry.VersePointer;
             }
-            else if (docParseContext.CurrentParagraph.ParentParagraph != null)
+            else if (docParseContext.CurrentParagraph.ParagraphContext.ParentParagraphParseResult != null)
             {
+                //todo: здесь и в других правилах научиться использовать docParseContext.CurrentParagraph.ParagraphContext
             }
             else if (docParseContext.TitleVerse != null && docParseContext.TitleVerse.IsMultiVerse != MultiVerse.SeveralChapters)
             {

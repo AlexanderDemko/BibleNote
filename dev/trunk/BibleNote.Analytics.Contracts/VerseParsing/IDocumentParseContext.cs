@@ -21,7 +21,7 @@ namespace BibleNote.Analytics.Contracts.VerseParsing
 
         void SetLatestVerseEntry(VerseEntryInfo verseEntry);
 
-        void SetCurrentParagraph(ParagraphParseResult paragraph);
+        void SetCurrentParagraph(ParagraphParseResult paragraph);        
 
         void EnterTable();
 
