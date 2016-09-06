@@ -6,10 +6,8 @@ using System.Threading.Tasks;
 
 namespace BibleNote.Analytics.Contracts.Providers
 {
-    public interface INavigationProvider
+    public interface IDocumentId
     {
-        string Name { get; }
-
-        string Description { get; }
+        
     }
 }

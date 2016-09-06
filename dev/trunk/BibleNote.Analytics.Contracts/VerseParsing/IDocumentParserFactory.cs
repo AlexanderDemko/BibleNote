@@ -5,9 +5,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BibleNote.Analytics.Providers.FolderNavigationProvider
+namespace BibleNote.Analytics.Contracts.VerseParsing
 {
-    public class FolderNavigationProvider : INavigationProvider
+    public interface IDocumentParserFactory
     {
+        IDocumentParser Create(IDocumentProvider documentProvider);
     }
 }

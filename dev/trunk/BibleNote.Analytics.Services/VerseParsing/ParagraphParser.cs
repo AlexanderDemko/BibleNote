@@ -102,10 +102,8 @@ namespace BibleNote.Analytics.Services.VerseParsing
                 }
                 else if (verseEntry.VersePointer.SubVerses.NotFoundVerses.Count > 0)
                 {
-                    throw new Exception(string.Join(", ", verseEntry.VersePointer.SubVerses.NotFoundVerses.Select(v => v.ToString())));
-                    //todo: надо как-то сохранять такие не найденные стихи, чтобы потом их показать пользователю.
+                    _result.NotFoundVerses.AddRange(verseEntry.VersePointer.SubVerses.NotFoundVerses);
                 }
-
 
                 var prevIndex = index;
                 index = verseEntry.EndIndex + 1;

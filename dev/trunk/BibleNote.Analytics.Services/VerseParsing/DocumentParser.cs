@@ -59,11 +59,21 @@ namespace BibleNote.Analytics.Services.VerseParsing
         public IElementParseContext ParseTable(HtmlNode node)
         {
             throw new NotImplementedException();
+        }      
+
+        public IElementParseContext ParseList(HtmlNode node)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IElementParseContext ParseListElement(HtmlNode node)
+        {
+            throw new NotImplementedException();
         }
 
         public void Dispose()
         {
-            
+
         }
     }
 }
