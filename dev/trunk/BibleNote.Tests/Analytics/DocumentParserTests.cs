@@ -28,7 +28,7 @@ namespace BibleNote.Tests.Analytics
             DIContainer.InitWithDefaults();
             DIContainer.Container.RegisterInstance<IConfigurationManager>(new MockConfigurationManager());
 
-            _documentProvider = new LocalHtmlProvider(DIContainer.Resolve<IDocumentParserFactory>());
+            _documentProvider = new HtmlProvider(DIContainer.Resolve<IDocumentParserFactory>());
         }
 
         [TestCleanup]
