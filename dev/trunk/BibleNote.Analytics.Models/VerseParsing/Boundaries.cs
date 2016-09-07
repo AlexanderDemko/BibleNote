@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BibleNote.Analytics.Models.Common
+namespace BibleNote.Analytics.Models.VerseParsing
 {
     public struct Boundaries
     {

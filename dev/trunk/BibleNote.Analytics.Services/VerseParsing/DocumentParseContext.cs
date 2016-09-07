@@ -1,7 +1,6 @@
-﻿using System;
-using BibleNote.Analytics.Contracts.VerseParsing;
-using BibleNote.Analytics.Models.Common;
-using System.Collections.Generic;
+﻿using BibleNote.Analytics.Contracts.VerseParsing;
+using BibleNote.Analytics.Models.Verse;
+using BibleNote.Analytics.Models.VerseParsing;
 
 namespace BibleNote.Analytics.Services.VerseParsing
 {

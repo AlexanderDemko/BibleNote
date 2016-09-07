@@ -24,13 +24,13 @@ namespace BibleNote.Analytics.Providers.HtmlProvider
 
                 if (ext == ".txt")
                 {
-
+                    //todo: надо обернуть каждый обзац в <p></p>
                 }
             }
-            else if (documentId is WebDocumentId)
-            {
+            //else if (documentId is WebDocumentId)
+            //{
 
-            }
+            //}
 
             if (html != null)
             {

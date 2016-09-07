@@ -4,8 +4,8 @@ using BibleNote.Analytics.Contracts.ParallelVerses;
 using BibleNote.Analytics.Core.Constants;
 using BibleNote.Analytics.Core.Helpers;
 using BibleNote.Analytics.Core.Resources;
-using BibleNote.Analytics.Models.Common;
 using BibleNote.Analytics.Models.Exceptions;
+using BibleNote.Analytics.Models.Modules;
 using BibleNote.Analytics.Models.Scheme;
 using Microsoft.Practices.Unity;
 using System;
@@ -15,7 +15,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using ModuleType = BibleNote.Analytics.Models.Common.ModuleType;
+using ModuleType = BibleNote.Analytics.Models.Modules.ModuleType;
 
 namespace BibleNote.Analytics.Services.Environment
 {

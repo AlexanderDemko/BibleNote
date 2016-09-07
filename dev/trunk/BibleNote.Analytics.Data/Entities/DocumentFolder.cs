@@ -6,16 +6,15 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BibleNote.Analytics.Models.Entities
-{    
-    public class Document
+namespace BibleNote.Analytics.Data.Entities
+{
+    [Table("DocumentFolders")]
+    public class DocumentFolder
     {
         [Key, DatabaseGenerated(DatabaseGeneratedOption.Identity)] 
-        public int DocumentId { get; set; }
+        public int DocumentFolderId { get; set; }
 
         [Required]
         public string Name { get; set; }
-
-        public DocumentFolder Folder { get; set; }
     }
 }

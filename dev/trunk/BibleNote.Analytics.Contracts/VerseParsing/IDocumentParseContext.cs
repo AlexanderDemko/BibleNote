@@ -1,4 +1,5 @@
-﻿using BibleNote.Analytics.Models.Common;
+﻿using BibleNote.Analytics.Models.Verse;
+using BibleNote.Analytics.Models.VerseParsing;
 using System;
 using System.Collections.Generic;
 using System.Linq;

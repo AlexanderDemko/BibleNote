@@ -1,7 +1,6 @@
 ﻿using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using BibleNote.Analytics.Services.Unity;
-using BibleNote.Analytics.Models.Common;
 using BibleNote.Analytics.Contracts.VerseParsing;
 using BibleNote.Analytics.Contracts.Environment;
 using Microsoft.Practices.Unity;
@@ -11,6 +10,8 @@ using BibleNote.Tests.Analytics.Mocks;
 using System;
 using BibleNote.Analytics.Contracts.Providers;
 using BibleNote.Analytics.Models.Exceptions;
+using BibleNote.Analytics.Models.VerseParsing;
+using BibleNote.Analytics.Models.Verse;
 
 namespace BibleNote.Tests.Analytics
 {
@@ -82,7 +83,7 @@ namespace BibleNote.Tests.Analytics
             var htmlDoc = new HtmlDocument();
             htmlDoc.LoadHtml(input);
 
-            var result = _parahraphParserService.ParseParagraph(htmlDoc.DocumentNode);
+            var result = _parahraphParserService.ParseParagraph(htmlDoc.DocumentNode, new ParagraphContext() { ParagraphState = ParagraphState.SimpleText });
 
             Assert.AreEqual(verses.Length, result.VerseEntries.Count, "Verses length is not the same. Expected: {0}. Found: {1}", verses.Length, result.VerseEntries.Count);            
             var verseEntries = result.VerseEntries.Select(ve => ve.VersePointer);
@@ -93,9 +94,9 @@ namespace BibleNote.Tests.Analytics
             Assert.AreEqual(new HtmlToTextConverter().SimpleConvert(input).Replace("&nbsp;", " "), result.Text, "Text parts do not contain the full input string.");
 
             if (notFoundVerses != null)
-            {
-                var notFoundVerseEntries = result.VerseEntries.First().VersePointer.SubVerses.NotFoundVerses;
-                Assert.AreEqual(notFoundVerses.Length, notFoundVerseEntries.Count);
+            {   
+                var notFoundVerseEntries = result.NotFoundVerses.Any() ? result.NotFoundVerses.Select(v => v.ToModuleVersePointer()) : result.VerseEntries.First().VersePointer.SubVerses.NotFoundVerses;
+                Assert.AreEqual(notFoundVerses.Length, notFoundVerseEntries.Count());
                 foreach (var verse in notFoundVerses)
                     Assert.IsTrue(notFoundVerseEntries.Contains(_versePointerFactory.CreateVersePointer(verse).ToModuleVersePointer()));
             }
@@ -245,16 +246,7 @@ namespace BibleNote.Tests.Analytics
         [TestMethod]
         public void TestScenario12()
         {
-            try
-            {
-                CheckVerses("Lev 28", null, null, new string[] { "Lev 28" }, null);
-                Assert.Fail("3 28");
-            }
-            catch (Exception ex)
-            {
-                Assert.AreEqual("3 28", ex.Message);
-            }
-
+            CheckVerses("Lev 28", null, null, new string[] { "Lev 28" }, null);           
             CheckVerses("Ps 75:10-11", "<a href='bnVerse:Псалтирь 74:11'>Ps 75:10-11</a>", null, new string[] { "Ps 75:11" }, "Псалтирь 74:11");
             CheckVerses("Ps 115:12-19", "<a href='bnVerse:Псалтирь 113:20-26'>Ps 115:12-19</a>", null, new string[] { "Ps 115:19" }, "Пс 113:20-26");
             CheckVerses("Ps 89:1-2, Lev 14:56-57, Lev 14:57, Ps 19:5", null, null, "Пс 88:1-3", "Лев 14:55-56", "Лев 14:56", "Пс 18:6");
@@ -455,47 +447,11 @@ namespace BibleNote.Tests.Analytics
 
         [TestMethod]
         public void TestScenario29()
-        {
-            try
-            {
-                CheckVerses("Быт 1:60", null, null);
-                Assert.Fail("1 1:60");
-            }
-            catch (Exception ex)
-            {
-                Assert.AreEqual("1 1:60", ex.Message);
-            }
-
-            try
-            {
-                CheckVerses("Ин 3:37", null, null);
-                Assert.Fail("43 3:37");
-            }
-            catch (Exception ex)
-            {
-                Assert.AreEqual("43 3:37", ex.Message);
-            }
-
-            try
-            {
-                CheckVerses("Ин 22", null, null);
-                Assert.Fail("43 22");
-            }
-            catch (Exception ex)
-            {
-                Assert.AreEqual("43 22", ex.Message);
-            }
-
-            try
-            {
-                CheckVerses("Ин 22:1", null, null);
-                Assert.Fail("43 22");
-            }
-            catch (Exception ex)
-            {
-                Assert.AreEqual("43 22", ex.Message);
-            }
-
+        {            
+            CheckVerses("Быт 1:60", null, null, new string[] { "Быт 1:60" }, null);
+            CheckVerses("Ин 3:37", null, null, new string[] { "Ин 3:37" }, null);
+            CheckVerses("Ин 22", null, null, new string[] { "Ин 22" }, null);
+            CheckVerses("Ин 22:1", null, null, new string[] { "Ин 22" }, null);
             CheckVerses("Ин 3:1, Ин 3:36", null, null, "Ин 3:1", "Ин 3:36");
             CheckVerses("Ин 3:30-40", null, null, new string[] { "Ин 3:37" }, "Ин 3:30-36");
         }

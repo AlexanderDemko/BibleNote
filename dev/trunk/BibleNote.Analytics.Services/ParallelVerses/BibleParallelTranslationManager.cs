@@ -1,7 +1,7 @@
 ﻿using BibleNote.Analytics.Contracts.Logging;
 using BibleNote.Analytics.Contracts.ParallelVerses;
-using BibleNote.Analytics.Models.Common;
 using BibleNote.Analytics.Models.Exceptions;
+using BibleNote.Analytics.Models.Modules;
 using Microsoft.Practices.Unity;
 using System;
 using System.Collections.Generic;

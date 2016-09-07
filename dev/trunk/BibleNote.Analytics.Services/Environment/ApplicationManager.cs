@@ -1,5 +1,4 @@
 ﻿using BibleNote.Analytics.Contracts.Environment;
-using BibleNote.Analytics.Models.Common;
 using Microsoft.Practices.Unity;
 using System;
 using System.Collections.Generic;
@@ -7,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using BibleNote.Analytics.Models.Scheme;
+using BibleNote.Analytics.Models.Modules;
 
 namespace BibleNote.Analytics.Services.Environment
 {

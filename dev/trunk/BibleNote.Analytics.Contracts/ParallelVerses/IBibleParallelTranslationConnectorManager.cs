@@ -1,5 +1,5 @@
-﻿using BibleNote.Analytics.Models.Common;
-using System;
+﻿using BibleNote.Analytics.Models.Modules;
+using BibleNote.Analytics.Models.Verse;
 using System.Collections.Generic;
 
 namespace BibleNote.Analytics.Contracts.ParallelVerses

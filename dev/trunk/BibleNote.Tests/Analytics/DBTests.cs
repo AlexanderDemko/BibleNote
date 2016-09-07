@@ -1,12 +1,8 @@
-﻿using System;
-using System.Text;
-using System.Collections.Generic;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using BibleNote.Analytics.Core.Helpers;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Linq;
 using BibleNote.Analytics.Services.Unity;
 using BibleNote.Analytics.Data;
-using BibleNote.Analytics.Models.Entities;
+using BibleNote.Analytics.Data.Entities;
 
 namespace BibleNote.Tests.Analytics
 { 

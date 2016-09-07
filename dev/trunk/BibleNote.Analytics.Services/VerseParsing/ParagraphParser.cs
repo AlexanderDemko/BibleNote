@@ -1,5 +1,4 @@
-﻿using BibleNote.Analytics.Models.Common;
-using HtmlAgilityPack;
+﻿using HtmlAgilityPack;
 using Microsoft.Practices.Unity;
 using System;
 using System.Collections.Generic;
@@ -12,6 +11,7 @@ using BibleNote.Analytics.Contracts.Providers;
 using BibleNote.Analytics.Core.Exceptions;
 using BibleNote.Analytics.Core.Helpers;
 using BibleNote.Analytics.Contracts.Environment;
+using BibleNote.Analytics.Models.VerseParsing;
 
 namespace BibleNote.Analytics.Services.VerseParsing
 {
@@ -51,7 +51,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
             _docParseContext = docParseContext;
         }
 
-        public ParagraphParseResult ParseParagraph(HtmlNode node)
+        public ParagraphParseResult ParseParagraph(HtmlNode node, ParagraphContext paragraphContext)
         {
             if (_documentProvider == null)
                 throw new NotInitializedException();
@@ -59,7 +59,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
             if (_docParseContext == null)
                 throw new NotInitializedException();
 
-            _result = new ParagraphParseResult();
+            _result = new ParagraphParseResult(paragraphContext);
             _docParseContext.SetCurrentParagraph(_result);      // todo: сейчас мы всё добавляем. Но в будущем надо перед сохранением будет удалять лишние параграфы. То есть сохранять только те, в которых есть стихи и около их.
 
             var parseString = new HtmlToTextConverter().Convert(node);

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using BibleNote.Analytics.Core.Extensions;
 using System.Text.RegularExpressions;
+using BibleNote.Analytics.Core.Constants;
 
 namespace BibleNote.Analytics.Core.Helpers
 {
@@ -102,7 +103,7 @@ namespace BibleNote.Analytics.Core.Helpers
                         continue;
                     }
 
-                    if ((childNode.HasChildNodes || childNode.Name == "br") && nodes.Count > 0)
+                    if ((childNode.HasChildNodes || childNode.Name == HtmlTags.Br) && nodes.Count > 0)
                     {
                         AddParseString(BuildParseString(nodes));
                         nodes.Clear();
@@ -136,7 +137,7 @@ namespace BibleNote.Analytics.Core.Helpers
                 if (string.IsNullOrEmpty(textNode.InnerHtml))
                     continue;
 
-                var nodeText = textNode.InnerHtml.Replace("&nbsp;", " ");
+                var nodeText = textNode.InnerHtml.Replace(HtmlTags.Nbsp, " ");
                 result.NodesInfo.Add(new TextNodeEntry()
                 {
                     Node = textNode,

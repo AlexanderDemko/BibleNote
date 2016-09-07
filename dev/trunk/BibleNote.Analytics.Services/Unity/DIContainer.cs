@@ -74,5 +74,10 @@ namespace BibleNote.Analytics.Services.Unity
         {
             return Container.Resolve<T>(overrides);            
         }
+
+        public static T Resolve<T>(string name, params ResolverOverride[] overrides)
+        {
+            return Container.Resolve<T>(name, overrides);
+        }
     }
 }

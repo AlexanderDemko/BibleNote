@@ -48,7 +48,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="HtmlProvider.cs" />
-    <Compile Include="IHtmlDocumentReader.cs" />
+    <Compile Include="HtmlDocumentReader.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="..\VersionInfo.cs">
       <Link>Properties\VersionInfo.cs</Link>
@@ -58,6 +58,10 @@
     <ProjectReference Include="..\BibleNote.Analytics.Contracts\BibleNote.Analytics.Contracts.csproj">
       <Project>{a47192d6-2dc9-40d5-b28c-ad55e298f68f}</Project>
       <Name>BibleNote.Analytics.Contracts</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\BibleNote.Analytics.Core\BibleNote.Analytics.Core.csproj">
+      <Project>{72939ebb-2258-4ee9-9645-4944a6450192}</Project>
+      <Name>BibleNote.Analytics.Core</Name>
     </ProjectReference>
     <ProjectReference Include="..\BibleNote.Analytics.Models\BibleNote.Analytics.Models.csproj">
       <Project>{209f7653-c94e-48b1-9ad5-a99d1c368983}</Project>

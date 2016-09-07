@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace BibleNote.Analytics.Contracts.Providers
 {
-    public interface IHtmlDocumentReader
+    public interface IHtmlDocumentReader: IDocumentReader
     {
         HtmlDocument Read(IDocumentId documentId);
     }

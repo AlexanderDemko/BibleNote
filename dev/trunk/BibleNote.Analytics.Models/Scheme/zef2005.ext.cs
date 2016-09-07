@@ -2,9 +2,9 @@ using System.Linq;
 using System.Collections.Generic;
 using System;
 using System.Xml.Serialization;
-using BibleNote.Analytics.Models.Common;
 using BibleNote.Analytics.Models.Exceptions;
 using BibleNote.Analytics.Core.Constants;
+using BibleNote.Analytics.Models.Verse;
 
 namespace BibleNote.Analytics.Models.Scheme
 {
