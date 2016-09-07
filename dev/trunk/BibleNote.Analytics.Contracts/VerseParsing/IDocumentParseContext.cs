@@ -16,6 +16,8 @@ namespace BibleNote.Analytics.Contracts.VerseParsing
 
         ParagraphContext CurrentParagraph { get; }
 
+        HierarchyContext CurrentHierarchy { get; }
+
         //CellInfo CurrentCell { get; }  // Если мы находимсяв таблице. А уже в CellInfo будет ссылка на текущую таблицу.
 
         void SetTitleVerse(VersePointer versePointer);
@@ -26,9 +28,9 @@ namespace BibleNote.Analytics.Contracts.VerseParsing
 
         void SetCurrentParagraphParseResult(ParagraphParseResult paragraphParseResult);
 
-        void EnterElement(ParagraphState paragraphState);
+        void EnterHierarchyElement(ParagraphState paragraphState);
 
-        void ExitElement();        
+        void ExitHierarchyElement();        
 
         /// <summary>
         /// For testing purposes

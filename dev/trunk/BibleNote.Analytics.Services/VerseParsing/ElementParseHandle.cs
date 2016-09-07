@@ -9,16 +9,16 @@ namespace BibleNote.Analytics.Services.VerseParsing
 {
     public class ElementParseHandle : IElementParseHandle
     {
-        private readonly IDocumentParseContext _documentParseContext;
+        private readonly Action _endAction;
 
-        public ElementParseHandle(IDocumentParseContext documentParseContext)
+        public ElementParseHandle(Action endAction)
         {
-            _documentParseContext = documentParseContext;
+            _endAction = endAction;
         }
 
         public void Dispose()
         {
-            _documentParseContext.ExitElement();
+            _endAction?.Invoke();
         }
     }
 }
