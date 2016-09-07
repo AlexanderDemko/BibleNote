@@ -85,17 +85,17 @@ namespace BibleNote.Analytics.Core.Helpers
             return result;
         }
 
-        private void FindParseStrings(HtmlNode htmlNode)
+        private void FindParseStrings(HtmlNode node)
         {
-            if (!htmlNode.IsHierarchyNode())
+            if (!node.IsHierarchyNode())
             {
-                AddParseString(BuildParseString(htmlNode.ChildNodes));
+                AddParseString(BuildParseString(node.ChildNodes));
             }
             else
             {
                 var nodes = new List<HtmlNode>();
 
-                foreach (var childNode in htmlNode.ChildNodes)
+                foreach (var childNode in node.ChildNodes)
                 {
                     if (childNode.IsTextNode())
                     {

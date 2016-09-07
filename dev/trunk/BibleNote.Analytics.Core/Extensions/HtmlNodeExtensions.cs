@@ -20,6 +20,11 @@ namespace BibleNote.Analytics.Core.Extensions
                 || (node.NodeType == HtmlNodeType.Element && node.ChildNodes.Count == 1 && node.ChildNodes[0].NodeType == HtmlNodeType.Text);
         }        
 
+        public static bool IsValuableTextNode(this HtmlNode textNode)
+        {
+            return !string.IsNullOrEmpty(textNode.InnerHtml.Trim());
+        }
+
         public static HtmlNode GetTextNode(this HtmlNode node)
         {
             HtmlNode textNode = null;

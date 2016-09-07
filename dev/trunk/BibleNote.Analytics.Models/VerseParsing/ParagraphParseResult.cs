@@ -9,19 +9,16 @@ namespace BibleNote.Analytics.Models.VerseParsing
 {
     public class ParagraphParseResult
     {
-        public string Text { get; set; }
-
-        public ParagraphContext ParagraphContext { get; set; }        
+        public string Text { get; set; }        
 
         public List<VerseEntryInfo> VerseEntries { get; set; }
 
         public List<SimpleVersePointer> NotFoundVerses { get; set; }
 
-        public ParagraphParseResult(ParagraphContext paragraphContext)
+        public ParagraphParseResult()
         {
             VerseEntries = new List<VerseEntryInfo>();
-            NotFoundVerses = new List<SimpleVersePointer>();
-            ParagraphContext = paragraphContext;
+            NotFoundVerses = new List<SimpleVersePointer>();            
         }
     }
 }

@@ -84,6 +84,7 @@
     <Compile Include="VerseParsing\IDocumentParseContext.cs" />
     <Compile Include="VerseParsing\IDocumentParser.cs" />
     <Compile Include="VerseParsing\IDocumentParserFactory.cs" />
+    <Compile Include="VerseParsing\IElementParseHandle.cs" />
     <Compile Include="VerseParsing\IParagraphParser.cs" />
     <Compile Include="VerseParsing\IVerseCorrectionService.cs" />
     <Compile Include="VerseParsing\IVersePointerFactory.cs" />

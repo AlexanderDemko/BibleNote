@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
+﻿
 namespace BibleNote.Analytics.Core.Constants
 {
     public static class HtmlTags
@@ -12,8 +7,10 @@ namespace BibleNote.Analytics.Core.Constants
         public const string Table = "table";
         public const string Row = "tr";
         public const string Cell = "td";
-        public const string Nbsp = "&nbsp;";
+        public const string Nbsp = "&nbsp;";        
+        public const string Head = "head";
+        public const string Html = "html";
 
-        public static readonly string[] List = new string[] { "ul", "li" };
+        public static readonly string[] List = new string[] { "ul", "ol" };
     }
 }

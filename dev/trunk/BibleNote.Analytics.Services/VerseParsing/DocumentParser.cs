@@ -3,18 +3,20 @@ using System;
 using HtmlAgilityPack;
 using BibleNote.Analytics.Contracts.Providers;
 using BibleNote.Analytics.Models.VerseParsing;
+using System.Linq;
+using BibleNote.Analytics.Models.Verse;
 
 namespace BibleNote.Analytics.Services.VerseParsing
 {
     public class DocumentParser : IDocumentParser
-    {
+    {       
         private readonly IParagraphParser _paragraphParser;
 
         private readonly IDocumentParseContext _documentParseContext;
 
         private readonly DocumentParseResult _documentParseResult;
 
-        private IDocumentProvider _documentProvider;
+        private IDocumentProvider _documentProvider;     
 
         public DocumentParseResult DocumentParseResult
         {
@@ -37,38 +39,31 @@ namespace BibleNote.Analytics.Services.VerseParsing
             _paragraphParser.Init(documentProvider, _documentParseContext);
         }
 
-        public void ParseTitle(HtmlNode node)
-        {
-            _documentParseResult.ParagraphParseResults.Add(
-                _paragraphParser.ParseParagraph(
-                    node, 
-                    new ParagraphContext() { ParagraphState = ParagraphState.Title, ParagraphPosition = node.LinePosition }));
-
-            // только если указана одна глава - тогда _documentParseContext.SetTitleVerse();
+        public ParagraphParseResult ParseParagraph(HtmlNode node)
+        {   
+            _documentParseContext.SetCurrentParagraph(new ParagraphContext(ParagraphState.Simple, _documentParseContext.CurrentParagraph));
+            var result = _paragraphParser.ParseParagraph(node);    
+            
+            if (_documentParseContext.CurrentParagraph.ParentParagraph?.ParagraphState == ParagraphState.Title)
+            {
+                if (result.VerseEntries.Count == 1)
+                {
+                    var titleVerse = result.VerseEntries.First().VersePointer;
+                    if (titleVerse.IsMultiVerse <= MultiVerse.OneChapter)
+                        _documentParseContext.SetTitleVerse(titleVerse);
+                };
+            }
+                     
+            _documentParseResult.ParagraphParseResults.Add(result);
+            
+            return result;
         }
 
-        public IElementParseContext ParseParagraph(HtmlNode node)
+        public IElementParseHandle ParseHierarchyElement(HtmlNode node, ParagraphState paragraphState)
         {
-            _documentParseResult.ParagraphParseResults.Add(
-                _paragraphParser.ParseParagraph(
-                    node,
-                    new ParagraphContext() { ParagraphState = ParagraphState.SimpleText, ParagraphPosition = node.LinePosition }));
-            return null;
-        }
+            _documentParseContext.EnterElement(paragraphState);            
 
-        public IElementParseContext ParseTable(HtmlNode node)
-        {
-            throw new NotImplementedException();
-        }      
-
-        public IElementParseContext ParseList(HtmlNode node)
-        {
-            throw new NotImplementedException();
-        }
-
-        public IElementParseContext ParseListElement(HtmlNode node)
-        {
-            throw new NotImplementedException();
+            return new ElementParseHandle(_documentParseContext);
         }
 
         public void Dispose()

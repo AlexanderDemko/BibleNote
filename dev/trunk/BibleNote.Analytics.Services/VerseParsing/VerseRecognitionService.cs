@@ -56,7 +56,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
         private static bool ChapterOrVerseRule(VerseEntryInfo verseEntry, IDocumentParseContext docParseContext)
         {
             if (docParseContext.LatestVerseEntry != null
-                && StringUtils.CheckDivergence(docParseContext.CurrentParagraph.Text, docParseContext.LatestVerseEntry.EndIndex, verseEntry.StartIndex, 2, ','))
+                && StringUtils.CheckDivergence(docParseContext.CurrentParagraph.ParseResult.Text, docParseContext.LatestVerseEntry.EndIndex, verseEntry.StartIndex, 2, ','))
             {
                 verseEntry.VersePointer.Book = docParseContext.LatestVerseEntry.VersePointer.Book;                
                 verseEntry.EntryType = docParseContext.LatestVerseEntry.VersePointer.VerseNumber.IsChapter ? VerseEntryType.Chapter : VerseEntryType.Verse;
@@ -112,7 +112,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
             {
                 parentVerse = docParseContext.LatestVerseEntry.VersePointer;
             }
-            else if (docParseContext.CurrentParagraph.ParagraphContext.ParentParagraphParseResult != null)
+            else if (docParseContext.CurrentParagraph.ParentParagraph != null)
             {
                 //todo: здесь и в других правилах научиться использовать docParseContext.CurrentParagraph.ParagraphContext
             }

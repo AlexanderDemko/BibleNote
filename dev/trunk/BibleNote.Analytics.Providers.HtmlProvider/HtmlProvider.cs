@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using BibleNote.Analytics.Core.Extensions;
 using BibleNote.Analytics.Models.Verse;
 using BibleNote.Analytics.Models.VerseParsing;
+using BibleNote.Analytics.Core.Constants;
 
 namespace BibleNote.Analytics.Providers.HtmlProvider
 {
@@ -43,46 +44,86 @@ namespace BibleNote.Analytics.Providers.HtmlProvider
 
             using (var docParser = _documentParserFactory.Create(this))
             {
-                using (docParser.ParseParagraph(htmlDoc.DocumentNode))
-                {
-                    
-                }                
+                ParseNode(docParser, htmlDoc.DocumentNode);
             }
 
             return result;
         }
 
-        //private void ParseDocument(IDocumentParser docParser, HtmlNode htmlNode)
-        //{
-        //    if (!htmlNode.IsHierarchyNode())
-        //    {
-        //        AddParseString(BuildParseString(htmlNode.ChildNodes));
-        //    }
-        //    else
-        //    {
-        //        var nodes = new List<HtmlNode>();
+        private void ParseNode(IDocumentParser docParser, HtmlNode node)
+        {
+            if (!node.IsHierarchyNode())
+            {
+                ParseLinearNodes(docParser, node.ChildNodes);
+            }
+            else
+            {
+                var nodes = new List<HtmlNode>();
 
-        //        foreach (var childNode in htmlNode.ChildNodes)
-        //        {
-        //            if (childNode.IsTextNode())
-        //            {
-        //                nodes.Add(childNode);
-        //                continue;
-        //            }
+                foreach (var childNode in node.ChildNodes)
+                {
+                    if (childNode.IsTextNode())
+                    {
+                        if (childNode.IsValuableTextNode())
+                            nodes.Add(childNode);
+                        continue;
+                    }
 
-        //            if ((childNode.HasChildNodes || childNode.Name == HtmlTags.Br) && nodes.Count > 0)
-        //            {
-        //                AddParseString(BuildParseString(nodes));
-        //                nodes.Clear();
-        //            }
+                    if ((childNode.HasChildNodes || childNode.Name == HtmlTags.Br) && nodes.Count > 0)
+                    {
+                        ParseLinearNodes(docParser, nodes);
+                        nodes.Clear();
+                    }
 
-        //            if (childNode.HasChildNodes)
-        //                FindParseStrings(childNode);
-        //        }
+                    if (childNode.HasChildNodes)                    
+                        ParseHierarchyNode(docParser, childNode);                    
+                }
 
-        //        if (nodes.Count > 0)
-        //            AddParseString(BuildParseString(nodes));
-        //    }
-        //}
+                if (nodes.Count > 0)
+                    ParseLinearNodes(docParser, nodes);
+            }
+        }
+
+        private void ParseHierarchyNode(IDocumentParser docParser, HtmlNode node)
+        {
+            var state = GetParagraphState(node);
+            if (state > ParagraphState.Simple)
+            {
+                using (docParser.ParseHierarchyElement(node, state))
+                {
+                    ParseNode(docParser, node);
+                }
+            }
+            else
+            {
+                ParseNode(docParser, node);
+            }
+        }
+
+        private ParagraphState GetParagraphState(HtmlNode node)
+        {
+            switch (node.Name)
+            {
+                case HtmlTags.Table:
+                    return ParagraphState.Table;
+                case HtmlTags.Head:
+                    if (node.ParentNode?.Name == HtmlTags.Html)
+                        return ParagraphState.Title;
+                    break;
+            }
+
+            if (HtmlTags.List.Contains(node.Name))
+                return ParagraphState.List;
+
+            return ParagraphState.Simple;
+        }
+
+        private void ParseLinearNodes(IDocumentParser docParser, IEnumerable<HtmlNode> nodes)
+        {
+            foreach (var node in nodes)
+            {
+                docParser.ParseParagraph(node);
+            }
+        }
     }
 }

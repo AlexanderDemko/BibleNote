@@ -13,6 +13,6 @@ namespace BibleNote.Analytics.Contracts.VerseParsing
     {
         void Init(IDocumentProvider documentProvider, IDocumentParseContext docParseContext);
 
-        ParagraphParseResult ParseParagraph(HtmlNode node, ParagraphContext paragraphContext);
+        ParagraphParseResult ParseParagraph(HtmlNode node);
     }
 }
