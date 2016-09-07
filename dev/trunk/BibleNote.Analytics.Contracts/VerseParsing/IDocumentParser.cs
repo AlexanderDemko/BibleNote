@@ -9,25 +9,14 @@ using System.Threading.Tasks;
 
 namespace BibleNote.Analytics.Contracts.VerseParsing
 {
-    public interface IElementParseContext: IDisposable
-    {
-
-    }
-
     public interface IDocumentParser: IDisposable
     {
-        void Init(IDocumentProvider documentProvider);
-
         DocumentParseResult DocumentParseResult { get; }
 
-        void ParseTitle(HtmlNode node);
+        void Init(IDocumentProvider documentProvider);                
 
-        IElementParseContext ParseParagraph(HtmlNode node);
+        ParagraphParseResult ParseParagraph(HtmlNode node);
 
-        IElementParseContext ParseTable(HtmlNode node);
-
-        IElementParseContext ParseList(HtmlNode node);
-
-        IElementParseContext ParseListElement(HtmlNode node);
+        IElementParseHandle ParseHierarchyElement(HtmlNode node, ParagraphState paragraphState);
     }
 }

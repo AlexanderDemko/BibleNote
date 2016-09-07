@@ -78,12 +78,13 @@ namespace BibleNote.Tests.Analytics
                 verses = new string[0];
 
             _documentParseContext.ClearContext();
+            _documentParseContext.SetCurrentParagraph(new ParagraphContext(ParagraphState.Simple, null));
             initDocParseContext?.Invoke(_documentParseContext);
 
             var htmlDoc = new HtmlDocument();
             htmlDoc.LoadHtml(input);
 
-            var result = _parahraphParserService.ParseParagraph(htmlDoc.DocumentNode, new ParagraphContext() { ParagraphState = ParagraphState.SimpleText });
+            var result = _parahraphParserService.ParseParagraph(htmlDoc.DocumentNode);
 
             Assert.AreEqual(verses.Length, result.VerseEntries.Count, "Verses length is not the same. Expected: {0}. Found: {1}", verses.Length, result.VerseEntries.Count);            
             var verseEntries = result.VerseEntries.Select(ve => ve.VersePointer);
@@ -95,10 +96,9 @@ namespace BibleNote.Tests.Analytics
 
             if (notFoundVerses != null)
             {   
-                var notFoundVerseEntries = result.NotFoundVerses.Any() ? result.NotFoundVerses.Select(v => v.ToModuleVersePointer()) : result.VerseEntries.First().VersePointer.SubVerses.NotFoundVerses;
-                Assert.AreEqual(notFoundVerses.Length, notFoundVerseEntries.Count());
+                Assert.AreEqual(notFoundVerses.Length, result.NotFoundVerses.Count);
                 foreach (var verse in notFoundVerses)
-                    Assert.IsTrue(notFoundVerseEntries.Contains(_versePointerFactory.CreateVersePointer(verse).ToModuleVersePointer()));
+                    Assert.IsTrue(result.NotFoundVerses.Contains(_versePointerFactory.CreateVersePointer(verse)));
             }
 
             return new TestResult() { HtmlDoc = htmlDoc, Result = result };

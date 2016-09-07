@@ -14,7 +14,7 @@ namespace BibleNote.Analytics.Contracts.VerseParsing
 
         VerseEntryInfo LatestVerseEntry { get; }
 
-        ParagraphParseResult CurrentParagraph { get; }
+        ParagraphContext CurrentParagraph { get; }
 
         //CellInfo CurrentCell { get; }  // Если мы находимсяв таблице. А уже в CellInfo будет ссылка на текущую таблицу.
 
@@ -22,15 +22,17 @@ namespace BibleNote.Analytics.Contracts.VerseParsing
 
         void SetLatestVerseEntry(VerseEntryInfo verseEntry);
 
-        void SetCurrentParagraph(ParagraphParseResult paragraph);        
+        void SetCurrentParagraph(ParagraphContext paragraphContext);
 
-        void EnterTable();
+        void SetCurrentParagraphParseResult(ParagraphParseResult paragraphParseResult);
 
-        void EnterCell();
+        void EnterElement(ParagraphState paragraphState);
+
+        void ExitElement();        
 
         /// <summary>
         /// For testing purposes
         /// </summary>
-        void ClearContext();        
+        void ClearContext();       
     }
 }
