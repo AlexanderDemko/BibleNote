@@ -43,17 +43,6 @@ namespace BibleNote.Analytics.Services.VerseParsing
         {   
             _documentParseContext.SetCurrentParagraph(new ParagraphContext(ParagraphState.Simple, _documentParseContext.CurrentParagraph));
             var result = _paragraphParser.ParseParagraph(node);    
-            
-            if (_documentParseContext.CurrentParagraph.ParentParagraph?.ParagraphState == ParagraphState.Title)
-            {
-                if (result.VerseEntries.Count == 1)
-                {
-                    var titleVerse = result.VerseEntries.First().VersePointer;
-                    if (titleVerse.IsMultiVerse <= MultiVerse.OneChapter)
-                        _documentParseContext.SetTitleVerse(titleVerse);
-                };
-            }
-                     
             _documentParseResult.ParagraphParseResults.Add(result);
             
             return result;
@@ -61,9 +50,9 @@ namespace BibleNote.Analytics.Services.VerseParsing
 
         public IElementParseHandle ParseHierarchyElement(HtmlNode node, ParagraphState paragraphState)
         {
-            _documentParseContext.EnterElement(paragraphState);            
+            _documentParseContext.EnterHierarchyElement(paragraphState);            
 
-            return new ElementParseHandle(_documentParseContext);
+            return new ElementParseHandle(() => _documentParseContext.ExitHierarchyElement());
         }
 
         public void Dispose()
