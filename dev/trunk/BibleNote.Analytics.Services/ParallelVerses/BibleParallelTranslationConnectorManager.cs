@@ -1,7 +1,8 @@
 ﻿using BibleNote.Analytics.Contracts.Environment;
 using BibleNote.Analytics.Contracts.ParallelVerses;
 using BibleNote.Analytics.Contracts.VerseParsing;
-using BibleNote.Analytics.Models.Common;
+using BibleNote.Analytics.Models.Modules;
+using BibleNote.Analytics.Models.Verse;
 using Microsoft.Practices.Unity;
 using System;
 using System.Collections.Generic;

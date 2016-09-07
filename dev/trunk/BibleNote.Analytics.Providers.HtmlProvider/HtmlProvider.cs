@@ -1,6 +1,5 @@
 ﻿using BibleNote.Analytics.Contracts.Providers;
 using BibleNote.Analytics.Contracts.VerseParsing;
-using BibleNote.Analytics.Models.Common;
 using BibleNote.Analytics.Providers.FileNavigationProvider;
 using HtmlAgilityPack;
 using System;
@@ -9,6 +8,9 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using BibleNote.Analytics.Core.Extensions;
+using BibleNote.Analytics.Models.Verse;
+using BibleNote.Analytics.Models.VerseParsing;
 
 namespace BibleNote.Analytics.Providers.HtmlProvider
 {
@@ -28,9 +30,10 @@ namespace BibleNote.Analytics.Providers.HtmlProvider
             return string.Format($"<a href='bnVerse:{versePointer}'>{versePointer.GetOriginalVerseString()}</a>");
         }
 
-        public HtmlProvider(IDocumentParserFactory documentParserFactory)
+        public HtmlProvider(IDocumentParserFactory documentParserFactory, IHtmlDocumentReader htmlDocumentReader)
         {
             _documentParserFactory = documentParserFactory;
+            _htmlDocumentReader = htmlDocumentReader;
         }
 
         public DocumentParseResult ParseDocument(IDocumentId documentId)
@@ -48,5 +51,38 @@ namespace BibleNote.Analytics.Providers.HtmlProvider
 
             return result;
         }
+
+        //private void ParseDocument(IDocumentParser docParser, HtmlNode htmlNode)
+        //{
+        //    if (!htmlNode.IsHierarchyNode())
+        //    {
+        //        AddParseString(BuildParseString(htmlNode.ChildNodes));
+        //    }
+        //    else
+        //    {
+        //        var nodes = new List<HtmlNode>();
+
+        //        foreach (var childNode in htmlNode.ChildNodes)
+        //        {
+        //            if (childNode.IsTextNode())
+        //            {
+        //                nodes.Add(childNode);
+        //                continue;
+        //            }
+
+        //            if ((childNode.HasChildNodes || childNode.Name == HtmlTags.Br) && nodes.Count > 0)
+        //            {
+        //                AddParseString(BuildParseString(nodes));
+        //                nodes.Clear();
+        //            }
+
+        //            if (childNode.HasChildNodes)
+        //                FindParseStrings(childNode);
+        //        }
+
+        //        if (nodes.Count > 0)
+        //            AddParseString(BuildParseString(nodes));
+        //    }
+        //}
     }
 }

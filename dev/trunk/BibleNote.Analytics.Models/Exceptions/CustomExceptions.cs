@@ -1,5 +1,5 @@
 ﻿using BibleNote.Analytics.Core.Resources;
-using BibleNote.Analytics.Models.Common;
+using BibleNote.Analytics.Models.Verse;
 using System;
 using System.Collections.Generic;
 using System.Linq;

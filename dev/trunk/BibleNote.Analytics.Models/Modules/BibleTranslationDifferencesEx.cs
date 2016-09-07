@@ -1,8 +1,9 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using BibleNote.Analytics.Core.Extensions;
+using BibleNote.Analytics.Models.Verse;
 
-namespace BibleNote.Analytics.Models.Common
+namespace BibleNote.Analytics.Models.Modules
 {
     public class ParallelBibleInfo : Dictionary<int, ModuleVersePointersComparisonTable>
     {

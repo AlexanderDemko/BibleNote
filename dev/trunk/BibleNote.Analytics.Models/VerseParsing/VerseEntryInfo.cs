@@ -1,11 +1,13 @@
 ﻿using BibleNote.Analytics.Core.Helpers;
+using BibleNote.Analytics.Models.Modules;
+using BibleNote.Analytics.Models.Verse;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BibleNote.Analytics.Models.Common
+namespace BibleNote.Analytics.Models.VerseParsing
 {
     public class BookEntry
     {

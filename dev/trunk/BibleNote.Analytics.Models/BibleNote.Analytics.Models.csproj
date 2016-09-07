@@ -44,18 +44,21 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Common\BibleTranslationDifferencesEx.cs" />
-    <Compile Include="Common\BibleTranslationDifferencesFormula.cs" />
-    <Compile Include="Common\Boundaries.cs" />
-    <Compile Include="Common\DocumentParseResult.cs" />
-    <Compile Include="Common\ParagraphContext.cs" />
-    <Compile Include="Common\ModuleInfo.cs" />
-    <Compile Include="Common\ParagraphParseResult.cs" />
-    <Compile Include="Common\TextFragmentInfo.cs" />
-    <Compile Include="Common\VerseEntryInfo.cs" />
-    <Compile Include="Common\VersePointer.cs" />
-    <Compile Include="Entities\Document.cs" />
-    <Compile Include="Entities\DocumentFolder.cs" />
+    <Compile Include="Modules\Abbreviation.cs" />
+    <Compile Include="Modules\BibleBookDifference.cs" />
+    <Compile Include="Modules\BibleBookDifferences.cs" />
+    <Compile Include="Modules\BibleBookInfo.cs" />
+    <Compile Include="Modules\BibleStructureInfo.cs" />
+    <Compile Include="Modules\BibleTranslationDifferences.cs" />
+    <Compile Include="Modules\BibleTranslationDifferencesEx.cs" />
+    <Compile Include="Modules\BibleTranslationDifferencesFormula.cs" />
+    <Compile Include="VerseParsing\Boundaries.cs" />
+    <Compile Include="VerseParsing\DocumentParseResult.cs" />
+    <Compile Include="VerseParsing\ParagraphContext.cs" />
+    <Compile Include="Modules\ModuleInfo.cs" />
+    <Compile Include="VerseParsing\ParagraphParseResult.cs" />
+    <Compile Include="VerseParsing\TextFragmentInfo.cs" />
+    <Compile Include="VerseParsing\VerseEntryInfo.cs" />
     <Compile Include="Exceptions\CustomExceptions.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="..\VersionInfo.cs">
@@ -65,6 +68,12 @@
       <DependentUpon>zef2005.xsd</DependentUpon>
     </Compile>
     <Compile Include="Scheme\zef2005.ext.cs" />
+    <Compile Include="Verse\ModuleVerse.cs" />
+    <Compile Include="Verse\ModuleVersePointer.cs" />
+    <Compile Include="Verse\SimpleVersePointer.cs" />
+    <Compile Include="Verse\VerseNumber.cs" />
+    <Compile Include="Verse\VersePointer.cs" />
+    <Compile Include="Verse\VersesListInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Scheme\zef2005.xsc">
@@ -82,6 +91,9 @@
       <Project>{72939ebb-2258-4ee9-9645-4944a6450192}</Project>
       <Name>BibleNote.Analytics.Core</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Common\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

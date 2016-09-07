@@ -1,10 +1,11 @@
-﻿using System;
+﻿using BibleNote.Analytics.Models.Verse;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BibleNote.Analytics.Models.Common
+namespace BibleNote.Analytics.Models.VerseParsing
 {
     public class ParagraphParseResult
     {
@@ -16,10 +17,11 @@ namespace BibleNote.Analytics.Models.Common
 
         public List<SimpleVersePointer> NotFoundVerses { get; set; }
 
-        public ParagraphParseResult()
+        public ParagraphParseResult(ParagraphContext paragraphContext)
         {
             VerseEntries = new List<VerseEntryInfo>();
             NotFoundVerses = new List<SimpleVersePointer>();
+            ParagraphContext = paragraphContext;
         }
     }
 }

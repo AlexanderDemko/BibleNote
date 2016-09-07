@@ -1,12 +1,10 @@
 ﻿using BibleNote.Analytics.Contracts.Environment;
-using BibleNote.Analytics.Models.Common;
+using BibleNote.Analytics.Models.Modules;
 using BibleNote.Analytics.Services.Unity;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace BibleNoteConsole
 {

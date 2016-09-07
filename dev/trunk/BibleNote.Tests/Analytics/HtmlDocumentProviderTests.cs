@@ -1,36 +1,30 @@
 ﻿using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using BibleNote.Analytics.Services.Unity;
-using BibleNote.Analytics.Contracts.VerseParsing;
 using BibleNote.Analytics.Contracts.Environment;
 using Microsoft.Practices.Unity;
-using HtmlAgilityPack;
-using BibleNote.Analytics.Core.Helpers;
 using BibleNote.Tests.Analytics.Mocks;
-using System.IO;
 using FluentAssertions;
-using System;
 using BibleNote.Analytics.Providers.HtmlProvider;
 using BibleNote.Analytics.Contracts.Providers;
 using BibleNote.Analytics.Providers.FileNavigationProvider;
-using BibleNote.Analytics.Services.VerseParsing;
 
 namespace BibleNote.Tests.Analytics
 {
     [TestClass]
-    public class DocumentParserTests
+    public class HtmlDocumentProviderTests
     {
-        private IDocumentProvider _documentProvider;
-        private IDocumentParserFactory _documentParserFactory;
+        private IDocumentProvider _documentProvider;        
 
         [TestInitialize]
         public void Init()
         {
             DIContainer.InitWithDefaults();
             DIContainer.Container.RegisterInstance<IConfigurationManager>(new MockConfigurationManager());
-
-            _documentProvider = new MockDocumentProvider();
-            _documentParserFactory = DIContainer.Resolve<IDocumentParserFactory>();
+            DIContainer.Container.RegisterType<IHtmlDocumentReader, HtmlDocumentReader>();
+            DIContainer.Container.RegisterType<IDocumentProvider, HtmlProvider>("Html");
+            
+            _documentProvider = DIContainer.Resolve<IDocumentProvider>("Html");
         }
 
         [TestCleanup]
@@ -42,13 +36,9 @@ namespace BibleNote.Tests.Analytics
         [TestMethod]
         public void ParseLocalHtmlFile()
         {
-            using (var docParser = _documentParserFactory.Create(_documentProvider))
-            {
-                //using (docParser.ParseParagraph())
-                //{
+            var parseResult = _documentProvider.ParseDocument(new FileDocumentId(@"..\..\Analytics\TestData\HtmlDoc.html"));
 
-                //}
-            }
+            parseResult.ParagraphParseResults.Count().Should().Be(2);            
         }
     }
 }

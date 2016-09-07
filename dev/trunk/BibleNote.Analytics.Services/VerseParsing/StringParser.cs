@@ -1,14 +1,8 @@
 ﻿using BibleNote.Analytics.Contracts.Environment;
 using BibleNote.Analytics.Contracts.VerseParsing;
-using BibleNote.Analytics.Core.Constants;
 using BibleNote.Analytics.Core.Helpers;
-using BibleNote.Analytics.Models.Common;
-using Microsoft.Practices.Unity;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using BibleNote.Analytics.Models.Verse;
+using BibleNote.Analytics.Models.VerseParsing;
 
 namespace BibleNote.Analytics.Services.VerseParsing
 {

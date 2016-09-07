@@ -1,14 +1,8 @@
 ﻿using BibleNote.Analytics.Contracts.VerseParsing;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using HtmlAgilityPack;
-using BibleNote.Analytics.Models.Common;
-using Microsoft.Practices.Unity;
-using BibleNote.Analytics.Services.Unity;
 using BibleNote.Analytics.Contracts.Providers;
+using BibleNote.Analytics.Models.VerseParsing;
 
 namespace BibleNote.Analytics.Services.VerseParsing
 {
@@ -45,14 +39,20 @@ namespace BibleNote.Analytics.Services.VerseParsing
 
         public void ParseTitle(HtmlNode node)
         {
-            _documentParseResult.ParagraphParseResults.Add(_paragraphParser.ParseParagraph(node));
+            _documentParseResult.ParagraphParseResults.Add(
+                _paragraphParser.ParseParagraph(
+                    node, 
+                    new ParagraphContext() { ParagraphState = ParagraphState.Title, ParagraphPosition = node.LinePosition }));
 
             // только если указана одна глава - тогда _documentParseContext.SetTitleVerse();
         }
 
         public IElementParseContext ParseParagraph(HtmlNode node)
         {
-            _documentParseResult.ParagraphParseResults.Add(_paragraphParser.ParseParagraph(node));
+            _documentParseResult.ParagraphParseResults.Add(
+                _paragraphParser.ParseParagraph(
+                    node,
+                    new ParagraphContext() { ParagraphState = ParagraphState.SimpleText, ParagraphPosition = node.LinePosition }));
             return null;
         }
 

@@ -1,4 +1,4 @@
-﻿using BibleNote.Analytics.Models.Common;
+﻿using BibleNote.Analytics.Models.Modules;
 using System;
 using System.Collections.Generic;
 

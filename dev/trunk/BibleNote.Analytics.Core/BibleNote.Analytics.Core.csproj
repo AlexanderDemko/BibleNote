@@ -76,6 +76,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Cache\XmlSerializerCache.cs" />
+    <Compile Include="Constants\HtmlTags.cs" />
     <Compile Include="Constants\SystemConstants.cs" />
     <Compile Include="Constants\VerseConstants.cs" />
     <Compile Include="Exceptions\NotInitializedException.cs" />

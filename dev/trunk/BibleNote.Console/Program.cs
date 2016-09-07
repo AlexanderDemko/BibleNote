@@ -2,7 +2,6 @@
 using BibleNote.Analytics.Contracts.VerseParsing;
 using BibleNote.Analytics.Core.Helpers;
 using BibleNote.Analytics.Data;
-using BibleNote.Analytics.Models.Common;
 using BibleNote.Analytics.Models.Scheme;
 using BibleNote.Analytics.Services;
 using BibleNote.Analytics.Services.Environment;
@@ -19,6 +18,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.Practices.Unity;
 using BibleNote.Tests.Analytics.Mocks;
+using BibleNote.Analytics.Models.Verse;
 
 namespace BibleNoteConsole
 {

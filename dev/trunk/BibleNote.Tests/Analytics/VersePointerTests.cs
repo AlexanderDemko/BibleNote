@@ -1,10 +1,10 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using BibleNote.Analytics.Models.Common;
 using BibleNote.Analytics.Contracts.VerseParsing;
 using BibleNote.Analytics.Services.Unity;
 using Microsoft.Practices.Unity;
 using BibleNote.Analytics.Contracts.Environment;
 using BibleNote.Tests.Analytics.Mocks;
+using BibleNote.Analytics.Models.Verse;
 
 namespace BibleNote.Tests.Analytics
 {

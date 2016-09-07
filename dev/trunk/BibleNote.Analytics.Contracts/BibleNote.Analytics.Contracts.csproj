@@ -79,11 +79,11 @@
     <Compile Include="Logging\ILog.cs" />
     <Compile Include="Environment\IModulesManager.cs" />
     <Compile Include="Providers\IDocumentId.cs" />
+    <Compile Include="Providers\IDocumentReader.cs" />
     <Compile Include="Providers\IHtmlDocumentReader.cs" />
     <Compile Include="VerseParsing\IDocumentParseContext.cs" />
     <Compile Include="VerseParsing\IDocumentParser.cs" />
     <Compile Include="VerseParsing\IDocumentParserFactory.cs" />
-    <Compile Include="VerseParsing\IParagraphContext.cs" />
     <Compile Include="VerseParsing\IParagraphParser.cs" />
     <Compile Include="VerseParsing\IVerseCorrectionService.cs" />
     <Compile Include="VerseParsing\IVersePointerFactory.cs" />

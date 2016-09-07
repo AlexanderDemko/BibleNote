@@ -63,6 +63,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AnalyticsContext.cs" />
+    <Compile Include="Entities\Document.cs" />
+    <Compile Include="Entities\DocumentFolder.cs" />
     <Compile Include="Migrations\201504151537190_Init.cs" />
     <Compile Include="Migrations\201504151537190_Init.Designer.cs">
       <DependentUpon>201504151537190_Init.cs</DependentUpon>
@@ -87,6 +89,9 @@
     <EmbeddedResource Include="Migrations\201504151537190_Init.resx">
       <DependentUpon>201504151537190_Init.cs</DependentUpon>
     </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Entities\Enums\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
