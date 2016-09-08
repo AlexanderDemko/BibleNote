@@ -90,7 +90,7 @@ namespace BibleNote.Analytics.Providers.HtmlProvider
             var state = GetParagraphState(node);
             if (state > ParagraphState.Simple)
             {
-                using (docParser.ParseHierarchyElement(node, state))
+                using (docParser.ParseHierarchyElement(state))
                 {
                     ParseNode(docParser, node);
                 }

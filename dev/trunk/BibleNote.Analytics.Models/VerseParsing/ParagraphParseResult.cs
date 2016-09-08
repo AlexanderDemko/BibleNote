@@ -9,7 +9,15 @@ namespace BibleNote.Analytics.Models.VerseParsing
 {
     public class ParagraphParseResult
     {
-        public string Text { get; set; }        
+        public string Text { get; set; }
+
+        public bool IsValuable
+        {
+            get
+            {
+                return VerseEntries.Any() || NotFoundVerses.Any();
+            }
+        }
 
         public List<VerseEntryInfo> VerseEntries { get; set; }
 

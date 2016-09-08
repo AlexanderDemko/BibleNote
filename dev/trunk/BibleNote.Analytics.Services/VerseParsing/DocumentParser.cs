@@ -37,14 +37,16 @@ namespace BibleNote.Analytics.Services.VerseParsing
             _documentParseContext.StartParseParagraph();
 
             var result = _paragraphParser.ParseParagraph(node);
-            DocumentParseResult.ParagraphParseResults.Add(result);
+
+            if (result.IsValuable)
+                DocumentParseResult.ParagraphParseResults.Add(result);
 
             _documentParseContext.EndParseParagraph(result);
 
             return result;
         }
 
-        public DisposeHandler ParseHierarchyElement(HtmlNode node, ParagraphState paragraphState)
+        public DisposeHandler ParseHierarchyElement(ParagraphState paragraphState)
         {
             _documentParseContext.EnterHierarchyElement(paragraphState);            
 

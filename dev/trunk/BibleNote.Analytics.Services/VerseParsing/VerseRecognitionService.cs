@@ -111,10 +111,10 @@ namespace BibleNote.Analytics.Services.VerseParsing
             if (parentVerse == null && docParseContext.CurrentHierarchy?.ParagraphState == ParagraphState.TableCell)
             {
                 var hierarchyInfo = (TableHierarchyInfo)docParseContext.CurrentHierarchy.ParentHierarchy.ParentHierarchy.HierarchyInfo;
-                if (hierarchyInfo.CurrentRow > 1)                
+                if (hierarchyInfo.CurrentRow > 0)                
                     parentVerse = hierarchyInfo.FirstRowChapters.TryGetAt(hierarchyInfo.CurrentColumn);                    
                 
-                if (parentVerse == null && hierarchyInfo.CurrentColumn > 1)
+                if (parentVerse == null && hierarchyInfo.CurrentColumn > 0)
                     parentVerse = hierarchyInfo.FirstColumnChapters.TryGetAt(hierarchyInfo.CurrentRow);
             }
 
