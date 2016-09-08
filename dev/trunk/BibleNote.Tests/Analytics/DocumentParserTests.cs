@@ -42,15 +42,20 @@ namespace BibleNote.Tests.Analytics
 
         }
 
+        private static HtmlNode GetNode(string html)
+        {
+            var htmlDoc = new HtmlDocument();
+            htmlDoc.LoadHtml(html);
+            return htmlDoc.DocumentNode;
+        }
+
         [TestMethod]
         public void DocParser_TestScenario1()
         {
-            var htmlDoc = new HtmlDocument();
-            htmlDoc.LoadHtml("<div>Это <p>тестовая <font>Мк 5:</font>6-7!!</p> строка</div>");
-
+            var node = GetNode("<div>Это <p>тестовая <font>Мк 5:</font>6-7!!</p> строка</div>");
             using (var docParser = _documentParserFactory.Create(_documentProvider))
             {
-                docParser.ParseParagraph(htmlDoc.DocumentNode);
+                docParser.ParseParagraph(node);
 
                 docParser.DocumentParseResult.ParagraphParseResults.Count().Should().Be(1);
                 docParser.DocumentParseResult.ParagraphParseResults[0].VerseEntries.Count.Should().Be(1);
@@ -61,28 +66,36 @@ namespace BibleNote.Tests.Analytics
         [TestMethod]
         public void DocParser_TestScenario2()
         {
-            var htmlDoc1 = new HtmlDocument();
-            htmlDoc1.LoadHtml("<div>Это <p>тестовая <font>Мк 5:</font>6-7!!</p> Мк 5:8,10-11 строка</div>");
+            var node1 = GetNode("<div>Это <p>тестовая <font>Мк 5:</font>6-7!!</p> Мк 5:8,10-11 строка</div>");
+            var node2 = GetNode("Ин 1:1");
+            var node3 = GetNode(":12");
 
-            var htmlDoc2 = new HtmlDocument();
-            htmlDoc2.LoadHtml(":12 - вот");
+            var docParseContext = new DocumentParseContext();
+            DIContainer.Container.RegisterInstance<IDocumentParseContextEditor>(docParseContext);
 
             using (var docParser = _documentParserFactory.Create(_documentProvider))
             {
-                using (docParser.ParseHierarchyElement(htmlDoc1.DocumentNode, ParagraphState.List))
+                using (docParser.ParseHierarchyElement(node1, ParagraphState.List))
                 {
-                    docParser.ParseParagraph(htmlDoc1.DocumentNode);
+                    docParser.ParseParagraph(node1);
 
-                    using (docParser.ParseHierarchyElement(htmlDoc2.DocumentNode, ParagraphState.ListElement))
+                    using (docParser.ParseHierarchyElement(node2, ParagraphState.ListElement))
+                    {                        
+                        docParser.ParseParagraph(node2);
+                    }
+
+                    using (docParser.ParseHierarchyElement(node3, ParagraphState.ListElement))
                     {
-                        docParser.ParseParagraph(htmlDoc2.DocumentNode);
+                        docParser.ParseParagraph(node3);
                     }
                 }
 
-                docParser.DocumentParseResult.ParagraphParseResults.Count().Should().Be(2);
-                docParser.DocumentParseResult.ParagraphParseResults[0].VerseEntries.Count.Should().Be(3);
-                docParser.DocumentParseResult.ParagraphParseResults[1].VerseEntries.Count.Should().Be(1);
-                docParser.DocumentParseResult.ParagraphParseResults[1].VerseEntries[0].VersePointer.Should().Be(_versePointerFactory.CreateVersePointer("Мк 5:12"));
+                var results = docParser.DocumentParseResult.ParagraphParseResults;
+                results.Count().Should().Be(3);
+                results[0].VerseEntries.Count.Should().Be(3);
+                results[1].VerseEntries.Count.Should().Be(1);
+                results[2].VerseEntries.Count.Should().Be(1);
+                results[2].VerseEntries[0].VersePointer.Should().Be(_versePointerFactory.CreateVersePointer("Мк 5:12"));
             }
         }
     }

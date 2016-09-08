@@ -36,6 +36,8 @@ namespace BibleNote.Analytics.Services.VerseParsing
 
         private IDocumentParseContext _docParseContext;
 
+        private IParagraphParseContextEditor _parseContextEditor;
+
         private ParagraphParseResult _result { get; set; }        
 
         public ParagraphParser(IStringParser stringParser, IVerseRecognitionService verseRecognitionService, IConfigurationManager configurationManager)
@@ -59,8 +61,10 @@ namespace BibleNote.Analytics.Services.VerseParsing
             if (_docParseContext == null)
                 throw new NotInitializedException();
 
+            _parseContextEditor = _docParseContext.CurrentParagraph as IParagraphParseContextEditor;
+
             _result = new ParagraphParseResult();
-            _docParseContext.SetCurrentParagraphResult(_result);
+            _parseContextEditor.SetParagraphResult(_result);
 
             var parseString = new HtmlToTextConverter().Convert(node);
             _result.Text = parseString.Value;
@@ -98,7 +102,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
                     }
 
                     _result.VerseEntries.Add(verseEntry);
-                    _docParseContext.SetLatestVerseEntry(verseEntry);
+                    _parseContextEditor.SetLatestVerseEntry(verseEntry);
                 }
 
                 if (verseEntry.VersePointer.SubVerses.NotFoundVerses.Count > 0)

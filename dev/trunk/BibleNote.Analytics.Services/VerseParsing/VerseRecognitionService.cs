@@ -55,22 +55,22 @@ namespace BibleNote.Analytics.Services.VerseParsing
         /// <returns></returns>
         private static bool ChapterOrVerseRule(VerseEntryInfo verseEntry, IDocumentParseContext docParseContext)
         {
-            if (docParseContext.LatestVerseEntry != null
-                && StringUtils.CheckDivergence(docParseContext.CurrentParagraph.Text, docParseContext.LatestVerseEntry.EndIndex, verseEntry.StartIndex, 2, ','))
+            if (docParseContext.CurrentParagraph.LatestVerseEntry != null
+                && StringUtils.CheckDivergence(docParseContext.CurrentParagraph.ParagraphParseResult.Text, docParseContext.CurrentParagraph.LatestVerseEntry.EndIndex, verseEntry.StartIndex, 2, ','))
             {
-                verseEntry.VersePointer.Book = docParseContext.LatestVerseEntry.VersePointer.Book;                
-                verseEntry.EntryType = docParseContext.LatestVerseEntry.VersePointer.VerseNumber.IsChapter ? VerseEntryType.Chapter : VerseEntryType.Verse;
+                verseEntry.VersePointer.Book = docParseContext.CurrentParagraph.LatestVerseEntry.VersePointer.Book;                
+                verseEntry.EntryType = docParseContext.CurrentParagraph.LatestVerseEntry.VersePointer.VerseNumber.IsChapter ? VerseEntryType.Chapter : VerseEntryType.Verse;
 
                 if (verseEntry.EntryType == VerseEntryType.Verse)
                 {   
-                    verseEntry.VersePointer.MoveChapterToVerse(docParseContext.LatestVerseEntry.VersePointer.MostTopChapter);
+                    verseEntry.VersePointer.MoveChapterToVerse(docParseContext.CurrentParagraph.LatestVerseEntry.VersePointer.MostTopChapter);
 
-                    if (verseEntry.VersePointer.Verse <= docParseContext.LatestVerseEntry.VersePointer.MostTopVerse)
+                    if (verseEntry.VersePointer.Verse <= docParseContext.CurrentParagraph.LatestVerseEntry.VersePointer.MostTopVerse)
                         return false;
                 }
                 else
                 {
-                    if (verseEntry.VersePointer.Chapter <= docParseContext.LatestVerseEntry.VersePointer.MostTopChapter)
+                    if (verseEntry.VersePointer.Chapter <= docParseContext.CurrentParagraph.LatestVerseEntry.VersePointer.MostTopChapter)
                         return false;
                 }
                                 
@@ -89,9 +89,9 @@ namespace BibleNote.Analytics.Services.VerseParsing
         /// <returns></returns>
         private static bool ChapterVerseRule(VerseEntryInfo verseEntry, IDocumentParseContext docParseContext)
         {            
-            if (docParseContext.LatestVerseEntry != null)
+            if (docParseContext.CurrentParagraph.LatestVerseEntry != null)
             {
-                verseEntry.VersePointer.Book = docParseContext.LatestVerseEntry.VersePointer.Book;
+                verseEntry.VersePointer.Book = docParseContext.CurrentParagraph.LatestVerseEntry.VersePointer.Book;
                 return true;
             }                        
 
@@ -106,9 +106,9 @@ namespace BibleNote.Analytics.Services.VerseParsing
         /// <returns></returns>
         private static bool VerseRule(VerseEntryInfo verseEntry, IDocumentParseContext docParseContext)
         {
-            var parentVerse = docParseContext.LatestVerseEntry?.VersePointer;
+            var parentVerse = docParseContext.CurrentParagraph.LatestVerseEntry?.VersePointer;
 
-            if (parentVerse == null && docParseContext.CurrentHierarchy.ParagraphState == ParagraphState.TableCell)
+            if (parentVerse == null && docParseContext.CurrentHierarchy?.ParagraphState == ParagraphState.TableCell)
             {
                 var hierarchyInfo = (TableHierarchyInfo)docParseContext.CurrentHierarchy.ParentHierarchy.ParentHierarchy.HierarchyInfo;
                 if (hierarchyInfo.CurrentRow > 1)                
@@ -139,9 +139,9 @@ namespace BibleNote.Analytics.Services.VerseParsing
         /// <returns></returns>
         private static bool ChapterRule(VerseEntryInfo verseEntry, IDocumentParseContext docParseContext)
         {
-            if (docParseContext.LatestVerseEntry != null)
+            if (docParseContext.CurrentParagraph.LatestVerseEntry != null)
             {
-                verseEntry.VersePointer.Book = docParseContext.LatestVerseEntry.VersePointer.Book;                
+                verseEntry.VersePointer.Book = docParseContext.CurrentParagraph.LatestVerseEntry.VersePointer.Book;                
                 return true;
             }            
 

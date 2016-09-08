@@ -12,22 +12,20 @@ namespace BibleNote.Analytics.Contracts.VerseParsing
     {
         ChapterPointer TitleChapter { get; }
 
-        VerseEntryInfo LatestVerseEntry { get; }
+        IParagraphParseContext CurrentParagraph { get; }
 
-        ParagraphParseResult CurrentParagraph { get; }
-
-        HierarchyContext CurrentHierarchy { get; }
-
-        void SetLatestVerseEntry(VerseEntryInfo verseEntry);
-
-        void SetCurrentParagraphResult(ParagraphParseResult paragraphParseResult);
+        HierarchyContext CurrentHierarchy { get; }        
     }   
     
     public interface IDocumentParseContextEditor : IDocumentParseContext
     {
-        //CellInfo CurrentCell { get; }  // Если мы находимся в таблице. А уже в CellInfo будет ссылка на текущую таблицу.
+        //CellInfo CurrentCell { get; }  // Если мы находимся в таблице. А уже в CellInfo будет ссылка на текущую таблицу.        
 
         void SetTitleVerse(ChapterPointer titleChapter);
+
+        void StartParseParagraph();
+
+        void EndParseParagraph(ParagraphParseResult paragraphParseResult);
 
         void EnterHierarchyElement(ParagraphState paragraphState);
 

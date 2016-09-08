@@ -13,6 +13,7 @@ using BibleNote.Analytics.Models.Exceptions;
 using BibleNote.Analytics.Models.VerseParsing;
 using BibleNote.Analytics.Models.Verse;
 using FluentAssertions;
+using BibleNote.Analytics.Services.VerseParsing;
 
 namespace BibleNote.Tests.Analytics
 {
@@ -84,7 +85,9 @@ namespace BibleNote.Tests.Analytics
             var htmlDoc = new HtmlDocument();
             htmlDoc.LoadHtml(input);
 
+            _documentParseContext.StartParseParagraph();
             var result = _parahraphParserService.ParseParagraph(htmlDoc.DocumentNode);
+            _documentParseContext.EndParseParagraph(result);
 
             Assert.AreEqual(verses.Length, result.VerseEntries.Count, "Verses length is not the same. Expected: {0}. Found: {1}", verses.Length, result.VerseEntries.Count);            
             var verseEntries = result.VerseEntries.Select(ve => ve.VersePointer);
