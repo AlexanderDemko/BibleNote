@@ -1,4 +1,4 @@
-﻿using BibleNote.Analytics.Models.Modules;
+﻿using BibleNote.Analytics.Core.Extensions;
 using BibleNote.Analytics.Models.Verse;
 using System.Collections.Generic;
 using System.Linq;
@@ -53,6 +53,19 @@ namespace BibleNote.Analytics.Models.VerseParsing
 
         public ChapterPointer GetHierarchyChapterPointer()
         {
+            if (ChapterPointer == null)
+            {
+                if (ParagraphState == ParagraphState.TableCell)
+                {
+                    var hierarchyInfo = (TableHierarchyInfo)ParentHierarchy.ParentHierarchy.HierarchyInfo;
+                    if (hierarchyInfo.CurrentRow > 0)
+                        ChapterPointer = hierarchyInfo.FirstRowChapters.TryGetAt(hierarchyInfo.CurrentColumn);
+
+                    if (ChapterPointer == null && hierarchyInfo.CurrentColumn > 0)
+                        ChapterPointer = hierarchyInfo.FirstColumnChapters.TryGetAt(hierarchyInfo.CurrentRow);
+                }
+            }
+
             return ChapterPointer ?? ParentHierarchy?.GetHierarchyChapterPointer();
         }
 
