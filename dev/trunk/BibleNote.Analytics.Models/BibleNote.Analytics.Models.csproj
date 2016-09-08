@@ -44,6 +44,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Common\DisposeHandler.cs" />
     <Compile Include="Modules\Abbreviation.cs" />
     <Compile Include="Modules\BibleBookDifference.cs" />
     <Compile Include="Modules\BibleBookDifferences.cs" />
@@ -55,8 +56,8 @@
     <Compile Include="VerseParsing\Boundaries.cs" />
     <Compile Include="VerseParsing\DocumentParseResult.cs" />
     <Compile Include="VerseParsing\HierarchyContext.cs" />
-    <Compile Include="VerseParsing\ParagraphContext.cs" />
     <Compile Include="Modules\ModuleInfo.cs" />
+    <Compile Include="VerseParsing\HierarchyInfo.cs" />
     <Compile Include="VerseParsing\ParagraphParseResult.cs" />
     <Compile Include="VerseParsing\TextFragmentInfo.cs" />
     <Compile Include="VerseParsing\VerseEntryInfo.cs" />
@@ -69,6 +70,7 @@
       <DependentUpon>zef2005.xsd</DependentUpon>
     </Compile>
     <Compile Include="Scheme\zef2005.ext.cs" />
+    <Compile Include="Verse\ChapterPointer.cs" />
     <Compile Include="Verse\ModuleVerse.cs" />
     <Compile Include="Verse\ModuleVersePointer.cs" />
     <Compile Include="Verse\SimpleVersePointer.cs" />
@@ -93,9 +95,7 @@
       <Name>BibleNote.Analytics.Core</Name>
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Common\" />
-  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

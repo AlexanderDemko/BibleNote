@@ -105,7 +105,7 @@
     <Compile Include="Analytics\HtmlDocumentProviderTests.cs" />
     <Compile Include="Analytics\DocumentParserTests.cs" />
     <Compile Include="Analytics\Mocks\MockConfigurationManager.cs" />
-    <Compile Include="Analytics\Mocks\MockDocumentProvider.cs" />
+    <Compile Include="Analytics\Mocks\MockDocumentProviderInfo.cs" />
     <Compile Include="Analytics\ParagraphParserTests.cs" />
     <Compile Include="Analytics\StringParserTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

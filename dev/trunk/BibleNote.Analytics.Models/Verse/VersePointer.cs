@@ -34,11 +34,11 @@ namespace BibleNote.Analytics.Models.Verse
 
         public VersesListInfo<ModuleVersePointer> SubVerses { get; set; }
 
-        public VersePointer(BibleBookInfo bookInfo, string moduleName, string originalVerseName, VerseNumber verseNumber, VerseNumber? topVerseNumber = null)
+        public VersePointer(BibleBookInfo bookInfo, string moduleShortName, string originalVerseName, VerseNumber verseNumber, VerseNumber? topVerseNumber = null)
             : base(bookInfo != null ? bookInfo.Index : 0, verseNumber, topVerseNumber)
         {
             Book = bookInfo;
-            ModuleShortName = moduleName;
+            ModuleShortName = moduleShortName;
             OriginalVerseName = originalVerseName;
             SubVerses = new VersesListInfo<ModuleVersePointer>();
         }
@@ -69,6 +69,14 @@ namespace BibleNote.Analytics.Models.Verse
                 TopVerseNumber = subVerses.Last().VerseNumber;
             else
                 TopVerseNumber = null;
+        }
+
+        public virtual ChapterPointer ToChapterPointer()
+        {
+            if (IsMultiVerse > MultiVerse.OneChapter)
+                throw new InvalidOperationException("Must be only one chapter in verse.");
+
+            return new ChapterPointer(Book, ModuleShortName, Chapter);
         }
     }
 }

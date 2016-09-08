@@ -66,7 +66,7 @@ namespace BibleNote.Analytics.Services.Unity
                 .RegisterTracingType<IStringParser, StringParser>(new TransientLifetimeManager())
                 .RegisterTracingType<IParagraphParser, ParagraphParser>(new TransientLifetimeManager())
                 .RegisterTracingType<IDocumentParser, DocumentParser>(new TransientLifetimeManager())
-                .RegisterTracingType<IDocumentParseContext, DocumentParseContext>(new TransientLifetimeManager())
+                .RegisterTracingType<IDocumentParseContextEditor, DocumentParseContext>(new TransientLifetimeManager())
                 .RegisterTracingType<IDocumentParserFactory, DocumentParserFactory>(new ContainerControlledLifetimeManager());
         }
         

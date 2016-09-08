@@ -33,7 +33,7 @@ namespace BibleNote.Tests.Analytics
 
         }
 
-        [TestMethod]
+        //todo: [TestMethod]
         public void ParseLocalHtmlFile()
         {
             var parseResult = _documentProvider.ParseDocument(new FileDocumentId(@"..\..\Analytics\TestData\HtmlDoc.html"));

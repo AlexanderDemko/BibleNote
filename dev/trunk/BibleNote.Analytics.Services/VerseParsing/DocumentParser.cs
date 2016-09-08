@@ -5,6 +5,7 @@ using BibleNote.Analytics.Contracts.Providers;
 using BibleNote.Analytics.Models.VerseParsing;
 using System.Linq;
 using BibleNote.Analytics.Models.Verse;
+using BibleNote.Analytics.Models.Common;
 
 namespace BibleNote.Analytics.Services.VerseParsing
 {
@@ -12,11 +13,11 @@ namespace BibleNote.Analytics.Services.VerseParsing
     {       
         private readonly IParagraphParser _paragraphParser;
 
-        private readonly IDocumentParseContext _documentParseContext;
+        private readonly IDocumentParseContextEditor _documentParseContext;
 
         private readonly DocumentParseResult _documentParseResult;
 
-        private IDocumentProvider _documentProvider;     
+        private IDocumentProviderInfo _documentProvider;     
 
         public DocumentParseResult DocumentParseResult
         {
@@ -26,14 +27,14 @@ namespace BibleNote.Analytics.Services.VerseParsing
             }
         }
 
-        public DocumentParser(IParagraphParser paragraphParser, IDocumentParseContext documentParseContext)
+        public DocumentParser(IParagraphParser paragraphParser, IDocumentParseContextEditor documentParseContext)
         {            
             _paragraphParser = paragraphParser;
             _documentParseContext = documentParseContext;
             _documentParseResult = new DocumentParseResult();
         }
 
-        public void Init(IDocumentProvider documentProvider)
+        public void Init(IDocumentProviderInfo documentProvider)
         {
             _documentProvider = documentProvider;            
             _paragraphParser.Init(documentProvider, _documentParseContext);
@@ -41,23 +42,22 @@ namespace BibleNote.Analytics.Services.VerseParsing
 
         public ParagraphParseResult ParseParagraph(HtmlNode node)
         {   
-            _documentParseContext.SetCurrentParagraph(new ParagraphContext(ParagraphState.Simple, _documentParseContext.CurrentParagraph));
             var result = _paragraphParser.ParseParagraph(node);    
             _documentParseResult.ParagraphParseResults.Add(result);
             
             return result;
         }
 
-        public IElementParseHandle ParseHierarchyElement(HtmlNode node, ParagraphState paragraphState)
+        public DisposeHandler ParseHierarchyElement(HtmlNode node, ParagraphState paragraphState)
         {
             _documentParseContext.EnterHierarchyElement(paragraphState);            
 
-            return new ElementParseHandle(() => _documentParseContext.ExitHierarchyElement());
+            return new DisposeHandler(() => _documentParseContext.ExitHierarchyElement());
         }
 
         public void Dispose()
         {
-
+            _documentParseContext.ClearContext();
         }
     }
 }

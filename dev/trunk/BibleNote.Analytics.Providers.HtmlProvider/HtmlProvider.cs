@@ -39,12 +39,13 @@ namespace BibleNote.Analytics.Providers.HtmlProvider
 
         public DocumentParseResult ParseDocument(IDocumentId documentId)
         {
-            var result = new DocumentParseResult();
+            DocumentParseResult result;
             var htmlDoc = _htmlDocumentReader.Read(documentId);
 
             using (var docParser = _documentParserFactory.Create(this))
             {
                 ParseNode(docParser, htmlDoc.DocumentNode);
+                result = docParser.DocumentParseResult;
             }
 
             return result;
@@ -106,10 +107,16 @@ namespace BibleNote.Analytics.Providers.HtmlProvider
             {
                 case HtmlTags.Table:
                     return ParagraphState.Table;
+                case HtmlTags.TableRow:
+                    return ParagraphState.TableRow;
+                case HtmlTags.TableCell:
+                    return ParagraphState.TableCell;
                 case HtmlTags.Head:
                     if (node.ParentNode?.Name == HtmlTags.Html)
                         return ParagraphState.Title;
                     break;
+                case HtmlTags.ListElement:
+                    return ParagraphState.ListElement;
             }
 
             if (HtmlTags.List.Contains(node.Name))

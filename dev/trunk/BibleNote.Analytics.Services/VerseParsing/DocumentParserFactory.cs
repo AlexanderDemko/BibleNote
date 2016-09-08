@@ -18,7 +18,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
             _container = container;
         }
 
-        public IDocumentParser Create(IDocumentProvider documentProvider)
+        public IDocumentParser Create(IDocumentProviderInfo documentProvider)
         {
             var documentParser = _container.Resolve<IDocumentParser>();
             documentParser.Init(documentProvider);
