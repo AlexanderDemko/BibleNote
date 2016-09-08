@@ -26,7 +26,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
 
         public void EndParseParagraph(ParagraphParseResult paragraphParseResult)
         {
-            if (CurrentHierarchy != null)
+            if (CurrentHierarchy != null && paragraphParseResult.IsValuable)
                 CurrentHierarchy.ParseResults.Add(paragraphParseResult);
         }
 
@@ -77,15 +77,15 @@ namespace BibleNote.Analytics.Services.VerseParsing
             if (CurrentHierarchy.ParagraphState == ParagraphState.TableCell)
             {
                 var hierarchyInfo = (TableHierarchyInfo)CurrentHierarchy.ParentHierarchy.ParentHierarchy.HierarchyInfo;                
-                if (hierarchyInfo.CurrentRow == 1)
+                if (hierarchyInfo.CurrentRow == 0)
                 {
                     CurrentHierarchy.TrySetChapterPointerFromParseResults();                    
                     hierarchyInfo.FirstRowChapters.Add(CurrentHierarchy.ChapterPointer);
                 }
 
-                if (hierarchyInfo.CurrentColumn == 1)
+                if (hierarchyInfo.CurrentColumn == 0)
                 {
-                    if (hierarchyInfo.CurrentRow != 1)
+                    if (hierarchyInfo.CurrentRow != 0)
                         CurrentHierarchy.TrySetChapterPointerFromParseResults();
                     
                     hierarchyInfo.FirstColumnChapters.Add(CurrentHierarchy.ChapterPointer);

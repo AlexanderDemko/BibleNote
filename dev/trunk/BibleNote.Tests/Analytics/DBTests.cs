@@ -16,6 +16,7 @@ namespace BibleNote.Tests.Analytics
         }
 
         [TestMethod]
+        [TestCategory("IgnoreOnCI")]
         public void TestCreateAndDeleteFolder()
         {
             var foldersCount = 0;
