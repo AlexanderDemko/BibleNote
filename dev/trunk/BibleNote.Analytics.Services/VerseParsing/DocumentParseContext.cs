@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using BibleNote.Analytics.Contracts.VerseParsing;
 using BibleNote.Analytics.Models.Verse;
 using BibleNote.Analytics.Models.VerseParsing;
@@ -7,28 +8,24 @@ namespace BibleNote.Analytics.Services.VerseParsing
 {
     public class DocumentParseContext : IDocumentParseContextEditor
     {
-        public ChapterPointer TitleChapter { get; private set; }
+        public ChapterPointer TitleChapter { get; private set; }        
 
-        public VerseEntryInfo LatestVerseEntry { get; private set; }        
+        public HierarchyContext CurrentHierarchy { get; private set; }
 
-        public ParagraphParseResult CurrentParagraph { get; private set; }
-
-        public HierarchyContext CurrentHierarchy { get; private set; }        
+        public IParagraphParseContext CurrentParagraph { get; private set; }        
 
         public void SetTitleVerse(ChapterPointer titleChapter)
         {
             TitleChapter = titleChapter;
         }
-        
-        public void SetLatestVerseEntry(VerseEntryInfo verseEntry)            
+
+        public void StartParseParagraph()
         {
-            LatestVerseEntry = verseEntry;
+            CurrentParagraph = new ParagraphParseContext();
         }
 
-        public void SetCurrentParagraphResult(ParagraphParseResult paragraphParseResult)
+        public void EndParseParagraph(ParagraphParseResult paragraphParseResult)
         {
-            CurrentParagraph = paragraphParseResult;
-
             if (CurrentHierarchy != null)
                 CurrentHierarchy.ParseResults.Add(paragraphParseResult);
         }
@@ -106,8 +103,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
         
         public void ClearContext()
         {
-            TitleChapter = null;
-            LatestVerseEntry = null;
+            TitleChapter = null;            
             CurrentParagraph = null;
             CurrentHierarchy = null;
         }

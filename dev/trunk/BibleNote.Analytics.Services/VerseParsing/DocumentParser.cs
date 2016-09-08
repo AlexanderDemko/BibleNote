@@ -13,25 +13,17 @@ namespace BibleNote.Analytics.Services.VerseParsing
     {       
         private readonly IParagraphParser _paragraphParser;
 
-        private readonly IDocumentParseContextEditor _documentParseContext;
+        private readonly IDocumentParseContextEditor _documentParseContext;        
 
-        private readonly DocumentParseResult _documentParseResult;
+        private IDocumentProviderInfo _documentProvider;
 
-        private IDocumentProviderInfo _documentProvider;     
-
-        public DocumentParseResult DocumentParseResult
-        {
-            get
-            {
-                return _documentParseResult;
-            }
-        }
+        public DocumentParseResult DocumentParseResult { get; private set; }
 
         public DocumentParser(IParagraphParser paragraphParser, IDocumentParseContextEditor documentParseContext)
         {            
             _paragraphParser = paragraphParser;
             _documentParseContext = documentParseContext;
-            _documentParseResult = new DocumentParseResult();
+            DocumentParseResult = new DocumentParseResult();
         }
 
         public void Init(IDocumentProviderInfo documentProvider)
@@ -41,10 +33,14 @@ namespace BibleNote.Analytics.Services.VerseParsing
         }
 
         public ParagraphParseResult ParseParagraph(HtmlNode node)
-        {   
-            var result = _paragraphParser.ParseParagraph(node);    
-            _documentParseResult.ParagraphParseResults.Add(result);
-            
+        {
+            _documentParseContext.StartParseParagraph();
+
+            var result = _paragraphParser.ParseParagraph(node);
+            DocumentParseResult.ParagraphParseResults.Add(result);
+
+            _documentParseContext.EndParseParagraph(result);
+
             return result;
         }
 
