@@ -326,6 +326,7 @@ namespace BibleNote.Tests.Analytics
                                 using (docParser.ParseHierarchyElement(ParagraphState.TableCell))
                                 {
                                     docParser.ParseParagraph(verseNode);
+                                    docParser.ParseParagraph(verseNode);
                                 }
                             }
                         }
@@ -333,11 +334,12 @@ namespace BibleNote.Tests.Analytics
                 }
 
                 var results = docParser.DocumentParseResult.ParagraphParseResults;
-                results.Count.Should().Be(4);
+                results.Count.Should().Be(5);
                 CheckParseResult(results[0], "Ин 1:1");
                 CheckParseResult(results[1], "Мк 5:6");
                 CheckParseResult(results[2], "Мк 5:12");                
-                CheckParseResult(results[3], "Ин 1:12");                
+                CheckParseResult(results[3], "Ин 1:12");
+                CheckParseResult(results[4], "Ин 1:12");
             }
         }
     }
