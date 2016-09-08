@@ -32,11 +32,11 @@ namespace BibleNote.Analytics.Services.VerseParsing
 
         private readonly IConfigurationManager _configurationManager;
 
-        private IDocumentProvider _documentProvider;
+        private IDocumentProviderInfo _documentProvider;
 
         private IDocumentParseContext _docParseContext;
 
-        private ParagraphParseResult _result { get; set; }
+        private ParagraphParseResult _result { get; set; }        
 
         public ParagraphParser(IStringParser stringParser, IVerseRecognitionService verseRecognitionService, IConfigurationManager configurationManager)
         {
@@ -45,7 +45,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
             _configurationManager = configurationManager;
         }
 
-        public void Init(IDocumentProvider documentProvider, IDocumentParseContext docParseContext)
+        public void Init(IDocumentProviderInfo documentProvider, IDocumentParseContext docParseContext)
         {
             _documentProvider = documentProvider;
             _docParseContext = docParseContext;
@@ -60,7 +60,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
                 throw new NotInitializedException();
 
             _result = new ParagraphParseResult();
-            _docParseContext.SetCurrentParagraphParseResult(_result);
+            _docParseContext.SetCurrentParagraphResult(_result);
 
             var parseString = new HtmlToTextConverter().Convert(node);
             _result.Text = parseString.Value;

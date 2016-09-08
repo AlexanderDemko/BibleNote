@@ -1,4 +1,5 @@
 ﻿using BibleNote.Analytics.Contracts.Providers;
+using BibleNote.Analytics.Models.Common;
 using BibleNote.Analytics.Models.VerseParsing;
 using HtmlAgilityPack;
 using System;
@@ -13,10 +14,10 @@ namespace BibleNote.Analytics.Contracts.VerseParsing
     {
         DocumentParseResult DocumentParseResult { get; }
 
-        void Init(IDocumentProvider documentProvider);                
+        void Init(IDocumentProviderInfo documentProvider);                
 
         ParagraphParseResult ParseParagraph(HtmlNode node);
 
-        IElementParseHandle ParseHierarchyElement(HtmlNode node, ParagraphState paragraphState);
+        DisposeHandler ParseHierarchyElement(HtmlNode node, ParagraphState paragraphState);
     }
 }

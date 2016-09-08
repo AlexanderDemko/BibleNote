@@ -42,10 +42,9 @@ namespace BibleNoteConsole
 
             VersePointerFactory = DIContainer.Resolve<IVersePointerFactory>();
 
-            ConvertTextModule(@"C:\temp\nrkv.txt");
+            //ConvertTextModule(@"C:\temp\nrkv.txt");
             //SaveTextModule(@"c:\temp\nkrv.txt");
-
-            return;
+            //return;
 
             var sw = new Stopwatch();
 

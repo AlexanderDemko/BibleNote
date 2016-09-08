@@ -5,21 +5,19 @@ using BibleNote.Analytics.Models.VerseParsing;
 
 namespace BibleNote.Analytics.Services.VerseParsing
 {
-    public class DocumentParseContext: IDocumentParseContext
+    public class DocumentParseContext : IDocumentParseContextEditor
     {
-        public VersePointer TitleVerse { get; private set; }
+        public ChapterPointer TitleChapter { get; private set; }
 
         public VerseEntryInfo LatestVerseEntry { get; private set; }        
 
-        public ParagraphContext CurrentParagraph { get; private set; }
+        public ParagraphParseResult CurrentParagraph { get; private set; }
 
-        public HierarchyContext CurrentHierarchy { get; private set; }
+        public HierarchyContext CurrentHierarchy { get; private set; }        
 
-        //public CellInfo CurrentCell { get; private set; }  // Если мы находимсяв таблице. А уже в CellInfo будет ссылка на текущую таблицу.
-
-        public void SetTitleVerse(VersePointer versePointer)
+        public void SetTitleVerse(ChapterPointer titleChapter)
         {
-            TitleVerse = versePointer;
+            TitleChapter = titleChapter;
         }
         
         public void SetLatestVerseEntry(VerseEntryInfo verseEntry)            
@@ -27,14 +25,9 @@ namespace BibleNote.Analytics.Services.VerseParsing
             LatestVerseEntry = verseEntry;
         }
 
-        public void SetCurrentParagraph(ParagraphContext paragraphContext)
+        public void SetCurrentParagraphResult(ParagraphParseResult paragraphParseResult)
         {
-            CurrentParagraph = paragraphContext;
-        }
-
-        public void SetCurrentParagraphParseResult(ParagraphParseResult paragraphParseResult)
-        {
-            CurrentParagraph.ParseResult = paragraphParseResult;
+            CurrentParagraph = paragraphParseResult;
 
             if (CurrentHierarchy != null)
                 CurrentHierarchy.ParseResults.Add(paragraphParseResult);
@@ -42,33 +35,81 @@ namespace BibleNote.Analytics.Services.VerseParsing
 
         public void EnterHierarchyElement(ParagraphState paragraphState)
         {
-            CurrentHierarchy = new HierarchyContext(paragraphState, CurrentHierarchy);            
+            CurrentHierarchy = new HierarchyContext(paragraphState, CurrentHierarchy);
+
+            switch (paragraphState)
+            {
+                case ParagraphState.ListElement:
+                    {
+                        if (CurrentHierarchy.ParentHierarchy.ParagraphState == ParagraphState.List)
+                            CurrentHierarchy.ParentHierarchy.TrySetChapterPointerFromParseResults();
+                        else
+                            CurrentHierarchy.ParagraphState = ParagraphState.Simple;
+                    }
+                    break;
+                case ParagraphState.Table:
+                    {
+                        CurrentHierarchy.HierarchyInfo = new TableHierarchyInfo();
+                    }
+                    break;
+                case ParagraphState.TableRow:
+                    {
+                        if (CurrentHierarchy.ParentHierarchy.ParagraphState == ParagraphState.Table)
+                        {
+                            var hierarchyInfo = ((TableHierarchyInfo)CurrentHierarchy.ParentHierarchy.HierarchyInfo);
+                            hierarchyInfo.CurrentRow++;
+                            hierarchyInfo.CurrentColumn = -1;
+                        }
+                        else
+                            CurrentHierarchy.ParagraphState = ParagraphState.Simple;
+                    }
+                    break;
+                case ParagraphState.TableCell:
+                    {
+                        if (CurrentHierarchy.ParentHierarchy.ParagraphState == ParagraphState.TableRow)
+                            ((TableHierarchyInfo)CurrentHierarchy.ParentHierarchy.ParentHierarchy.HierarchyInfo).CurrentColumn++;
+                        else
+                            CurrentHierarchy.ParagraphState = ParagraphState.Simple;
+                    }
+                    break;
+            }
         }
 
         public void ExitHierarchyElement()
-        {
-            if (CurrentHierarchy.ParagraphState == ParagraphState.Title)
+        {            
+            if (CurrentHierarchy.ParagraphState == ParagraphState.TableCell)
             {
-                if (CurrentHierarchy.ParseResults.SelectMany(r => r.VerseEntries).Count() == 1)
+                var hierarchyInfo = (TableHierarchyInfo)CurrentHierarchy.ParentHierarchy.ParentHierarchy.HierarchyInfo;                
+                if (hierarchyInfo.CurrentRow == 1)
                 {
-                    var result = CurrentHierarchy.ParseResults.Single(r => r.VerseEntries.Any());
-                    var titleVerse = result.VerseEntries.First().VersePointer;
-                    if (titleVerse.IsMultiVerse <= MultiVerse.OneChapter)
-                        SetTitleVerse(titleVerse);
-                };
+                    CurrentHierarchy.TrySetChapterPointerFromParseResults();                    
+                    hierarchyInfo.FirstRowChapters.Add(CurrentHierarchy.ChapterPointer);
+                }
+
+                if (hierarchyInfo.CurrentColumn == 1)
+                {
+                    if (hierarchyInfo.CurrentRow != 1)
+                        CurrentHierarchy.TrySetChapterPointerFromParseResults();
+                    
+                    hierarchyInfo.FirstColumnChapters.Add(CurrentHierarchy.ChapterPointer);
+                }
+            }
+            else if (CurrentHierarchy.ParagraphState == ParagraphState.Title)
+            {
+                CurrentHierarchy.TrySetChapterPointerFromParseResults();
+                if (CurrentHierarchy.ChapterPointer != null)
+                    SetTitleVerse(CurrentHierarchy.ChapterPointer);
             }
 
-            CurrentHierarchy = CurrentHierarchy.ParentHierarchy;
+            CurrentHierarchy = CurrentHierarchy.ParentHierarchy;            
         }
-
-        /// <summary>
-        /// For testing purposes
-        /// </summary>
+        
         public void ClearContext()
         {
-            TitleVerse = null;
+            TitleChapter = null;
             LatestVerseEntry = null;
             CurrentParagraph = null;
+            CurrentHierarchy = null;
         }
     }
 }

@@ -1,9 +1,9 @@
 ﻿using BibleNote.Analytics.Contracts.VerseParsing;
 using BibleNote.Analytics.Core.Helpers;
-using BibleNote.Analytics.Models.Verse;
 using BibleNote.Analytics.Models.VerseParsing;
 using System;
 using System.Collections.Generic;
+using BibleNote.Analytics.Core.Extensions;
 
 namespace BibleNote.Analytics.Services.VerseParsing
 {
@@ -56,7 +56,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
         private static bool ChapterOrVerseRule(VerseEntryInfo verseEntry, IDocumentParseContext docParseContext)
         {
             if (docParseContext.LatestVerseEntry != null
-                && StringUtils.CheckDivergence(docParseContext.CurrentParagraph.ParseResult.Text, docParseContext.LatestVerseEntry.EndIndex, verseEntry.StartIndex, 2, ','))
+                && StringUtils.CheckDivergence(docParseContext.CurrentParagraph.Text, docParseContext.LatestVerseEntry.EndIndex, verseEntry.StartIndex, 2, ','))
             {
                 verseEntry.VersePointer.Book = docParseContext.LatestVerseEntry.VersePointer.Book;                
                 verseEntry.EntryType = docParseContext.LatestVerseEntry.VersePointer.VerseNumber.IsChapter ? VerseEntryType.Chapter : VerseEntryType.Verse;
@@ -106,20 +106,20 @@ namespace BibleNote.Analytics.Services.VerseParsing
         /// <returns></returns>
         private static bool VerseRule(VerseEntryInfo verseEntry, IDocumentParseContext docParseContext)
         {
-            VersePointer parentVerse = null;
+            var parentVerse = docParseContext.LatestVerseEntry?.VersePointer;
 
-            if (docParseContext.LatestVerseEntry != null)
+            if (parentVerse == null && docParseContext.CurrentHierarchy.ParagraphState == ParagraphState.TableCell)
             {
-                parentVerse = docParseContext.LatestVerseEntry.VersePointer;
+                var hierarchyInfo = (TableHierarchyInfo)docParseContext.CurrentHierarchy.ParentHierarchy.ParentHierarchy.HierarchyInfo;
+                if (hierarchyInfo.CurrentRow > 1)                
+                    parentVerse = hierarchyInfo.FirstRowChapters.TryGetAt(hierarchyInfo.CurrentColumn);                    
+                
+                if (parentVerse == null && hierarchyInfo.CurrentColumn > 1)
+                    parentVerse = hierarchyInfo.FirstColumnChapters.TryGetAt(hierarchyInfo.CurrentRow);
             }
-            else if (docParseContext.CurrentParagraph.ParentParagraph != null)
-            {
-                //todo: здесь и в других правилах научиться использовать docParseContext.CurrentParagraph.ParagraphContext
-            }
-            else if (docParseContext.TitleVerse != null && docParseContext.TitleVerse.IsMultiVerse != MultiVerse.SeveralChapters)
-            {
-                parentVerse = docParseContext.TitleVerse;
-            }
+
+            if (parentVerse == null)
+                parentVerse = docParseContext.CurrentHierarchy?.GetHierarchyChapterPointer() ?? docParseContext.TitleChapter;
 
             if (parentVerse != null)
             {

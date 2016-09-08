@@ -107,11 +107,10 @@ namespace BibleNote.Analytics.Models.Verse
 
         public SimpleVersePointer(int bookIndex, VerseNumber verseNumber, VerseNumber? topVerseNumber)
         {
-            this.BookIndex = bookIndex;
-            this.VerseNumber = verseNumber;
-            this.TopVerseNumber = topVerseNumber;
+            BookIndex = bookIndex;
+            VerseNumber = verseNumber;
+            TopVerseNumber = topVerseNumber;
         }
-
 
         public void SetChapter(int newChapter)
         {

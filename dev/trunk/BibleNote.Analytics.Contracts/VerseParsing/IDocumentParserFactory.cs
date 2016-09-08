@@ -9,6 +9,6 @@ namespace BibleNote.Analytics.Contracts.VerseParsing
 {
     public interface IDocumentParserFactory
     {
-        IDocumentParser Create(IDocumentProvider documentProvider);
+        IDocumentParser Create(IDocumentProviderInfo documentProvider);
     }
 }
