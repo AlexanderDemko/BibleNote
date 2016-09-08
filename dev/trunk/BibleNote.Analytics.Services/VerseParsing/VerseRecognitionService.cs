@@ -3,7 +3,6 @@ using BibleNote.Analytics.Core.Helpers;
 using BibleNote.Analytics.Models.VerseParsing;
 using System;
 using System.Collections.Generic;
-using BibleNote.Analytics.Core.Extensions;
 
 namespace BibleNote.Analytics.Services.VerseParsing
 {
@@ -106,20 +105,9 @@ namespace BibleNote.Analytics.Services.VerseParsing
         /// <returns></returns>
         private static bool VerseRule(VerseEntryInfo verseEntry, IDocumentParseContext docParseContext)
         {
-            var parentVerse = docParseContext.CurrentParagraph.LatestVerseEntry?.VersePointer;
-
-            if (parentVerse == null && docParseContext.CurrentHierarchy?.ParagraphState == ParagraphState.TableCell)
-            {
-                var hierarchyInfo = (TableHierarchyInfo)docParseContext.CurrentHierarchy.ParentHierarchy.ParentHierarchy.HierarchyInfo;
-                if (hierarchyInfo.CurrentRow > 0)                
-                    parentVerse = hierarchyInfo.FirstRowChapters.TryGetAt(hierarchyInfo.CurrentColumn);                    
-                
-                if (parentVerse == null && hierarchyInfo.CurrentColumn > 0)
-                    parentVerse = hierarchyInfo.FirstColumnChapters.TryGetAt(hierarchyInfo.CurrentRow);
-            }
-
-            if (parentVerse == null)
-                parentVerse = docParseContext.CurrentHierarchy?.GetHierarchyChapterPointer() ?? docParseContext.TitleChapter;
+            var parentVerse = docParseContext.CurrentParagraph.LatestVerseEntry?.VersePointer
+                            ?? docParseContext.CurrentHierarchy?.GetHierarchyChapterPointer() 
+                            ?? docParseContext.TitleChapter;
 
             if (parentVerse != null)
             {
