@@ -10,6 +10,7 @@ namespace BibleNote.Tests.Analytics.Mocks
     public class MockConfigurationManager : IConfigurationManager
     {
         public string ModuleShortName { get; set; }
+
         public bool UseCommaDelimiter { get; set; }
 
         public MockConfigurationManager()
@@ -17,7 +18,6 @@ namespace BibleNote.Tests.Analytics.Mocks
             ModuleShortName = "rst";
             UseCommaDelimiter = true;          
         }
-
 
         public void SaveChanges()
         {
