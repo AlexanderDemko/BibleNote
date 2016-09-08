@@ -186,6 +186,7 @@ namespace BibleNote.Tests.Analytics
                         using (docParser.ParseHierarchyElement(ParagraphState.TableCell))
                         {
                             docParser.ParseParagraph(node2);
+                            docParser.ParseParagraph(verseNode);
                         }
                     }
 
