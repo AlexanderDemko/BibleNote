@@ -11,34 +11,17 @@ namespace BibleNote.Analytics.Core.Extensions
     {
         public static bool IsHierarchyNode(this HtmlNode node)
         {
-            return node.ChildNodes.FirstOrDefault(child => !IsTextNode(child)) != null;
+            return node.ChildNodes.Any(child => !IsTextNode(child));
         }
 
         public static bool IsTextNode(this HtmlNode node)
         {
-            return node.NodeType == HtmlNodeType.Text 
-                || (node.NodeType == HtmlNodeType.Element && node.ChildNodes.Count == 1 && node.ChildNodes[0].NodeType == HtmlNodeType.Text);
+            return node.NodeType == HtmlNodeType.Text;
         }        
 
         public static bool IsValuableTextNode(this HtmlNode textNode)
         {
             return !string.IsNullOrEmpty(textNode.InnerHtml.Trim());
-        }
-
-        public static HtmlNode GetTextNode(this HtmlNode node)
-        {
-            HtmlNode textNode = null;
-
-            if (node.NodeType == HtmlNodeType.Text)
-                textNode = node;
-
-            if (node.NodeType == HtmlNodeType.Element && node.ChildNodes.Count == 1 && node.ChildNodes[0].NodeType == HtmlNodeType.Text)
-                textNode = node.ChildNodes[0];
-
-            if (textNode != null)
-                return textNode;
-
-            throw new ArgumentException("Node is not TextNode");
         }
     }
 }

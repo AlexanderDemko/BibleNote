@@ -55,7 +55,6 @@
     <Compile Include="Modules\BibleTranslationDifferencesFormula.cs" />
     <Compile Include="VerseParsing\Boundaries.cs" />
     <Compile Include="VerseParsing\DocumentParseResult.cs" />
-    <Compile Include="VerseParsing\HierarchyContext.cs" />
     <Compile Include="Modules\ModuleInfo.cs" />
     <Compile Include="VerseParsing\HierarchyInfo.cs" />
     <Compile Include="VerseParsing\ParagraphParseResult.cs" />

@@ -12,6 +12,7 @@ using BibleNote.Analytics.Core.Extensions;
 using BibleNote.Analytics.Models.Verse;
 using BibleNote.Analytics.Models.VerseParsing;
 using BibleNote.Analytics.Core.Constants;
+using BibleNote.Analytics.Contracts.VerseParsing.ParseContext;
 
 namespace BibleNote.Analytics.Providers.HtmlProvider
 {
@@ -19,7 +20,7 @@ namespace BibleNote.Analytics.Providers.HtmlProvider
     {
         private readonly IDocumentParserFactory _documentParserFactory;
 
-        private readonly IHtmlDocumentReader _htmlDocumentReader;
+        private readonly IHtmlDocumentConnector _htmlDocumentConnector;
 
         public bool IsReadonly      // наверное, этот параметр надо вынести выше - на уровень NavigationProviderInstance
         {
@@ -31,21 +32,25 @@ namespace BibleNote.Analytics.Providers.HtmlProvider
             return string.Format($"<a href='bnVerse:{versePointer}'>{versePointer.GetOriginalVerseString()}</a>");
         }
 
-        public HtmlProvider(IDocumentParserFactory documentParserFactory, IHtmlDocumentReader htmlDocumentReader)
+        public HtmlProvider(IDocumentParserFactory documentParserFactory, IHtmlDocumentConnector htmlDocumentReader)
         {
             _documentParserFactory = documentParserFactory;
-            _htmlDocumentReader = htmlDocumentReader;
+            _htmlDocumentConnector = htmlDocumentReader;
         }
 
         public DocumentParseResult ParseDocument(IDocumentId documentId)
         {
             DocumentParseResult result;
-            var htmlDoc = _htmlDocumentReader.Read(documentId);
-
-            using (var docParser = _documentParserFactory.Create(this))
+            using (var docHandler = _htmlDocumentConnector.Connect(documentId))
             {
-                ParseNode(docParser, htmlDoc.DocumentNode);
-                result = docParser.DocumentParseResult;
+                using (var docParser = _documentParserFactory.Create(this))
+                {
+                    ParseNode(docParser, docHandler.HtmlDocument.DocumentNode);
+                    result = docParser.DocumentParseResult;
+                }
+
+                if (result.ParagraphParseResults.Any(pr => pr.IsValuable))
+                    docHandler.SetDocumentChanged();
             }
 
             return result;

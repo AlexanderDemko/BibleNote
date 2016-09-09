@@ -2,23 +2,18 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using BibleNote.Analytics.Services.Unity;
 using BibleNote.Analytics.Contracts.VerseParsing;
-using BibleNote.Analytics.Contracts.Environment;
-using Microsoft.Practices.Unity;
 using HtmlAgilityPack;
 using BibleNote.Analytics.Core.Helpers;
 using BibleNote.Tests.Analytics.Mocks;
 using System;
-using BibleNote.Analytics.Contracts.Providers;
-using BibleNote.Analytics.Models.Exceptions;
 using BibleNote.Analytics.Models.VerseParsing;
-using BibleNote.Analytics.Models.Verse;
 using FluentAssertions;
-using BibleNote.Analytics.Services.VerseParsing;
+using BibleNote.Analytics.Contracts.VerseParsing.ParseContext;
 
 namespace BibleNote.Tests.Analytics
 {
     [TestClass]
-    public class ParagraphParserTests
+    public class ParagraphParserTests : TestsBase
     {
         public class TestResult
         {
@@ -26,31 +21,15 @@ namespace BibleNote.Tests.Analytics
             public ParagraphParseResult Result { get; set; }
         }
 
-        private MockDocumentProviderInfo _mockDocumentProvider;
-        private IConfigurationManager _mockConfigurationManager;
+        private MockDocumentProviderInfo _mockDocumentProvider;        
         private IParagraphParser _parahraphParserService;
         private IVersePointerFactory _versePointerFactory;
-        private IDocumentParseContextEditor _documentParseContext;
-        private IModulesManager _modulesManager;
+        private IDocumentParseContextEditor _documentParseContext;        
 
         [TestInitialize]
-        public void Init()
+        public override void Init()
         {
-            DIContainer.InitWithDefaults();
-
-            _mockConfigurationManager = new MockConfigurationManager();
-            DIContainer.Container.RegisterInstance(_mockConfigurationManager);
-
-            _modulesManager = DIContainer.Resolve<IModulesManager>();
-            try
-            {
-                _modulesManager.GetCurrentModuleInfo();
-            }
-            catch (ModuleNotFoundException)
-            {
-                _modulesManager.UploadModule(@"..\..\..\Data\Modules\rst\rst.bnm", "rst");
-                _modulesManager.UploadModule(@"..\..\..\Data\Modules\kjv\kjv.bnm", "kjv");
-            }
+            base.Init();
 
             _documentParseContext = DIContainer.Resolve<IDocumentParseContextEditor>();
             _versePointerFactory = DIContainer.Resolve<IVersePointerFactory>();

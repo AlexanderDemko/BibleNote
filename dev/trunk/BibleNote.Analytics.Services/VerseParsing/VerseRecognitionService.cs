@@ -1,4 +1,5 @@
 ﻿using BibleNote.Analytics.Contracts.VerseParsing;
+using BibleNote.Analytics.Contracts.VerseParsing.ParseContext;
 using BibleNote.Analytics.Core.Helpers;
 using BibleNote.Analytics.Models.VerseParsing;
 using System;

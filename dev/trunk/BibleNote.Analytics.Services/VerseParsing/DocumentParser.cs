@@ -6,6 +6,7 @@ using BibleNote.Analytics.Models.VerseParsing;
 using System.Linq;
 using BibleNote.Analytics.Models.Verse;
 using BibleNote.Analytics.Models.Common;
+using BibleNote.Analytics.Contracts.VerseParsing.ParseContext;
 
 namespace BibleNote.Analytics.Services.VerseParsing
 {

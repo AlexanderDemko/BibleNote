@@ -48,8 +48,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		VersionInfo.cs = VersionInfo.cs
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BibleNote.Analytics.Providers.CommonProviders", "BibleNote.Analytics.Providers.CommonProviders\BibleNote.Analytics.Providers.CommonProviders.csproj", "{30A8F259-1B1E-41EF-82EB-CE74DA0B95BD}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -112,10 +110,6 @@ Global
 		{A2538A2F-EA54-4F42-B1EB-CF4B2E3ED503}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A2538A2F-EA54-4F42-B1EB-CF4B2E3ED503}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A2538A2F-EA54-4F42-B1EB-CF4B2E3ED503}.Release|Any CPU.Build.0 = Release|Any CPU
-		{30A8F259-1B1E-41EF-82EB-CE74DA0B95BD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{30A8F259-1B1E-41EF-82EB-CE74DA0B95BD}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{30A8F259-1B1E-41EF-82EB-CE74DA0B95BD}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{30A8F259-1B1E-41EF-82EB-CE74DA0B95BD}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -134,10 +128,9 @@ Global
 		{4F5E6A82-BBCE-42DC-ADE6-8C672D806AB9} = {4878DD17-95DF-4BAB-AB68-4A9789B84D56}
 		{84381C15-F3E9-4EB5-9D98-FE29352F2627} = {C9C9F0C2-C0E7-4303-B28A-AF13A00BAB0A}
 		{A2538A2F-EA54-4F42-B1EB-CF4B2E3ED503} = {C9C9F0C2-C0E7-4303-B28A-AF13A00BAB0A}
-		{30A8F259-1B1E-41EF-82EB-CE74DA0B95BD} = {C9C9F0C2-C0E7-4303-B28A-AF13A00BAB0A}
 	EndGlobalSection
 	GlobalSection(TeamFoundationVersionControl) = preSolution
-		SccNumberOfProjects = 16
+		SccNumberOfProjects = 15
 		SccEnterpriseProvider = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
 		SccTeamFoundationServer = https://demko.visualstudio.com/defaultcollection
 		SccLocalPath0 = .
@@ -195,9 +188,5 @@ Global
 		SccProjectTopLevelParentUniqueName14 = BibleNote.sln
 		SccProjectName14 = BibleNote.Analytics.Providers.FolderNavigationProvider
 		SccLocalPath14 = BibleNote.Analytics.Providers.FolderNavigationProvider
-		SccProjectUniqueName15 = BibleNote.Analytics.Providers.CommonProviders\\BibleNote.Analytics.Providers.CommonProviders.csproj
-		SccProjectTopLevelParentUniqueName15 = BibleNote.sln
-		SccProjectName15 = BibleNote.Analytics.Providers.CommonProviders
-		SccLocalPath15 = BibleNote.Analytics.Providers.CommonProviders
 	EndGlobalSection
 EndGlobal
