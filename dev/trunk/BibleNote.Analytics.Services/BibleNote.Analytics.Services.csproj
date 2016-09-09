@@ -94,10 +94,11 @@
     <Compile Include="Unity\DIContainer.cs" />
     <Compile Include="Logging\DiagnosticsLog.cs" />
     <Compile Include="Unity\LogCallHandler.cs" />
-    <Compile Include="VerseParsing\DocumentParseContext.cs" />
+    <Compile Include="VerseParsing\ParseContext\DocumentParseContext.cs" />
     <Compile Include="VerseParsing\DocumentParser.cs" />
     <Compile Include="VerseParsing\DocumentParserFactory.cs" />
-    <Compile Include="VerseParsing\ParagraphParseContext.cs" />
+    <Compile Include="VerseParsing\ParseContext\HierarchyElementParseContext.cs" />
+    <Compile Include="VerseParsing\ParseContext\ParagraphParseContext.cs" />
     <Compile Include="VerseParsing\ParagraphParser.cs" />
     <Compile Include="VerseParsing\VerseCorrectionService.cs" />
     <Compile Include="VerseParsing\VersePointerFactory.cs" />

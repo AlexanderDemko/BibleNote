@@ -9,15 +9,14 @@ using BibleNote.Analytics.Models.VerseParsing;
 namespace BibleNote.Tests.Analytics
 {
     [TestClass]
-    public class StringParserTests
+    public class StringParserTests : TestsBase
     {
         private IStringParser _stringParser;
 
         [TestInitialize]
-        public void Init()
+        public override void Init()
         {
-            DIContainer.InitWithDefaults();
-            DIContainer.Container.RegisterInstance<IConfigurationManager>(new MockConfigurationManager());
+            base.Init();
 
             _stringParser = DIContainer.Resolve<IStringParser>();
         }

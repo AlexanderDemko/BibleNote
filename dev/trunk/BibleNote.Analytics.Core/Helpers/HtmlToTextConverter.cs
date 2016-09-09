@@ -65,7 +65,11 @@ namespace BibleNote.Analytics.Core.Helpers
         public TextNodesString Convert(HtmlNode node)
         {
             _parseStrings = new List<TextNodesString>();
-            FindParseStrings(node);
+
+            if (node.NodeType == HtmlNodeType.Text)            
+                AddParseString(BuildParseString(new[] { node }));            
+            else
+                FindParseStrings(node);
 
             var result = new TextNodesString();
             var sb = new StringBuilder();            
@@ -87,7 +91,7 @@ namespace BibleNote.Analytics.Core.Helpers
 
         private void FindParseStrings(HtmlNode node)
         {
-            if (!node.IsHierarchyNode())
+            if (!IsHierarchyNode(node))
             {
                 AddParseString(BuildParseString(node.ChildNodes));
             }
@@ -97,7 +101,7 @@ namespace BibleNote.Analytics.Core.Helpers
 
                 foreach (var childNode in node.ChildNodes)
                 {
-                    if (childNode.IsTextNode())
+                    if (LikeTextNode(childNode))
                     {
                         nodes.Add(childNode);
                         continue;
@@ -133,7 +137,7 @@ namespace BibleNote.Analytics.Core.Helpers
 
             foreach (var node in nodes)
             {
-                var textNode = node.GetTextNode();
+                var textNode = GetTextNode(node);
                 if (string.IsNullOrEmpty(textNode.InnerHtml))
                     continue;
 
@@ -150,6 +154,33 @@ namespace BibleNote.Analytics.Core.Helpers
 
             result.Value = sb.ToString();
             return result;
+        }
+
+        private static bool IsHierarchyNode(HtmlNode node)
+        {
+            return node.ChildNodes.Any(child => !LikeTextNode(child));
+        }
+
+        private static bool LikeTextNode(HtmlNode node)
+        {
+            return node.NodeType == HtmlNodeType.Text
+                || (node.NodeType == HtmlNodeType.Element && node.ChildNodes.Count == 1 && node.ChildNodes[0].NodeType == HtmlNodeType.Text);
+        }
+
+        private static HtmlNode GetTextNode(HtmlNode node)
+        {
+            HtmlNode textNode = null;
+
+            if (node.NodeType == HtmlNodeType.Text)
+                textNode = node;
+
+            if (node.NodeType == HtmlNodeType.Element && node.ChildNodes.Count == 1 && node.ChildNodes[0].NodeType == HtmlNodeType.Text)
+                textNode = node.ChildNodes[0];
+
+            if (textNode != null)
+                return textNode;
+
+            throw new ArgumentException("Node is not TextNode");
         }
     }
 }

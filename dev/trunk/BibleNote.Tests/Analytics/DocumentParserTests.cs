@@ -15,25 +15,30 @@ using BibleNote.Analytics.Contracts.Providers;
 using BibleNote.Analytics.Providers.FileNavigationProvider;
 using BibleNote.Analytics.Services.VerseParsing;
 using BibleNote.Analytics.Models.VerseParsing;
+using BibleNote.Analytics.Services.VerseParsing.ParseContext;
+using BibleNote.Analytics.Contracts.VerseParsing.ParseContext;
 
 namespace BibleNote.Tests.Analytics
 {
     [TestClass]
-    public class DocumentParserTests
+    public class DocumentParserTests : TestsBase
     {
         private IDocumentProviderInfo _documentProvider;
         private IDocumentParserFactory _documentParserFactory;
         private IVersePointerFactory _versePointerFactory;
+        private DocumentParseContext _documentParseContext;
 
         [TestInitialize]
-        public void Init()
+        public override void Init()
         {
-            DIContainer.InitWithDefaults();
-            DIContainer.Container.RegisterInstance<IConfigurationManager>(new MockConfigurationManager());
+            base.Init();
 
             _documentProvider = new MockDocumentProviderInfo() { IsReadonly = true };
             _documentParserFactory = DIContainer.Resolve<IDocumentParserFactory>();
             _versePointerFactory = DIContainer.Resolve<IVersePointerFactory>();
+
+            _documentParseContext = new DocumentParseContext();
+            DIContainer.Container.RegisterInstance<IDocumentParseContextEditor>(_documentParseContext);
         }
 
         [TestCleanup]
@@ -51,10 +56,10 @@ namespace BibleNote.Tests.Analytics
 
         private void CheckParseResult(ParagraphParseResult parseResult, params string[] verses)
         {
-            parseResult.VerseEntries.Count.Should().Be(verses.Length);
+            Assert.AreEqual(verses.Length, parseResult.VerseEntries.Count, "Verses length is not the same. Expected: {0}. Found: {1}", verses.Length, parseResult.VerseEntries.Count);
             var verseEntries = parseResult.VerseEntries.Select(ve => ve.VersePointer);
             foreach (var verse in verses)
-                verseEntries.Contains(_versePointerFactory.CreateVersePointer(verse)).Should().BeTrue("should be '{0}'", verse);           
+                Assert.IsTrue(verseEntries.Contains(_versePointerFactory.CreateVersePointer(verse)), "Can not find the verse: '{0}'", verse);
         }
 
         [TestMethod]
@@ -76,10 +81,7 @@ namespace BibleNote.Tests.Analytics
         {
             var node1 = GetNode("Мк 5:6");
             var node2 = GetNode("Ин 1:1");
-            var node3 = GetNode(":12");
-
-            var docParseContext = new DocumentParseContext();
-            DIContainer.Container.RegisterInstance<IDocumentParseContextEditor>(docParseContext);
+            var verseNode = GetNode(":12");
 
             using (var docParser = _documentParserFactory.Create(_documentProvider))
             {
@@ -94,7 +96,7 @@ namespace BibleNote.Tests.Analytics
 
                     using (docParser.ParseHierarchyElement(ParagraphState.ListElement))
                     {
-                        docParser.ParseParagraph(node3);
+                        docParser.ParseParagraph(verseNode);
                     }
                 }
 
@@ -112,10 +114,7 @@ namespace BibleNote.Tests.Analytics
             var emptyNode = GetNode("Пустая строка");
             var node2 = GetNode("Мк 5:6");
             var node3 = GetNode("Ин 1:1");
-            var node4 = GetNode(":12");
-
-            var docParseContext = new DocumentParseContext();
-            DIContainer.Container.RegisterInstance<IDocumentParseContextEditor>(docParseContext);
+            var verseNode = GetNode(":12");
 
             using (var docParser = _documentParserFactory.Create(_documentProvider))
             {
@@ -143,7 +142,7 @@ namespace BibleNote.Tests.Analytics
 
                         using (docParser.ParseHierarchyElement(ParagraphState.TableCell))
                         {
-                            docParser.ParseParagraph(node4);
+                            docParser.ParseParagraph(verseNode);
                         }
                     }
                 }
@@ -163,9 +162,6 @@ namespace BibleNote.Tests.Analytics
             var node1 = GetNode("Ин 1:1");
             var node2 = GetNode("Мк 5:6");            
             var verseNode = GetNode(":12");            
-
-            var docParseContext = new DocumentParseContext();
-            DIContainer.Container.RegisterInstance<IDocumentParseContextEditor>(docParseContext);
 
             using (var docParser = _documentParserFactory.Create(_documentProvider))
             {
@@ -284,9 +280,6 @@ namespace BibleNote.Tests.Analytics
             var node2 = GetNode("Мк 5:6");
             var verseNode = GetNode(":12");
 
-            var docParseContext = new DocumentParseContext();
-            DIContainer.Container.RegisterInstance<IDocumentParseContextEditor>(docParseContext);
-
             using (var docParser = _documentParserFactory.Create(_documentProvider))
             {
                 using (docParser.ParseHierarchyElement(ParagraphState.List))
@@ -340,6 +333,84 @@ namespace BibleNote.Tests.Analytics
                 CheckParseResult(results[2], "Мк 5:12");                
                 CheckParseResult(results[3], "Ин 1:12");
                 CheckParseResult(results[4], "Ин 1:12");
+            }
+        }
+
+        [TestMethod]
+        public void DocParser_TestScenario6()
+        {
+            var emptyNode = GetNode("Пустая строка");
+            var node1 = GetNode("Ин 1:1");
+            var node2 = GetNode("Мк 5:6");            
+            var verseNode = GetNode(":12");
+
+            using (var docParser = _documentParserFactory.Create(_documentProvider))
+            {
+                _documentParseContext.SetTitleVerse(_versePointerFactory.CreateVersePointer("Лк 3").ToChapterPointer());
+
+                using (docParser.ParseHierarchyElement(ParagraphState.Table))
+                {
+                    using (docParser.ParseHierarchyElement(ParagraphState.TableRow))
+                    {
+                        using (docParser.ParseHierarchyElement(ParagraphState.TableCell))
+                        {
+                            docParser.ParseParagraph(node1);
+                        }
+
+                        using (docParser.ParseHierarchyElement(ParagraphState.TableCell))
+                        {
+                            docParser.ParseParagraph(emptyNode);
+                        }
+                    }
+
+                    using (docParser.ParseHierarchyElement(ParagraphState.TableRow))
+                    {
+                        using (docParser.ParseHierarchyElement(ParagraphState.TableCell))
+                        {
+                            docParser.ParseParagraph(verseNode);
+                        }
+
+                        using (docParser.ParseHierarchyElement(ParagraphState.TableCell))
+                        {
+                            docParser.ParseParagraph(node2);
+                        }
+                    }
+
+                    using (docParser.ParseHierarchyElement(ParagraphState.TableRow))
+                    {
+                        using (docParser.ParseHierarchyElement(ParagraphState.TableCell))
+                        {
+                            docParser.ParseParagraph(verseNode);
+                        }
+
+                        using (docParser.ParseHierarchyElement(ParagraphState.TableCell))
+                        {
+                            docParser.ParseParagraph(verseNode);
+                        }
+                    }
+
+                    using (docParser.ParseHierarchyElement(ParagraphState.TableRow))
+                    {
+                        using (docParser.ParseHierarchyElement(ParagraphState.TableCell))
+                        {
+                            docParser.ParseParagraph(emptyNode);
+                        }
+
+                        using (docParser.ParseHierarchyElement(ParagraphState.TableCell))
+                        {
+                            docParser.ParseParagraph(verseNode);
+                        }
+                    }
+                }
+
+                var results = docParser.DocumentParseResult.ParagraphParseResults;
+                results.Count.Should().Be(6);
+                CheckParseResult(results[0], "Ин 1:1");
+                CheckParseResult(results[1], "Ин 1:12");
+                CheckParseResult(results[2], "Мк 5:6");
+                CheckParseResult(results[3], "Ин 1:12");
+                CheckParseResult(results[4], "Лк 3:12");
+                CheckParseResult(results[5], "Лк 3:12");
             }
         }
     }

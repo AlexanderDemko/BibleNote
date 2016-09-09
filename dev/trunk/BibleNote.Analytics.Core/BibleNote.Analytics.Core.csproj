@@ -84,6 +84,7 @@
     <Compile Include="Extensions\HtmlNodeExtensions.cs" />
     <Compile Include="Extensions\ListExtensions.cs" />
     <Compile Include="Extensions\UnityExtensions.cs" />
+    <Compile Include="Helpers\FileUtils.cs" />
     <Compile Include="Helpers\HtmlToTextConverter.cs" />
     <Compile Include="Helpers\StringUtils.cs" />
     <Compile Include="Helpers\SystemUtils.cs" />

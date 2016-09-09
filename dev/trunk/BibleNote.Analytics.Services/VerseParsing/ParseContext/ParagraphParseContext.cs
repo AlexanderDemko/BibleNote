@@ -1,4 +1,5 @@
 ﻿using BibleNote.Analytics.Contracts.VerseParsing;
+using BibleNote.Analytics.Contracts.VerseParsing.ParseContext;
 using BibleNote.Analytics.Models.VerseParsing;
 using System;
 using System.Collections.Generic;
@@ -6,7 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BibleNote.Analytics.Services.VerseParsing
+namespace BibleNote.Analytics.Services.VerseParsing.ParseContext
 {
     public class ParagraphParseContext : IParagraphParseContextEditor
     {

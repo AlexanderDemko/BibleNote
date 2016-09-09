@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BibleNote.Analytics.Contracts.VerseParsing
+namespace BibleNote.Analytics.Contracts.VerseParsing.ParseContext
 {
     public interface IParagraphParseContext
     {

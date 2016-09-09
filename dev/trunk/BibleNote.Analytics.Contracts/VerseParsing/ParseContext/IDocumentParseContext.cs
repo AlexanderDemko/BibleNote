@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BibleNote.Analytics.Contracts.VerseParsing
+namespace BibleNote.Analytics.Contracts.VerseParsing.ParseContext
 {
     public interface IDocumentParseContext
     {
@@ -14,7 +14,7 @@ namespace BibleNote.Analytics.Contracts.VerseParsing
 
         IParagraphParseContext CurrentParagraph { get; }
 
-        HierarchyContext CurrentHierarchy { get; }        
+        IHierarchyElementParseContext CurrentHierarchy { get; }        
     }   
     
     public interface IDocumentParseContextEditor : IDocumentParseContext
@@ -30,10 +30,7 @@ namespace BibleNote.Analytics.Contracts.VerseParsing
         void EnterHierarchyElement(ParagraphState paragraphState);
 
         void ExitHierarchyElement();        
-
-        /// <summary>
-        /// For testing purposes
-        /// </summary>
+        
         void ClearContext();       
     }
 }

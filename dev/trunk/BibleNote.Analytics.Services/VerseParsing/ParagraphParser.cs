@@ -12,6 +12,7 @@ using BibleNote.Analytics.Core.Exceptions;
 using BibleNote.Analytics.Core.Helpers;
 using BibleNote.Analytics.Contracts.Environment;
 using BibleNote.Analytics.Models.VerseParsing;
+using BibleNote.Analytics.Contracts.VerseParsing.ParseContext;
 
 namespace BibleNote.Analytics.Services.VerseParsing
 {

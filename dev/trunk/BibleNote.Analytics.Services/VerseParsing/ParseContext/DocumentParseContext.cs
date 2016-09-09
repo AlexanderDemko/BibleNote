@@ -3,14 +3,15 @@ using System.Linq;
 using BibleNote.Analytics.Contracts.VerseParsing;
 using BibleNote.Analytics.Models.Verse;
 using BibleNote.Analytics.Models.VerseParsing;
+using BibleNote.Analytics.Contracts.VerseParsing.ParseContext;
 
-namespace BibleNote.Analytics.Services.VerseParsing
+namespace BibleNote.Analytics.Services.VerseParsing.ParseContext
 {
     public class DocumentParseContext : IDocumentParseContextEditor
     {
         public ChapterPointer TitleChapter { get; private set; }        
 
-        public HierarchyContext CurrentHierarchy { get; private set; }
+        public IHierarchyElementParseContext CurrentHierarchy { get; private set; }
 
         public IParagraphParseContext CurrentParagraph { get; private set; }        
 
@@ -32,7 +33,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
 
         public void EnterHierarchyElement(ParagraphState paragraphState)
         {
-            CurrentHierarchy = new HierarchyContext(paragraphState, CurrentHierarchy);
+            CurrentHierarchy = new HierarchyElementParseContext(paragraphState, CurrentHierarchy);
 
             switch (paragraphState)
             {

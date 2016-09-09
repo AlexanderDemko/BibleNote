@@ -11,9 +11,14 @@ namespace BibleNote.Analytics.Providers.FileNavigationProvider
     {
         public string FilePath { get; private set; }
 
-        public FileDocumentId(string filePath)
+        public bool IsReadonly { get; private set; }
+
+        public bool Changed { get; set; }
+
+        public FileDocumentId(string filePath, bool isReadonly)
         {
             FilePath = filePath;
+            IsReadonly = isReadonly;
         }
     }
 }
