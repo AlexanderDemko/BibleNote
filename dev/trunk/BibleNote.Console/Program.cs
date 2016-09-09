@@ -17,7 +17,6 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.Practices.Unity;
-using BibleNote.Tests.Analytics.Mocks;
 using BibleNote.Analytics.Models.Verse;
 
 namespace BibleNoteConsole
