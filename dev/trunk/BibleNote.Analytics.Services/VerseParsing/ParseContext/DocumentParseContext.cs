@@ -9,7 +9,7 @@ namespace BibleNote.Analytics.Services.VerseParsing.ParseContext
 {
     public class DocumentParseContext : IDocumentParseContextEditor
     {
-        public ChapterPointer TitleChapter { get; private set; }        
+        public ChapterEntryInfo TitleChapter { get; private set; }        
 
         public IHierarchyElementParseContext CurrentHierarchy { get; private set; }
 
@@ -42,7 +42,7 @@ namespace BibleNote.Analytics.Services.VerseParsing.ParseContext
                         if (CurrentHierarchy.ParentHierarchy.ParagraphState == ParagraphState.List)
                             CurrentHierarchy.ParentHierarchy.TrySetChapterPointerFromParseResults();
                         else
-                            CurrentHierarchy.ParagraphState = ParagraphState.Simple;
+                            CurrentHierarchy.ParagraphState = ParagraphState.Inline;
                     }
                     break;
                 case ParagraphState.Table:
@@ -59,7 +59,7 @@ namespace BibleNote.Analytics.Services.VerseParsing.ParseContext
                             hierarchyInfo.CurrentColumn = -1;
                         }
                         else
-                            CurrentHierarchy.ParagraphState = ParagraphState.Simple;
+                            CurrentHierarchy.ParagraphState = ParagraphState.Inline;
                     }
                     break;
                 case ParagraphState.TableCell:
@@ -67,7 +67,7 @@ namespace BibleNote.Analytics.Services.VerseParsing.ParseContext
                         if (CurrentHierarchy.ParentHierarchy.ParagraphState == ParagraphState.TableRow)
                             ((TableHierarchyInfo)CurrentHierarchy.ParentHierarchy.ParentHierarchy.HierarchyInfo).CurrentColumn++;
                         else
-                            CurrentHierarchy.ParagraphState = ParagraphState.Simple;
+                            CurrentHierarchy.ParagraphState = ParagraphState.Inline;
                     }
                     break;
             }
