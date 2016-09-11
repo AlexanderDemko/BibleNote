@@ -10,7 +10,7 @@ namespace BibleNote.Analytics.Contracts.VerseParsing.ParseContext
 {
     public interface IDocumentParseContext
     {
-        ChapterPointer TitleChapter { get; }
+        ChapterEntryInfo TitleChapter { get; }
 
         IParagraphParseContext CurrentParagraph { get; }
 

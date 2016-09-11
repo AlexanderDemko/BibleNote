@@ -26,7 +26,7 @@ namespace BibleNote.Tests.Analytics
         private IDocumentProviderInfo _documentProvider;
         private IDocumentParserFactory _documentParserFactory;
         private IVersePointerFactory _versePointerFactory;
-        private DocumentParseContext _documentParseContext;
+        private IDocumentParseContextEditor _documentParseContext;
 
         [TestInitialize]
         public override void Init()
@@ -38,7 +38,7 @@ namespace BibleNote.Tests.Analytics
             _versePointerFactory = DIContainer.Resolve<IVersePointerFactory>();
 
             _documentParseContext = new DocumentParseContext();
-            DIContainer.Container.RegisterInstance<IDocumentParseContextEditor>(_documentParseContext);
+            DIContainer.Container.RegisterInstance(_documentParseContext);
         }
 
         [TestCleanup]
@@ -72,7 +72,7 @@ namespace BibleNote.Tests.Analytics
 
                 var results = docParser.DocumentParseResult.ParagraphParseResults;
                 results.Count.Should().Be(1);
-                CheckParseResult(results[0], "Мк 5:6-7");                
+                CheckParseResult(results[0], "Мк 5:6-7");
             }
         }
 
@@ -90,7 +90,7 @@ namespace BibleNote.Tests.Analytics
                     docParser.ParseParagraph(node1);
 
                     using (docParser.ParseHierarchyElement(ParagraphState.ListElement))
-                    {                        
+                    {
                         docParser.ParseParagraph(node2);
                     }
 
@@ -104,7 +104,7 @@ namespace BibleNote.Tests.Analytics
                 results.Count.Should().Be(3);
                 CheckParseResult(results[0], "Мк 5:6");
                 CheckParseResult(results[1], "Ин 1:1");
-                CheckParseResult(results[2], "Мк 5:12");                
+                CheckParseResult(results[2], "Мк 5:12");
             }
         }
 
@@ -160,8 +160,8 @@ namespace BibleNote.Tests.Analytics
         {
             var emptyNode = GetNode("Пустая строка");
             var node1 = GetNode("Ин 1:1");
-            var node2 = GetNode("Мк 5:6");            
-            var verseNode = GetNode(":12");            
+            var node2 = GetNode("Мк 5:6");
+            var verseNode = GetNode(":12");
 
             using (var docParser = _documentParserFactory.Create(_documentProvider))
             {
@@ -225,7 +225,7 @@ namespace BibleNote.Tests.Analytics
                                 using (docParser.ParseHierarchyElement(ParagraphState.ListElement))
                                 {
                                     docParser.ParseParagraph(verseNode);
-                                }                                
+                                }
                             }
 
                             docParser.ParseParagraph(verseNode);
@@ -252,7 +252,7 @@ namespace BibleNote.Tests.Analytics
                                 {
                                     docParser.ParseParagraph(verseNode);
                                 }
-                            }                            
+                            }
                         }
                     }
                 }
@@ -330,7 +330,7 @@ namespace BibleNote.Tests.Analytics
                 results.Count.Should().Be(5);
                 CheckParseResult(results[0], "Ин 1:1");
                 CheckParseResult(results[1], "Мк 5:6");
-                CheckParseResult(results[2], "Мк 5:12");                
+                CheckParseResult(results[2], "Мк 5:12");
                 CheckParseResult(results[3], "Ин 1:12");
                 CheckParseResult(results[4], "Ин 1:12");
             }
@@ -341,7 +341,7 @@ namespace BibleNote.Tests.Analytics
         {
             var emptyNode = GetNode("Пустая строка");
             var node1 = GetNode("Ин 1:1");
-            var node2 = GetNode("Мк 5:6");            
+            var node2 = GetNode("Мк 5:6");
             var verseNode = GetNode(":12");
 
             using (var docParser = _documentParserFactory.Create(_documentProvider))
@@ -411,6 +411,185 @@ namespace BibleNote.Tests.Analytics
                 CheckParseResult(results[3], "Ин 1:12");
                 CheckParseResult(results[4], "Лк 3:12");
                 CheckParseResult(results[5], "Лк 3:12");
+            }
+        }
+
+        [TestMethod]
+        public void DocParser_TestScenario7()
+        {
+            var node = GetNode("Ин 1:1");
+            var verseNode = GetNode(":12");
+
+            using (var docParser = _documentParserFactory.Create(_documentProvider))
+            {
+                using (docParser.ParseHierarchyElement(ParagraphState.Title))
+                {
+                    docParser.ParseParagraph(node);
+                }
+
+                using (docParser.ParseHierarchyElement(ParagraphState.Block))
+                {
+                    docParser.ParseParagraph(verseNode);
+                }
+
+                var results = docParser.DocumentParseResult.ParagraphParseResults;
+                results.Count.Should().Be(2);
+                CheckParseResult(results[0], "Ин 1:1");
+                CheckParseResult(results[1], "Ин 1:12");
+            }
+        }
+
+        [TestMethod]
+        public void DocParser_TestScenario8()
+        {
+            var emptyNode = GetNode("Пустая строка");
+            var node1 = GetNode("Мф 1:1 - стих в начале");
+            var node2 = GetNode("Стих не в начале - Мк 2:2");
+            var node3 = GetNode("Лк 3-4 - несколько глав в начале");
+            var node4 = GetNode("Несколько глав не в начале - Ин 5-6");            
+            var verseNode = GetNode(":12");
+
+            using (var docParser = _documentParserFactory.Create(_documentProvider))
+            {
+                using (docParser.ParseHierarchyElement(ParagraphState.Block))
+                {
+                    docParser.ParseParagraph(node1);
+                    docParser.ParseParagraph(node2);
+                    docParser.ParseParagraph(emptyNode);
+                    docParser.ParseParagraph(verseNode);
+                }
+
+                using (docParser.ParseHierarchyElement(ParagraphState.Block))
+                {
+                    docParser.ParseParagraph(node1);                    
+                    docParser.ParseParagraph(node3);                    
+                    docParser.ParseParagraph(verseNode);
+                }
+
+                using (docParser.ParseHierarchyElement(ParagraphState.Block))
+                {
+                    docParser.ParseParagraph(node1);
+                    docParser.ParseParagraph(node4);
+                    docParser.ParseParagraph(verseNode);
+                }
+
+                var results = docParser.DocumentParseResult.ParagraphParseResults;
+                results.Count.Should().Be(8);
+                CheckParseResult(results[0], "Мф 1:1");
+                CheckParseResult(results[1], "Мк 2:2");
+                CheckParseResult(results[2], "Мф 1:12");
+                CheckParseResult(results[3], "Мф 1:1");
+                CheckParseResult(results[4], "Лк 3-4");
+                CheckParseResult(results[5], "Мф 1:1");
+                CheckParseResult(results[6], "Ин 5-6");
+                CheckParseResult(results[7], "Мф 1:12");
+            }
+        }
+
+        [TestMethod]
+        public void DocParser_TestScenario9()
+        {
+            var emptyNode = GetNode("Пустая строка");
+            var node0 = GetNode("1Петр 3:3");
+            var node1 = GetNode("Мф 1:1 - стих в начале");
+            var node2 = GetNode("Стих не в начале - Мк 2:2");
+            var node3 = GetNode("Лк 3-4 - несколько глав в начале");
+            var node4 = GetNode("Несколько глав не в начале - Ин 5-6");
+            var verseNode = GetNode(":12");
+
+            using (var docParser = _documentParserFactory.Create(_documentProvider))
+            {
+                using (docParser.ParseHierarchyElement(ParagraphState.List))
+                {
+                    using (docParser.ParseHierarchyElement(ParagraphState.ListElement))
+                    {
+                        docParser.ParseParagraph(node0);
+                        docParser.ParseParagraph(emptyNode);
+                        docParser.ParseParagraph(verseNode);
+                    }
+
+                    using (docParser.ParseHierarchyElement(ParagraphState.ListElement))
+                    {
+                        docParser.ParseParagraph(node1);
+
+                        using (docParser.ParseHierarchyElement(ParagraphState.List))
+                        {
+                            using (docParser.ParseHierarchyElement(ParagraphState.ListElement))
+                            {
+                                docParser.ParseParagraph(emptyNode);
+                                docParser.ParseParagraph(verseNode);
+                            }
+
+                            using (docParser.ParseHierarchyElement(ParagraphState.ListElement))
+                            {
+                                docParser.ParseParagraph(node0);
+                                docParser.ParseParagraph(verseNode);
+                            }
+
+                            using (docParser.ParseHierarchyElement(ParagraphState.ListElement))
+                            {
+                                docParser.ParseParagraph(node2);
+                                docParser.ParseParagraph(verseNode);
+                            }
+
+                            using (docParser.ParseHierarchyElement(ParagraphState.ListElement))
+                            {
+                                docParser.ParseParagraph(node3);
+                                docParser.ParseParagraph(verseNode);
+                            }
+
+                            using (docParser.ParseHierarchyElement(ParagraphState.ListElement))
+                            {
+                                docParser.ParseParagraph(node4);
+                                docParser.ParseParagraph(verseNode);
+                            }
+                        }
+                    }
+
+                    using (docParser.ParseHierarchyElement(ParagraphState.ListElement))
+                    {
+                        docParser.ParseParagraph(node2);
+
+                        using (docParser.ParseHierarchyElement(ParagraphState.List))
+                        {
+                            using (docParser.ParseHierarchyElement(ParagraphState.ListElement))
+                            {                                
+                                docParser.ParseParagraph(verseNode);
+                            }
+                        }
+                    }
+
+                    using (docParser.ParseHierarchyElement(ParagraphState.ListElement))
+                    {
+                        docParser.ParseParagraph(node3);
+
+                        using (docParser.ParseHierarchyElement(ParagraphState.List))
+                        {
+                            using (docParser.ParseHierarchyElement(ParagraphState.ListElement))
+                            {
+                                docParser.ParseParagraph(verseNode);
+                            }
+                        }
+                    }
+                }
+
+                var results = docParser.DocumentParseResult.ParagraphParseResults;
+                results.Count.Should().Be(14);
+                CheckParseResult(results[0], "1Петр 3:3");
+                CheckParseResult(results[1], "1Петр 3:12");
+                CheckParseResult(results[2], "Мф 1:1");
+                CheckParseResult(results[3], "Мф 1:12");
+                CheckParseResult(results[4], "1Петр 3:3");
+                CheckParseResult(results[5], "1Петр 3:12");
+                CheckParseResult(results[6], "Мк 2:2");
+                CheckParseResult(results[7], "Мф 1:12");
+                CheckParseResult(results[8], "Лк 3-4");
+                CheckParseResult(results[9], "Мф 1:12");                
+                CheckParseResult(results[10], "Ин 5-6");
+                CheckParseResult(results[11], "Мф 1:12");
+                CheckParseResult(results[12], "Мк 2:2");
+                //CheckParseResult(results[13], "Мк 2:12"); ?????
+                CheckParseResult(results[13], "Лк 3-4");
             }
         }
     }

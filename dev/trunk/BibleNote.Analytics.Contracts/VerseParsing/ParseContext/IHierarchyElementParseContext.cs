@@ -11,7 +11,8 @@ namespace BibleNote.Analytics.Contracts.VerseParsing.ParseContext
     public enum ParagraphState
     {
         ListElement,
-        Simple,
+        Inline,
+        Block,
         Title,
         Table,
         TableRow,

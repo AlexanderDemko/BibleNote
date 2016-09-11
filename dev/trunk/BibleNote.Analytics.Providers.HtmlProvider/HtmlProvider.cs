@@ -93,7 +93,7 @@ namespace BibleNote.Analytics.Providers.HtmlProvider
         private void ParseHierarchyNode(IDocumentParser docParser, HtmlNode node)
         {
             var state = GetParagraphState(node);
-            if (state > ParagraphState.Simple)
+            if (state > ParagraphState.Inline)
             {
                 using (docParser.ParseHierarchyElement(state))
                 {
@@ -108,6 +108,12 @@ namespace BibleNote.Analytics.Providers.HtmlProvider
 
         private ParagraphState GetParagraphState(HtmlNode node)
         {
+            if (HtmlTags.BlockElements.Contains(node.Name))
+                return ParagraphState.Block;
+
+            if (HtmlTags.ListElements.Contains(node.Name))
+                return ParagraphState.List;
+
             switch (node.Name)
             {
                 case HtmlTags.Table:
@@ -122,12 +128,9 @@ namespace BibleNote.Analytics.Providers.HtmlProvider
                     break;
                 case HtmlTags.ListElement:
                     return ParagraphState.ListElement;
-            }
+            }            
 
-            if (HtmlTags.List.Contains(node.Name))
-                return ParagraphState.List;
-
-            return ParagraphState.Simple;
+            return ParagraphState.Inline;
         }
 
         private void ParseLinearNodes(IDocumentParser docParser, IEnumerable<HtmlNode> nodes)

@@ -12,7 +12,7 @@ namespace BibleNote.Analytics.Core.Constants
         public const string Html = "html";
         public const string ListElement = "li";
 
-
-        public static readonly string[] List = new string[] { "ul", "ol" };
+        public static readonly string[] ListElements = new string[] { "ul", "ol" };
+        public static readonly string[] BlockElements = new string[] { "div", "article", "body", "aside", "footer", "nav", "section", "" };
     }
 }
