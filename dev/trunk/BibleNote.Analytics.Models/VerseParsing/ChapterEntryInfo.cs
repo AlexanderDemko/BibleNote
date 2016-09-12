@@ -11,8 +11,32 @@ namespace BibleNote.Analytics.Models.VerseParsing
     {
         public ChapterPointer ChapterPointer { get; set; }
 
-        public bool AtStart { get; set; }
+        public bool AtStartOfParagraph { get; set; }
 
-        public bool Own { get; set; }       // замена _calculatedChapter
+        public bool Calculated { get; set; } 
+
+        public ChapterEntryInfo()
+        {
+        }
+
+        public ChapterEntryInfo(ChapterPointer chapterPointer)
+        {
+            ChapterPointer = chapterPointer;
+        }
+
+        public ChapterEntryInfo CloneAsCalculated()
+        {
+            return new ChapterEntryInfo()
+            {
+                ChapterPointer = ChapterPointer,
+                AtStartOfParagraph = AtStartOfParagraph,
+                Calculated = true
+            };
+        }        
+
+        public ChapterEntryInfo GetOwnChapterEntry()
+        {
+            return Calculated ? null : this;
+        }
     }
 }

@@ -210,19 +210,19 @@ namespace BibleNote.Tests.Analytics
             var input = "2,3 и :1-2 как и в :3,4-5;6 и 7:8";
 
             CheckVerses(input, null,
-                docParseContext => docParseContext.SetTitleVerse(_versePointerFactory.CreateVersePointer("1Кор 1").ToChapterPointer()),
+                docParseContext => docParseContext.SetTitleVerse(new ChapterEntryInfo(_versePointerFactory.CreateVersePointer("1Кор 1").ToChapterPointer())),
                 "1Кор 1:1-2", "1Кор 1:3", "1Кор 1:4-5", "1Кор 6", "1Кор 7:8");      // возможно, не надо поддерживать два последних VersePointer-a
 
             CheckVerses(input, null,
-                docParseContext => docParseContext.SetTitleVerse(_versePointerFactory.CreateVersePointer("1Кор 1:1").ToChapterPointer()),
+                docParseContext => docParseContext.SetTitleVerse(new ChapterEntryInfo(_versePointerFactory.CreateVersePointer("1Кор 1:1").ToChapterPointer())),
                 "1Кор 1:1-2", "1Кор 1:3", "1Кор 1:4-5", "1Кор 6", "1Кор 7:8");      
 
             CheckVerses(input, null,
-                docParseContext => docParseContext.SetTitleVerse(_versePointerFactory.CreateVersePointer("1Кор 1:1-2").ToChapterPointer()),
+                docParseContext => docParseContext.SetTitleVerse(new ChapterEntryInfo(_versePointerFactory.CreateVersePointer("1Кор 1:1-2").ToChapterPointer())),
                 "1Кор 1:1-2", "1Кор 1:3", "1Кор 1:4-5", "1Кор 6", "1Кор 7:8");      
 
             Action action = () => CheckVerses(input, null,
-                docParseContext => docParseContext.SetTitleVerse(_versePointerFactory.CreateVersePointer("1Кор 1-2").ToChapterPointer()));
+                docParseContext => docParseContext.SetTitleVerse(new ChapterEntryInfo(_versePointerFactory.CreateVersePointer("1Кор 1-2").ToChapterPointer())));
             action.ShouldThrow<InvalidOperationException>("Must be only one chapter in verse.");
         }
 
@@ -380,7 +380,7 @@ namespace BibleNote.Tests.Analytics
         {
             CheckVerses("Ин 5:6 и 7 стих, 8ст, ст9-11, ст.12,13", null, null, "Ин 5:6", "Ин 5:7", "Ин 5:8", "Ин 5:9-11", "Ин 5:12", "Ин 5:13");
             CheckVerses("ст. 22-23, стихи 23-24, стих 12, гл. 2-3, главы 3-4, глава 6", null,
-                docParseContext => docParseContext.SetTitleVerse(_versePointerFactory.CreateVersePointer("Ин 3").ToChapterPointer()),
+                docParseContext => docParseContext.SetTitleVerse(new ChapterEntryInfo(_versePointerFactory.CreateVersePointer("Ин 3").ToChapterPointer())),
                 "Ин 3:22-23", "Ин 3:23-24", "Ин 3:12", "Ин 2-3", "Ин 3-4", "Ин 6");
         }
 

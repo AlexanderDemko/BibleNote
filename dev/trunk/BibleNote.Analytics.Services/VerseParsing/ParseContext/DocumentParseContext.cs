@@ -13,9 +13,9 @@ namespace BibleNote.Analytics.Services.VerseParsing.ParseContext
 
         public IHierarchyElementParseContext CurrentHierarchy { get; private set; }
 
-        public IParagraphParseContext CurrentParagraph { get; private set; }        
+        public IParagraphParseContext CurrentParagraph { get; private set; }
 
-        public void SetTitleVerse(ChapterPointer titleChapter)
+        public void SetTitleVerse(ChapterEntryInfo titleChapter)
         {
             TitleChapter = titleChapter;
         }
@@ -80,8 +80,8 @@ namespace BibleNote.Analytics.Services.VerseParsing.ParseContext
                 var hierarchyInfo = (TableHierarchyInfo)CurrentHierarchy.ParentHierarchy.ParentHierarchy.HierarchyInfo;                
                 if (hierarchyInfo.CurrentRow == 0)
                 {
-                    CurrentHierarchy.TrySetChapterPointerFromParseResults();                    
-                    hierarchyInfo.FirstRowChapters.Add(CurrentHierarchy.ChapterPointer);
+                    CurrentHierarchy.TrySetChapterPointerFromParseResults();
+                    hierarchyInfo.FirstRowChapters.Add(CurrentHierarchy.ChapterPointer?.GetOwnChapterEntry());
                 }
 
                 if (hierarchyInfo.CurrentColumn == 0)
@@ -89,7 +89,7 @@ namespace BibleNote.Analytics.Services.VerseParsing.ParseContext
                     if (hierarchyInfo.CurrentRow != 0)
                         CurrentHierarchy.TrySetChapterPointerFromParseResults();
                     
-                    hierarchyInfo.FirstColumnChapters.Add(CurrentHierarchy.ChapterPointer);
+                    hierarchyInfo.FirstColumnChapters.Add(CurrentHierarchy.ChapterPointer?.GetOwnChapterEntry());
                 }
             }
             else if (CurrentHierarchy.ParagraphState == ParagraphState.Title)

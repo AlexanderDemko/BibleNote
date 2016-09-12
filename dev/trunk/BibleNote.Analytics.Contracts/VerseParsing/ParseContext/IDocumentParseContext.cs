@@ -19,9 +19,7 @@ namespace BibleNote.Analytics.Contracts.VerseParsing.ParseContext
     
     public interface IDocumentParseContextEditor : IDocumentParseContext
     {
-        //CellInfo CurrentCell { get; }  // Если мы находимся в таблице. А уже в CellInfo будет ссылка на текущую таблицу.        
-
-        void SetTitleVerse(ChapterPointer titleChapter);
+        void SetTitleVerse(ChapterEntryInfo titleChapter);
 
         void StartParseParagraph();
 
