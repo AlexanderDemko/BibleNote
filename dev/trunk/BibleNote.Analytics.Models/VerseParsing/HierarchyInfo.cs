@@ -13,14 +13,14 @@ namespace BibleNote.Analytics.Models.VerseParsing
 
         public int CurrentColumn { get; set; }
 
-        public List<ChapterPointer> FirstRowChapters { get; set; }
+        public List<ChapterEntryInfo> FirstRowChapters { get; set; }
 
-        public List<ChapterPointer> FirstColumnChapters { get; set; }
+        public List<ChapterEntryInfo> FirstColumnChapters { get; set; }
 
         public TableHierarchyInfo()
         {
-            FirstRowChapters = new List<ChapterPointer>();
-            FirstColumnChapters = new List<ChapterPointer>();
+            FirstRowChapters = new List<ChapterEntryInfo>();
+            FirstColumnChapters = new List<ChapterEntryInfo>();
 
             CurrentRow = -1;
             CurrentColumn = -1;

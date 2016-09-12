@@ -26,7 +26,7 @@ namespace BibleNote.Analytics.Contracts.VerseParsing.ParseContext
 
         IHierarchyInfo HierarchyInfo { get; set; }
 
-        ChapterPointer ChapterPointer { get; }
+        ChapterEntryInfo ChapterPointer { get; }
 
         List<ParagraphParseResult> ParseResults { get; }
 
@@ -34,6 +34,6 @@ namespace BibleNote.Analytics.Contracts.VerseParsing.ParseContext
 
         void TrySetChapterPointerFromParseResults();
 
-        ChapterPointer GetHierarchyChapterPointer();
+        ChapterEntryInfo GetHierarchyChapterPointer();
     }
 }

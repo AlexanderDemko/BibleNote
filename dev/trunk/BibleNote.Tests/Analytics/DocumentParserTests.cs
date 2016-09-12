@@ -54,12 +54,22 @@ namespace BibleNote.Tests.Analytics
             return htmlDoc.DocumentNode;
         }
 
-        private void CheckParseResult(ParagraphParseResult parseResult, params string[] verses)
+        private void CheckParseResult(ParagraphParseResult parseResult, params string[] expectedVerses)
         {
-            Assert.AreEqual(verses.Length, parseResult.VerseEntries.Count, "Verses length is not the same. Expected: {0}. Found: {1}", verses.Length, parseResult.VerseEntries.Count);
+            Assert.AreEqual(expectedVerses.Length, parseResult.VerseEntries.Count, "Verses length is not the same. Expected: {0}. Found: {1}", expectedVerses.Length, parseResult.VerseEntries.Count);
             var verseEntries = parseResult.VerseEntries.Select(ve => ve.VersePointer);
-            foreach (var verse in verses)
+            foreach (var verse in expectedVerses)
                 Assert.IsTrue(verseEntries.Contains(_versePointerFactory.CreateVersePointer(verse)), "Can not find the verse: '{0}'", verse);
+        }
+
+        private void CheckParseResults(IDocumentParser docParser, params string[][] expectedResults)
+        {
+            var results = docParser.DocumentParseResult.ParagraphParseResults;
+            results.Count.Should().Be(expectedResults.Length);
+            for (var i = 0; i < expectedResults.Length; i++)                        
+            {
+                CheckParseResult(results[i], expectedResults[i]);
+            }
         }
 
         [TestMethod]
@@ -69,10 +79,7 @@ namespace BibleNote.Tests.Analytics
             using (var docParser = _documentParserFactory.Create(_documentProvider))
             {
                 docParser.ParseParagraph(node);
-
-                var results = docParser.DocumentParseResult.ParagraphParseResults;
-                results.Count.Should().Be(1);
-                CheckParseResult(results[0], "Мк 5:6-7");
+                CheckParseResults(docParser, new string[] { "Мк 5:6-7" });
             }
         }
 
@@ -100,11 +107,10 @@ namespace BibleNote.Tests.Analytics
                     }
                 }
 
-                var results = docParser.DocumentParseResult.ParagraphParseResults;
-                results.Count.Should().Be(3);
-                CheckParseResult(results[0], "Мк 5:6");
-                CheckParseResult(results[1], "Ин 1:1");
-                CheckParseResult(results[2], "Мк 5:12");
+                CheckParseResults(docParser, 
+                    new string[] { "Мк 5:6" },
+                    new string[] { "Ин 1:1" },
+                    new string[] { "Мк 5:12" });
             }
         }
 
@@ -147,11 +153,10 @@ namespace BibleNote.Tests.Analytics
                     }
                 }
 
-                var results = docParser.DocumentParseResult.ParagraphParseResults;
-                results.Count.Should().Be(3);
-                CheckParseResult(results[0], "Мк 5:6");
-                CheckParseResult(results[1], "Ин 1:1");
-                CheckParseResult(results[2], "Мк 5:12");
+                CheckParseResults(docParser,
+                    new string[] { "Мк 5:6" },
+                    new string[] { "Ин 1:1" },
+                    new string[] { "Мк 5:12" });
             }
         }
 
@@ -259,16 +264,15 @@ namespace BibleNote.Tests.Analytics
 
                 docParser.ParseParagraph(verseNode);
 
-                var results = docParser.DocumentParseResult.ParagraphParseResults;
-                results.Count.Should().Be(8);
-                CheckParseResult(results[0], "Мк 5:6");
-                CheckParseResult(results[1], "Ин 1:1");
-                CheckParseResult(results[2], "Ин 1:12");
-                CheckParseResult(results[3], "Мк 5:12");
-                CheckParseResult(results[4], "Ин 1:1");
-                CheckParseResult(results[5], "Ин 1:12");
-                CheckParseResult(results[6], "Мк 5:12");
-                CheckParseResult(results[7], "Мк 5:12");
+                CheckParseResults(docParser,
+                    new string[] { "Мк 5:6" },
+                    new string[] { "Ин 1:1" },
+                    new string[] { "Ин 1:12" },
+                    new string[] { "Мк 5:12" },
+                    new string[] { "Ин 1:1" },
+                    new string[] { "Ин 1:12" },
+                    new string[] { "Мк 5:12" },
+                    new string[] { "Мк 5:12" });
             }
         }
 
@@ -326,13 +330,12 @@ namespace BibleNote.Tests.Analytics
                     }
                 }
 
-                var results = docParser.DocumentParseResult.ParagraphParseResults;
-                results.Count.Should().Be(5);
-                CheckParseResult(results[0], "Ин 1:1");
-                CheckParseResult(results[1], "Мк 5:6");
-                CheckParseResult(results[2], "Мк 5:12");
-                CheckParseResult(results[3], "Ин 1:12");
-                CheckParseResult(results[4], "Ин 1:12");
+                CheckParseResults(docParser,
+                    new string[] { "Ин 1:1" },
+                    new string[] { "Мк 5:6" },
+                    new string[] { "Мк 5:12" },
+                    new string[] { "Ин 1:12" },
+                    new string[] { "Ин 1:12" });
             }
         }
 
@@ -346,7 +349,7 @@ namespace BibleNote.Tests.Analytics
 
             using (var docParser = _documentParserFactory.Create(_documentProvider))
             {
-                _documentParseContext.SetTitleVerse(_versePointerFactory.CreateVersePointer("Лк 3").ToChapterPointer());
+                _documentParseContext.SetTitleVerse(new ChapterEntryInfo(_versePointerFactory.CreateVersePointer("Лк 3").ToChapterPointer()) { AtStartOfParagraph = true });
 
                 using (docParser.ParseHierarchyElement(ParagraphState.Table))
                 {
@@ -403,14 +406,13 @@ namespace BibleNote.Tests.Analytics
                     }
                 }
 
-                var results = docParser.DocumentParseResult.ParagraphParseResults;
-                results.Count.Should().Be(6);
-                CheckParseResult(results[0], "Ин 1:1");
-                CheckParseResult(results[1], "Ин 1:12");
-                CheckParseResult(results[2], "Мк 5:6");
-                CheckParseResult(results[3], "Ин 1:12");
-                CheckParseResult(results[4], "Лк 3:12");
-                CheckParseResult(results[5], "Лк 3:12");
+                CheckParseResults(docParser,
+                    new string[] { "Ин 1:1" },
+                    new string[] { "Ин 1:12" },
+                    new string[] { "Мк 5:6" },
+                    new string[] { "Ин 1:12" },
+                    new string[] { "Лк 3:12" },
+                    new string[] { "Лк 3:12" });
             }
         }
 
@@ -432,10 +434,9 @@ namespace BibleNote.Tests.Analytics
                     docParser.ParseParagraph(verseNode);
                 }
 
-                var results = docParser.DocumentParseResult.ParagraphParseResults;
-                results.Count.Should().Be(2);
-                CheckParseResult(results[0], "Ин 1:1");
-                CheckParseResult(results[1], "Ин 1:12");
+                CheckParseResults(docParser,
+                    new string[] { "Ин 1:1" },
+                    new string[] { "Ин 1:12" });
             }
         }
 
@@ -473,16 +474,15 @@ namespace BibleNote.Tests.Analytics
                     docParser.ParseParagraph(verseNode);
                 }
 
-                var results = docParser.DocumentParseResult.ParagraphParseResults;
-                results.Count.Should().Be(8);
-                CheckParseResult(results[0], "Мф 1:1");
-                CheckParseResult(results[1], "Мк 2:2");
-                CheckParseResult(results[2], "Мф 1:12");
-                CheckParseResult(results[3], "Мф 1:1");
-                CheckParseResult(results[4], "Лк 3-4");
-                CheckParseResult(results[5], "Мф 1:1");
-                CheckParseResult(results[6], "Ин 5-6");
-                CheckParseResult(results[7], "Мф 1:12");
+                CheckParseResults(docParser,
+                    new string[] { "Мф 1:1" },
+                    new string[] { "Мк 2:2" },
+                    new string[] { "Мф 1:12" },
+                    new string[] { "Мф 1:1" },
+                    new string[] { "Лк 3-4" },
+                    new string[] { "Мф 1:1" },
+                    new string[] { "Ин 5-6" },
+                    new string[] { "Мф 1:12" });
             }
         }
 
@@ -573,23 +573,68 @@ namespace BibleNote.Tests.Analytics
                     }
                 }
 
-                var results = docParser.DocumentParseResult.ParagraphParseResults;
-                results.Count.Should().Be(14);
-                CheckParseResult(results[0], "1Петр 3:3");
-                CheckParseResult(results[1], "1Петр 3:12");
-                CheckParseResult(results[2], "Мф 1:1");
-                CheckParseResult(results[3], "Мф 1:12");
-                CheckParseResult(results[4], "1Петр 3:3");
-                CheckParseResult(results[5], "1Петр 3:12");
-                CheckParseResult(results[6], "Мк 2:2");
-                CheckParseResult(results[7], "Мф 1:12");
-                CheckParseResult(results[8], "Лк 3-4");
-                CheckParseResult(results[9], "Мф 1:12");                
-                CheckParseResult(results[10], "Ин 5-6");
-                CheckParseResult(results[11], "Мф 1:12");
-                CheckParseResult(results[12], "Мк 2:2");
-                //CheckParseResult(results[13], "Мк 2:12"); ?????
-                CheckParseResult(results[13], "Лк 3-4");
+                CheckParseResults(docParser,
+                    new string[] { "1Петр 3:3" },
+                    new string[] { "1Петр 3:12" },
+                    new string[] { "Мф 1:1" },
+                    new string[] { "Мф 1:12" },
+                    new string[] { "1Петр 3:3" },
+                    new string[] { "1Петр 3:12" },
+                    new string[] { "Мк 2:2" },
+                    new string[] { "Мф 1:12" },
+                    new string[] { "Лк 3-4" },
+                    new string[] { "Мф 1:12" },
+                    new string[] { "Ин 5-6" },
+                    new string[] { "Мф 1:12" },
+                    new string[] { "Мк 2:2" },
+                    //new string[] { "Мк 2:12" }, ?????
+                    new string[] { "Лк 3-4" });
+            }
+        }
+
+        [TestMethod]
+        public void DocParser_TestScenario10()
+        {
+            var node = GetNode("Мф 1:1 и Мк 2:2");
+            var verseNode = GetNode(":12");
+
+            using (var docParser = _documentParserFactory.Create(_documentProvider))
+            {
+                docParser.ParseParagraph(node);
+                docParser.ParseParagraph(verseNode);
+
+                CheckParseResults(docParser,
+                    new string[] { "Мф 1:1", "Мк 2:2" });
+            }
+        }
+
+        [TestMethod]
+        public void DocParser_TestScenario11()
+        {
+            var node1 = GetNode("Мф 1:1 и 2:2");
+            var node2 = GetNode("Мф 1:1 и :2");
+            var verseNode = GetNode(":12");
+
+            using (var docParser = _documentParserFactory.Create(_documentProvider))
+            {
+                using (docParser.ParseHierarchyElement(ParagraphState.Block))
+                {
+
+                    docParser.ParseParagraph(node1);
+                    docParser.ParseParagraph(verseNode);
+                }
+
+                using (docParser.ParseHierarchyElement(ParagraphState.Block))
+                {
+
+                    docParser.ParseParagraph(node2);
+                    docParser.ParseParagraph(verseNode);
+                }
+
+                CheckParseResults(docParser,
+                    new string[] { "Мф 1:1", "Мф 2:2" },
+                    new string[] { "Мф 1:1", "Мф 1:2" },
+                    new string[] { "Мф 1:12" });
             }
         }
     }

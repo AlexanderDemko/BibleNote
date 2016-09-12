@@ -14,7 +14,7 @@ namespace BibleNote.Analytics.Services.VerseParsing.ParseContext
 
         public IHierarchyInfo HierarchyInfo { get; set; }
 
-        public ChapterPointer ChapterPointer { get; private set; }
+        public ChapterEntryInfo ChapterPointer { get; private set; }
 
         public List<ParagraphParseResult> ParseResults { get; private set; }
 
@@ -38,34 +38,39 @@ namespace BibleNote.Analytics.Services.VerseParsing.ParseContext
             {
                 VersePointer chapterVp = null;
                 var correctEntryType = false;
+                var atStartOfParagraph = false;
                 foreach (var verseEntry in ParseResults.SelectMany(r => r.VerseEntries))
                 {
-                    if (verseEntry.EntryType == VerseEntryType.BookChapter || verseEntry.EntryType == VerseEntryType.BookChapterVerse)
-                        correctEntryType = true;
-
-                    if (chapterVp == null)
-                    {
-                        chapterVp = verseEntry.VersePointer;
-                    }
-                    else if (verseEntry.VersePointer.BookIndex != chapterVp.BookIndex || verseEntry.VersePointer.Chapter != chapterVp.Chapter)
+                    if (chapterVp != null
+                        && (verseEntry.VersePointer.BookIndex != chapterVp.BookIndex || verseEntry.VersePointer.Chapter != chapterVp.Chapter))
                     {
                         chapterVp = null;
                         break;
                     }
+
+                    if (chapterVp == null)                    
+                        chapterVp = verseEntry.VersePointer;
+
+                    if (verseEntry.EntryType == VerseEntryType.BookChapter || verseEntry.EntryType == VerseEntryType.BookChapterVerse)
+                        correctEntryType = true;
+
+                    if (verseEntry.StartIndex == 0)
+                        atStartOfParagraph = true;
                 }
 
                 if (chapterVp != null && correctEntryType)
-                    ChapterPointer = chapterVp.ToChapterPointer();
+                    ChapterPointer = new ChapterEntryInfo(chapterVp.ToChapterPointer()) { AtStartOfParagraph = atStartOfParagraph };
             }
 
             _chapterWasSearched = true;
         }
-
-        private ChapterPointer _calculatedChapterPointer;
-        public ChapterPointer GetHierarchyChapterPointer()
+        
+        public ChapterEntryInfo GetHierarchyChapterPointer()
         {
-            if (ChapterPointer == null && _calculatedChapterPointer == null)
+            if (ChapterPointer == null)
             {
+                ChapterEntryInfo _calculatedChapterPointer = null;
+
                 if (ParagraphState == ParagraphState.TableCell)
                 {
                     var hierarchyInfo = (TableHierarchyInfo)ParentHierarchy.ParentHierarchy.HierarchyInfo;
@@ -75,9 +80,12 @@ namespace BibleNote.Analytics.Services.VerseParsing.ParseContext
                     if (_calculatedChapterPointer == null && hierarchyInfo.CurrentColumn > 0)
                         _calculatedChapterPointer = hierarchyInfo.FirstColumnChapters.TryGetAt(hierarchyInfo.CurrentRow);
                 }
+
+                if (_calculatedChapterPointer != null)
+                    ChapterPointer = _calculatedChapterPointer.CloneAsCalculated();
             }
 
-            return ChapterPointer ?? _calculatedChapterPointer ?? ParentHierarchy?.GetHierarchyChapterPointer();
+            return ChapterPointer ?? ParentHierarchy?.GetHierarchyChapterPointer();
         }      
     }
 }
