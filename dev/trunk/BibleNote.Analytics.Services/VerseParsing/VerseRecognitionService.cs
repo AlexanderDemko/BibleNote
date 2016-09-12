@@ -107,7 +107,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
         private static bool VerseRule(VerseEntryInfo verseEntry, IDocumentParseContext docParseContext)
         {
             var parentVerse = docParseContext.CurrentParagraph.LatestVerseEntry?.VersePointer
-                            ?? docParseContext.CurrentHierarchy?.GetHierarchyChapterPointer()?.ChapterPointer 
+                            ?? docParseContext.CurrentHierarchy?.GetHierarchyChapter()?.ChapterPointer 
                             ?? docParseContext.TitleChapter?.ChapterPointer;
 
             if (parentVerse != null)

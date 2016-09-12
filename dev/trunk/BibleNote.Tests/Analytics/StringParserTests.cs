@@ -33,7 +33,7 @@ namespace BibleNote.Tests.Analytics
         }
 
         [TestMethod]
-        public void FindVerseEntries()
+        public void StringParserTest()
         {
             var s = "Тест и Ин 5:6, а потом 5:7,8. 9 глава. 10 стих. и :7. ст.5-6. *:8-9*, [5:7], в 5 стихе, в главе 6. Лк 5-6,8 и 7:9";
 

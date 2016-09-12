@@ -65,7 +65,7 @@ namespace BibleNote.Analytics.Services.VerseParsing.ParseContext
             _chapterWasSearched = true;
         }
         
-        public ChapterEntryInfo GetHierarchyChapterPointer()
+        public ChapterEntryInfo GetHierarchyChapter()
         {
             if (ChapterPointer == null)
             {
@@ -85,7 +85,7 @@ namespace BibleNote.Analytics.Services.VerseParsing.ParseContext
                     ChapterPointer = _calculatedChapterPointer.CloneAsCalculated();
             }
 
-            return ChapterPointer ?? ParentHierarchy?.GetHierarchyChapterPointer();
+            return ChapterPointer ?? ParentHierarchy?.GetHierarchyChapter();
         }      
     }
 }

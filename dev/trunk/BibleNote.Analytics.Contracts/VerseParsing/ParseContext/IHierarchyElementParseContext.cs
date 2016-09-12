@@ -34,6 +34,6 @@ namespace BibleNote.Analytics.Contracts.VerseParsing.ParseContext
 
         void TrySetChapterPointerFromParseResults();
 
-        ChapterEntryInfo GetHierarchyChapterPointer();
+        ChapterEntryInfo GetHierarchyChapter();
     }
 }
