@@ -73,7 +73,7 @@ namespace BibleNote.Tests.Analytics
         }
 
         [TestMethod]
-        public void DocParser_TestScenario1()
+        public void DocParser_Test1()
         {
             var node = GetNode("<div>Это <p>тестовая <font>Мк 5:</font>6-7!!</p> строка</div>");
             using (var docParser = _documentParserFactory.Create(_documentProvider))
@@ -84,7 +84,7 @@ namespace BibleNote.Tests.Analytics
         }
 
         [TestMethod]
-        public void DocParser_TestScenario2()
+        public void DocParser_Test2()
         {
             var node1 = GetNode("Мк 5:6");
             var node2 = GetNode("Ин 1:1");
@@ -115,7 +115,7 @@ namespace BibleNote.Tests.Analytics
         }
 
         [TestMethod]
-        public void DocParser_TestScenario3()
+        public void DocParser_Test3()
         {
             var emptyNode = GetNode("Пустая строка");
             var node2 = GetNode("Мк 5:6");
@@ -161,7 +161,7 @@ namespace BibleNote.Tests.Analytics
         }
 
         [TestMethod]
-        public void DocParser_TestScenario4()
+        public void DocParser_Test4()
         {
             var emptyNode = GetNode("Пустая строка");
             var node1 = GetNode("Ин 1:1");
@@ -277,7 +277,7 @@ namespace BibleNote.Tests.Analytics
         }
 
         [TestMethod]
-        public void DocParser_TestScenario5()
+        public void DocParser_Test5()
         {
             var emptyNode = GetNode("Пустая строка");
             var node1 = GetNode("Ин 1:1");
@@ -340,7 +340,7 @@ namespace BibleNote.Tests.Analytics
         }
 
         [TestMethod]
-        public void DocParser_TestScenario6()
+        public void DocParser_Test6()
         {
             var emptyNode = GetNode("Пустая строка");
             var node1 = GetNode("Ин 1:1");
@@ -417,7 +417,7 @@ namespace BibleNote.Tests.Analytics
         }
 
         [TestMethod]
-        public void DocParser_TestScenario7()
+        public void DocParser_Test7()
         {
             var node = GetNode("Ин 1:1");
             var verseNode = GetNode(":12");
@@ -441,7 +441,7 @@ namespace BibleNote.Tests.Analytics
         }
 
         [TestMethod]
-        public void DocParser_TestScenario8()
+        public void DocParser_Test8()
         {
             var emptyNode = GetNode("Пустая строка");
             var node1 = GetNode("Мф 1:1 - стих в начале");
@@ -487,7 +487,7 @@ namespace BibleNote.Tests.Analytics
         }
 
         [TestMethod]
-        public void DocParser_TestScenario9()
+        public void DocParser_Test9()
         {
             var emptyNode = GetNode("Пустая строка");
             var node0 = GetNode("1Петр 3:3");
@@ -593,7 +593,7 @@ namespace BibleNote.Tests.Analytics
         }
 
         [TestMethod]
-        public void DocParser_TestScenario10()
+        public void DocParser_Test10()
         {
             var node = GetNode("Мф 1:1 и Мк 2:2");
             var verseNode = GetNode(":12");
@@ -609,7 +609,7 @@ namespace BibleNote.Tests.Analytics
         }
 
         [TestMethod]
-        public void DocParser_TestScenario11()
+        public void DocParser_Test11()
         {
             var node1 = GetNode("Мф 1:1 и 2:2");
             var node2 = GetNode("Мф 1:1 и :2");

@@ -52,7 +52,7 @@ namespace BibleNote.Tests.Analytics
         }
 
         [TestMethod]
-        public void TestSimpleParse()
+        public void VersePointer_Test1()
         {            
             CheckVerseParsing("2Петр 3", new SimpleVersePointer(61, new VerseNumber(3)));
             CheckVerseParsing("2Петр 3:1", new SimpleVersePointer(61, new VerseNumber(3, 1)));           
@@ -76,7 +76,7 @@ namespace BibleNote.Tests.Analytics
         }
 
         [TestMethod]
-        public void TestExtendedParse()
+        public void VersePointer_Test2()
         {
             CheckVerseParsing("2Петр (3:1)", new SimpleVersePointer(61, new VerseNumber(3, 1)));
             CheckVerseParsing("2Петр ( 3:1)", new SimpleVersePointer(61, new VerseNumber(3, 1)));
@@ -96,13 +96,13 @@ namespace BibleNote.Tests.Analytics
         }
 
         [TestMethod]
-        public void TestMultiVerseParse()
+        public void VersePointer_Test3()
         {
             CheckVerseParsing("Ин 3:10-17", new SimpleVersePointer(43, new VerseNumber(3, 10), new VerseNumber(3, 17)));
         }
 
         [TestMethod]
-        public void TestVerseExpanding()
+        public void VersePointer_Test4()
         {
             CheckVerseExpanding("Ин 2:3-4:7", 66, null,
                                 "Ин 2:3", "Ин 2:4", "Ин 2:5", "Ин 2:6", "Ин 2:7", "Ин 2:8", "Ин 2:9", "Ин 2:10", "Ин 2:11", "Ин 2:12",
