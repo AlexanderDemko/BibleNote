@@ -21,7 +21,7 @@ namespace BibleNote.Tests.Analytics
             _stringParser = DIContainer.Resolve<IStringParser>();
         }
 
-        private void AssertVerseEntry(VerseEntryInfo verseEntryInfo, int startIndex, int endIndex, VerseEntryType verseEntryType,
+        private void AssertVerseEntry(VerseEntry verseEntryInfo, int startIndex, int endIndex, VerseEntryType verseEntryType,
             VerseEntryOptions? verseEntryOptions = null)
         {
             Assert.AreEqual(startIndex, verseEntryInfo.StartIndex);

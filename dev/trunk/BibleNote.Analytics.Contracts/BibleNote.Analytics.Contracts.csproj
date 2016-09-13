@@ -81,11 +81,8 @@
     <Compile Include="Providers\IDocumentHandler.cs" />
     <Compile Include="Providers\IDocumentId.cs" />
     <Compile Include="Providers\IDocumentConnector.cs" />
-    <Compile Include="VerseParsing\ParseContext\IDocumentParseContext.cs" />
     <Compile Include="VerseParsing\IDocumentParser.cs" />
     <Compile Include="VerseParsing\IDocumentParserFactory.cs" />
-    <Compile Include="VerseParsing\ParseContext\IHierarchyElementParseContext.cs" />
-    <Compile Include="VerseParsing\ParseContext\IParagraphParseContext.cs" />
     <Compile Include="VerseParsing\IParagraphParser.cs" />
     <Compile Include="VerseParsing\IVerseCorrectionService.cs" />
     <Compile Include="VerseParsing\IVersePointerFactory.cs" />

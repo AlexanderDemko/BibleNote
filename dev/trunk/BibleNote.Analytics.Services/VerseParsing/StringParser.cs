@@ -24,14 +24,14 @@ namespace BibleNote.Analytics.Services.VerseParsing
             _configurationManager = configurationManager;
         }
 
-        public VerseEntryInfo TryGetVerse(string text, int startIndex)
+        public VerseEntry TryGetVerse(string text, int startIndex)
         {
             return TryGetVerse(text, startIndex, startIndex, _configurationManager.UseCommaDelimiter);
         }
 
-        public VerseEntryInfo TryGetVerse(string text, int startIndex, int leftBoundary, bool useCommaDelimiter)
+        public VerseEntry TryGetVerse(string text, int startIndex, int leftBoundary, bool useCommaDelimiter)
         {
-            VerseEntryInfo result = null;
+            VerseEntry result = null;
 
             var maxBookNameLength = _applicationManager.CurrentModuleInfo.MaxBookNameLength - 2;
             var indexOfDigit = StringUtils.GetNextIndexOfDigit(text, startIndex);
@@ -53,7 +53,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
             }
 
             if (result == null)
-                result = new VerseEntryInfo() { EntryType = VerseEntryType.None };
+                result = new VerseEntry() { EntryType = VerseEntryType.None };
 
             return result;
         }
@@ -70,15 +70,15 @@ namespace BibleNote.Analytics.Services.VerseParsing
             return result;
         }
 
-        private VerseEntryInfo TryGetVerseEntry(string text, int startIndex, int indexOfDigit, bool useCommaDelimiter)
+        private VerseEntry TryGetVerseEntry(string text, int startIndex, int indexOfDigit, bool useCommaDelimiter)
         {
             var textFragmentInfo = GetTextFragmentInfo(text, startIndex, indexOfDigit, useCommaDelimiter);
             CheckTextFragment(textFragmentInfo, text, useCommaDelimiter);
 
             if (textFragmentInfo.IsEmpty)
-                return new VerseEntryInfo() { EntryType = VerseEntryType.None };
+                return new VerseEntry() { EntryType = VerseEntryType.None };
 
-            var result = new VerseEntryInfo()
+            var result = new VerseEntry()
             {
                 EntryType = textFragmentInfo.EntryType,
                 EntryOptions = textFragmentInfo.GetEntryOptions(),

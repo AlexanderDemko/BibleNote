@@ -2,14 +2,14 @@
 using BibleNote.Analytics.Contracts.Logging;
 using BibleNote.Analytics.Contracts.ParallelVerses;
 using BibleNote.Analytics.Contracts.VerseParsing;
-using BibleNote.Analytics.Contracts.VerseParsing.ParseContext;
 using BibleNote.Analytics.Core.Extensions;
 using BibleNote.Analytics.Data;
+using BibleNote.Analytics.Models.Contracts.ParseContext;
+using BibleNote.Analytics.Models.VerseParsing.ParseContext;
 using BibleNote.Analytics.Services.Environment;
 using BibleNote.Analytics.Services.Logging;
 using BibleNote.Analytics.Services.ParallelVerses;
 using BibleNote.Analytics.Services.VerseParsing;
-using BibleNote.Analytics.Services.VerseParsing.ParseContext;
 using Microsoft.Practices.Unity;
 using Microsoft.Practices.Unity.InterceptionExtension;
 using System;

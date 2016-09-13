@@ -6,9 +6,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BibleNote.Analytics.Contracts.VerseParsing.ParseContext
+namespace BibleNote.Analytics.Models.Contracts.ParseContext
 {
-    public enum ParagraphState
+    public enum ParagraphType
     {
         ListElement,
         Inline,
@@ -22,18 +22,22 @@ namespace BibleNote.Analytics.Contracts.VerseParsing.ParseContext
 
     public interface IHierarchyElementParseContext
     {
-        ParagraphState ParagraphState { get; set; }
+        ParagraphType ParagraphType { get; set; }
 
         IHierarchyInfo HierarchyInfo { get; set; }
 
-        ChapterEntryInfo ChapterPointer { get; }
+        ChapterEntry ChapterEntry { get; }
 
-        List<ParagraphParseResult> ParseResults { get; }
+        List<ParagraphParseResult> ParagraphResults { get; }
 
         IHierarchyElementParseContext ParentHierarchy { get; }
 
-        void TrySetChapterPointerFromParseResults();
+        IHierarchyElementParseContext PreviousSibling { get; set; }
 
-        ChapterEntryInfo GetHierarchyChapter();
+        bool Parsed { get; set; }
+
+        void AddParagraphResult(ParagraphParseResult paragraphResult);
+
+        ChapterEntry GetHierarchyChapter();
     }
 }

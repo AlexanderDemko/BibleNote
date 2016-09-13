@@ -85,7 +85,7 @@ namespace BibleNote.Analytics.Models.VerseParsing
         InSquareBrackets = 3        // исключаемая глава. То есть стихи этой главы на данной странице (если глава в заголовке) или в подпунктах (если глава - в parentNode списка) сохраняются как detailedVerse.
     }
 
-    public class VerseEntryInfo
+    public class VerseEntry
     {
         public VersePointer VersePointer { get; set; }
 

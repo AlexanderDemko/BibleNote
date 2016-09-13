@@ -1,18 +1,13 @@
 ﻿using HtmlAgilityPack;
-using Microsoft.Practices.Unity;
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using BibleNote.Analytics.Core.Extensions;
 using BibleNote.Analytics.Contracts.VerseParsing;
 using BibleNote.Analytics.Contracts.Providers;
 using BibleNote.Analytics.Core.Exceptions;
 using BibleNote.Analytics.Core.Helpers;
 using BibleNote.Analytics.Contracts.Environment;
 using BibleNote.Analytics.Models.VerseParsing;
-using BibleNote.Analytics.Contracts.VerseParsing.ParseContext;
+using BibleNote.Analytics.Models.Contracts.ParseContext;
 
 namespace BibleNote.Analytics.Services.VerseParsing
 {
@@ -57,12 +52,12 @@ namespace BibleNote.Analytics.Services.VerseParsing
         public ParagraphParseResult ParseParagraph(HtmlNode node)
         {
             if (_documentProvider == null)
-                throw new NotInitializedException();
+                throw new NotInitializedException("_documentProvider == null");
 
             if (_docParseContext == null)
-                throw new NotInitializedException();
+                throw new NotInitializedException("_docParseContext == null");            
 
-            _parseContextEditor = _docParseContext.CurrentParagraph as IParagraphParseContextEditor;
+            _parseContextEditor = (IParagraphParseContextEditor)_docParseContext.CurrentParagraph;
 
             _result = new ParagraphParseResult();
             _parseContextEditor.SetParagraphResult(_result);
@@ -70,6 +65,8 @@ namespace BibleNote.Analytics.Services.VerseParsing
             var parseString = new HtmlToTextConverter().Convert(node);
             _result.Text = parseString.Value;
             ParseTextNodes(parseString);
+
+            _parseContextEditor.SetParsed();
 
             return _result;
         }
@@ -123,7 +120,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
             }
         }
 
-        private void UpdateLinkNode(HtmlNode node, VerseEntryInfo verseEntry)
+        private void UpdateLinkNode(HtmlNode node, VerseEntry verseEntry)
         {
             var hrefAttrName = "href";
             var hrefAttrValue = $"bnVerse:{verseEntry.VersePointer}";           // todo: нужно вынести в сервис, который в том числе будут использовать все провайдеры
@@ -141,7 +138,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
             return node.NodeType == HtmlNodeType.Element && node.Name == "a";
         }
 
-        private void InsertVerseLink(VerseInNodeEntry verseInNodeEntry, VerseEntryInfo verseEntry)
+        private void InsertVerseLink(VerseInNodeEntry verseInNodeEntry, VerseEntry verseEntry)
         {
             var verseLink = _documentProvider.GetVersePointerLink(verseEntry.VersePointer);
 
@@ -166,7 +163,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
         /// <param name="verseEntryInfo"></param>
         /// <param name="skipNodes">Чтобы не проверять строку с начала</param>
         /// <returns></returns>
-        private VerseInNodeEntry FindNodeAndMoveVerseTextInOneNodeIfNotReadonly(TextNodesString parseString, VerseEntryInfo verseEntryInfo, ref int skipNodes)
+        private VerseInNodeEntry FindNodeAndMoveVerseTextInOneNodeIfNotReadonly(TextNodesString parseString, VerseEntry verseEntryInfo, ref int skipNodes)
         {
             var result = new VerseInNodeEntry();
 
