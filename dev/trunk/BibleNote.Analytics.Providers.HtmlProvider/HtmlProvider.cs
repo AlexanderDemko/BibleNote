@@ -1,18 +1,13 @@
 ﻿using BibleNote.Analytics.Contracts.Providers;
 using BibleNote.Analytics.Contracts.VerseParsing;
-using BibleNote.Analytics.Providers.FileNavigationProvider;
 using HtmlAgilityPack;
-using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using BibleNote.Analytics.Core.Extensions;
 using BibleNote.Analytics.Models.Verse;
 using BibleNote.Analytics.Models.VerseParsing;
 using BibleNote.Analytics.Core.Constants;
-using BibleNote.Analytics.Contracts.VerseParsing.ParseContext;
+using BibleNote.Analytics.Models.Contracts.ParseContext;
 
 namespace BibleNote.Analytics.Providers.HtmlProvider
 {
@@ -92,8 +87,8 @@ namespace BibleNote.Analytics.Providers.HtmlProvider
 
         private void ParseHierarchyNode(IDocumentParser docParser, HtmlNode node)
         {
-            var state = GetParagraphState(node);
-            if (state > ParagraphState.Inline)
+            var state = GetParagraphType(node);
+            if (state > ParagraphType.Inline)
             {
                 using (docParser.ParseHierarchyElement(state))
                 {
@@ -106,31 +101,31 @@ namespace BibleNote.Analytics.Providers.HtmlProvider
             }
         }
 
-        private ParagraphState GetParagraphState(HtmlNode node)
+        private ParagraphType GetParagraphType(HtmlNode node)
         {
             if (HtmlTags.BlockElements.Contains(node.Name))
-                return ParagraphState.Block;
+                return ParagraphType.Block;
 
             if (HtmlTags.ListElements.Contains(node.Name))
-                return ParagraphState.List;
+                return ParagraphType.List;
 
             switch (node.Name)
             {
                 case HtmlTags.Table:
-                    return ParagraphState.Table;
+                    return ParagraphType.Table;
                 case HtmlTags.TableRow:
-                    return ParagraphState.TableRow;
+                    return ParagraphType.TableRow;
                 case HtmlTags.TableCell:
-                    return ParagraphState.TableCell;
+                    return ParagraphType.TableCell;
                 case HtmlTags.Head:
                     if (node.ParentNode?.Name == HtmlTags.Html)
-                        return ParagraphState.Title;
+                        return ParagraphType.Title;
                     break;
                 case HtmlTags.ListElement:
-                    return ParagraphState.ListElement;
+                    return ParagraphType.ListElement;
             }            
 
-            return ParagraphState.Inline;
+            return ParagraphType.Inline;
         }
 
         private void ParseLinearNodes(IDocumentParser docParser, IEnumerable<HtmlNode> nodes)

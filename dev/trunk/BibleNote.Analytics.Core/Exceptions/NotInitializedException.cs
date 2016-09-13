@@ -8,5 +8,10 @@ namespace BibleNote.Analytics.Core.Exceptions
 {
     public class NotInitializedException: Exception
     {        
+        public NotInitializedException(string message)
+            : base (message)
+        {
+
+        }
     }
 }

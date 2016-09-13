@@ -6,7 +6,7 @@ using BibleNote.Analytics.Models.VerseParsing;
 using System.Linq;
 using BibleNote.Analytics.Models.Verse;
 using BibleNote.Analytics.Models.Common;
-using BibleNote.Analytics.Contracts.VerseParsing.ParseContext;
+using BibleNote.Analytics.Models.Contracts.ParseContext;
 
 namespace BibleNote.Analytics.Services.VerseParsing
 {
@@ -14,49 +14,48 @@ namespace BibleNote.Analytics.Services.VerseParsing
     {       
         private readonly IParagraphParser _paragraphParser;
 
-        private readonly IDocumentParseContextEditor _documentParseContext;        
+        private readonly IDocumentParseContextEditor _docParseContext;        
 
         private IDocumentProviderInfo _documentProvider;
 
         public DocumentParseResult DocumentParseResult { get; private set; }
 
-        public DocumentParser(IParagraphParser paragraphParser, IDocumentParseContextEditor documentParseContext)
+        public DocumentParser(IParagraphParser paragraphParser, IDocumentParseContextEditor docParseContext)
         {            
             _paragraphParser = paragraphParser;
-            _documentParseContext = documentParseContext;
+            _docParseContext = docParseContext;
             DocumentParseResult = new DocumentParseResult();
         }
 
         public void Init(IDocumentProviderInfo documentProvider)
         {
             _documentProvider = documentProvider;            
-            _paragraphParser.Init(documentProvider, _documentParseContext);
+            _paragraphParser.Init(documentProvider, _docParseContext);
         }
 
         public ParagraphParseResult ParseParagraph(HtmlNode node)
-        {
-            _documentParseContext.StartParseParagraph();
+        {   
+            using (_docParseContext.ParseParagraph())
+            {
+                var result = _paragraphParser.ParseParagraph(node);
 
-            var result = _paragraphParser.ParseParagraph(node);
+                if (result.IsValuable)
+                    DocumentParseResult.ParagraphParseResults.Add(result);
 
-            if (result.IsValuable)
-                DocumentParseResult.ParagraphParseResults.Add(result);
-
-            _documentParseContext.EndParseParagraph(result);
-
-            return result;
+                return result;
+            }
         }
 
-        public DisposeHandler ParseHierarchyElement(ParagraphState paragraphState)
+        public DisposeHandler ParseHierarchyElement(ParagraphType paragraphType)
         {
-            _documentParseContext.EnterHierarchyElement(paragraphState);            
+            _docParseContext.EnterHierarchyElement(paragraphType);            
 
-            return new DisposeHandler(() => _documentParseContext.ExitHierarchyElement());
+            return new DisposeHandler(() => _docParseContext.ExitHierarchyElement());
         }
 
         public void Dispose()
         {
-            _documentParseContext.ClearContext();
+            _docParseContext.ClearContext();
         }
     }
 }

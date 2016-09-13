@@ -1,6 +1,6 @@
 ﻿using BibleNote.Analytics.Contracts.VerseParsing;
-using BibleNote.Analytics.Contracts.VerseParsing.ParseContext;
 using BibleNote.Analytics.Core.Helpers;
+using BibleNote.Analytics.Models.Contracts.ParseContext;
 using BibleNote.Analytics.Models.VerseParsing;
 using System;
 using System.Collections.Generic;
@@ -11,7 +11,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
     {
         private IVerseCorrectionService _verseCorrectionService;
 
-        private class RuleList : List<Func<VerseEntryInfo, IDocumentParseContext, bool>> { }
+        private class RuleList : List<Func<VerseEntry, IDocumentParseContext, bool>> { }
 
         private static Dictionary<VerseEntryType, RuleList> _funcs = new Dictionary<VerseEntryType, RuleList>()
         {
@@ -28,7 +28,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
             _verseCorrectionService = verseCorrectionService;
         }
 
-        public bool TryRecognizeVerse(VerseEntryInfo verseEntry, IDocumentParseContext docParseContext)
+        public bool TryRecognizeVerse(VerseEntry verseEntry, IDocumentParseContext docParseContext)
         {
             if (!verseEntry.VersePointerFound)
                 return false;
@@ -42,7 +42,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
             return false;
         }
 
-        private static bool FullVerseRule(VerseEntryInfo verseEntry, IDocumentParseContext docParseContext)
+        private static bool FullVerseRule(VerseEntry verseEntry, IDocumentParseContext docParseContext)
         {
             return true;
         }
@@ -53,10 +53,10 @@ namespace BibleNote.Analytics.Services.VerseParsing
         /// <param name="verseEntry"></param>
         /// <param name="docParseContext"></param>
         /// <returns></returns>
-        private static bool ChapterOrVerseRule(VerseEntryInfo verseEntry, IDocumentParseContext docParseContext)
+        private static bool ChapterOrVerseRule(VerseEntry verseEntry, IDocumentParseContext docParseContext)
         {
             if (docParseContext.CurrentParagraph.LatestVerseEntry != null
-                && StringUtils.CheckDivergence(docParseContext.CurrentParagraph.ParagraphParseResult.Text, docParseContext.CurrentParagraph.LatestVerseEntry.EndIndex, verseEntry.StartIndex, 2, ','))
+                && StringUtils.CheckDivergence(docParseContext.CurrentParagraph.ParseResult.Text, docParseContext.CurrentParagraph.LatestVerseEntry.EndIndex, verseEntry.StartIndex, 2, ','))
             {
                 verseEntry.VersePointer.Book = docParseContext.CurrentParagraph.LatestVerseEntry.VersePointer.Book;                
                 verseEntry.EntryType = docParseContext.CurrentParagraph.LatestVerseEntry.VersePointer.VerseNumber.IsChapter ? VerseEntryType.Chapter : VerseEntryType.Verse;
@@ -87,7 +87,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
         /// <param name="verseEntry"></param>
         /// <param name="docParseContext"></param>
         /// <returns></returns>
-        private static bool ChapterVerseRule(VerseEntryInfo verseEntry, IDocumentParseContext docParseContext)
+        private static bool ChapterVerseRule(VerseEntry verseEntry, IDocumentParseContext docParseContext)
         {            
             if (docParseContext.CurrentParagraph.LatestVerseEntry != null)
             {
@@ -104,10 +104,11 @@ namespace BibleNote.Analytics.Services.VerseParsing
         /// <param name="verseEntry"></param>
         /// <param name="docParseContext"></param>
         /// <returns></returns>
-        private static bool VerseRule(VerseEntryInfo verseEntry, IDocumentParseContext docParseContext)
+        private static bool VerseRule(VerseEntry verseEntry, IDocumentParseContext docParseContext)
         {
             var parentVerse = docParseContext.CurrentParagraph.LatestVerseEntry?.VersePointer
-                            ?? docParseContext.CurrentHierarchy?.GetHierarchyChapter()?.ChapterPointer 
+                            ?? docParseContext.CurrentParagraph.GetPreviousChapter()?.ChapterPointer
+                            ?? docParseContext.CurrentHierarchy?.GetHierarchyChapter()?.ChapterPointer
                             ?? docParseContext.TitleChapter?.ChapterPointer;
 
             if (parentVerse != null)
@@ -126,7 +127,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
         /// <param name="verseEntry"></param>
         /// <param name="docParseContext"></param>
         /// <returns></returns>
-        private static bool ChapterRule(VerseEntryInfo verseEntry, IDocumentParseContext docParseContext)
+        private static bool ChapterRule(VerseEntry verseEntry, IDocumentParseContext docParseContext)
         {
             if (docParseContext.CurrentParagraph.LatestVerseEntry != null)
             {

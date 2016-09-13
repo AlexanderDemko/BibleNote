@@ -4,8 +4,8 @@ namespace BibleNote.Analytics.Contracts.VerseParsing
 {
     public interface IStringParser
     {
-        VerseEntryInfo TryGetVerse(string text, int index);
+        VerseEntry TryGetVerse(string text, int index);
 
-        VerseEntryInfo TryGetVerse(string text, int startIndex, int leftBoundary, bool useCommaDelimiter);
+        VerseEntry TryGetVerse(string text, int startIndex, int leftBoundary, bool useCommaDelimiter);
     }
 }
