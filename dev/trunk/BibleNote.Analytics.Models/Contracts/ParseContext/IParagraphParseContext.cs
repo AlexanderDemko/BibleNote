@@ -8,18 +8,11 @@ using BibleNote.Analytics.Models.Verse;
 
 namespace BibleNote.Analytics.Models.Contracts.ParseContext
 {
-    public interface IParagraphParseContext
+    public interface IParagraphParseContext : IElementParseContext
     {
         ParagraphParseResult ParseResult { get; }
 
         VerseEntry LatestVerseEntry { get; }
-
-        /// <summary>
-        /// В рамках текущей IHierarchyElementParseContext
-        /// </summary>
-        IParagraphParseContext PreviousSibling { get; }
-
-        ChapterEntry GetPreviousChapter();
     }
 
     public interface IParagraphParseContextEditor : IParagraphParseContext

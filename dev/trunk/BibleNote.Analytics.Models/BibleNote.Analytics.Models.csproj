@@ -47,6 +47,7 @@
     <Compile Include="Common\DisposeHandler.cs" />
     <Compile Include="Contracts\IHierarchyInfo.cs" />
     <Compile Include="Contracts\ParseContext\IDocumentParseContext.cs" />
+    <Compile Include="Contracts\ParseContext\IElementParseContext.cs" />
     <Compile Include="Contracts\ParseContext\IHierarchyElementParseContext.cs" />
     <Compile Include="Contracts\ParseContext\IParagraphParseContext.cs" />
     <Compile Include="Modules\Abbreviation.cs" />

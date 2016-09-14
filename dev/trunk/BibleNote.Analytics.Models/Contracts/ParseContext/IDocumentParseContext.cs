@@ -24,7 +24,7 @@ namespace BibleNote.Analytics.Models.Contracts.ParseContext
 
         DisposeHandler ParseParagraph();
 
-        void EnterHierarchyElement(ParagraphType paragraphType);
+        void EnterHierarchyElement(ElementType paragraphType);
 
         void ExitHierarchyElement();        
         

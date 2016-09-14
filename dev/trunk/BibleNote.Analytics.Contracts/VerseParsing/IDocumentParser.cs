@@ -15,6 +15,6 @@ namespace BibleNote.Analytics.Contracts.VerseParsing
 
         ParagraphParseResult ParseParagraph(HtmlNode node);
 
-        DisposeHandler ParseHierarchyElement(ParagraphType paragraphType);
+        DisposeHandler ParseHierarchyElement(ElementType paragraphType);
     }
 }

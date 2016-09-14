@@ -13,5 +13,21 @@ namespace BibleNote.Analytics.Models.Verse
             : base(bookInfo, moduleShortName, string.Empty, new VerseNumber(chapter))
         {            
         }
+
+        public override bool Equals(object obj)
+        {
+            if (obj == null)
+                return false;
+
+            var otherObj = (ChapterPointer)obj;
+
+            return BookIndex == otherObj.BookIndex
+                && Chapter == otherObj.Chapter;
+        }
+
+        public override int GetHashCode()
+        {
+            return base.GetHashCode();
+        }
     }
 }

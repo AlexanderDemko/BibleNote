@@ -31,6 +31,8 @@ namespace BibleNote.Analytics.Services.VerseParsing
         {
             _documentProvider = documentProvider;            
             _paragraphParser.Init(documentProvider, _docParseContext);
+
+            _docParseContext.EnterHierarchyElement(ElementType.Root);
         }
 
         public ParagraphParseResult ParseParagraph(HtmlNode node)
@@ -46,7 +48,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
             }
         }
 
-        public DisposeHandler ParseHierarchyElement(ParagraphType paragraphType)
+        public DisposeHandler ParseHierarchyElement(ElementType paragraphType)
         {
             _docParseContext.EnterHierarchyElement(paragraphType);            
 
@@ -55,6 +57,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
 
         public void Dispose()
         {
+            _docParseContext.ExitHierarchyElement();
             _docParseContext.ClearContext();
         }
     }

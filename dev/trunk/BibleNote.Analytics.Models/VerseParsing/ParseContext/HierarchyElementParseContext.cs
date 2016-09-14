@@ -4,12 +4,13 @@ using System.Collections.Generic;
 using System.Linq;
 using BibleNote.Analytics.Models.Contracts.ParseContext;
 using BibleNote.Analytics.Models.Contracts;
+using System;
 
 namespace BibleNote.Analytics.Models.VerseParsing.ParseContext
 {
     public class HierarchyElementParseContext : IHierarchyElementParseContext
     {
-        public ParagraphType ParagraphType { get; set; }
+        public ElementType ElementType { get; private set; }
 
         public IHierarchyInfo HierarchyInfo { get; set; }        
 
@@ -17,7 +18,7 @@ namespace BibleNote.Analytics.Models.VerseParsing.ParseContext
 
         public IHierarchyElementParseContext ParentHierarchy { get; private set; }
 
-        public IHierarchyElementParseContext PreviousSibling { get; set; }
+        public IElementParseContext PreviousSibling { get; private set; }
 
         public bool Parsed { get; set; }
 
@@ -30,68 +31,109 @@ namespace BibleNote.Analytics.Models.VerseParsing.ParseContext
                 if (!Parsed)
                     return null;
 
-                if (!_chapterEntryWasSearched)
-                {
-                    _chapterEntryWasSearched = true;
-
-                    ChapterPointer singleCp = null;                    
-                    var atStartOfParagraph = false;
-                    foreach (var chapterEntry in ParagraphResults.Select(pc => pc.ChapterEntry))
-                    {
-                        if (singleCp != null
-                            && (chapterEntry.ChapterPointer.BookIndex != singleCp.BookIndex || chapterEntry.ChapterPointer.Chapter != singleCp.Chapter))
-                        {
-                            singleCp = null;
-                            break;
-                        }
-
-                        if (singleCp == null)
-                            singleCp = chapterEntry.ChapterPointer;                        
-
-                        if (chapterEntry.AtStartOfParagraph)
-                            atStartOfParagraph = true;
-                    }
-
-                    if (singleCp != null)
-                        _chapterEntry = new ChapterEntry(singleCp) { AtStartOfParagraph = atStartOfParagraph };
-                }
-
-                return _chapterEntry;
+                return GetChapterEntry();
             }
         }
-        public HierarchyElementParseContext(ParagraphType paragraphState, IHierarchyElementParseContext parentHierarchy)
+
+        public HierarchyElementParseContext(ElementType paragraphState, IElementParseContext previousSibling, IHierarchyElementParseContext parentHierarchy)
         {
-            ParagraphType = paragraphState;
+            ElementType = paragraphState;
+            PreviousSibling = previousSibling;
             ParentHierarchy = parentHierarchy;
 
             ParagraphResults = new List<ParagraphParseResult>();
         }        
         
-        public ChapterEntry GetHierarchyChapter()
-        {   
-            return ChapterEntry ?? CalculateChapterEntry() ?? ParentHierarchy?.GetHierarchyChapter();
+        public ChapterEntry GetHierarchyChapterEntry()
+        {
+            if (ChapterEntry?.Valid == true)
+                return ChapterEntry;
+            else if (ChapterEntry?.AtStartOfParagraph == true)
+                return null;            
+
+            var calculatedChapterEntry = GetCalculatedChapterEntry();
+            if (calculatedChapterEntry?.Valid == true) 
+                return calculatedChapterEntry;
+            else if (calculatedChapterEntry?.AtStartOfParagraph == true)
+                return null;
+
+            return  ParentHierarchy?.GetHierarchyChapterEntry();
         }
 
-        private ChapterEntry CalculateChapterEntry()
+        private ChapterEntry GetChapterEntry()
+        {
+            if (!_chapterEntryWasSearched)
+            {
+                _chapterEntryWasSearched = true;
+
+                _chapterEntry = new ChapterEntry();                            
+                foreach (var entry in ParagraphResults.Select(pc => pc.ChapterEntry))
+                {
+                    if (entry?.Valid == false
+                        || (_chapterEntry.ChapterPointer != null && !entry.ChapterPointer.Equals(_chapterEntry.ChapterPointer)))
+                    {
+                        _chapterEntry.ChapterPointer = null;
+                        break;
+                    }
+
+                    if (_chapterEntry.ChapterPointer == null)
+                        _chapterEntry.ChapterPointer = entry.ChapterPointer;
+
+                    if (entry.AtStartOfParagraph)
+                        _chapterEntry.AtStartOfParagraph = true;
+                }
+            }
+
+            return _chapterEntry;
+        }
+
+        private ChapterEntry GetCalculatedChapterEntry()
         {
             ChapterEntry result = null;
 
-            if (ParagraphType == ParagraphType.TableCell)
+            if (ElementType == ElementType.TableCell)
             {
                 var hierarchyInfo = (TableHierarchyInfo)ParentHierarchy.ParentHierarchy.HierarchyInfo;
                 if (hierarchyInfo.CurrentRow > 0)
                     result = hierarchyInfo.FirstRowParseContexts.TryGetAt(hierarchyInfo.CurrentColumn)?.ChapterEntry;
 
-                if (result == null && hierarchyInfo.CurrentColumn > 0)
+                if (result?.Valid == false && result?.AtStartOfParagraph == false && hierarchyInfo.CurrentColumn > 0)
                     result = hierarchyInfo.FirstColumnParseContexts.TryGetAt(hierarchyInfo.CurrentRow)?.ChapterEntry;
+            }
+            else if ((ElementType == ElementType.Linear || PreviousSibling?.ElementType == ElementType.Linear)                 
+                     && PreviousSibling?.ChapterEntry?.AtStartOfParagraph == true)
+            {
+                result = PreviousSibling.ChapterEntry;
+            }
+            else if (ElementType == ElementType.ListElement)
+            {
+                result = GetPreviousSiblingChapterEntry();                    
             }
 
             return result;
         }
 
+        public ChapterEntry GetPreviousSiblingChapterEntry()
+        {
+            if (PreviousSibling?.ElementType == ElementType.ListElement)    // тогда в PreviousSibling точно хранится IHierarchyElementParseContext
+            {
+                if (PreviousSibling?.ChapterEntry?.AtStartOfParagraph == true)
+                    return PreviousSibling?.ChapterEntry;
+                else if (PreviousSibling != null)
+                    return ((IHierarchyElementParseContext)PreviousSibling).GetPreviousSiblingChapterEntry();
+            }
+
+            return null;
+        }
+
         public void AddParagraphResult(ParagraphParseResult paragraphResult)
         {
             ParagraphResults.Add(paragraphResult);
+        }
+
+        public void ChangeElementType(ElementType elementType)
+        {
+            ElementType = elementType;
         }
     }
 }

@@ -82,45 +82,74 @@ namespace BibleNote.Tests.Analytics
             var node1 = GetNode("Мк 5:6");
             var node2 = GetNode("Ин 1:1");
             var node3 = GetNode("не с начала Лк 1:1");
-            var verseNode = GetNode(":12");
+            var verseNode = GetNode(":12 и :13");
 
             using (var docParser = _documentParserFactory.Create(_documentProvider))
             {
                 docParser.ParseParagraph(node1);
 
-                using (docParser.ParseHierarchyElement(ParagraphType.List))
+                using (docParser.ParseHierarchyElement(ElementType.List))
                 {
-                    using (docParser.ParseHierarchyElement(ParagraphType.ListElement))
+                    using (docParser.ParseHierarchyElement(ElementType.ListElement))
                     {
                         docParser.ParseParagraph(node2);
                     }
 
-                    using (docParser.ParseHierarchyElement(ParagraphType.ListElement))
+                    using (docParser.ParseHierarchyElement(ElementType.ListElement))
                     {
                         docParser.ParseParagraph(verseNode);
                     }
                 }
 
-                using (docParser.ParseHierarchyElement(ParagraphType.List))
+                using (docParser.ParseHierarchyElement(ElementType.List))
                 {
-                    using (docParser.ParseHierarchyElement(ParagraphType.ListElement))
+                    using (docParser.ParseHierarchyElement(ElementType.ListElement))
                     {
                         docParser.ParseParagraph(node3);
                     }
 
-                    using (docParser.ParseHierarchyElement(ParagraphType.ListElement))
+                    using (docParser.ParseHierarchyElement(ElementType.ListElement))
                     {
                         docParser.ParseParagraph(verseNode);
                     }
                 }
 
-
                 CheckParseResults(docParser, 
                     new string[] { "Мк 5:6" },
                     new string[] { "Ин 1:1" },
-                    new string[] { "Ин 1:12" },
+                    new string[] { "Ин 1:12", "Ин 1:13" },
+                    new string[] { "Лк 1:1" });
+            }
+        }
+
+        [TestMethod]
+        public void DocParser_Test2_1()
+        {
+            var node1 = GetNode("Мк 5:6");            
+            var node2 = GetNode("не с начала Лк 1:1");
+            var verseNode = GetNode(":12 и :13");
+
+            using (var docParser = _documentParserFactory.Create(_documentProvider))
+            {
+                docParser.ParseParagraph(node1);
+
+                using (docParser.ParseHierarchyElement(ElementType.List))
+                {
+                    using (docParser.ParseHierarchyElement(ElementType.ListElement))
+                    {
+                        docParser.ParseParagraph(node2);
+                    }
+
+                    using (docParser.ParseHierarchyElement(ElementType.ListElement))
+                    {
+                        docParser.ParseParagraph(verseNode);
+                    }
+                }
+
+                CheckParseResults(docParser,
+                    new string[] { "Мк 5:6" },                                        
                     new string[] { "Лк 1:1" },
-                    new string[] { "Мк 5:12" });
+                    new string[] { "Мк 5:12", "Мк 5:13" });
             }
         }
 
@@ -134,29 +163,29 @@ namespace BibleNote.Tests.Analytics
 
             using (var docParser = _documentParserFactory.Create(_documentProvider))
             {
-                using (docParser.ParseHierarchyElement(ParagraphType.Table))
+                using (docParser.ParseHierarchyElement(ElementType.Table))
                 {
-                    using (docParser.ParseHierarchyElement(ParagraphType.TableRow))
+                    using (docParser.ParseHierarchyElement(ElementType.TableRow))
                     {
-                        using (docParser.ParseHierarchyElement(ParagraphType.TableCell))
+                        using (docParser.ParseHierarchyElement(ElementType.TableCell))
                         {
                             docParser.ParseParagraph(emptyNode);
                         }
 
-                        using (docParser.ParseHierarchyElement(ParagraphType.TableCell))
+                        using (docParser.ParseHierarchyElement(ElementType.TableCell))
                         {
                             docParser.ParseParagraph(node2);
                         }
                     }
 
-                    using (docParser.ParseHierarchyElement(ParagraphType.TableRow))
+                    using (docParser.ParseHierarchyElement(ElementType.TableRow))
                     {
-                        using (docParser.ParseHierarchyElement(ParagraphType.TableCell))
+                        using (docParser.ParseHierarchyElement(ElementType.TableCell))
                         {
                             docParser.ParseParagraph(node3);
                         }
 
-                        using (docParser.ParseHierarchyElement(ParagraphType.TableCell))
+                        using (docParser.ParseHierarchyElement(ElementType.TableCell))
                         {
                             docParser.ParseParagraph(verseNode);
                         }
@@ -180,64 +209,64 @@ namespace BibleNote.Tests.Analytics
 
             using (var docParser = _documentParserFactory.Create(_documentProvider))
             {
-                using (docParser.ParseHierarchyElement(ParagraphType.Table))
+                using (docParser.ParseHierarchyElement(ElementType.Table))
                 {
-                    using (docParser.ParseHierarchyElement(ParagraphType.TableRow))
+                    using (docParser.ParseHierarchyElement(ElementType.TableRow))
                     {
-                        using (docParser.ParseHierarchyElement(ParagraphType.TableCell))
+                        using (docParser.ParseHierarchyElement(ElementType.TableCell))
                         {
                             docParser.ParseParagraph(emptyNode);
                         }
 
-                        using (docParser.ParseHierarchyElement(ParagraphType.TableCell))
+                        using (docParser.ParseHierarchyElement(ElementType.TableCell))
                         {
                             docParser.ParseParagraph(emptyNode);
                         }
 
-                        using (docParser.ParseHierarchyElement(ParagraphType.TableCell))
+                        using (docParser.ParseHierarchyElement(ElementType.TableCell))
                         {
                             docParser.ParseParagraph(node2);
                             docParser.ParseParagraph(verseNode);
                         }
                     }
 
-                    using (docParser.ParseHierarchyElement(ParagraphType.TableRow))
+                    using (docParser.ParseHierarchyElement(ElementType.TableRow))
                     {
-                        using (docParser.ParseHierarchyElement(ParagraphType.TableCell))
+                        using (docParser.ParseHierarchyElement(ElementType.TableCell))
                         {
                             docParser.ParseParagraph(node1);
                         }
 
-                        using (docParser.ParseHierarchyElement(ParagraphType.TableCell))
+                        using (docParser.ParseHierarchyElement(ElementType.TableCell))
                         {
                             docParser.ParseParagraph(verseNode);
                         }
 
-                        using (docParser.ParseHierarchyElement(ParagraphType.TableCell))
+                        using (docParser.ParseHierarchyElement(ElementType.TableCell))
                         {
                             docParser.ParseParagraph(verseNode);
                         }
                     }
 
-                    using (docParser.ParseHierarchyElement(ParagraphType.TableRow))
+                    using (docParser.ParseHierarchyElement(ElementType.TableRow))
                     {
-                        using (docParser.ParseHierarchyElement(ParagraphType.TableCell))
+                        using (docParser.ParseHierarchyElement(ElementType.TableCell))
                         {
                             docParser.ParseParagraph(emptyNode);
                         }
 
-                        using (docParser.ParseHierarchyElement(ParagraphType.TableCell))
+                        using (docParser.ParseHierarchyElement(ElementType.TableCell))
                         {
                             docParser.ParseParagraph(emptyNode);
                         }
 
-                        using (docParser.ParseHierarchyElement(ParagraphType.TableCell))
+                        using (docParser.ParseHierarchyElement(ElementType.TableCell))
                         {
                             docParser.ParseParagraph(node1);
 
-                            using (docParser.ParseHierarchyElement(ParagraphType.List))
+                            using (docParser.ParseHierarchyElement(ElementType.List))
                             {
-                                using (docParser.ParseHierarchyElement(ParagraphType.ListElement))
+                                using (docParser.ParseHierarchyElement(ElementType.ListElement))
                                 {
                                     docParser.ParseParagraph(verseNode);
                                 }
@@ -247,23 +276,23 @@ namespace BibleNote.Tests.Analytics
                         }
                     }
 
-                    using (docParser.ParseHierarchyElement(ParagraphType.TableRow))
+                    using (docParser.ParseHierarchyElement(ElementType.TableRow))
                     {
-                        using (docParser.ParseHierarchyElement(ParagraphType.TableCell))
+                        using (docParser.ParseHierarchyElement(ElementType.TableCell))
                         {
                             docParser.ParseParagraph(emptyNode);
                         }
 
-                        using (docParser.ParseHierarchyElement(ParagraphType.TableCell))
+                        using (docParser.ParseHierarchyElement(ElementType.TableCell))
                         {
                             docParser.ParseParagraph(emptyNode);
                         }
 
-                        using (docParser.ParseHierarchyElement(ParagraphType.TableCell))
+                        using (docParser.ParseHierarchyElement(ElementType.TableCell))
                         {
-                            using (docParser.ParseHierarchyElement(ParagraphType.List))
+                            using (docParser.ParseHierarchyElement(ElementType.List))
                             {
-                                using (docParser.ParseHierarchyElement(ParagraphType.ListElement))
+                                using (docParser.ParseHierarchyElement(ElementType.ListElement))
                                 {
                                     docParser.ParseParagraph(verseNode);
                                 }
@@ -298,20 +327,20 @@ namespace BibleNote.Tests.Analytics
             {
                 docParser.ParseParagraph(node1);
 
-                using (docParser.ParseHierarchyElement(ParagraphType.List))
+                using (docParser.ParseHierarchyElement(ElementType.List))
                 {
-                    using (docParser.ParseHierarchyElement(ParagraphType.ListElement))
+                    using (docParser.ParseHierarchyElement(ElementType.ListElement))
                     {
-                        using (docParser.ParseHierarchyElement(ParagraphType.Table))
+                        using (docParser.ParseHierarchyElement(ElementType.Table))
                         {
-                            using (docParser.ParseHierarchyElement(ParagraphType.TableRow))
+                            using (docParser.ParseHierarchyElement(ElementType.TableRow))
                             {
-                                using (docParser.ParseHierarchyElement(ParagraphType.TableCell))
+                                using (docParser.ParseHierarchyElement(ElementType.TableCell))
                                 {
                                     docParser.ParseParagraph(node2);
                                 }
 
-                                using (docParser.ParseHierarchyElement(ParagraphType.TableCell))
+                                using (docParser.ParseHierarchyElement(ElementType.TableCell))
                                 {
                                     docParser.ParseParagraph(verseNode);
                                 }
@@ -319,18 +348,18 @@ namespace BibleNote.Tests.Analytics
                         }
                     }
 
-                    using (docParser.ParseHierarchyElement(ParagraphType.ListElement))
+                    using (docParser.ParseHierarchyElement(ElementType.ListElement))
                     {
-                        using (docParser.ParseHierarchyElement(ParagraphType.Table))
+                        using (docParser.ParseHierarchyElement(ElementType.Table))
                         {
-                            using (docParser.ParseHierarchyElement(ParagraphType.TableRow))
+                            using (docParser.ParseHierarchyElement(ElementType.TableRow))
                             {
-                                using (docParser.ParseHierarchyElement(ParagraphType.TableCell))
+                                using (docParser.ParseHierarchyElement(ElementType.TableCell))
                                 {
                                     docParser.ParseParagraph(emptyNode);
                                 }
 
-                                using (docParser.ParseHierarchyElement(ParagraphType.TableCell))
+                                using (docParser.ParseHierarchyElement(ElementType.TableCell))
                                 {
                                     docParser.ParseParagraph(verseNode);
                                     docParser.ParseParagraph(verseNode);
@@ -361,55 +390,55 @@ namespace BibleNote.Tests.Analytics
             {
                 _documentParseContext.SetTitleVerse(new ChapterEntry(_versePointerFactory.CreateVersePointer("Лк 3").ToChapterPointer()) { AtStartOfParagraph = true });
 
-                using (docParser.ParseHierarchyElement(ParagraphType.Table))
+                using (docParser.ParseHierarchyElement(ElementType.Table))
                 {
-                    using (docParser.ParseHierarchyElement(ParagraphType.TableRow))
+                    using (docParser.ParseHierarchyElement(ElementType.TableRow))
                     {
-                        using (docParser.ParseHierarchyElement(ParagraphType.TableCell))
+                        using (docParser.ParseHierarchyElement(ElementType.TableCell))
                         {
                             docParser.ParseParagraph(node1);
                         }
 
-                        using (docParser.ParseHierarchyElement(ParagraphType.TableCell))
+                        using (docParser.ParseHierarchyElement(ElementType.TableCell))
                         {
                             docParser.ParseParagraph(emptyNode);
                         }
                     }
 
-                    using (docParser.ParseHierarchyElement(ParagraphType.TableRow))
+                    using (docParser.ParseHierarchyElement(ElementType.TableRow))
                     {
-                        using (docParser.ParseHierarchyElement(ParagraphType.TableCell))
+                        using (docParser.ParseHierarchyElement(ElementType.TableCell))
                         {
                             docParser.ParseParagraph(verseNode);
                         }
 
-                        using (docParser.ParseHierarchyElement(ParagraphType.TableCell))
+                        using (docParser.ParseHierarchyElement(ElementType.TableCell))
                         {
                             docParser.ParseParagraph(node2);
                         }
                     }
 
-                    using (docParser.ParseHierarchyElement(ParagraphType.TableRow))
+                    using (docParser.ParseHierarchyElement(ElementType.TableRow))
                     {
-                        using (docParser.ParseHierarchyElement(ParagraphType.TableCell))
+                        using (docParser.ParseHierarchyElement(ElementType.TableCell))
                         {
                             docParser.ParseParagraph(verseNode);
                         }
 
-                        using (docParser.ParseHierarchyElement(ParagraphType.TableCell))
+                        using (docParser.ParseHierarchyElement(ElementType.TableCell))
                         {
                             docParser.ParseParagraph(verseNode);
                         }
                     }
 
-                    using (docParser.ParseHierarchyElement(ParagraphType.TableRow))
+                    using (docParser.ParseHierarchyElement(ElementType.TableRow))
                     {
-                        using (docParser.ParseHierarchyElement(ParagraphType.TableCell))
+                        using (docParser.ParseHierarchyElement(ElementType.TableCell))
                         {
                             docParser.ParseParagraph(emptyNode);
                         }
 
-                        using (docParser.ParseHierarchyElement(ParagraphType.TableCell))
+                        using (docParser.ParseHierarchyElement(ElementType.TableCell))
                         {
                             docParser.ParseParagraph(verseNode);
                         }
@@ -434,12 +463,12 @@ namespace BibleNote.Tests.Analytics
 
             using (var docParser = _documentParserFactory.Create(_documentProvider))
             {
-                using (docParser.ParseHierarchyElement(ParagraphType.Title))
+                using (docParser.ParseHierarchyElement(ElementType.Title))
                 {
                     docParser.ParseParagraph(node);
                 }
 
-                using (docParser.ParseHierarchyElement(ParagraphType.Block))
+                using (docParser.ParseHierarchyElement(ElementType.Block))
                 {
                     docParser.ParseParagraph(verseNode);
                 }
@@ -462,7 +491,7 @@ namespace BibleNote.Tests.Analytics
 
             using (var docParser = _documentParserFactory.Create(_documentProvider))
             {
-                using (docParser.ParseHierarchyElement(ParagraphType.Block))
+                using (docParser.ParseHierarchyElement(ElementType.Block))
                 {
                     docParser.ParseParagraph(node1);
                     docParser.ParseParagraph(node2);
@@ -470,14 +499,14 @@ namespace BibleNote.Tests.Analytics
                     docParser.ParseParagraph(verseNode);
                 }
 
-                using (docParser.ParseHierarchyElement(ParagraphType.Block))
+                using (docParser.ParseHierarchyElement(ElementType.Block))
                 {
                     docParser.ParseParagraph(node1);                    
                     docParser.ParseParagraph(node3);                    
                     docParser.ParseParagraph(verseNode);
                 }
 
-                using (docParser.ParseHierarchyElement(ParagraphType.Block))
+                using (docParser.ParseHierarchyElement(ElementType.Block))
                 {
                     docParser.ParseParagraph(node1);
                     docParser.ParseParagraph(node4);
@@ -509,46 +538,46 @@ namespace BibleNote.Tests.Analytics
 
             using (var docParser = _documentParserFactory.Create(_documentProvider))
             {
-                using (docParser.ParseHierarchyElement(ParagraphType.List))
+                using (docParser.ParseHierarchyElement(ElementType.List))
                 {
-                    using (docParser.ParseHierarchyElement(ParagraphType.ListElement))
+                    using (docParser.ParseHierarchyElement(ElementType.ListElement))
                     {
                         docParser.ParseParagraph(node0);
                         docParser.ParseParagraph(emptyNode);
                         docParser.ParseParagraph(verseNode);
                     }
 
-                    using (docParser.ParseHierarchyElement(ParagraphType.ListElement))
+                    using (docParser.ParseHierarchyElement(ElementType.ListElement))
                     {
                         docParser.ParseParagraph(node1);
 
-                        using (docParser.ParseHierarchyElement(ParagraphType.List))
+                        using (docParser.ParseHierarchyElement(ElementType.List))
                         {
-                            using (docParser.ParseHierarchyElement(ParagraphType.ListElement))
+                            using (docParser.ParseHierarchyElement(ElementType.ListElement))
                             {
                                 docParser.ParseParagraph(emptyNode);
                                 docParser.ParseParagraph(verseNode);
                             }
 
-                            using (docParser.ParseHierarchyElement(ParagraphType.ListElement))
+                            using (docParser.ParseHierarchyElement(ElementType.ListElement))
                             {
                                 docParser.ParseParagraph(node0);
                                 docParser.ParseParagraph(verseNode);
                             }
 
-                            using (docParser.ParseHierarchyElement(ParagraphType.ListElement))
+                            using (docParser.ParseHierarchyElement(ElementType.ListElement))
                             {
                                 docParser.ParseParagraph(node2);
                                 docParser.ParseParagraph(verseNode);
                             }
 
-                            using (docParser.ParseHierarchyElement(ParagraphType.ListElement))
+                            using (docParser.ParseHierarchyElement(ElementType.ListElement))
                             {
                                 docParser.ParseParagraph(node3);
                                 docParser.ParseParagraph(verseNode);
                             }
 
-                            using (docParser.ParseHierarchyElement(ParagraphType.ListElement))
+                            using (docParser.ParseHierarchyElement(ElementType.ListElement))
                             {
                                 docParser.ParseParagraph(node4);
                                 docParser.ParseParagraph(verseNode);
@@ -556,26 +585,26 @@ namespace BibleNote.Tests.Analytics
                         }
                     }
 
-                    using (docParser.ParseHierarchyElement(ParagraphType.ListElement))
+                    using (docParser.ParseHierarchyElement(ElementType.ListElement))
                     {
                         docParser.ParseParagraph(node2);
 
-                        using (docParser.ParseHierarchyElement(ParagraphType.List))
+                        using (docParser.ParseHierarchyElement(ElementType.List))
                         {
-                            using (docParser.ParseHierarchyElement(ParagraphType.ListElement))
+                            using (docParser.ParseHierarchyElement(ElementType.ListElement))
                             {                                
                                 docParser.ParseParagraph(verseNode);
                             }
                         }
                     }
 
-                    using (docParser.ParseHierarchyElement(ParagraphType.ListElement))
+                    using (docParser.ParseHierarchyElement(ElementType.ListElement))
                     {
                         docParser.ParseParagraph(node3);
 
-                        using (docParser.ParseHierarchyElement(ParagraphType.List))
+                        using (docParser.ParseHierarchyElement(ElementType.List))
                         {
-                            using (docParser.ParseHierarchyElement(ParagraphType.ListElement))
+                            using (docParser.ParseHierarchyElement(ElementType.ListElement))
                             {
                                 docParser.ParseParagraph(verseNode);
                             }
@@ -627,14 +656,14 @@ namespace BibleNote.Tests.Analytics
 
             using (var docParser = _documentParserFactory.Create(_documentProvider))
             {
-                using (docParser.ParseHierarchyElement(ParagraphType.Block))
+                using (docParser.ParseHierarchyElement(ElementType.Block))
                 {
 
                     docParser.ParseParagraph(node1);
                     docParser.ParseParagraph(verseNode);
                 }
 
-                using (docParser.ParseHierarchyElement(ParagraphType.Block))
+                using (docParser.ParseHierarchyElement(ElementType.Block))
                 {
 
                     docParser.ParseParagraph(node2);
@@ -658,24 +687,24 @@ namespace BibleNote.Tests.Analytics
 
             using (var docParser = _documentParserFactory.Create(_documentProvider))
             {
-                using (docParser.ParseHierarchyElement(ParagraphType.List))
+                using (docParser.ParseHierarchyElement(ElementType.List))
                 {
-                    using (docParser.ParseHierarchyElement(ParagraphType.ListElement))
+                    using (docParser.ParseHierarchyElement(ElementType.ListElement))
                     {
                         docParser.ParseParagraph(node);                        
                     }
 
-                    using (docParser.ParseHierarchyElement(ParagraphType.ListElement))
+                    using (docParser.ParseHierarchyElement(ElementType.ListElement))
                     {
                         docParser.ParseParagraph(verseNode1);
                     }
 
-                    using (docParser.ParseHierarchyElement(ParagraphType.ListElement))
+                    using (docParser.ParseHierarchyElement(ElementType.ListElement))
                     {
                         docParser.ParseParagraph(emptyNode);
                     }
 
-                    using (docParser.ParseHierarchyElement(ParagraphType.ListElement))
+                    using (docParser.ParseHierarchyElement(ElementType.ListElement))
                     {
                         docParser.ParseParagraph(verseNode2);
                     }
@@ -683,7 +712,7 @@ namespace BibleNote.Tests.Analytics
 
                 CheckParseResults(docParser,
                     new string[] { "Мф 1" },
-                    new string[] { "Мф 1:1", "Мф 1:3-4" },
+                    new string[] { "Мф 1:2", "Мф 1:3-4" },
                     new string[] { "Мф 1:12" });
             }
         }
