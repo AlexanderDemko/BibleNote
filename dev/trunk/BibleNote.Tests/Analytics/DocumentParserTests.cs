@@ -305,6 +305,7 @@ namespace BibleNote.Tests.Analytics
 
                 CheckParseResults(docParser,
                     new string[] { "Мк 5:6" },
+                    new string[] { "Мк 5:12" },
                     new string[] { "Ин 1:1" },
                     new string[] { "Ин 1:12" },
                     new string[] { "Мк 5:12" },

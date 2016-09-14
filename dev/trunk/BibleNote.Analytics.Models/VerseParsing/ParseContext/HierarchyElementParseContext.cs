@@ -69,7 +69,7 @@ namespace BibleNote.Analytics.Models.VerseParsing.ParseContext
                 _chapterEntry = new ChapterEntry();                            
                 foreach (var entry in ParagraphResults.Select(pc => pc.ChapterEntry))
                 {
-                    if (entry?.Valid == false
+                    if (!(entry?.Valid).GetValueOrDefault()
                         || (_chapterEntry.ChapterPointer != null && !entry.ChapterPointer.Equals(_chapterEntry.ChapterPointer)))
                     {
                         _chapterEntry.ChapterPointer = null;
@@ -97,7 +97,7 @@ namespace BibleNote.Analytics.Models.VerseParsing.ParseContext
                 if (hierarchyInfo.CurrentRow > 0)
                     result = hierarchyInfo.FirstRowParseContexts.TryGetAt(hierarchyInfo.CurrentColumn)?.ChapterEntry;
 
-                if (result?.Valid == false && result?.AtStartOfParagraph == false && hierarchyInfo.CurrentColumn > 0)
+                if (!(result?.Valid).GetValueOrDefault() && !(result?.AtStartOfParagraph).GetValueOrDefault() && hierarchyInfo.CurrentColumn > 0)
                     result = hierarchyInfo.FirstColumnParseContexts.TryGetAt(hierarchyInfo.CurrentRow)?.ChapterEntry;
             }
             else if ((ElementType == ElementType.Linear || PreviousSibling?.ElementType == ElementType.Linear)                 
