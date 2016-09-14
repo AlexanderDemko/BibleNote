@@ -22,49 +22,7 @@ namespace BibleNote.Analytics.Models.VerseParsing
                 if (!Parsed)
                     return null;
 
-                if (!_chapterEntryWasSearched)
-                {
-                    _chapterEntryWasSearched = true;
-
-                    if (VerseEntries.Any())
-                    {
-                        _chapterEntry = new ChapterEntry();
-
-                        VersePointer chapterVp = null;
-                        var correctEntryType = false;                        
-                        foreach (var verseEntry in VerseEntries)
-                        {
-                            if ( chapterVp != null
-                                && (verseEntry.VersePointer.BookIndex != chapterVp.BookIndex || verseEntry.VersePointer.Chapter != chapterVp.Chapter))
-                            {
-                                chapterVp = null;
-                                break;
-                            }
-
-                            if (chapterVp == null)
-                                chapterVp = verseEntry.VersePointer;
-
-                            if (verseEntry.StartIndex == 0)
-                                _chapterEntry.AtStartOfParagraph = true;
-
-                            if (verseEntry.VersePointer.IsMultiVerse <= MultiVerse.OneChapter)
-                            {
-                                if (verseEntry.EntryType == VerseEntryType.BookChapter || verseEntry.EntryType == VerseEntryType.BookChapterVerse)
-                                    correctEntryType = true;
-                            }
-                            else
-                            {
-                                correctEntryType = false;
-                                break;
-                            }
-                        }
-
-                        if (chapterVp != null && correctEntryType)
-                            _chapterEntry.ChapterPointer = chapterVp.ToChapterPointer();
-                    }
-                }
-
-                return _chapterEntry;
+                return GetChapterEntry();              
             }
         }
 
@@ -89,6 +47,53 @@ namespace BibleNote.Analytics.Models.VerseParsing
         public override string ToString()
         {
             return $"{VerseEntries.Count} verses in: {Text}";
+        }
+
+        private ChapterEntry GetChapterEntry()
+        {
+            if (!_chapterEntryWasSearched)
+            {
+                _chapterEntryWasSearched = true;
+
+                if (VerseEntries.Any())
+                {
+                    _chapterEntry = new ChapterEntry();
+
+                    VersePointer chapterVp = null;
+                    var correctEntryType = false;
+                    foreach (var verseEntry in VerseEntries)
+                    {
+                        if (chapterVp != null
+                            && (verseEntry.VersePointer.BookIndex != chapterVp.BookIndex || verseEntry.VersePointer.Chapter != chapterVp.Chapter))
+                        {
+                            chapterVp = null;
+                            break;
+                        }
+
+                        if (chapterVp == null)
+                            chapterVp = verseEntry.VersePointer;
+
+                        if (verseEntry.StartIndex == 0)
+                            _chapterEntry.AtStartOfParagraph = true;
+
+                        if (verseEntry.VersePointer.IsMultiVerse <= MultiVerse.OneChapter)
+                        {
+                            if (verseEntry.EntryType == VerseEntryType.BookChapter || verseEntry.EntryType == VerseEntryType.BookChapterVerse)
+                                correctEntryType = true;
+                        }
+                        else
+                        {
+                            correctEntryType = false;
+                            break;
+                        }
+                    }
+
+                    if (chapterVp != null && correctEntryType)
+                        _chapterEntry.ChapterPointer = chapterVp.ToChapterPointer();
+                }
+            }
+
+            return _chapterEntry;
         }
     }
 }
