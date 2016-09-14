@@ -1,4 +1,5 @@
-﻿using BibleNote.Analytics.Models.Contracts.ParseContext;
+﻿using System;
+using BibleNote.Analytics.Models.Contracts.ParseContext;
 
 namespace BibleNote.Analytics.Models.VerseParsing.ParseContext
 {
@@ -8,9 +9,13 @@ namespace BibleNote.Analytics.Models.VerseParsing.ParseContext
 
         public ParagraphParseResult ParseResult { get; private set; }
 
-        public IParagraphParseContext PreviousSibling { get; private set; }
+        public IElementParseContext PreviousSibling { get; private set; }
 
-        public ParagraphParseContext(IParagraphParseContext previousSibling)
+        public ElementType ElementType { get { return ElementType.Linear; } }
+
+        public ChapterEntry ChapterEntry { get { return ParseResult.ChapterEntry; } }
+
+        public ParagraphParseContext(IElementParseContext previousSibling)
         {
             PreviousSibling = previousSibling;
         }
@@ -25,12 +30,9 @@ namespace BibleNote.Analytics.Models.VerseParsing.ParseContext
             ParseResult = paragraphParseResult;
         }
 
-        public ChapterEntry GetPreviousChapter()
+        public ChapterEntry GetHierarchyChapterEntry()
         {
-            if (PreviousSibling == null)
-                return null;
-
-            return PreviousSibling.ParseResult.ChapterEntry ?? PreviousSibling.GetPreviousChapter();                            
+            return ParseResult.ChapterEntry ?? PreviousSibling?.GetHierarchyChapterEntry();                            
         }
 
         public void SetParsed()

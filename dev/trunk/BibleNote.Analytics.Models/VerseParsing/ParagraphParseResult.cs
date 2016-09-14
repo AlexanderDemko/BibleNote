@@ -26,14 +26,15 @@ namespace BibleNote.Analytics.Models.VerseParsing
                 {
                     _chapterEntryWasSearched = true;
 
-                    if (!VerseEntries.Any(v => v.VersePointer.IsMultiVerse > MultiVerse.OneChapter))
+                    if (VerseEntries.Any())
                     {
+                        _chapterEntry = new ChapterEntry();
+
                         VersePointer chapterVp = null;
-                        var correctEntryType = false;
-                        var atStartOfParagraph = false;
+                        var correctEntryType = false;                        
                         foreach (var verseEntry in VerseEntries)
                         {
-                            if (chapterVp != null
+                            if ( chapterVp != null
                                 && (verseEntry.VersePointer.BookIndex != chapterVp.BookIndex || verseEntry.VersePointer.Chapter != chapterVp.Chapter))
                             {
                                 chapterVp = null;
@@ -43,15 +44,23 @@ namespace BibleNote.Analytics.Models.VerseParsing
                             if (chapterVp == null)
                                 chapterVp = verseEntry.VersePointer;
 
-                            if (verseEntry.EntryType == VerseEntryType.BookChapter || verseEntry.EntryType == VerseEntryType.BookChapterVerse)
-                                correctEntryType = true;
-
                             if (verseEntry.StartIndex == 0)
-                                atStartOfParagraph = true;
+                                _chapterEntry.AtStartOfParagraph = true;
+
+                            if (verseEntry.VersePointer.IsMultiVerse <= MultiVerse.OneChapter)
+                            {
+                                if (verseEntry.EntryType == VerseEntryType.BookChapter || verseEntry.EntryType == VerseEntryType.BookChapterVerse)
+                                    correctEntryType = true;
+                            }
+                            else
+                            {
+                                correctEntryType = false;
+                                break;
+                            }
                         }
 
                         if (chapterVp != null && correctEntryType)
-                            _chapterEntry = new ChapterEntry(chapterVp.ToChapterPointer()) { AtStartOfParagraph = atStartOfParagraph };
+                            _chapterEntry.ChapterPointer = chapterVp.ToChapterPointer();
                     }
                 }
 
@@ -75,6 +84,11 @@ namespace BibleNote.Analytics.Models.VerseParsing
         {
             VerseEntries = new List<VerseEntry>();
             NotFoundVerses = new List<SimpleVersePointer>();            
+        }
+
+        public override string ToString()
+        {
+            return $"{VerseEntries.Count} verses in: {Text}";
         }
     }
 }

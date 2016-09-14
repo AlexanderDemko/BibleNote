@@ -8,36 +8,22 @@ using System.Threading.Tasks;
 
 namespace BibleNote.Analytics.Models.Contracts.ParseContext
 {
-    public enum ParagraphType
+    
+
+    public interface IHierarchyElementParseContext : IElementParseContext
     {
-        ListElement,
-        Inline,
-        Block,
-        Title,
-        Table,
-        TableRow,
-        TableCell,
-        List
-    }
-
-    public interface IHierarchyElementParseContext
-    {
-        ParagraphType ParagraphType { get; set; }
-
-        IHierarchyInfo HierarchyInfo { get; set; }
-
-        ChapterEntry ChapterEntry { get; }
+        IHierarchyInfo HierarchyInfo { get; set; }        
 
         List<ParagraphParseResult> ParagraphResults { get; }
 
-        IHierarchyElementParseContext ParentHierarchy { get; }
-
-        IHierarchyElementParseContext PreviousSibling { get; set; }
+        IHierarchyElementParseContext ParentHierarchy { get; }        
 
         bool Parsed { get; set; }
 
         void AddParagraphResult(ParagraphParseResult paragraphResult);
 
-        ChapterEntry GetHierarchyChapter();
+        void ChangeElementType(ElementType elementType);
+
+        ChapterEntry GetPreviousSiblingChapterEntry();
     }
 }

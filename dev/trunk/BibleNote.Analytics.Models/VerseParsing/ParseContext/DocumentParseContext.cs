@@ -5,9 +5,7 @@ namespace BibleNote.Analytics.Models.VerseParsing.ParseContext
 {
     public class DocumentParseContext : IDocumentParseContextEditor
     {
-        private IHierarchyElementParseContext _previousHierarchy;
-
-        private IParagraphParseContext _previousParagraphParseContext;
+        private IElementParseContext _previousElement;        
 
         public ChapterEntry TitleChapter { get; private set; }        
 
@@ -22,52 +20,53 @@ namespace BibleNote.Analytics.Models.VerseParsing.ParseContext
 
         public DisposeHandler ParseParagraph()
         {
-            CurrentParagraph = new ParagraphParseContext(_previousParagraphParseContext);
-            _previousParagraphParseContext = CurrentParagraph;
+            CurrentParagraph = new ParagraphParseContext(_previousElement);            
 
             return new DisposeHandler(() =>
             {
                 if (CurrentHierarchy != null && CurrentParagraph.ParseResult.IsValuable)                
-                    CurrentHierarchy.AddParagraphResult(CurrentParagraph.ParseResult);                
+                    CurrentHierarchy.AddParagraphResult(CurrentParagraph.ParseResult);
+
+                _previousElement = CurrentParagraph;
             });
         }
 
-        public void EnterHierarchyElement(ParagraphType paragraphType)
+        public void EnterHierarchyElement(ElementType paragraphType)
         {
-            CurrentHierarchy = new HierarchyElementParseContext(paragraphType, CurrentHierarchy) { PreviousSibling = _previousHierarchy };
-            _previousHierarchy = null;
+            CurrentHierarchy = new HierarchyElementParseContext(paragraphType, _previousElement, CurrentHierarchy);
+            _previousElement = null;         // чтобы, когда мы войдём в параграф, у него PreviousSibling был null
 
             switch (paragraphType)
             {
-                case ParagraphType.ListElement:
+                case ElementType.ListElement:
                     {
-                        if (CurrentHierarchy.ParentHierarchy?.ParagraphType != ParagraphType.List)
-                            CurrentHierarchy.ParagraphType = ParagraphType.Inline;
+                        if (CurrentHierarchy.ParentHierarchy?.ElementType != ElementType.List)
+                            CurrentHierarchy.ChangeElementType(ElementType.Linear);
                     }
                     break;
-                case ParagraphType.Table:
+                case ElementType.Table:
                     {
                         CurrentHierarchy.HierarchyInfo = new TableHierarchyInfo();
                     }
                     break;
-                case ParagraphType.TableRow:
+                case ElementType.TableRow:
                     {
-                        if (CurrentHierarchy.ParentHierarchy?.ParagraphType == ParagraphType.Table)
+                        if (CurrentHierarchy.ParentHierarchy?.ElementType == ElementType.Table)
                         {
                             var hierarchyInfo = ((TableHierarchyInfo)CurrentHierarchy.ParentHierarchy.HierarchyInfo);
                             hierarchyInfo.CurrentRow++;
                             hierarchyInfo.CurrentColumn = -1;
                         }
                         else
-                            CurrentHierarchy.ParagraphType = ParagraphType.Inline;
+                            CurrentHierarchy.ChangeElementType(ElementType.Linear);
                     }
                     break;
-                case ParagraphType.TableCell:
+                case ElementType.TableCell:
                     {
-                        if (CurrentHierarchy.ParentHierarchy?.ParagraphType == ParagraphType.TableRow)
+                        if (CurrentHierarchy.ParentHierarchy?.ElementType == ElementType.TableRow)
                             ((TableHierarchyInfo)CurrentHierarchy.ParentHierarchy.ParentHierarchy.HierarchyInfo).CurrentColumn++;
                         else
-                            CurrentHierarchy.ParagraphType = ParagraphType.Inline;
+                            CurrentHierarchy.ChangeElementType(ElementType.Linear);
                     }
                     break;
             }
@@ -77,7 +76,7 @@ namespace BibleNote.Analytics.Models.VerseParsing.ParseContext
         {
             CurrentHierarchy.Parsed = true;
 
-            if (CurrentHierarchy.ParagraphType == ParagraphType.TableCell)
+            if (CurrentHierarchy.ElementType == ElementType.TableCell)
             {
                 var hierarchyInfo = (TableHierarchyInfo)CurrentHierarchy.ParentHierarchy.ParentHierarchy.HierarchyInfo;                
                 if (hierarchyInfo.CurrentRow == 0)                                    
@@ -86,13 +85,12 @@ namespace BibleNote.Analytics.Models.VerseParsing.ParseContext
                 if (hierarchyInfo.CurrentColumn == 0)                   
                     hierarchyInfo.FirstColumnParseContexts.Add(CurrentHierarchy);                
             }
-            else if (CurrentHierarchy.ParagraphType == ParagraphType.Title)
+            else if (CurrentHierarchy.ElementType == ElementType.Title)
             {   
                 SetTitleVerse(CurrentHierarchy.ChapterEntry);
             }
 
-            _previousHierarchy = CurrentHierarchy;
-            _previousParagraphParseContext = null;            
+            _previousElement = CurrentHierarchy;            
             CurrentHierarchy = CurrentHierarchy.ParentHierarchy;            
         }
         
@@ -101,8 +99,7 @@ namespace BibleNote.Analytics.Models.VerseParsing.ParseContext
             TitleChapter = null;            
             CurrentParagraph = null;
             CurrentHierarchy = null;
-            _previousHierarchy = null;
-            _previousParagraphParseContext = null;
+            _previousElement = null;            
         }
     }
 }
