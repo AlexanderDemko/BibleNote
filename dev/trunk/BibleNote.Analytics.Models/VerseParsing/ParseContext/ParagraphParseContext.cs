@@ -32,13 +32,10 @@ namespace BibleNote.Analytics.Models.VerseParsing.ParseContext
 
         public ChapterEntry GetHierarchyChapterEntry()
         {
-            if (ParseResult.ChapterEntry?.AtStartOfParagraph == true)
-            {
-                if (ParseResult.ChapterEntry?.Valid == true)
-                    return ParseResult.ChapterEntry;
-                else 
-                    return null;
-            }            
+            if (ParseResult.ChapterEntry != null 
+                && ParseResult.ChapterEntry.AtStartOfParagraph 
+                && (ParseResult.ChapterEntry.Found || ParseResult.ChapterEntry.Invalid))
+                return ParseResult.ChapterEntry;
 
             return PreviousSibling?.GetHierarchyChapterEntry();                            
         }
