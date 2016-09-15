@@ -106,12 +106,18 @@ namespace BibleNote.Analytics.Services.VerseParsing
         /// <returns></returns>
         private static bool VerseRule(VerseEntry verseEntry, IDocumentParseContext docParseContext)
         {
-            var parentVerse = docParseContext.CurrentParagraph.LatestVerseEntry?.VersePointer
-                            ?? docParseContext.CurrentParagraph.GetHierarchyChapterEntry()?.ChapterPointer
-                            ?? docParseContext.CurrentHierarchy?.GetHierarchyChapterEntry()?.ChapterPointer
-                            ?? docParseContext.TitleChapter?.ChapterPointer;
+            var parentVerse = docParseContext.CurrentParagraph.LatestVerseEntry?.VersePointer;
+            if (parentVerse == null)
+            {
+                var chapterEntry = docParseContext.CurrentParagraph.GetHierarchyChapterEntry()
+                                ?? docParseContext.CurrentHierarchy?.GetHierarchyChapterEntry()
+                                ?? docParseContext.TitleChapter;
 
-            if (parentVerse != null)
+                if (chapterEntry?.Found == true)                
+                    parentVerse = chapterEntry.ChapterPointer;
+            }               
+
+            if (parentVerse != null && parentVerse.IsMultiVerse <= Models.Verse.MultiVerse.OneChapter)
             {
                 verseEntry.VersePointer.Book = parentVerse.Book;
                 verseEntry.VersePointer.SetChapter(parentVerse.MostTopChapter);

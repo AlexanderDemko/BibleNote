@@ -311,7 +311,7 @@ namespace BibleNote.Tests.Analytics
                     new string[] { "Мк 5:12" },
                     new string[] { "Ин 1:1" },
                     new string[] { "Ин 1:12" },
-                    new string[] { "Мк 5:12" },
+                    new string[] { "Ин 1:12" },
                     new string[] { "Мк 5:12" });
             }
         }
@@ -573,6 +573,11 @@ namespace BibleNote.Tests.Analytics
                             }
 
                             using (docParser.ParseHierarchyElement(ElementType.ListElement))
+                            {                                
+                                docParser.ParseParagraph(verseNode);
+                            }
+
+                            using (docParser.ParseHierarchyElement(ElementType.ListElement))
                             {
                                 docParser.ParseParagraph(node3);
                                 docParser.ParseParagraph(verseNode);
@@ -621,11 +626,10 @@ namespace BibleNote.Tests.Analytics
                     new string[] { "1Петр 3:3" },
                     new string[] { "1Петр 3:12" },
                     new string[] { "Мк 2:2" },
-                    new string[] { "Мф 1:12" },
-                    new string[] { "Лк 3-4" },
-                    new string[] { "Мф 1:12" },
-                    new string[] { "Ин 5-6" },
-                    new string[] { "Мф 1:12" },
+                    new string[] { "1Петр 3:12" },
+                    new string[] { "1Петр 3:12" },
+                    new string[] { "Лк 3-4" },                    
+                    new string[] { "Ин 5-6" },                    
                     new string[] { "Мк 2:2" },
                     //new string[] { "Мк 2:12" }, ?????
                     new string[] { "Лк 3-4" });
@@ -715,6 +719,26 @@ namespace BibleNote.Tests.Analytics
                     new string[] { "Мф 1" },
                     new string[] { "Мф 1:2", "Мф 1:3-4" },
                     new string[] { "Мф 1:12" });
+            }
+        }
+
+        [TestMethod]
+        public void DocParser_Test13()
+        {            
+            var node1 = GetNode("Ин 1");
+            var node2 = GetNode("Тест Мф 1-2 и :5");            
+            var verseNode = GetNode(":12");
+
+            using (var docParser = _documentParserFactory.Create(_documentProvider))
+            {
+                docParser.ParseParagraph(node1);
+                docParser.ParseParagraph(node2);
+                docParser.ParseParagraph(verseNode);
+
+                CheckParseResults(docParser,
+                    new string[] { "Ин 1" },
+                    new string[] { "Мф 1-2" },
+                    new string[] { "Ин 1:12" });
             }
         }
     }

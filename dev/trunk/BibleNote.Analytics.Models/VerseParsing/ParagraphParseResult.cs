@@ -46,7 +46,7 @@ namespace BibleNote.Analytics.Models.VerseParsing
 
         public override string ToString()
         {
-            return $"{VerseEntries.Count} verses in: {Text}";
+            return VerseEntries.Count == 1 ? $"{VerseEntries.First().VersePointer}" : $"{VerseEntries.Count} verses in: {Text}";
         }
 
         private ChapterEntry GetChapterEntry()
@@ -59,14 +59,13 @@ namespace BibleNote.Analytics.Models.VerseParsing
                 {
                     _chapterEntry = new ChapterEntry();
 
-                    VersePointer chapterVp = null;
-                    var correctEntryType = false;
+                    VersePointer chapterVp = null;                    
                     foreach (var verseEntry in VerseEntries)
                     {
                         if (chapterVp != null
                             && (verseEntry.VersePointer.BookIndex != chapterVp.BookIndex || verseEntry.VersePointer.Chapter != chapterVp.Chapter))
-                        {
-                            chapterVp = null;
+                        {                            
+                            _chapterEntry.Invalid = true;
                             break;
                         }
 
@@ -79,16 +78,16 @@ namespace BibleNote.Analytics.Models.VerseParsing
                         if (verseEntry.VersePointer.IsMultiVerse <= MultiVerse.OneChapter)
                         {
                             if (verseEntry.EntryType == VerseEntryType.BookChapter || verseEntry.EntryType == VerseEntryType.BookChapterVerse)
-                                correctEntryType = true;
+                                _chapterEntry.CorrectType = true;
                         }
                         else
-                        {
-                            correctEntryType = false;
+                        {                            
+                            _chapterEntry.Invalid = true;
                             break;
                         }
                     }
 
-                    if (chapterVp != null && correctEntryType)
+                    if (chapterVp != null && !_chapterEntry.Invalid)
                         _chapterEntry.ChapterPointer = chapterVp.ToChapterPointer();
                 }
             }

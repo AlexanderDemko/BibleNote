@@ -46,16 +46,12 @@ namespace BibleNote.Analytics.Models.VerseParsing.ParseContext
         
         public ChapterEntry GetHierarchyChapterEntry()
         {
-            if (ChapterEntry?.Valid == true)
-                return ChapterEntry;
-            else if (ChapterEntry?.AtStartOfParagraph == true)
-                return null;            
+            if (ChapterEntry != null && (ChapterEntry.Found || (ChapterEntry.AtStartOfParagraph && ChapterEntry.Invalid)))
+                return ChapterEntry;            
 
             var calculatedChapterEntry = GetCalculatedChapterEntry();
-            if (calculatedChapterEntry?.Valid == true) 
-                return calculatedChapterEntry;
-            else if (calculatedChapterEntry?.AtStartOfParagraph == true)
-                return null;
+            if (calculatedChapterEntry != null && (calculatedChapterEntry.Found || (calculatedChapterEntry.AtStartOfParagraph && calculatedChapterEntry.Invalid)))                
+                return calculatedChapterEntry;            
 
             return  ParentHierarchy?.GetHierarchyChapterEntry();
         }
@@ -66,11 +62,18 @@ namespace BibleNote.Analytics.Models.VerseParsing.ParseContext
             {
                 _chapterEntryWasSearched = true;
 
-                _chapterEntry = new ChapterEntry();                            
-                foreach (var entry in ParagraphResults.Select(pc => pc.ChapterEntry))
+                _chapterEntry = new ChapterEntry();
+                foreach (var entry in ParagraphResults.Select(pr => pr.ChapterEntry))
                 {
-                    if (!(entry?.Valid).GetValueOrDefault()
-                        || (_chapterEntry.ChapterPointer != null && !entry.ChapterPointer.Equals(_chapterEntry.ChapterPointer)))
+                    if (entry?.Invalid == true)
+                    {
+                        _chapterEntry.AtStartOfParagraph = entry.AtStartOfParagraph;
+                        _chapterEntry.Invalid = true;
+                        break;
+                    }
+
+                    if (entry?.ChapterPointer == null
+                        || (_chapterEntry.ChapterPointer != null && entry.ChapterPointer?.Equals(_chapterEntry.ChapterPointer) == false))
                     {
                         _chapterEntry.ChapterPointer = null;
                         break;
@@ -79,8 +82,12 @@ namespace BibleNote.Analytics.Models.VerseParsing.ParseContext
                     if (_chapterEntry.ChapterPointer == null)
                         _chapterEntry.ChapterPointer = entry.ChapterPointer;
 
-                    if (entry.AtStartOfParagraph)
-                        _chapterEntry.AtStartOfParagraph = true;
+                    if (entry.Found)
+                    {
+                        _chapterEntry.CorrectType = true;
+                        if (entry.AtStartOfParagraph)
+                            _chapterEntry.AtStartOfParagraph = true;
+                    }
                 }
             }
 
@@ -97,13 +104,15 @@ namespace BibleNote.Analytics.Models.VerseParsing.ParseContext
                 if (hierarchyInfo.CurrentRow > 0)
                     result = hierarchyInfo.FirstRowParseContexts.TryGetAt(hierarchyInfo.CurrentColumn)?.ChapterEntry;
 
-                if (!(result?.Valid).GetValueOrDefault() && !(result?.AtStartOfParagraph).GetValueOrDefault() && hierarchyInfo.CurrentColumn > 0)
+                if (!(result?.Found).GetValueOrDefault() && !(result?.AtStartOfParagraph).GetValueOrDefault() && hierarchyInfo.CurrentColumn > 0)
                     result = hierarchyInfo.FirstColumnParseContexts.TryGetAt(hierarchyInfo.CurrentRow)?.ChapterEntry;
             }
-            else if ((ElementType == ElementType.Linear || PreviousSibling?.ElementType == ElementType.Linear)                 
-                     && PreviousSibling?.ChapterEntry?.AtStartOfParagraph == true)
+            else if (ElementType == ElementType.Linear || PreviousSibling?.ElementType == ElementType.Linear)
             {
-                result = PreviousSibling.ChapterEntry;
+                if (PreviousSibling?.ChapterEntry?.AtStartOfParagraph == true)
+                    result = PreviousSibling.ChapterEntry;
+                else if (PreviousSibling?.ChapterEntry?.Found == true)
+                    result = ChapterEntry.Terminator;
             }
             else if (ElementType == ElementType.ListElement)
             {
@@ -117,10 +126,12 @@ namespace BibleNote.Analytics.Models.VerseParsing.ParseContext
         {
             if (PreviousSibling?.ElementType == ElementType.ListElement)    // тогда в PreviousSibling точно хранится IHierarchyElementParseContext
             {
-                if (PreviousSibling?.ChapterEntry?.AtStartOfParagraph == true)
-                    return PreviousSibling?.ChapterEntry;
-                else if (PreviousSibling != null)
-                    return ((IHierarchyElementParseContext)PreviousSibling).GetPreviousSiblingChapterEntry();
+                if (PreviousSibling?.ChapterEntry != null 
+                    && PreviousSibling.ChapterEntry.AtStartOfParagraph 
+                    && (PreviousSibling.ChapterEntry.Invalid || PreviousSibling.ChapterEntry.Found))
+                        return PreviousSibling.ChapterEntry;
+                
+                return ((IHierarchyElementParseContext)PreviousSibling)?.GetPreviousSiblingChapterEntry();
             }
 
             return null;
