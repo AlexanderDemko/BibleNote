@@ -1,6 +1,7 @@
 ﻿using BibleNote.Analytics.Contracts.Providers;
 using BibleNote.Analytics.Core.Helpers;
 using BibleNote.Analytics.Providers.FileNavigationProvider;
+using BibleNote.Analytics.Providers.WebNavigationProvider;
 using HtmlAgilityPack;
 using System;
 using System.Collections.Generic;
@@ -38,10 +39,10 @@ namespace BibleNote.Analytics.Providers.HtmlProvider
                     //todo: надо обернуть каждый обзац в <p></p>
                 }
             }
-            //else if (documentId is WebDocumentId)
-            //{
-
-            //}
+            else if (documentId is WebDocumentId)
+            {
+                throw new NotImplementedException();
+            }
 
             if (html != null)
             {
@@ -65,7 +66,7 @@ namespace BibleNote.Analytics.Providers.HtmlProvider
                 var filePath = ((FileDocumentId)DocumentId).FilePath;
                 var ext = Path.GetExtension(filePath);
 
-                if (ext != ".txt")
+                if (ext != ".txt")      // todo: не нравится мне так проверять. Надо как-то лучше продумать, как суммировать всю иерархию IsReadonly
                 {
                     var encoding = FileUtils.GetEncoding(filePath);
                     HtmlDocument.Save(filePath, encoding);
