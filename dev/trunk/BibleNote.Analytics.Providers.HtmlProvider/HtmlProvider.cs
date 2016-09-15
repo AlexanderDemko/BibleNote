@@ -17,10 +17,7 @@ namespace BibleNote.Analytics.Providers.HtmlProvider
 
         private readonly IHtmlDocumentConnector _htmlDocumentConnector;
 
-        public bool IsReadonly      // наверное, этот параметр надо вынести выше - на уровень NavigationProviderInstance
-        {
-            get { return false; }  // а почему вообще localHtmlProvider должен отличаться от webHtmlProvider? Локальные html файлы лучше тоже не менять, а преобразовывать при отображении только.
-        }
+        public bool IsReadonly { get { return false; } }   // todo: надо дополнительно этот параметр вынести выше - на уровень NavigationProviderInstance
 
         public string GetVersePointerLink(VersePointer versePointer)
         {

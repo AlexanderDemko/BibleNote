@@ -74,6 +74,10 @@
       <Project>{a2538a2f-ea54-4f42-b1eb-cf4b2e3ed503}</Project>
       <Name>BibleNote.Analytics.Providers.FileNavigationProvider</Name>
     </ProjectReference>
+    <ProjectReference Include="..\BibleNote.Analytics.Providers.WebNavigationProvider\BibleNote.Analytics.Providers.WebNavigationProvider.csproj">
+      <Project>{2a3c1f30-dfdf-4dab-9ddf-0b1b3153804b}</Project>
+      <Name>BibleNote.Analytics.Providers.WebNavigationProvider</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
