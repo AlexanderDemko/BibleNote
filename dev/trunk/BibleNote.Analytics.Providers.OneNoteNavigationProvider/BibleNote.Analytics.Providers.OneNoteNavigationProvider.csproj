@@ -4,11 +4,11 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{C4E38CA9-E8B5-4D53-867D-185DB9205E19}</ProjectGuid>
+    <ProjectGuid>{8773C46A-774C-43C7-9ECD-EEC19FC5F837}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>BibleNote.Analytics.Providers.OneNoteProvider</RootNamespace>
-    <AssemblyName>BibleNote.Analytics.Providers.OneNoteProvider</AssemblyName>
+    <RootNamespace>BibleNote.Analytics.Providers.OneNoteNavigationProvider</RootNamespace>
+    <AssemblyName>BibleNote.Analytics.Providers.OneNoteNavigationProvider</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <SccProjectName>SAK</SccProjectName>
@@ -34,10 +34,6 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="HtmlAgilityPack, Version=1.4.9.5, Culture=neutral, PublicKeyToken=bd319b19eaf3b43a, processorArchitecture=MSIL">
-      <HintPath>..\packages\HtmlAgilityPack.1.4.9.5\lib\Net45\HtmlAgilityPack.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
@@ -48,11 +44,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="OneNoteDocumentHandler.cs" />
-    <Compile Include="OneNoteDocumentConnector.cs" />
-    <Compile Include="IOneNoteDocumentConnector.cs" />
-    <Compile Include="IOneNoteDocumentHandler.cs" />
-    <Compile Include="OneNoteProvider.cs" />
+    <Compile Include="OneNoteDocumentId.cs" />
+    <Compile Include="OneNoteNavigationProvider.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -60,21 +53,6 @@
       <Project>{a47192d6-2dc9-40d5-b28c-ad55e298f68f}</Project>
       <Name>BibleNote.Analytics.Contracts</Name>
     </ProjectReference>
-    <ProjectReference Include="..\BibleNote.Analytics.Core\BibleNote.Analytics.Core.csproj">
-      <Project>{72939ebb-2258-4ee9-9645-4944a6450192}</Project>
-      <Name>BibleNote.Analytics.Core</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\BibleNote.Analytics.Models\BibleNote.Analytics.Models.csproj">
-      <Project>{209f7653-c94e-48b1-9ad5-a99d1c368983}</Project>
-      <Name>BibleNote.Analytics.Models</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\BibleNote.Analytics.Providers.OneNoteNavigationProvider\BibleNote.Analytics.Providers.OneNoteNavigationProvider.csproj">
-      <Project>{8773c46a-774c-43c7-9ecd-eec19fc5f837}</Project>
-      <Name>BibleNote.Analytics.Providers.OneNoteNavigationProvider</Name>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

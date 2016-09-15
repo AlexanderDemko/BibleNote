@@ -1,13 +1,8 @@
 ﻿using BibleNote.Analytics.Contracts.Providers;
 using BibleNote.Analytics.Core.Helpers;
-using BibleNote.Analytics.Providers.FileNavigationProvider;
+using BibleNote.Analytics.Providers.OneNoteNavigationProvider;
 using HtmlAgilityPack;
 using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace BibleNote.Analytics.Providers.HtmlProvider
 {
@@ -27,7 +22,7 @@ namespace BibleNote.Analytics.Providers.HtmlProvider
         {
             string html = null;
 
-            if (documentId is FileDocumentId)
+            if (documentId is OneNoteDocumentId)
             {
                 здесь
             }
