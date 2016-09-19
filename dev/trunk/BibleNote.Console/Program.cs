@@ -18,6 +18,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.Practices.Unity;
 using BibleNote.Analytics.Models.Verse;
+using BibleNote.Analytics.Providers.OneNote.Services;
 
 namespace BibleNoteConsole
 {
@@ -39,7 +40,14 @@ namespace BibleNoteConsole
             DIContainer.Container.RegisterInstance<IConfigurationManager>(new MockConfigurationManager());
             ModulesManager = DIContainer.Resolve<IModulesManager>();
 
-            VersePointerFactory = DIContainer.Resolve<IVersePointerFactory>();
+            DIContainer.Container.RegisterType<OneNoteUtils>();
+
+            var oneNoteUtils = DIContainer.Resolve<OneNoteUtils>();
+
+            var oneNoteApp = oneNoteUtils.CreateOneNoteAppSafe();
+            string pageId = oneNoteApp.Windows.CurrentWindow.CurrentPageId;            
+            var xDoc = oneNoteUtils.GetPageContent(ref oneNoteApp, pageId);
+            
 
             //ConvertTextModule(@"C:\temp\nrkv.txt");
             //SaveTextModule(@"c:\temp\nkrv.txt");
