@@ -4,11 +4,11 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{446BEB96-9A56-4309-B770-F42CC0896C82}</ProjectGuid>
+    <ProjectGuid>{2A3C1F30-DFDF-4DAB-9DDF-0B1B3153804B}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>BibleNote.Analytics.Providers.WordProvider</RootNamespace>
-    <AssemblyName>BibleNote.Analytics.Providers.WordProvider</AssemblyName>
+    <RootNamespace>BibleNote.Analytics.Providers.Navigation.Web</RootNamespace>
+    <AssemblyName>BibleNote.Analytics.Providers.Navigation.Web</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <SccProjectName>SAK</SccProjectName>
@@ -44,17 +44,14 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="WordProvider.cs" />
+    <Compile Include="WebDocumentId.cs" />
+    <Compile Include="WebNavigationProvider.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\BibleNote.Analytics.Contracts\BibleNote.Analytics.Contracts.csproj">
       <Project>{a47192d6-2dc9-40d5-b28c-ad55e298f68f}</Project>
       <Name>BibleNote.Analytics.Contracts</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\BibleNote.Analytics.Models\BibleNote.Analytics.Models.csproj">
-      <Project>{209f7653-c94e-48b1-9ad5-a99d1c368983}</Project>
-      <Name>BibleNote.Analytics.Models</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BibleNote.Analytics.Providers.WebNavigationProvider
+namespace BibleNote.Analytics.Providers.Navigation.Web
 {
     public class WebNavigationProvider : INavigationProvider
     {

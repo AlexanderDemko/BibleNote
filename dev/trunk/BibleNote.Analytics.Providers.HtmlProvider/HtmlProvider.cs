@@ -9,7 +9,7 @@ using BibleNote.Analytics.Models.VerseParsing;
 using BibleNote.Analytics.Core.Constants;
 using BibleNote.Analytics.Models.Contracts.ParseContext;
 
-namespace BibleNote.Analytics.Providers.HtmlProvider
+namespace BibleNote.Analytics.Providers.Html
 {
     public class HtmlProvider : IDocumentProvider
     {

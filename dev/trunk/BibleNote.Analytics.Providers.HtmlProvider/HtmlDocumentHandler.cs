@@ -1,16 +1,12 @@
 ﻿using BibleNote.Analytics.Contracts.Providers;
 using BibleNote.Analytics.Core.Helpers;
-using BibleNote.Analytics.Providers.FileNavigationProvider;
-using BibleNote.Analytics.Providers.WebNavigationProvider;
+using BibleNote.Analytics.Providers.Navigation.File;
+using BibleNote.Analytics.Providers.Navigation.Web;
 using HtmlAgilityPack;
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace BibleNote.Analytics.Providers.HtmlProvider
+namespace BibleNote.Analytics.Providers.Html
 {
     public class HtmlDocumentHandler : IHtmlDocumentHandler
     {

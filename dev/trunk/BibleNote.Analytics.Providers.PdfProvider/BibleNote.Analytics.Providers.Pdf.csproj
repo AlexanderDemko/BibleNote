@@ -7,8 +7,8 @@
     <ProjectGuid>{428953FE-AF1D-40A4-B195-059BEBBC3966}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>BibleNote.Analytics.Providers.PdfProvider</RootNamespace>
-    <AssemblyName>BibleNote.Analytics.Providers.PdfProvider</AssemblyName>
+    <RootNamespace>BibleNote.Analytics.Providers.Pdf</RootNamespace>
+    <AssemblyName>BibleNote.Analytics.Providers.Pdf</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <SccProjectName>SAK</SccProjectName>

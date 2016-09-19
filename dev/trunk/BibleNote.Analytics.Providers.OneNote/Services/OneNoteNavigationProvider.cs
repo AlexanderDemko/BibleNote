@@ -1,14 +1,14 @@
 ﻿using BibleNote.Analytics.Contracts.Providers;
 
-namespace BibleNote.Analytics.Providers.Navigation.File
+namespace BibleNote.Analytics.Providers.OneNote.Services
 {
-    public class FileNavigationProvider : INavigationProvider
+    public class OneNoteNavigationProvider : INavigationProvider
     {
         public string Name
         {
             get
             {
-                return "FileNavigationProvider";
+                return "OneNoteNavigationProvider";
             }
         }
 
@@ -16,7 +16,7 @@ namespace BibleNote.Analytics.Providers.Navigation.File
         {
             get
             {
-                return "Folder with files .txt, .html, .docx, .doc.";
+                return "OneNote pages.";
             }
         }        
     }

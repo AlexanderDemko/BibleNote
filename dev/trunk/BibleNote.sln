@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
-VisualStudioVersion = 14.0.25123.0
+VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BibleNote.Tests", "BibleNote.Tests\BibleNote.Tests.csproj", "{3B9DA479-AD87-41A3-944F-C434A741137F}"
 EndProject
@@ -39,24 +39,22 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BibleNote.UI.Contracts", "B
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BibleNote.UI.Services", "BibleNote.UI.Services\BibleNote.UI.Services.csproj", "{4F5E6A82-BBCE-42DC-ADE6-8C672D806AB9}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BibleNote.Analytics.Providers.HtmlProvider", "BibleNote.Analytics.Providers.HtmlProvider\BibleNote.Analytics.Providers.HtmlProvider.csproj", "{84381C15-F3E9-4EB5-9D98-FE29352F2627}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BibleNote.Analytics.Providers.Html", "BibleNote.Analytics.Providers.HtmlProvider\BibleNote.Analytics.Providers.Html.csproj", "{84381C15-F3E9-4EB5-9D98-FE29352F2627}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BibleNote.Analytics.Providers.FileNavigationProvider", "BibleNote.Analytics.Providers.FolderNavigationProvider\BibleNote.Analytics.Providers.FileNavigationProvider.csproj", "{A2538A2F-EA54-4F42-B1EB-CF4B2E3ED503}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BibleNote.Analytics.Providers.Navigation.File", "BibleNote.Analytics.Providers.FolderNavigationProvider\BibleNote.Analytics.Providers.Navigation.File.csproj", "{A2538A2F-EA54-4F42-B1EB-CF4B2E3ED503}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{0F3469CA-209B-4CE9-94A3-C8E09465ECDE}"
 	ProjectSection(SolutionItems) = preProject
 		VersionInfo.cs = VersionInfo.cs
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BibleNote.Analytics.Providers.WebNavigationProvider", "BibleNote.Analytics.Providers.WebNavigationProvider\BibleNote.Analytics.Providers.WebNavigationProvider.csproj", "{2A3C1F30-DFDF-4DAB-9DDF-0B1B3153804B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BibleNote.Analytics.Providers.Navigation.Web", "BibleNote.Analytics.Providers.WebNavigationProvider\BibleNote.Analytics.Providers.Navigation.Web.csproj", "{2A3C1F30-DFDF-4DAB-9DDF-0B1B3153804B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BibleNote.Analytics.Providers.WordProvider", "BibleNote.Analytics.Providers.WordProvider\BibleNote.Analytics.Providers.WordProvider.csproj", "{446BEB96-9A56-4309-B770-F42CC0896C82}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BibleNote.Analytics.Providers.Word", "BibleNote.Analytics.Providers.WordProvider\BibleNote.Analytics.Providers.Word.csproj", "{446BEB96-9A56-4309-B770-F42CC0896C82}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BibleNote.Analytics.Providers.OneNoteProvider", "BibleNote.Analytics.Providers.OneNoteProvider\BibleNote.Analytics.Providers.OneNoteProvider.csproj", "{C4E38CA9-E8B5-4D53-867D-185DB9205E19}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BibleNote.Analytics.Providers.Pdf", "BibleNote.Analytics.Providers.PdfProvider\BibleNote.Analytics.Providers.Pdf.csproj", "{428953FE-AF1D-40A4-B195-059BEBBC3966}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BibleNote.Analytics.Providers.PdfProvider", "BibleNote.Analytics.Providers.PdfProvider\BibleNote.Analytics.Providers.PdfProvider.csproj", "{428953FE-AF1D-40A4-B195-059BEBBC3966}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BibleNote.Analytics.Providers.OneNoteNavigationProvider", "BibleNote.Analytics.Providers.OneNoteNavigationProvider\BibleNote.Analytics.Providers.OneNoteNavigationProvider.csproj", "{8773C46A-774C-43C7-9ECD-EEC19FC5F837}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BibleNote.Analytics.Providers.OneNote", "BibleNote.Analytics.Providers.OneNote\BibleNote.Analytics.Providers.OneNote.csproj", "{265FF2C5-DC52-4D10-9202-0D36B345485E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -128,18 +126,14 @@ Global
 		{446BEB96-9A56-4309-B770-F42CC0896C82}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{446BEB96-9A56-4309-B770-F42CC0896C82}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{446BEB96-9A56-4309-B770-F42CC0896C82}.Release|Any CPU.Build.0 = Release|Any CPU
-		{C4E38CA9-E8B5-4D53-867D-185DB9205E19}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{C4E38CA9-E8B5-4D53-867D-185DB9205E19}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{C4E38CA9-E8B5-4D53-867D-185DB9205E19}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{C4E38CA9-E8B5-4D53-867D-185DB9205E19}.Release|Any CPU.Build.0 = Release|Any CPU
 		{428953FE-AF1D-40A4-B195-059BEBBC3966}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{428953FE-AF1D-40A4-B195-059BEBBC3966}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{428953FE-AF1D-40A4-B195-059BEBBC3966}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{428953FE-AF1D-40A4-B195-059BEBBC3966}.Release|Any CPU.Build.0 = Release|Any CPU
-		{8773C46A-774C-43C7-9ECD-EEC19FC5F837}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{8773C46A-774C-43C7-9ECD-EEC19FC5F837}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{8773C46A-774C-43C7-9ECD-EEC19FC5F837}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{8773C46A-774C-43C7-9ECD-EEC19FC5F837}.Release|Any CPU.Build.0 = Release|Any CPU
+		{265FF2C5-DC52-4D10-9202-0D36B345485E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{265FF2C5-DC52-4D10-9202-0D36B345485E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{265FF2C5-DC52-4D10-9202-0D36B345485E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{265FF2C5-DC52-4D10-9202-0D36B345485E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -160,12 +154,11 @@ Global
 		{A2538A2F-EA54-4F42-B1EB-CF4B2E3ED503} = {C9C9F0C2-C0E7-4303-B28A-AF13A00BAB0A}
 		{2A3C1F30-DFDF-4DAB-9DDF-0B1B3153804B} = {C9C9F0C2-C0E7-4303-B28A-AF13A00BAB0A}
 		{446BEB96-9A56-4309-B770-F42CC0896C82} = {C9C9F0C2-C0E7-4303-B28A-AF13A00BAB0A}
-		{C4E38CA9-E8B5-4D53-867D-185DB9205E19} = {C9C9F0C2-C0E7-4303-B28A-AF13A00BAB0A}
 		{428953FE-AF1D-40A4-B195-059BEBBC3966} = {C9C9F0C2-C0E7-4303-B28A-AF13A00BAB0A}
-		{8773C46A-774C-43C7-9ECD-EEC19FC5F837} = {C9C9F0C2-C0E7-4303-B28A-AF13A00BAB0A}
+		{265FF2C5-DC52-4D10-9202-0D36B345485E} = {C9C9F0C2-C0E7-4303-B28A-AF13A00BAB0A}
 	EndGlobalSection
 	GlobalSection(TeamFoundationVersionControl) = preSolution
-		SccNumberOfProjects = 20
+		SccNumberOfProjects = 19
 		SccEnterpriseProvider = {4CA58AB2-18FA-4F8D-95D4-32DDF27D184C}
 		SccTeamFoundationServer = https://demko.visualstudio.com/
 		SccLocalPath0 = .
@@ -215,33 +208,29 @@ Global
 		SccProjectTopLevelParentUniqueName12 = BibleNote.sln
 		SccProjectName12 = BibleNote.UI.Services
 		SccLocalPath12 = BibleNote.UI.Services
-		SccProjectUniqueName13 = BibleNote.Analytics.Providers.HtmlProvider\\BibleNote.Analytics.Providers.HtmlProvider.csproj
+		SccProjectUniqueName13 = BibleNote.Analytics.Providers.OneNote\\BibleNote.Analytics.Providers.OneNote.csproj
 		SccProjectTopLevelParentUniqueName13 = BibleNote.sln
-		SccProjectName13 = BibleNote.Analytics.Providers.HtmlProvider
-		SccLocalPath13 = BibleNote.Analytics.Providers.HtmlProvider
-		SccProjectUniqueName14 = BibleNote.Analytics.Providers.FolderNavigationProvider\\BibleNote.Analytics.Providers.FileNavigationProvider.csproj
+		SccProjectName13 = BibleNote.Analytics.Providers.OneNote
+		SccLocalPath13 = BibleNote.Analytics.Providers.OneNote
+		SccProjectUniqueName14 = BibleNote.Analytics.Providers.HtmlProvider\\BibleNote.Analytics.Providers.Html.csproj
 		SccProjectTopLevelParentUniqueName14 = BibleNote.sln
-		SccProjectName14 = BibleNote.Analytics.Providers.FolderNavigationProvider
-		SccLocalPath14 = BibleNote.Analytics.Providers.FolderNavigationProvider
-		SccProjectUniqueName15 = BibleNote.Analytics.Providers.WebNavigationProvider\\BibleNote.Analytics.Providers.WebNavigationProvider.csproj
+		SccProjectName14 = BibleNote.Analytics.Providers.HtmlProvider
+		SccLocalPath14 = BibleNote.Analytics.Providers.HtmlProvider
+		SccProjectUniqueName15 = BibleNote.Analytics.Providers.PdfProvider\\BibleNote.Analytics.Providers.Pdf.csproj
 		SccProjectTopLevelParentUniqueName15 = BibleNote.sln
-		SccProjectName15 = BibleNote.Analytics.Providers.WebNavigationProvider
-		SccLocalPath15 = BibleNote.Analytics.Providers.WebNavigationProvider
-		SccProjectUniqueName16 = BibleNote.Analytics.Providers.WordProvider\\BibleNote.Analytics.Providers.WordProvider.csproj
+		SccProjectName15 = BibleNote.Analytics.Providers.PdfProvider
+		SccLocalPath15 = BibleNote.Analytics.Providers.PdfProvider
+		SccProjectUniqueName16 = BibleNote.Analytics.Providers.WordProvider\\BibleNote.Analytics.Providers.Word.csproj
 		SccProjectTopLevelParentUniqueName16 = BibleNote.sln
 		SccProjectName16 = BibleNote.Analytics.Providers.WordProvider
 		SccLocalPath16 = BibleNote.Analytics.Providers.WordProvider
-		SccProjectUniqueName17 = BibleNote.Analytics.Providers.OneNoteProvider\\BibleNote.Analytics.Providers.OneNoteProvider.csproj
+		SccProjectUniqueName17 = BibleNote.Analytics.Providers.FolderNavigationProvider\\BibleNote.Analytics.Providers.Navigation.File.csproj
 		SccProjectTopLevelParentUniqueName17 = BibleNote.sln
-		SccProjectName17 = BibleNote.Analytics.Providers.OneNoteProvider
-		SccLocalPath17 = BibleNote.Analytics.Providers.OneNoteProvider
-		SccProjectUniqueName18 = BibleNote.Analytics.Providers.PdfProvider\\BibleNote.Analytics.Providers.PdfProvider.csproj
+		SccProjectName17 = BibleNote.Analytics.Providers.FolderNavigationProvider
+		SccLocalPath17 = BibleNote.Analytics.Providers.FolderNavigationProvider
+		SccProjectUniqueName18 = BibleNote.Analytics.Providers.WebNavigationProvider\\BibleNote.Analytics.Providers.Navigation.Web.csproj
 		SccProjectTopLevelParentUniqueName18 = BibleNote.sln
-		SccProjectName18 = BibleNote.Analytics.Providers.PdfProvider
-		SccLocalPath18 = BibleNote.Analytics.Providers.PdfProvider
-		SccProjectUniqueName19 = BibleNote.Analytics.Providers.OneNoteNavigationProvider\\BibleNote.Analytics.Providers.OneNoteNavigationProvider.csproj
-		SccProjectTopLevelParentUniqueName19 = BibleNote.sln
-		SccProjectName19 = BibleNote.Analytics.Providers.OneNoteNavigationProvider
-		SccLocalPath19 = BibleNote.Analytics.Providers.OneNoteNavigationProvider
+		SccProjectName18 = BibleNote.Analytics.Providers.WebNavigationProvider
+		SccLocalPath18 = BibleNote.Analytics.Providers.WebNavigationProvider
 	EndGlobalSection
 EndGlobal

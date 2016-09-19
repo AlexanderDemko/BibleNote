@@ -1,15 +1,13 @@
 ﻿using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using BibleNote.Analytics.Services.Unity;
-using BibleNote.Analytics.Contracts.Environment;
 using Microsoft.Practices.Unity;
-using BibleNote.Tests.Analytics.Mocks;
 using FluentAssertions;
-using BibleNote.Analytics.Providers.HtmlProvider;
 using BibleNote.Analytics.Contracts.Providers;
-using BibleNote.Analytics.Providers.FileNavigationProvider;
 using BibleNote.Analytics.Models.VerseParsing;
 using BibleNote.Analytics.Contracts.VerseParsing;
+using BibleNote.Analytics.Providers.Html;
+using BibleNote.Analytics.Providers.Navigation.File;
 
 namespace BibleNote.Tests.Analytics
 {

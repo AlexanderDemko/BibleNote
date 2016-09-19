@@ -141,13 +141,13 @@
       <Project>{209f7653-c94e-48b1-9ad5-a99d1c368983}</Project>
       <Name>BibleNote.Analytics.Models</Name>
     </ProjectReference>
-    <ProjectReference Include="..\BibleNote.Analytics.Providers.FolderNavigationProvider\BibleNote.Analytics.Providers.FileNavigationProvider.csproj">
+    <ProjectReference Include="..\BibleNote.Analytics.Providers.FolderNavigationProvider\BibleNote.Analytics.Providers.Navigation.File.csproj">
       <Project>{a2538a2f-ea54-4f42-b1eb-cf4b2e3ed503}</Project>
-      <Name>BibleNote.Analytics.Providers.FileNavigationProvider</Name>
+      <Name>BibleNote.Analytics.Providers.Navigation.File</Name>
     </ProjectReference>
-    <ProjectReference Include="..\BibleNote.Analytics.Providers.HtmlProvider\BibleNote.Analytics.Providers.HtmlProvider.csproj">
+    <ProjectReference Include="..\BibleNote.Analytics.Providers.HtmlProvider\BibleNote.Analytics.Providers.Html.csproj">
       <Project>{84381c15-f3e9-4eb5-9d98-fe29352f2627}</Project>
-      <Name>BibleNote.Analytics.Providers.HtmlProvider</Name>
+      <Name>BibleNote.Analytics.Providers.Html</Name>
     </ProjectReference>
     <ProjectReference Include="..\BibleNote.Analytics.Services\BibleNote.Analytics.Services.csproj">
       <Project>{38af7691-09fa-4373-aea2-52f6d3d50c85}</Project>

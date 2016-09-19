@@ -1,6 +1,6 @@
 ﻿using BibleNote.Analytics.Contracts.Providers;
 
-namespace BibleNote.Analytics.Providers.FileNavigationProvider
+namespace BibleNote.Analytics.Providers.Navigation.File
 {
     public class FileDocumentId: IDocumentId
     {
