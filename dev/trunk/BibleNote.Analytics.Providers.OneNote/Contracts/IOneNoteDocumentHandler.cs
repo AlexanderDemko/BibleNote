@@ -1,10 +1,9 @@
 ﻿using BibleNote.Analytics.Contracts.Providers;
 using HtmlAgilityPack;
-using System;
 
-namespace BibleNote.Analytics.Providers.Html
+namespace BibleNote.Analytics.Providers.OneNote.Contracts
 {
-    public interface IHtmlDocumentHandler : IDocumentHandler
+    public interface IOneNoteDocumentHandler : IDocumentHandler
     {
         HtmlDocument HtmlDocument { get; }
     }
