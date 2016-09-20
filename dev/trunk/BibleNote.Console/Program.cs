@@ -39,14 +39,6 @@ namespace BibleNoteConsole
             DIContainer.InitWithDefaults();
             DIContainer.Container.RegisterInstance<IConfigurationManager>(new MockConfigurationManager());
             ModulesManager = DIContainer.Resolve<IModulesManager>();
-
-            DIContainer.Container.RegisterType<OneNoteUtils>();
-
-            var oneNoteUtils = DIContainer.Resolve<OneNoteUtils>();
-
-            var oneNoteApp = oneNoteUtils.CreateOneNoteAppSafe();
-            string pageId = oneNoteApp.Windows.CurrentWindow.CurrentPageId;            
-            var xDoc = oneNoteUtils.GetPageContent(ref oneNoteApp, pageId);
             
 
             //ConvertTextModule(@"C:\temp\nrkv.txt");

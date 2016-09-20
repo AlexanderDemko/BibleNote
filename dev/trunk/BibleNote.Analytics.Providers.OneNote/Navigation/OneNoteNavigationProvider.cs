@@ -1,6 +1,6 @@
 ﻿using BibleNote.Analytics.Contracts.Providers;
 
-namespace BibleNote.Analytics.Providers.OneNote.Services
+namespace BibleNote.Analytics.Providers.OneNote.Navigation
 {
     public class OneNoteNavigationProvider : INavigationProvider
     {
