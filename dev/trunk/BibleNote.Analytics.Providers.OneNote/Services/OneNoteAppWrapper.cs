@@ -47,11 +47,10 @@ namespace BibleNote.Analytics.Providers.OneNote.Services
             catch (COMException ex)
             {
                 if (ex.Message.Contains("0x80010100")                                           // "System.Runtime.InteropServices.COMException (0x80010100): System call failed. (Exception from HRESULT: 0x80010100 (RPC_E_SYS_CALL_FAILED))";
-                    || ex.Message.Contains("0x800706BA")
-                    || ex.Message.Contains("0x800706BE")
-                    || ex.Message.Contains("0x80010001")                                        // System.Runtime.InteropServices.COMException (0x80010001): Вызов был отклонен. (Исключение из HRESULT: 0x80010001 (RPC_E_CALL_REJECTED))
-                    || ex.Message.Contains("0x80010108")                                        // RPC_E_DISCONNECTED
-                    )
+                 || ex.Message.Contains("0x800706BA")
+                 || ex.Message.Contains("0x800706BE")
+                 || ex.Message.Contains("0x80010001")                                        // System.Runtime.InteropServices.COMException (0x80010001): Вызов был отклонен. (Исключение из HRESULT: 0x80010001 (RPC_E_CALL_REJECTED))
+                 || ex.Message.Contains("0x80010108"))                                        // RPC_E_DISCONNECTED                    
                 {
                     _log.Write(LogLevel.Warning, $"UseOneNoteAPI. Attempt {attemptsCount}: {ex.Message}");
                     if (attemptsCount <= 15)
