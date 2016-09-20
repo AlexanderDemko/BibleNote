@@ -1,7 +1,7 @@
 ﻿using BibleNote.Analytics.Contracts.Providers;
 using System;
 
-namespace BibleNote.Analytics.Providers.Navigation.Web
+namespace BibleNote.Analytics.Providers.Web.Navigation
 {
     public class WebDocumentId: IDocumentId
     {

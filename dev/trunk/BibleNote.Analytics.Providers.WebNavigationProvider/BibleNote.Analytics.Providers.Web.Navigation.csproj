@@ -7,8 +7,8 @@
     <ProjectGuid>{2A3C1F30-DFDF-4DAB-9DDF-0B1B3153804B}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>BibleNote.Analytics.Providers.Navigation.Web</RootNamespace>
-    <AssemblyName>BibleNote.Analytics.Providers.Navigation.Web</AssemblyName>
+    <RootNamespace>BibleNote.Analytics.Providers.Web.Navigation</RootNamespace>
+    <AssemblyName>BibleNote.Analytics.Providers.Web.Navigation</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <SccProjectName>SAK</SccProjectName>

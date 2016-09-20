@@ -1,7 +1,6 @@
 ﻿using BibleNote.Analytics.Contracts.Providers;
-using BibleNote.Analytics.Core.Helpers;
 using BibleNote.Analytics.Providers.OneNote.Contracts;
-using BibleNote.Analytics.Providers.OneNote.Models;
+using BibleNote.Analytics.Providers.OneNote.Navigation;
 using HtmlAgilityPack;
 using System;
 
@@ -25,7 +24,10 @@ namespace BibleNote.Analytics.Providers.OneNote.Services
 
             if (documentId is OneNoteDocumentId)
             {
-                throw new NotImplementedException();
+                using (var oneNoteApp = new OneNoteAppWrapper())
+                {
+                    html = oneNoteApp.GetPageContent(((OneNoteDocumentId)documentId).PageId);
+                }
             }
 
             if (html != null)

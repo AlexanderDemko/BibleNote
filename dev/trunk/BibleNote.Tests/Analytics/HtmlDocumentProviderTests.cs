@@ -7,7 +7,7 @@ using BibleNote.Analytics.Contracts.Providers;
 using BibleNote.Analytics.Models.VerseParsing;
 using BibleNote.Analytics.Contracts.VerseParsing;
 using BibleNote.Analytics.Providers.Html;
-using BibleNote.Analytics.Providers.Navigation.File;
+using BibleNote.Analytics.Providers.FileSystem.Navigation;
 
 namespace BibleNote.Tests.Analytics
 {
