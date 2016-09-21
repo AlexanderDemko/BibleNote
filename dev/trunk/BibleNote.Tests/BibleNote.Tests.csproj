@@ -102,6 +102,8 @@
   </Choose>
   <ItemGroup>
     <Compile Include="Analytics\DBTests.cs" />
+    <Compile Include="Analytics\Mocks\MockOneNoteDocumentConnector.cs" />
+    <Compile Include="Analytics\OneNoteDocumentProviderTests.cs" />
     <Compile Include="Analytics\HtmlDocumentProviderTests.cs" />
     <Compile Include="Analytics\DocumentParserTests.cs" />
     <Compile Include="Analytics\Mocks\MockConfigurationManager.cs" />
@@ -149,6 +151,10 @@
       <Project>{84381c15-f3e9-4eb5-9d98-fe29352f2627}</Project>
       <Name>BibleNote.Analytics.Providers.Html</Name>
     </ProjectReference>
+    <ProjectReference Include="..\BibleNote.Analytics.Providers.OneNote\BibleNote.Analytics.Providers.OneNote.csproj">
+      <Project>{265ff2c5-dc52-4d10-9202-0d36b345485e}</Project>
+      <Name>BibleNote.Analytics.Providers.OneNote</Name>
+    </ProjectReference>
     <ProjectReference Include="..\BibleNote.Analytics.Services\BibleNote.Analytics.Services.csproj">
       <Project>{38af7691-09fa-4373-aea2-52f6d3d50c85}</Project>
       <Name>BibleNote.Analytics.Services</Name>
@@ -156,7 +162,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="Analytics\TestData\Html_Simple.html" />
-    <Content Include="Analytics\TestData\OneNoteDoc.html" />
+    <Content Include="Analytics\TestData\OneNote_Simple.html" />
     <Content Include="HTMLPage1.html" />
   </ItemGroup>
   <Choose>
