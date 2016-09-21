@@ -19,16 +19,16 @@ namespace BibleNote.Analytics.Providers.Html
 
         public bool IsReadonly { get { return false; } }   // todo: надо дополнительно этот параметр вынести выше - на уровень NavigationProviderInstance
 
+        public HtmlProvider(IDocumentParserFactory documentParserFactory, IHtmlDocumentConnector htmlDocumentConnector)
+        {
+            _documentParserFactory = documentParserFactory;
+            _htmlDocumentConnector = htmlDocumentConnector;
+        }
+
         public string GetVersePointerLink(VersePointer versePointer)
         {
             return string.Format($"<a href='bnVerse:{versePointer}'>{versePointer.GetOriginalVerseString()}</a>");
-        }
-
-        public HtmlProvider(IDocumentParserFactory documentParserFactory, IHtmlDocumentConnector htmlDocumentReader)
-        {
-            _documentParserFactory = documentParserFactory;
-            _htmlDocumentConnector = htmlDocumentReader;
-        }
+        }        
 
         public DocumentParseResult ParseDocument(IDocumentId documentId)
         {

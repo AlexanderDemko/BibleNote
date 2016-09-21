@@ -28,7 +28,7 @@ namespace BibleNote.Analytics.Providers.OneNote.Services
                 {
                     html = oneNoteApp.GetPageContent(((OneNoteDocumentId)documentId).PageId);
                 }
-            }
+            }            
 
             if (html != null)
             {
