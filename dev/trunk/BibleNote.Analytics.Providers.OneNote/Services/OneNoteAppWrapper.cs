@@ -1,4 +1,5 @@
 ﻿using BibleNote.Analytics.Contracts.Logging;
+using BibleNote.Analytics.Providers.OneNote.Constants;
 using BibleNote.Analytics.Services.Unity;
 using Microsoft.Office.Interop.OneNote;
 using System;
@@ -25,7 +26,7 @@ namespace BibleNote.Analytics.Providers.OneNote.Services
         {
             string result = null;
 
-            UseOneNoteApp(() => _app.GetPageContent(pageId, out result, pageInfo, Constants.CurrentOneNoteSchema));
+            UseOneNoteApp(() => _app.GetPageContent(pageId, out result, pageInfo, OneNoteConstants.CurrentOneNoteSchema));
 
             return result;
         }
