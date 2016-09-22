@@ -71,7 +71,6 @@
   <ItemGroup>
     <Compile Include="Constants.cs" />
     <Compile Include="Contracts\IOneNoteDocumentConnector.cs" />
-    <Compile Include="Contracts\IOneNoteDocumentHandler.cs" />
     <Compile Include="Services\OneNoteAppWrapper.cs" />
     <Compile Include="Services\OneNoteDocumentConnector.cs" />
     <Compile Include="Services\OneNoteDocumentHandler.cs" />
