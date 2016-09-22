@@ -44,9 +44,9 @@ namespace BibleNote.Tests.Analytics
         }
 
         [TestMethod]
-        public void ParseHtml_1()
+        public void ParseHtml_Test1()
         {
-            var parseResult = _documentProvider.ParseDocument(new FileDocumentId(@"..\..\Analytics\TestData\Html_Simple.html", true));
+            var parseResult = _documentProvider.ParseDocument(new FileDocumentId(@"..\..\Analytics\TestData\Html_1.html", true));
 
             var results = parseResult.ParagraphParseResults;
             results.Count.Should().Be(10);

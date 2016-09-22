@@ -69,7 +69,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Constants.cs" />
+    <Compile Include="Constants\OneNoteTags.cs" />
+    <Compile Include="Constants\OneNoteConstants.cs" />
     <Compile Include="Contracts\IOneNoteDocumentConnector.cs" />
     <Compile Include="Services\OneNoteAppWrapper.cs" />
     <Compile Include="Services\OneNoteDocumentConnector.cs" />
