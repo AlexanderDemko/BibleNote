@@ -2,7 +2,7 @@
 using HtmlAgilityPack;
 using System;
 
-namespace BibleNote.Analytics.Providers.Html
+namespace BibleNote.Analytics.Contracts.Providers
 {
     public interface IHtmlDocumentHandler : IDocumentHandler
     {

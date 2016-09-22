@@ -2,7 +2,7 @@
 
 namespace BibleNote.Analytics.Providers.OneNote.Contracts
 {
-    public interface IOneNoteDocumentConnector : IDocumentConnector<IOneNoteDocumentHandler>
+    public interface IOneNoteDocumentConnector : IDocumentConnector<IHtmlDocumentHandler>
     {        
     }
 }

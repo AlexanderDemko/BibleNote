@@ -6,7 +6,7 @@ using System;
 
 namespace BibleNote.Analytics.Providers.OneNote.Services
 {
-    public class OneNoteDocumentHandler : IOneNoteDocumentHandler
+    public class OneNoteDocumentHandler : IHtmlDocumentHandler
     {
         public HtmlDocument HtmlDocument { get; private set; }
 
