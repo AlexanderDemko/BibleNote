@@ -19,6 +19,8 @@ using System.Threading.Tasks;
 using Microsoft.Practices.Unity;
 using BibleNote.Analytics.Models.Verse;
 using BibleNote.Analytics.Providers.OneNote.Services;
+using AngleSharp.Parser.Html;
+using System.Xml.Linq;
 
 namespace BibleNoteConsole
 {
@@ -49,6 +51,45 @@ namespace BibleNoteConsole
 
             try
             {
+                var input = @"    
+<one:Title selected='partial' lang='ru'>
+        <one:OE author='Alexander Demko' authorInitials='AD' lastModifiedBy='Alexander Demko' lastModifiedByInitials='AD' creationTime='2016-09-22T14:59:16.000Z' lastModifiedTime='2016-09-22T14:59:16.000Z' objectID='{3458141B-7E8F-4947-B7D0-238F462B062E}{15}{B0}' alignment='left' quickStyleIndex='0' selected='partial'>
+            <one:T>
+                <![CDATA[<span lang=en-US>Троица</span><span lang=ru> (</span><span lang=en-US>Ин</span><span lang=ru>1:1)</span>]]>
+            </one:T>
+            
+        </one:OE>
+    </one:Title>
+    <one:Outline author='Alexander Demko' authorInitials='AD' lastModifiedBy='Alexander Demko' lastModifiedByInitials='AD' lastModifiedTime='2016-09-22T14:58:17.000Z' objectID='{3458141B-7E8F-4947-B7D0-238F462B062E}{134}{B0}'>
+        <one:Position x='36.0' y='86.4000015258789' z='0' />
+        <one:Size width='540.0' height='174.6240844726562' />
+        <one:OEChildren indent='2'>
+            <one:OE creationTime='2016-09-22T14:58:17.000Z' lastModifiedTime='2016-09-22T14:58:17.000Z' objectID='{3458141B-7E8F-4947-B7D0-238F462B062E}{135}{B0}' alignment='left' quickStyleIndex='1'>
+                <one:List>
+                    <one:Bullet bullet='2' fontSize='11.0' />
+                </one:List>
+                <one:T>
+                    <![CDATA[<a href='file:///C:\molitvoslov\'>Молитвы</a>]]>
+                </one:T>
+            </one:OE>
+            <one:OE creationTime='2016-09-22T14:58:17.000Z' lastModifiedTime='2016-09-22T14:58:17.000Z' objectID='{3458141B-7E8F-4947-B7D0-238F462B062E}{140}{B0}' alignment='left' quickStyleIndex='1'>
+                <one:List>
+                    <one:Bullet bullet='2' fontSize='11.0' />
+                </one:List>
+                <one:T>
+                    <![CDATA[<a href='file:///C:\biblia\'>Библия</a>]]>
+                </one:T>
+            </one:OE>
+        </one:OEChildren> 
+";
+                var result = Regex.Replace(input, "([^>])(\\n|&nbsp;)([^<])", "$1 $3");
+                result = Regex.Replace(result, @"(<!\[CDATA\[)(((?!one:).)*)(]]>)", "$2");
+
+
+
+
+                var xdoc = XDocument.Parse(File.ReadAllText(@"..\..\HTMLPage1.html"));
+
                 //var _moduleInfo = ModulesManager.UploadModule(@"C:\prj\BibleNote v4\dev\trunk\Data\Modules\rst\rst.bnm", "rst");
                 //ModulesManager.SetCurrentModule("rst");
                 //var bible = ModulesManager.GetCurrentBibleContent();

@@ -3,6 +3,7 @@ using BibleNote.Analytics.Providers.OneNote.Contracts;
 using BibleNote.Analytics.Providers.OneNote.Navigation;
 using HtmlAgilityPack;
 using System;
+using System.Text.RegularExpressions;
 
 namespace BibleNote.Analytics.Providers.OneNote.Services
 {
@@ -27,6 +28,7 @@ namespace BibleNote.Analytics.Providers.OneNote.Services
                 using (var oneNoteApp = new OneNoteAppWrapper())
                 {
                     html = oneNoteApp.GetPageContent(((OneNoteDocumentId)documentId).PageId);
+                    html = Regex.Replace(html, @"(<!\[CDATA\[)([\s\S]*)(]]>)", "$2");
                 }
             }            
 
