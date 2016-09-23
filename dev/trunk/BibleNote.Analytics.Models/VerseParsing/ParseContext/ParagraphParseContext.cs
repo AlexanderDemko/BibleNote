@@ -11,7 +11,7 @@ namespace BibleNote.Analytics.Models.VerseParsing.ParseContext
 
         public IElementParseContext PreviousSibling { get; private set; }
 
-        public ElementType ElementType { get { return ElementType.Linear; } }
+        public ElementType ElementType { get { return ElementType.SimpleBlock; } }
 
         public ChapterEntry ChapterEntry { get { return ParseResult.ChapterEntry; } }
 

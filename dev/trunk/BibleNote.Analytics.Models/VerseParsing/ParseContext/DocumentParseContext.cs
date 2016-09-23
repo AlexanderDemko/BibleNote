@@ -41,7 +41,7 @@ namespace BibleNote.Analytics.Models.VerseParsing.ParseContext
                 case ElementType.ListElement:
                     {
                         if (CurrentHierarchy.ParentHierarchy?.ElementType != ElementType.List)
-                            CurrentHierarchy.ChangeElementType(ElementType.Linear);
+                            CurrentHierarchy.ChangeElementType(ElementType.SimpleBlock);
                     }
                     break;
                 case ElementType.Table:
@@ -49,16 +49,25 @@ namespace BibleNote.Analytics.Models.VerseParsing.ParseContext
                         CurrentHierarchy.HierarchyInfo = new TableHierarchyInfo();
                     }
                     break;
+                case ElementType.TableBody:
+                    {
+                        if (CurrentHierarchy.ParentHierarchy?.ElementType != ElementType.Table)
+                            CurrentHierarchy.ChangeElementType(ElementType.SimpleBlock);
+                        else
+                            CurrentHierarchy.HierarchyInfo = CurrentHierarchy.ParentHierarchy.HierarchyInfo;
+                    }
+                    break;
                 case ElementType.TableRow:
                     {
-                        if (CurrentHierarchy.ParentHierarchy?.ElementType == ElementType.Table)
+                        if (CurrentHierarchy.ParentHierarchy?.ElementType == ElementType.Table
+                            || CurrentHierarchy.ParentHierarchy?.ElementType == ElementType.TableBody)
                         {
                             var hierarchyInfo = ((TableHierarchyInfo)CurrentHierarchy.ParentHierarchy.HierarchyInfo);
                             hierarchyInfo.CurrentRow++;
                             hierarchyInfo.CurrentColumn = -1;
                         }
                         else
-                            CurrentHierarchy.ChangeElementType(ElementType.Linear);
+                            CurrentHierarchy.ChangeElementType(ElementType.SimpleBlock);
                     }
                     break;
                 case ElementType.TableCell:
@@ -66,7 +75,7 @@ namespace BibleNote.Analytics.Models.VerseParsing.ParseContext
                         if (CurrentHierarchy.ParentHierarchy?.ElementType == ElementType.TableRow)
                             ((TableHierarchyInfo)CurrentHierarchy.ParentHierarchy.ParentHierarchy.HierarchyInfo).CurrentColumn++;
                         else
-                            CurrentHierarchy.ChangeElementType(ElementType.Linear);
+                            CurrentHierarchy.ChangeElementType(ElementType.SimpleBlock);
                     }
                     break;
             }

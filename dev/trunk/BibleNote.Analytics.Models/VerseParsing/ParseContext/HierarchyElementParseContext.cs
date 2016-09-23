@@ -107,7 +107,7 @@ namespace BibleNote.Analytics.Models.VerseParsing.ParseContext
                 if (!(result?.Found).GetValueOrDefault() && !(result?.AtStartOfParagraph).GetValueOrDefault() && hierarchyInfo.CurrentColumn > 0)
                     result = hierarchyInfo.FirstColumnParseContexts.TryGetAt(hierarchyInfo.CurrentRow)?.ChapterEntry;
             }
-            else if (ElementType == ElementType.Linear || PreviousSibling?.ElementType == ElementType.Linear)
+            else if (ElementType == ElementType.SimpleBlock || PreviousSibling?.ElementType == ElementType.SimpleBlock)
             {
                 if (PreviousSibling?.ChapterEntry?.AtStartOfParagraph == true)
                     result = PreviousSibling.ChapterEntry;

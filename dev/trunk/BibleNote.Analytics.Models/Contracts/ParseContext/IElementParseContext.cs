@@ -10,11 +10,12 @@ namespace BibleNote.Analytics.Models.Contracts.ParseContext
     public enum ElementType
     {
         ListElement,
-        Linear,
-        Block,
+        SimpleBlock,
+        HierarchicalBlock,
         Root,
         Title,
         Table,
+        TableBody,
         TableRow,
         TableCell,
         List
