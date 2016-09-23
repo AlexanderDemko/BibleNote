@@ -52,51 +52,21 @@ namespace BibleNote.Analytics.Providers.OneNote.Services
 
         private void ParseNode(IDocumentParser docParser, HtmlNode node)
         {
-            if (!node.IsHierarchyNode())
-            {
-                ParseLinearNodes(docParser, node.ChildNodes);
-            }
-            else
-            {
-                var nodes = new List<HtmlNode>();
-
-                foreach (var childNode in node.ChildNodes)
-                {
-                    if (childNode.IsTextNode())
-                    {
-                        if (childNode.IsValuableTextNode())
-                            nodes.Add(childNode);
-                        continue;
-                    }
-
-                    if ((childNode.HasChildNodes || childNode.Name == HtmlTags.Br) && nodes.Count > 0)
-                    {
-                        ParseLinearNodes(docParser, nodes);
-                        nodes.Clear();
-                    }
-
-                    if (childNode.HasChildNodes)
-                        ParseHierarchyNode(docParser, childNode);
-                }
-
-                if (nodes.Count > 0)
-                    ParseLinearNodes(docParser, nodes);
-            }
-        }
-
-        private void ParseHierarchyNode(IDocumentParser docParser, HtmlNode node)
-        {
             var state = GetParagraphType(node);
-            if (state > ElementType.Linear)
+            if (state > ElementType.SimpleBlock)
             {
                 using (docParser.ParseHierarchyElement(state))
                 {
-                    ParseNode(docParser, node);
+                    foreach (var childNode in node.ChildNodes)
+                    {
+                        ParseNode(docParser, childNode);
+                    }
                 }
             }
             else
             {
-                ParseNode(docParser, node);
+                if (node.HasChildNodes || node.IsValuableTextNode())
+                    docParser.ParseParagraph(node);
             }
         }
 
@@ -125,18 +95,10 @@ namespace BibleNote.Analytics.Providers.OneNote.Services
                     break;
                 case OneNoteTags.OeChildren:
                 case OneNoteTags.Oe:                
-                    return ElementType.Block;
+                    return ElementType.HierarchicalBlock;
             }
 
-            return ElementType.Linear;
-        }
-
-        private void ParseLinearNodes(IDocumentParser docParser, IEnumerable<HtmlNode> nodes)
-        {
-            foreach (var node in nodes)
-            {
-                docParser.ParseParagraph(node);
-            }
+            return ElementType.SimpleBlock;
         }
     }
 }

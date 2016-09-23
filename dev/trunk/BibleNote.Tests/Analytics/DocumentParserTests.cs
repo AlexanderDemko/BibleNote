@@ -469,7 +469,7 @@ namespace BibleNote.Tests.Analytics
                     docParser.ParseParagraph(node);
                 }
 
-                using (docParser.ParseHierarchyElement(ElementType.Block))
+                using (docParser.ParseHierarchyElement(ElementType.HierarchicalBlock))
                 {
                     docParser.ParseParagraph(verseNode);
                 }
@@ -492,7 +492,7 @@ namespace BibleNote.Tests.Analytics
 
             using (var docParser = _documentParserFactory.Create(_documentProvider))
             {
-                using (docParser.ParseHierarchyElement(ElementType.Block))
+                using (docParser.ParseHierarchyElement(ElementType.HierarchicalBlock))
                 {
                     docParser.ParseParagraph(node1);
                     docParser.ParseParagraph(node2);
@@ -500,14 +500,14 @@ namespace BibleNote.Tests.Analytics
                     docParser.ParseParagraph(verseNode);
                 }
 
-                using (docParser.ParseHierarchyElement(ElementType.Block))
+                using (docParser.ParseHierarchyElement(ElementType.HierarchicalBlock))
                 {
                     docParser.ParseParagraph(node1);                    
                     docParser.ParseParagraph(node3);                    
                     docParser.ParseParagraph(verseNode);
                 }
 
-                using (docParser.ParseHierarchyElement(ElementType.Block))
+                using (docParser.ParseHierarchyElement(ElementType.HierarchicalBlock))
                 {
                     docParser.ParseParagraph(node1);
                     docParser.ParseParagraph(node4);
@@ -661,14 +661,14 @@ namespace BibleNote.Tests.Analytics
 
             using (var docParser = _documentParserFactory.Create(_documentProvider))
             {
-                using (docParser.ParseHierarchyElement(ElementType.Block))
+                using (docParser.ParseHierarchyElement(ElementType.HierarchicalBlock))
                 {
 
                     docParser.ParseParagraph(node1);
                     docParser.ParseParagraph(verseNode);
                 }
 
-                using (docParser.ParseHierarchyElement(ElementType.Block))
+                using (docParser.ParseHierarchyElement(ElementType.HierarchicalBlock))
                 {
 
                     docParser.ParseParagraph(node2);

@@ -61,5 +61,20 @@ namespace BibleNote.Tests.Analytics
             CheckParseResult(results[8], "Ис 44:5");
             CheckParseResult(results[9], "Ис 44:6");
         }
+
+        [TestMethod]
+        public void ParseHtml_Test2()
+        {
+            var parseResult = _documentProvider.ParseDocument(new FileDocumentId(@"..\..\Analytics\TestData\Html_2.html", true));
+
+            var results = parseResult.ParagraphParseResults;
+            results.Count.Should().Be(6);
+            CheckParseResult(results[0], "Ин 1");
+            CheckParseResult(results[1], "Ин 2");
+            CheckParseResult(results[2], "Ин 1:3");
+            CheckParseResult(results[3], "Ин 2:4");
+            CheckParseResult(results[4], "Ин 1:1");
+            CheckParseResult(results[5], "Ин 2:2");            
+        }
     }
 }

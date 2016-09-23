@@ -19,9 +19,9 @@ namespace BibleNote.Analytics.Core.Extensions
             return node.NodeType == HtmlNodeType.Text;
         }        
 
-        public static bool IsValuableTextNode(this HtmlNode textNode)
+        public static bool IsValuableTextNode(this HtmlNode node)
         {
-            return !string.IsNullOrEmpty(textNode.InnerHtml.Trim());
+            return IsTextNode(node) && !string.IsNullOrEmpty(node.InnerHtml.Trim());
         }
     }
 }
