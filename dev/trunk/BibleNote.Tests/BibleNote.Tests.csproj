@@ -165,7 +165,6 @@
     <Content Include="Analytics\TestData\Html_2.html" />
     <Content Include="Analytics\TestData\OneNote_2.html" />
     <Content Include="Analytics\TestData\OneNote_1.html" />
-    <Content Include="HTMLPage1.html" />
   </ItemGroup>
   <Choose>
     <When Condition="'$(VisualStudioVersion)' == '10.0' And '$(IsCodedUITest)' == 'True'">
