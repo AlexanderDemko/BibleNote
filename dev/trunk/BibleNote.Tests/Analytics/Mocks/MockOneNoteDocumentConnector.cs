@@ -43,8 +43,8 @@ namespace BibleNote.Tests.Analytics.Mocks
                 var filePath = ((FileDocumentId)documentId).FilePath;
                 var ext = Path.GetExtension(filePath);
                 html = File.ReadAllText(filePath);
-                html = Regex.Replace(html, "([^>])(\\n|&nbsp;)([^<])", "$1 $3");
-                html = Regex.Replace(html, @"(<!\[CDATA\[)(((?!one:).)*)(]]>)", "$2");
+                //html = Regex.Replace(html, "([^>])(\\n|&nbsp;)([^<])", "$1 $3");
+                html = Regex.Replace(html, @"(<!\[CDATA\[)(((?!one:)[\s\S])*)(]]>)", "$2");                
             }
 
             if (html != null)
