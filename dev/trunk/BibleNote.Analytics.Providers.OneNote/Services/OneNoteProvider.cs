@@ -94,7 +94,8 @@ namespace BibleNote.Analytics.Providers.OneNote.Services
                         return ElementType.Title;
                     break;
                 case OneNoteTags.OeChildren:
-                case OneNoteTags.Oe:                
+                case OneNoteTags.Oe:
+                case OneNoteTags.Page:    
                     return ElementType.HierarchicalBlock;
             }
 
