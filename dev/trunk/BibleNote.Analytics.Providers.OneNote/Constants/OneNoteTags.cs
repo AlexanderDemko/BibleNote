@@ -6,6 +6,7 @@ namespace BibleNote.Analytics.Providers.OneNote.Constants
         public const string Page = "one:page";
         public const string Title = "one:title";
         public const string OeChildren = "one:oechildren";
+        public const string Outline = "one:outline";        
         public const string Oe = "one:oe";
         public const string List = "one:list";
         public const string T = "one:t";

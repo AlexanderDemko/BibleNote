@@ -93,6 +93,7 @@ namespace BibleNote.Analytics.Providers.OneNote.Services
                     if (node.ParentNode?.Name == OneNoteTags.Page)
                         return ElementType.Title;
                     break;
+                case OneNoteTags.Outline:
                 case OneNoteTags.OeChildren:
                 case OneNoteTags.Oe:
                 case OneNoteTags.Page:    
