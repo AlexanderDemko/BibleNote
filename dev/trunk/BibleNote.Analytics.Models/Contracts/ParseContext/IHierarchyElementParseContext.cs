@@ -16,6 +16,14 @@ namespace BibleNote.Analytics.Models.Contracts.ParseContext
 
         List<ParagraphParseResult> ParagraphResults { get; }
 
+        /// <summary>
+        /// Include nested
+        /// </summary>
+        /// <returns></returns>
+        IEnumerable<ParagraphParseResult> GetAllParagraphResults();      
+
+        List<IHierarchyElementParseContext> ChildHierarchies { get; }
+
         IHierarchyElementParseContext ParentHierarchy { get; }        
 
         bool Parsed { get; set; }

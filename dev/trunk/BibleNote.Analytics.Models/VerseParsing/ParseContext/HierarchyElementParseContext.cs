@@ -16,6 +16,8 @@ namespace BibleNote.Analytics.Models.VerseParsing.ParseContext
 
         public List<ParagraphParseResult> ParagraphResults { get; private set; }
 
+        public List<IHierarchyElementParseContext> ChildHierarchies { get; private set; }
+
         public IHierarchyElementParseContext ParentHierarchy { get; private set; }
 
         public IElementParseContext PreviousSibling { get; private set; }
@@ -35,13 +37,15 @@ namespace BibleNote.Analytics.Models.VerseParsing.ParseContext
             }
         }
 
-        public HierarchyElementParseContext(ElementType paragraphState, IElementParseContext previousSibling, IHierarchyElementParseContext parentHierarchy)
+        public HierarchyElementParseContext(ElementType paragraphState, IElementParseContext previousSibling, 
+            IHierarchyElementParseContext parentHierarchy)
         {
             ElementType = paragraphState;
             PreviousSibling = previousSibling;
             ParentHierarchy = parentHierarchy;
 
             ParagraphResults = new List<ParagraphParseResult>();
+            ChildHierarchies = new List<IHierarchyElementParseContext>();
         }        
         
         public ChapterEntry GetHierarchyChapterEntry()
@@ -56,6 +60,14 @@ namespace BibleNote.Analytics.Models.VerseParsing.ParseContext
             return  ParentHierarchy?.GetHierarchyChapterEntry();
         }
 
+        public IEnumerable<ParagraphParseResult> GetAllParagraphResults()
+        {            
+            return ParagraphResults
+                .Union(ChildHierarchies
+                            .Where(ch => ch.ElementType.IsSimpleHierarchical())
+                            .SelectMany(ch => ch.GetAllParagraphResults()));
+        }
+
         private ChapterEntry GetChapterEntry()
         {
             if (!_chapterEntryWasSearched)
@@ -63,7 +75,7 @@ namespace BibleNote.Analytics.Models.VerseParsing.ParseContext
                 _chapterEntryWasSearched = true;
 
                 _chapterEntry = new ChapterEntry();
-                foreach (var entry in ParagraphResults.Select(pr => pr.ChapterEntry))
+                foreach (var entry in GetAllParagraphResults().Select(pr => pr.ChapterEntry))
                 {
                     if (entry?.Invalid == true)
                     {
