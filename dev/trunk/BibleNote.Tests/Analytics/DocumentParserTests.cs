@@ -321,7 +321,7 @@ namespace BibleNote.Tests.Analytics
         {
             var emptyNode = GetNode("Пустая строка");
             var node1 = GetNode("Ин 1:1");
-            var node2 = GetNode("Мк 5:6");
+            var node2 = GetNode("не сначала Мк 5:6");
             var verseNode = GetNode(":12");
 
             using (var docParser = _documentParserFactory.Create(_documentProvider))
@@ -738,6 +738,87 @@ namespace BibleNote.Tests.Analytics
                 CheckParseResults(docParser,
                     new string[] { "Ин 1" },
                     new string[] { "Мф 1-2" },
+                    new string[] { "Ин 1:12" });
+            }
+        }
+
+        [TestMethod]
+        public void DocParser_Test14()
+        {
+            var node1 = GetNode("Ин 1");
+            var verseNode = GetNode(":12");
+
+            using (var docParser = _documentParserFactory.Create(_documentProvider))
+            {
+                using (docParser.ParseHierarchyElement(ElementType.Table))
+                {
+                    using (docParser.ParseHierarchyElement(ElementType.TableBody))
+                    {
+                        using (docParser.ParseHierarchyElement(ElementType.TableRow))
+                        {
+                            using (docParser.ParseHierarchyElement(ElementType.TableCell))
+                            {
+                                docParser.ParseParagraph(node1);
+                            }
+                        }
+                    }
+
+                    using (docParser.ParseHierarchyElement(ElementType.TableBody))
+                    {
+                        using (docParser.ParseHierarchyElement(ElementType.TableRow))
+                        {
+                            using (docParser.ParseHierarchyElement(ElementType.TableCell))
+                            {
+                                docParser.ParseParagraph(verseNode);
+                            }
+                        }
+                    }
+                }
+
+                CheckParseResults(docParser,
+                    new string[] { "Ин 1" },                    
+                    new string[] { "Ин 1:12" });
+            }
+        }
+
+        [TestMethod]
+        public void DocParser_Test15()
+        {
+            var node1 = GetNode("Ин 1");
+            var verseNode = GetNode(":12");
+
+            using (var docParser = _documentParserFactory.Create(_documentProvider))
+            {
+                using (docParser.ParseHierarchyElement(ElementType.Table))
+                {
+                    using (docParser.ParseHierarchyElement(ElementType.TableRow))
+                    {
+                        using (docParser.ParseHierarchyElement(ElementType.TableCell))
+                        {
+                            using (docParser.ParseHierarchyElement(ElementType.HierarchicalBlock))
+                            {
+                                using (docParser.ParseHierarchyElement(ElementType.HierarchicalBlock))
+                                {
+                                    docParser.ParseParagraph(node1);
+                                }                                
+                            }
+                        }
+                    }
+
+                    using (docParser.ParseHierarchyElement(ElementType.TableRow))
+                    {
+                        using (docParser.ParseHierarchyElement(ElementType.TableCell))
+                        {
+                            using (docParser.ParseHierarchyElement(ElementType.HierarchicalBlock))
+                            {
+                                docParser.ParseParagraph(verseNode);
+                            }
+                        }
+                    }
+                }
+
+                CheckParseResults(docParser,
+                    new string[] { "Ин 1" },
                     new string[] { "Ин 1:12" });
             }
         }

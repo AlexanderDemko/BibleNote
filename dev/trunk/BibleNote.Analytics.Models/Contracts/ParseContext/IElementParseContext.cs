@@ -7,20 +7,6 @@ using System.Threading.Tasks;
 
 namespace BibleNote.Analytics.Models.Contracts.ParseContext
 {
-    public enum ElementType
-    {
-        ListElement,
-        SimpleBlock,
-        HierarchicalBlock,
-        Root,
-        Title,
-        Table,
-        TableBody,
-        TableRow,
-        TableCell,
-        List
-    }
-
     public interface IElementParseContext
     {
         ElementType ElementType { get; }

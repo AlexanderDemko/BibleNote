@@ -51,7 +51,7 @@ namespace BibleNote.Analytics.Providers.Html
         private void ParseNode(IDocumentParser docParser, HtmlNode node)
         {
             var state = GetParagraphType(node);
-            if (state > ElementType.SimpleBlock)
+            if (state.IsHierarchical())
             {
                 using (docParser.ParseHierarchyElement(state))
                 {
