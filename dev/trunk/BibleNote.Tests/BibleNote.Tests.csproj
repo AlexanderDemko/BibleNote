@@ -110,6 +110,7 @@
     <Compile Include="Analytics\Mocks\MockDocumentProviderInfo.cs" />
     <Compile Include="Analytics\ParagraphParserTests.cs" />
     <Compile Include="Analytics\StringParserTests.cs" />
+    <Compile Include="Analytics\DocumentParserTestsBase.cs" />
     <Compile Include="Analytics\TestsBase.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="..\VersionInfo.cs">

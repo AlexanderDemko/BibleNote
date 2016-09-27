@@ -12,7 +12,7 @@ namespace BibleNote.Analytics.Models.VerseParsing.ParseContext
     {
         public ElementType ElementType { get; private set; }
 
-        public IHierarchyInfo HierarchyInfo { get; set; }        
+        public IHierarchyInfo HierarchyInfo { get; set; }
 
         public List<ParagraphParseResult> ParagraphResults { get; private set; }
 
@@ -37,7 +37,7 @@ namespace BibleNote.Analytics.Models.VerseParsing.ParseContext
             }
         }
 
-        public HierarchyElementParseContext(ElementType paragraphState, IElementParseContext previousSibling, 
+        public HierarchyElementParseContext(ElementType paragraphState, IElementParseContext previousSibling,
             IHierarchyElementParseContext parentHierarchy)
         {
             ElementType = paragraphState;
@@ -46,24 +46,24 @@ namespace BibleNote.Analytics.Models.VerseParsing.ParseContext
 
             ParagraphResults = new List<ParagraphParseResult>();
             ChildHierarchies = new List<IHierarchyElementParseContext>();
-        }        
-        
+        }
+
         public ChapterEntry GetHierarchyChapterEntry()
         {
             if (ChapterEntry != null && (ChapterEntry.Found || (ChapterEntry.AtStartOfParagraph && ChapterEntry.Invalid)))
-                return ChapterEntry;            
+                return ChapterEntry;
 
             var calculatedChapterEntry = GetCalculatedChapterEntry();
-            if (calculatedChapterEntry != null && (calculatedChapterEntry.Found || (calculatedChapterEntry.AtStartOfParagraph && calculatedChapterEntry.Invalid)))                
-                return calculatedChapterEntry;            
+            if (calculatedChapterEntry != null && (calculatedChapterEntry.Found || (calculatedChapterEntry.AtStartOfParagraph && calculatedChapterEntry.Invalid)))
+                return calculatedChapterEntry;
 
-            return  ParentHierarchy?.GetHierarchyChapterEntry();
+            return ParentHierarchy?.GetHierarchyChapterEntry();
         }
 
         public IEnumerable<ParagraphParseResult> GetAllParagraphResults()
-        {            
+        {
             return ParagraphResults
-                .Union(ChildHierarchies
+                    .Union(ChildHierarchies
                             .Where(ch => ch.ElementType.IsSimpleHierarchical())
                             .SelectMany(ch => ch.GetAllParagraphResults()));
         }
@@ -119,31 +119,32 @@ namespace BibleNote.Analytics.Models.VerseParsing.ParseContext
                 if (!(result?.Found).GetValueOrDefault() && !(result?.AtStartOfParagraph).GetValueOrDefault() && hierarchyInfo.CurrentColumn > 0)
                     result = hierarchyInfo.FirstColumnParseContexts.TryGetAt(hierarchyInfo.CurrentRow)?.ChapterEntry;
             }
-            else if (ElementType == ElementType.SimpleBlock || PreviousSibling?.ElementType == ElementType.SimpleBlock)
+            else if (ElementType.CanBeLinear() || PreviousSibling?.ElementType.CanBeLinear() == true)
             {
-                if (PreviousSibling?.ChapterEntry?.AtStartOfParagraph == true)
-                    result = PreviousSibling.ChapterEntry;
-                else if (PreviousSibling?.ChapterEntry?.Found == true)
-                    result = ChapterEntry.Terminator;
+                result = GetPreviousSiblingChapterEntry();
             }
-            else if (ElementType == ElementType.ListElement)
-            {
-                result = GetPreviousSiblingChapterEntry();                    
-            }
+            //else if (ElementType.IsSimpleBlockOrSimpleHierarchical() || PreviousSibling?.ElementType.IsSimpleBlockOrSimpleHierarchical() == true)
+            //{
+            //    if (PreviousSibling?.ChapterEntry?.AtStartOfParagraph == true)
+            //        result = PreviousSibling.ChapterEntry;
+            //    else if (PreviousSibling?.ChapterEntry?.Found == true)
+            //        result = ChapterEntry.Terminator;
+            //}           
 
             return result;
         }
 
         public ChapterEntry GetPreviousSiblingChapterEntry()
         {
-            if (PreviousSibling?.ElementType == ElementType.ListElement)    // тогда в PreviousSibling точно хранится IHierarchyElementParseContext
+            if (PreviousSibling?.ElementType.CanBeLinear() == true)    
             {
                 if (PreviousSibling?.ChapterEntry != null 
                     && PreviousSibling.ChapterEntry.AtStartOfParagraph 
                     && (PreviousSibling.ChapterEntry.Invalid || PreviousSibling.ChapterEntry.Found))
                         return PreviousSibling.ChapterEntry;
                 
-                return ((IHierarchyElementParseContext)PreviousSibling)?.GetPreviousSiblingChapterEntry();
+                if (PreviousSibling is IHierarchyElementParseContext)
+                    return ((IHierarchyElementParseContext)PreviousSibling)?.GetPreviousSiblingChapterEntry();
             }
 
             return null;

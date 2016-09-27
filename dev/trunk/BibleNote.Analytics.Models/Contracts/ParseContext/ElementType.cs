@@ -8,16 +8,16 @@ namespace BibleNote.Analytics.Models.Contracts.ParseContext
 {
     public enum ElementType
     {
+        SimpleBlock,                
+        HierarchicalBlock,
         ListElement,
-        SimpleBlock,
-        HierarchicalBlock,        
         Title,
         List,
         Table,
         TableBody,
         TableRow,
         TableCell,
-        Root
+        Root        // может быть несколько. Не обязательно корневой элемент.
     }
 
     public static class ElementTypeHelper
@@ -29,7 +29,12 @@ namespace BibleNote.Analytics.Models.Contracts.ParseContext
 
         public static bool IsSimpleHierarchical(this ElementType type)
         {
-            return type.IsHierarchical() && type < ElementType.List;
+            return type == ElementType.HierarchicalBlock;
+        }
+
+        public static bool CanBeLinear(this ElementType type)
+        {
+            return type <= ElementType.ListElement;
         }
     }
 }
