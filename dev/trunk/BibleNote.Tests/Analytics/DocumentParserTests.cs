@@ -1,5 +1,4 @@
-﻿using System.Linq;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using BibleNote.Analytics.Services.Unity;
 using BibleNote.Analytics.Contracts.VerseParsing;
 using Microsoft.Practices.Unity;
@@ -10,15 +9,15 @@ using BibleNote.Analytics.Contracts.Providers;
 using BibleNote.Analytics.Models.VerseParsing;
 using BibleNote.Analytics.Models.Contracts.ParseContext;
 using BibleNote.Analytics.Models.VerseParsing.ParseContext;
+using System;
 
 namespace BibleNote.Tests.Analytics
 {
     [TestClass]
-    public class DocumentParserTests : TestsBase
+    public class DocumentParserTests : DocumentParserTestsBase
     {
         private IDocumentProviderInfo _documentProvider;
-        private IDocumentParserFactory _documentParserFactory;
-        private IVersePointerFactory _versePointerFactory;
+        private IDocumentParserFactory _documentParserFactory;        
         private IDocumentParseContextEditor _documentParseContext;
 
         [TestInitialize]
@@ -28,7 +27,6 @@ namespace BibleNote.Tests.Analytics
 
             _documentProvider = new MockDocumentProviderInfo() { IsReadonly = true };
             _documentParserFactory = DIContainer.Resolve<IDocumentParserFactory>();
-            _versePointerFactory = DIContainer.Resolve<IVersePointerFactory>();
 
             _documentParseContext = new DocumentParseContext();
             DIContainer.Container.RegisterInstance(_documentParseContext);
@@ -40,29 +38,16 @@ namespace BibleNote.Tests.Analytics
 
         }
 
+        private void CheckParseResults(IDocumentParser docParser, params string[][] expectedResults)
+        {
+            base.CheckParseResults(docParser.DocumentParseResult.ParagraphParseResults, expectedResults);
+        }
+
         private static HtmlNode GetNode(string html)
         {
             var htmlDoc = new HtmlDocument();
             htmlDoc.LoadHtml(html);
             return htmlDoc.DocumentNode;
-        }
-
-        private void CheckParseResult(ParagraphParseResult parseResult, params string[] expectedVerses)
-        {
-            Assert.AreEqual(expectedVerses.Length, parseResult.VerseEntries.Count, "Verses length is not the same. Expected: {0}. Found: {1}", expectedVerses.Length, parseResult.VerseEntries.Count);
-            var verseEntries = parseResult.VerseEntries.Select(ve => ve.VersePointer);
-            foreach (var verse in expectedVerses)
-                Assert.IsTrue(verseEntries.Contains(_versePointerFactory.CreateVersePointer(verse)), "Can not find the verse: '{0}'", verse);
-        }
-
-        private void CheckParseResults(IDocumentParser docParser, params string[][] expectedResults)
-        {
-            var results = docParser.DocumentParseResult.ParagraphParseResults;
-            results.Count.Should().Be(expectedResults.Length);
-            for (var i = 0; i < expectedResults.Length; i++)                        
-            {
-                CheckParseResult(results[i], expectedResults[i]);
-            }
         }
 
         [TestMethod]
@@ -386,10 +371,14 @@ namespace BibleNote.Tests.Analytics
             var node1 = GetNode("Ин 1:1");
             var node2 = GetNode("Мк 5:6");
             var verseNode = GetNode(":12");
+            var titleNode = GetNode("Лк 3");
 
             using (var docParser = _documentParserFactory.Create(_documentProvider))
             {
-                _documentParseContext.SetTitleVerse(new ChapterEntry(_versePointerFactory.CreateVersePointer("Лк 3").ToChapterPointer()) { AtStartOfParagraph = true });
+                using (docParser.ParseHierarchyElement(ElementType.Title))
+                {
+                    docParser.ParseParagraph(titleNode);                    
+                }
 
                 using (docParser.ParseHierarchyElement(ElementType.Table))
                 {
@@ -447,6 +436,7 @@ namespace BibleNote.Tests.Analytics
                 }
 
                 CheckParseResults(docParser,
+                    new string[] { "Лк 3" },
                     new string[] { "Ин 1:1" },
                     new string[] { "Ин 1:12" },
                     new string[] { "Мк 5:6" },

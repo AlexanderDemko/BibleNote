@@ -110,11 +110,12 @@ namespace BibleNote.Analytics.Services.VerseParsing
             if (parentVerse == null)
             {
                 var chapterEntry = docParseContext.CurrentParagraph.GetHierarchyChapterEntry()
-                                ?? docParseContext.CurrentHierarchy?.GetHierarchyChapterEntry()
-                                ?? docParseContext.TitleChapter;
+                                ?? docParseContext.CurrentHierarchy?.GetHierarchyChapterEntry();
 
                 if (chapterEntry?.Found == true)                
                     parentVerse = chapterEntry.ChapterPointer;
+                else if (docParseContext.TitleChapter?.Found == true)
+                    parentVerse = docParseContext.TitleChapter.ChapterPointer;
             }               
 
             if (parentVerse != null && parentVerse.IsMultiVerse <= Models.Verse.MultiVerse.OneChapter)
