@@ -1,11 +1,9 @@
-﻿using BibleNote.Analytics.Contracts.Providers;
-using HtmlAgilityPack;
-using System;
+﻿using BibleNote.Analytics.Contracts.VerseParsing;
 
 namespace BibleNote.Analytics.Contracts.Providers
 {
     public interface IHtmlDocumentHandler : IDocumentHandler
     {
-        HtmlDocument HtmlDocument { get; }
+        IXmlNode HtmlDocument { get; }
     }
 }

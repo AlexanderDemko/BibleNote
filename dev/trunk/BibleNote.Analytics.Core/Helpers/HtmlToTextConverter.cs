@@ -1,17 +1,17 @@
-﻿using HtmlAgilityPack;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using BibleNote.Analytics.Core.Extensions;
 using System.Text.RegularExpressions;
 using BibleNote.Analytics.Core.Constants;
+using BibleNote.Analytics.Core.Contracts;
 
 namespace BibleNote.Analytics.Core.Helpers
 {
     public class TextNodeEntry
     {
-        public HtmlNode Node { get; set; }
+        public IXmlNode Node { get; set; }
 
         internal string CleanedText { get; set; }
 
@@ -25,7 +25,7 @@ namespace BibleNote.Analytics.Core.Helpers
 
         public void Clean()
         {
-            Node.InnerHtml = CleanedText;
+            Node.InnerXml = CleanedText;
             WasCleaned = true;
         }
 
@@ -62,11 +62,11 @@ namespace BibleNote.Analytics.Core.Helpers
             return htmlPattern.Replace(htmlString, string.Empty);
         }
 
-        public TextNodesString Convert(HtmlNode node)
+        public TextNodesString Convert(IXmlNode node)
         {
             _parseStrings = new List<TextNodesString>();
 
-            if (node.NodeType == HtmlNodeType.Text)            
+            if (node.NodeType == IXmlNodeType.Text)            
                 AddParseString(BuildParseString(new[] { node }));            
             else
                 FindParseStrings(node);
@@ -89,7 +89,7 @@ namespace BibleNote.Analytics.Core.Helpers
             return result;
         }
 
-        private void FindParseStrings(HtmlNode node)
+        private void FindParseStrings(IXmlNode node)
         {
             if (!IsHierarchyNode(node))
             {
@@ -97,7 +97,7 @@ namespace BibleNote.Analytics.Core.Helpers
             }
             else
             {
-                var nodes = new List<HtmlNode>();
+                var nodes = new List<IXmlNode>();
 
                 foreach (var childNode in node.ChildNodes)
                 {
@@ -107,13 +107,13 @@ namespace BibleNote.Analytics.Core.Helpers
                         continue;
                     }
 
-                    if ((childNode.HasChildNodes || childNode.Name == HtmlTags.Br) && nodes.Count > 0)
+                    if ((childNode.HasChildNodes() || childNode.Name == HtmlTags.Br) && nodes.Count > 0)
                     {
                         AddParseString(BuildParseString(nodes));
                         nodes.Clear();
                     }
 
-                    if (childNode.HasChildNodes)
+                    if (childNode.HasChildNodes())
                         FindParseStrings(childNode);
                 }
 
@@ -130,7 +130,7 @@ namespace BibleNote.Analytics.Core.Helpers
             _parseStrings.Add(parseString);
         }
 
-        private TextNodesString BuildParseString(IEnumerable<HtmlNode> nodes)
+        private TextNodesString BuildParseString(IEnumerable<IXmlNode> nodes)
         {
             var result = new TextNodesString();
             var sb = new StringBuilder();
@@ -138,10 +138,10 @@ namespace BibleNote.Analytics.Core.Helpers
             foreach (var node in nodes)
             {
                 var textNode = GetTextNode(node);
-                if (string.IsNullOrEmpty(textNode.InnerHtml))
+                if (string.IsNullOrEmpty(textNode.InnerXml))
                     continue;
 
-                var nodeText = textNode.InnerHtml.Replace(HtmlTags.Nbsp, " ");
+                var nodeText = textNode.InnerXml.Replace(HtmlTags.Nbsp, " ");
                 result.NodesInfo.Add(new TextNodeEntry()
                 {
                     Node = textNode,
@@ -156,26 +156,26 @@ namespace BibleNote.Analytics.Core.Helpers
             return result;
         }
 
-        private static bool IsHierarchyNode(HtmlNode node)
+        private static bool IsHierarchyNode(IXmlNode node)
         {
             return node.ChildNodes.Any(child => !LikeTextNode(child));
         }
 
-        private static bool LikeTextNode(HtmlNode node)
+        private static bool LikeTextNode(IXmlNode node)
         {
-            return node.NodeType == HtmlNodeType.Text
-                || (node.NodeType == HtmlNodeType.Element && node.ChildNodes.Count == 1 && node.ChildNodes[0].NodeType == HtmlNodeType.Text);
+            return node.NodeType == IXmlNodeType.Text
+                || (node.NodeType == IXmlNodeType.Element && node.ChildNodes.Count == 1 && node.ChildNodes.First().NodeType == IXmlNodeType.Text);
         }
 
-        private static HtmlNode GetTextNode(HtmlNode node)
+        private static IXmlNode GetTextNode(IXmlNode node)
         {
-            HtmlNode textNode = null;
+            IXmlNode textNode = null;
 
-            if (node.NodeType == HtmlNodeType.Text)
+            if (node.NodeType == IXmlNodeType.Text)
                 textNode = node;
 
-            if (node.NodeType == HtmlNodeType.Element && node.ChildNodes.Count == 1 && node.ChildNodes[0].NodeType == HtmlNodeType.Text)
-                textNode = node.ChildNodes[0];
+            if (node.NodeType == IXmlNodeType.Element && node.ChildNodes.Count == 1 && node.ChildNodes.First().NodeType == IXmlNodeType.Text)
+                textNode = node.ChildNodes.First();
 
             if (textNode != null)
                 return textNode;

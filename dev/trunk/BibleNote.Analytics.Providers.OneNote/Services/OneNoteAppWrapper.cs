@@ -69,7 +69,7 @@ namespace BibleNote.Analytics.Providers.OneNote.Services
                 {
                     foreach (var inkWord in inkNode.Elements("one:inkword")
                                                    .Where(ink => ink.Element("one:callbackid") == null)
-                                                   .ToArray())
+                                                   .ToList())
                     {
                         inkWord.Remove();
                     }
