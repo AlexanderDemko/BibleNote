@@ -2,15 +2,16 @@
 using BibleNote.Analytics.Services.Unity;
 using BibleNote.Analytics.Contracts.VerseParsing;
 using Microsoft.Practices.Unity;
-using HtmlAgilityPack;
 using BibleNote.Tests.Analytics.Mocks;
-using FluentAssertions;
 using BibleNote.Analytics.Contracts.Providers;
-using BibleNote.Analytics.Models.VerseParsing;
 using BibleNote.Analytics.Models.Contracts.ParseContext;
 using BibleNote.Analytics.Models.VerseParsing.ParseContext;
-using System;
 using BibleNote.Tests.Analytics.TestsBase;
+using BibleNote.Analytics.Core.Contracts;
+using System.Xml.Linq;
+using BibleNote.Analytics.Providers.OneNote.Services;
+using BibleNote.Analytics.Providers.Html;
+using HtmlAgilityPack;
 
 namespace BibleNote.Tests.Analytics
 {
@@ -44,11 +45,11 @@ namespace BibleNote.Tests.Analytics
             base.CheckParseResults(docParser.DocumentParseResult.ParagraphParseResults, expectedResults);
         }
 
-        private static HtmlNode GetNode(string html)
+        private static IXmlNode GetNode(string html)
         {
             var htmlDoc = new HtmlDocument();
             htmlDoc.LoadHtml(html);
-            return htmlDoc.DocumentNode;
+            return new HtmlNodeWrapper(htmlDoc.DocumentNode);
         }
 
         [TestMethod]

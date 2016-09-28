@@ -10,6 +10,12 @@ namespace BibleNote.Analytics.Core.Contracts
         Text = 3
     }
 
+    public enum IXmlTextNodeMode
+    {
+        Exact,
+        Like
+    }
+
     public interface IXmlNode
     {
         string Name { get; }
@@ -20,12 +26,26 @@ namespace BibleNote.Analytics.Core.Contracts
 
         IXmlNodeType NodeType { get; }
 
+        IXmlNode GetParentNode();
+
         bool HasChildNodes();
 
-        ICollection<IXmlNode> ChildNodes { get; }
+        IEnumerable<IXmlNode> GetChildNodes();
+
+        int ChildNodesCount { get; }
+
+        IXmlNode GetFirstChild();
 
         string GetAttributeValue(string attributeName);
 
         void SetAttributeValue(string attributeName, string attributeValue);
+
+        bool IsHierarchyNode(IXmlTextNodeMode textNodeMode);
+
+        bool IsTextNode(IXmlTextNodeMode textNodeMode);
+
+        bool IsValuableTextNode(IXmlTextNodeMode textNodeMode);
+
+        IXmlNode GetTextNode();        
     }    
 }

@@ -7,7 +7,6 @@ using BibleNote.Analytics.Services;
 using BibleNote.Analytics.Services.Environment;
 using BibleNote.Analytics.Services.Unity;
 using BibleNote.Analytics.Services.VerseParsing;
-using HtmlAgilityPack;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;

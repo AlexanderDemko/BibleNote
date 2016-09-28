@@ -1,12 +1,12 @@
 ﻿using BibleNote.Analytics.Contracts.VerseParsing;
 using System;
-using HtmlAgilityPack;
 using BibleNote.Analytics.Contracts.Providers;
 using BibleNote.Analytics.Models.VerseParsing;
 using System.Linq;
 using BibleNote.Analytics.Models.Verse;
 using BibleNote.Analytics.Models.Common;
 using BibleNote.Analytics.Models.Contracts.ParseContext;
+using BibleNote.Analytics.Core.Contracts;
 
 namespace BibleNote.Analytics.Services.VerseParsing
 {
@@ -35,7 +35,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
             _docParseContext.EnterHierarchyElement(ElementType.Root);
         }
 
-        public ParagraphParseResult ParseParagraph(HtmlNode node)
+        public ParagraphParseResult ParseParagraph(IXmlNode node)
         {   
             using (_docParseContext.ParseParagraph())
             {

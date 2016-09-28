@@ -91,17 +91,17 @@ namespace BibleNote.Analytics.Core.Helpers
 
         private void FindParseStrings(IXmlNode node)
         {
-            if (!IsHierarchyNode(node))
+            if (!node.IsHierarchyNode(IXmlTextNodeMode.Like))
             {
-                AddParseString(BuildParseString(node.ChildNodes));
+                AddParseString(BuildParseString(node.GetChildNodes()));
             }
             else
             {
                 var nodes = new List<IXmlNode>();
 
-                foreach (var childNode in node.ChildNodes)
+                foreach (var childNode in node.GetChildNodes())
                 {
-                    if (LikeTextNode(childNode))
+                    if (childNode.IsTextNode(IXmlTextNodeMode.Like))
                     {
                         nodes.Add(childNode);
                         continue;
@@ -137,7 +137,7 @@ namespace BibleNote.Analytics.Core.Helpers
 
             foreach (var node in nodes)
             {
-                var textNode = GetTextNode(node);
+                var textNode = node.GetTextNode();
                 if (string.IsNullOrEmpty(textNode.InnerXml))
                     continue;
 
@@ -154,33 +154,6 @@ namespace BibleNote.Analytics.Core.Helpers
 
             result.Value = sb.ToString();
             return result;
-        }
-
-        private static bool IsHierarchyNode(IXmlNode node)
-        {
-            return node.ChildNodes.Any(child => !LikeTextNode(child));
-        }
-
-        private static bool LikeTextNode(IXmlNode node)
-        {
-            return node.NodeType == IXmlNodeType.Text
-                || (node.NodeType == IXmlNodeType.Element && node.ChildNodes.Count == 1 && node.ChildNodes.First().NodeType == IXmlNodeType.Text);
-        }
-
-        private static IXmlNode GetTextNode(IXmlNode node)
-        {
-            IXmlNode textNode = null;
-
-            if (node.NodeType == IXmlNodeType.Text)
-                textNode = node;
-
-            if (node.NodeType == IXmlNodeType.Element && node.ChildNodes.Count == 1 && node.ChildNodes.First().NodeType == IXmlNodeType.Text)
-                textNode = node.ChildNodes.First();
-
-            if (textNode != null)
-                return textNode;
-
-            throw new ArgumentException("Node is not TextNode");
         }
     }
 }

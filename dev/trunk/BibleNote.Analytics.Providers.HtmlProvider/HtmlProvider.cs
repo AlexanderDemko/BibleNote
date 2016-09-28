@@ -8,6 +8,7 @@ using BibleNote.Analytics.Models.Verse;
 using BibleNote.Analytics.Models.VerseParsing;
 using BibleNote.Analytics.Core.Constants;
 using BibleNote.Analytics.Models.Contracts.ParseContext;
+using BibleNote.Analytics.Core.Contracts;
 
 namespace BibleNote.Analytics.Providers.Html
 {
@@ -63,8 +64,9 @@ namespace BibleNote.Analytics.Providers.Html
             }
             else
             {
-                if (node.HasChildNodes || node.IsValuableTextNode())
-                    docParser.ParseParagraph(node);
+                var nodeWrapper = new HtmlNodeWrapper(node);
+                if (node.HasChildNodes || nodeWrapper.IsValuableTextNode(IXmlTextNodeMode.Exact))
+                    docParser.ParseParagraph(nodeWrapper);
             }
         }
 
