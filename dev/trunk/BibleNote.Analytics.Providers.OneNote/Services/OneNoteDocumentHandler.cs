@@ -1,44 +1,41 @@
 ﻿using BibleNote.Analytics.Contracts.Providers;
+using BibleNote.Analytics.Core.Contracts;
 using BibleNote.Analytics.Providers.OneNote.Contracts;
 using BibleNote.Analytics.Providers.OneNote.Navigation;
-using HtmlAgilityPack;
 using System;
 using System.Text.RegularExpressions;
+using System.Xml.Linq;
 
 namespace BibleNote.Analytics.Providers.OneNote.Services
 {
-    public class OneNoteDocumentHandler : IHtmlDocumentHandler
+    public class OneNoteDocumentHandler : IXDocumentHandler
     {
-        public HtmlDocument HtmlDocument { get; private set; }
+        public XDocument Document { get; private set; }
 
         public IDocumentId DocumentId { get; private set; }
 
         public OneNoteDocumentHandler(IDocumentId documentId)
         {
             DocumentId = documentId;
-            HtmlDocument = ReadDocument(DocumentId);
+            Document = ReadDocument(DocumentId);
         }
 
-        private static HtmlDocument ReadDocument(IDocumentId documentId)
+        private static XDocument ReadDocument(IDocumentId documentId)
         {
-            string html = null;
+            string xml = null;
 
             if (documentId is OneNoteDocumentId)
             {
                 using (var oneNoteApp = new OneNoteAppWrapper())
                 {
-                    html = oneNoteApp.GetPageContent(((OneNoteDocumentId)documentId).PageId);
+                    xml = oneNoteApp.GetPageContent(((OneNoteDocumentId)documentId).PageId);
                     //html = Regex.Replace(html, "([^>])(\\n|&nbsp;)([^<])", "$1 $3");      // todo: разобраться, нужно ли это сейчас
-                    html = Regex.Replace(html, @"(<!\[CDATA\[)(((?!one:)[\s\S])*)(]]>)", "$2");
+                    xml = Regex.Replace(xml, @"(<!\[CDATA\[)(((?!one:)[\s\S])*)(]]>)", "$2");
                 }
             }            
 
-            if (html != null)
-            {
-                var htmlDoc = new HtmlDocument();
-                htmlDoc.LoadHtml(html);
-                return htmlDoc;
-            }
+            if (xml != null)            
+                return XDocument.Parse(xml);
 
             throw new NotSupportedException(documentId.GetType().Name);
         }
@@ -54,7 +51,7 @@ namespace BibleNote.Analytics.Providers.OneNote.Services
             {
                 using (var oneNoteApp = new OneNoteAppWrapper())
                 {
-                    oneNoteApp.UpdatePageContent(HtmlDocument);
+                    oneNoteApp.UpdatePageContent(Document);
                 }
             }
         }

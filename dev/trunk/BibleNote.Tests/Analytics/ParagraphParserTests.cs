@@ -2,13 +2,16 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using BibleNote.Analytics.Services.Unity;
 using BibleNote.Analytics.Contracts.VerseParsing;
-using HtmlAgilityPack;
 using BibleNote.Analytics.Core.Helpers;
 using BibleNote.Tests.Analytics.Mocks;
 using System;
 using BibleNote.Analytics.Models.VerseParsing;
 using FluentAssertions;
 using BibleNote.Analytics.Models.Contracts.ParseContext;
+using System.Xml.Linq;
+using BibleNote.Analytics.Core.Contracts;
+using BibleNote.Analytics.Providers.Html;
+using HtmlAgilityPack;
 
 namespace BibleNote.Tests.Analytics
 {
@@ -17,7 +20,7 @@ namespace BibleNote.Tests.Analytics
     {
         public class TestResult
         {
-            public HtmlDocument HtmlDoc { get; set; }
+            public IXmlNode Node { get; set; }
             public ParagraphParseResult Result { get; set; }
         }
 
@@ -63,17 +66,18 @@ namespace BibleNote.Tests.Analytics
 
             var htmlDoc = new HtmlDocument();
             htmlDoc.LoadHtml(input);
+            var xDoc = new HtmlNodeWrapper(htmlDoc.DocumentNode);
 
             ParagraphParseResult result;
             using (_documentParseContext.ParseParagraph())            
-                result = _parahraphParserService.ParseParagraph(htmlDoc.DocumentNode);            
+                result = _parahraphParserService.ParseParagraph(xDoc);            
 
             Assert.AreEqual(verses.Length, result.VerseEntries.Count, "Verses length is not the same. Expected: {0}. Found: {1}", verses.Length, result.VerseEntries.Count);            
             var verseEntries = result.VerseEntries.Select(ve => ve.VersePointer);
             foreach (var verse in verses)
                 Assert.IsTrue(verseEntries.Contains(_versePointerFactory.CreateVersePointer(verse)), "Can not find the verse: '{0}'", verse);            
 
-            Assert.AreEqual(expectedOutput, htmlDoc.DocumentNode.InnerHtml, "The output html is wrong.");
+            Assert.AreEqual(expectedOutput, xDoc.InnerXml, "The output html is wrong.");
             Assert.AreEqual(new HtmlToTextConverter().SimpleConvert(input).Replace("&nbsp;", " "), result.Text, "Text parts do not contain the full input string.");
 
             if (notFoundVerses != null)
@@ -83,7 +87,7 @@ namespace BibleNote.Tests.Analytics
                     Assert.IsTrue(result.NotFoundVerses.Contains(_versePointerFactory.CreateVersePointer(verse)));
             }
 
-            return new TestResult() { HtmlDoc = htmlDoc, Result = result };
+            return new TestResult() { Node = xDoc, Result = result };
         }
 
         private TestResult CheckVerses(string input, string expectedOutput, Action<IDocumentParseContextEditor> initDocParseContext, params string[] verses)

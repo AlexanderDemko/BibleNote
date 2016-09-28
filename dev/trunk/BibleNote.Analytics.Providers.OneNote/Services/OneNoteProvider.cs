@@ -5,11 +5,12 @@ using BibleNote.Analytics.Models.VerseParsing;
 using BibleNote.Analytics.Providers.OneNote.Contracts;
 using System.Collections.Generic;
 using System.Linq;
-using HtmlAgilityPack;
 using BibleNote.Analytics.Core.Extensions;
 using BibleNote.Analytics.Models.Contracts.ParseContext;
 using BibleNote.Analytics.Providers.OneNote.Constants;
 using BibleNote.Analytics.Core.Constants;
+using System.Xml.Linq;
+using BibleNote.Analytics.Core.Contracts;
 
 namespace BibleNote.Analytics.Providers.OneNote.Services
 {
@@ -39,7 +40,7 @@ namespace BibleNote.Analytics.Providers.OneNote.Services
             {
                 using (var docParser = _documentParserFactory.Create(this))
                 {
-                    ParseNode(docParser, docHandler.HtmlDocument.DocumentNode.Element(OneNoteTags.Page));
+                    ParseNode(docParser, docHandler.Document.Root);
                     result = docParser.DocumentParseResult;
                 }
 
@@ -50,14 +51,14 @@ namespace BibleNote.Analytics.Providers.OneNote.Services
             return result;
         }
 
-        private void ParseNode(IDocumentParser docParser, HtmlNode node)
+        private void ParseNode(IDocumentParser docParser, XElement node)
         {
             var state = GetParagraphType(node);
             if (state.IsHierarchical())
             {
                 using (docParser.ParseHierarchyElement(state))
                 {
-                    foreach (var childNode in node.ChildNodes)
+                    foreach (var childNode in node.Elements())
                     {
                         ParseNode(docParser, childNode);
                     }
@@ -65,23 +66,24 @@ namespace BibleNote.Analytics.Providers.OneNote.Services
             }
             else
             {
-                if (node.HasChildNodes || node.IsValuableTextNode())
-                    docParser.ParseParagraph(node);
+                var nodeWrapper = new XElementWrapper(node);
+                if (node.HasElements || nodeWrapper.IsValuableTextNode(IXmlTextNodeMode.Exact))
+                    docParser.ParseParagraph(nodeWrapper);
             }
         }
 
-        private ElementType GetParagraphType(HtmlNode node)
+        private ElementType GetParagraphType(XElement node)
         {
             if (node.Name == OneNoteTags.OeChildren
-                && node.FirstChild?.Name == OneNoteTags.Oe
-                && node.FirstChild.FirstChild?.Name == OneNoteTags.List)
+                && node.Elements().First()?.Name.LocalName == OneNoteTags.Oe
+                && node.Elements().First().Elements().First()?.Name.LocalName == OneNoteTags.List)
                 return ElementType.List;
 
             if (node.Name == OneNoteTags.Oe 
-                && node.FirstChild?.Name == OneNoteTags.List)
+                && node.Elements().First()?.Name == OneNoteTags.List)
                 return ElementType.ListElement;            
 
-            switch (node.Name)
+            switch (node.Name.LocalName)
             {
                 case OneNoteTags.Table:
                     return ElementType.Table;
@@ -90,7 +92,7 @@ namespace BibleNote.Analytics.Providers.OneNote.Services
                 case OneNoteTags.TableCell:
                     return ElementType.TableCell;
                 case OneNoteTags.Title:
-                    if (node.ParentNode?.Name == OneNoteTags.Page)
+                    if (node.Parent?.Name.LocalName == OneNoteTags.Page)
                         return ElementType.Title;
                     break;
                 case OneNoteTags.Page:

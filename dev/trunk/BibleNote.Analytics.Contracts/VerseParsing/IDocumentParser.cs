@@ -1,8 +1,8 @@
 ﻿using BibleNote.Analytics.Contracts.Providers;
+using BibleNote.Analytics.Core.Contracts;
 using BibleNote.Analytics.Models.Common;
 using BibleNote.Analytics.Models.Contracts.ParseContext;
 using BibleNote.Analytics.Models.VerseParsing;
-using HtmlAgilityPack;
 using System;
 
 namespace BibleNote.Analytics.Contracts.VerseParsing
@@ -13,7 +13,7 @@ namespace BibleNote.Analytics.Contracts.VerseParsing
 
         void Init(IDocumentProviderInfo documentProvider);                
 
-        ParagraphParseResult ParseParagraph(HtmlNode node);
+        ParagraphParseResult ParseParagraph(IXmlNode node);
 
         DisposeHandler ParseHierarchyElement(ElementType paragraphType);
     }

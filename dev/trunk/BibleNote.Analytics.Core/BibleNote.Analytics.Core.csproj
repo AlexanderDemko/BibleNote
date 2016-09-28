@@ -78,7 +78,6 @@
     <Compile Include="Contracts\IXmlNode.cs" />
     <Compile Include="Exceptions\NotInitializedException.cs" />
     <Compile Include="Extensions\DictionaryExtensions.cs" />
-    <Compile Include="Extensions\HtmlNodeExtensions.cs" />
     <Compile Include="Extensions\ListExtensions.cs" />
     <Compile Include="Extensions\UnityExtensions.cs" />
     <Compile Include="Helpers\FileUtils.cs" />

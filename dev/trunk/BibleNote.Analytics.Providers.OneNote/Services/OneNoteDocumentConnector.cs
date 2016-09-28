@@ -5,7 +5,7 @@ namespace BibleNote.Analytics.Providers.OneNote.Services
 {
     public class OneNoteDocumentConnector : IOneNoteDocumentConnector
     {
-        public IHtmlDocumentHandler Connect(IDocumentId documentId)
+        public IXDocumentHandler Connect(IDocumentId documentId)
         {
             return new OneNoteDocumentHandler(documentId);
         }

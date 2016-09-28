@@ -1,7 +1,7 @@
 ﻿using BibleNote.Analytics.Contracts.Logging;
 using BibleNote.Analytics.Providers.OneNote.Constants;
 using BibleNote.Analytics.Services.Unity;
-using HtmlAgilityPack;
+using System.Xml.XPath;
 using Microsoft.Office.Interop.OneNote;
 using System;
 using System.Collections.Generic;
@@ -10,6 +10,8 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Xml.Linq;
+using System.Xml;
 
 namespace BibleNote.Analytics.Providers.OneNote.Services
 {
@@ -54,38 +56,43 @@ namespace BibleNote.Analytics.Providers.OneNote.Services
             ReleaseOneNoteApp();
         }
 
-        public void UpdatePageContent(HtmlDocument pageDoc)
+        public void UpdatePageContent(XDocument pageDoc)
         {
-            var inkNodes = pageDoc.DocumentNode.Elements("one:inkdrawing")
-                            .Union(pageDoc.DocumentNode.Elements("one:inkword"));
+            var xnm = GetOneNoteXNM();
+
+            var inkNodes = pageDoc.Root.XPathSelectElements("one:InkDrawing", xnm)
+                               .Union(pageDoc.Root.XPathSelectElements("//one:OE[.//one:InkDrawing]", xnm))
+                               .Union(pageDoc.Root.XPathSelectElements("one:Outline[.//one:InkWord]", xnm)).ToArray();
 
             foreach (var inkNode in inkNodes)
             {
-                if (inkNode.Element("one:t") == null)
-                {
+                if (inkNode.XPathSelectElement(".//one:T", xnm) == null)
                     inkNode.Remove();
-                }
                 else
                 {
-                    foreach (var inkWord in inkNode.Elements("one:inkword")
-                                                   .Where(ink => ink.Element("one:callbackid") == null)
-                                                   .ToList())
-                    {
-                        inkWord.Remove();
-                    }
+                    var inkWords = inkNode.XPathSelectElements(".//one:InkWord", xnm).Where(ink => ink.XPathSelectElement(".//one:CallbackID", xnm) == null).ToArray();
+                    inkWords.Remove();
                 }
             }
 
-            var pageTitleEl = pageDoc.DocumentNode.Element("one:title");                // могли случайно удалить заголовок со страницы
-            if (pageTitleEl != null && !pageTitleEl.HasChildNodes && !pageTitleEl.HasAttributes)
-                pageTitleEl.Remove();            
-
-            UseOneNoteApp(() => _app.UpdatePageContent(pageDoc.DocumentNode.OuterHtml, DateTime.MinValue, OneNoteConstants.CurrentOneNoteSchema));
+            var pageTitleEl = pageDoc.Root.XPathSelectElement("one:Title", xnm);                // могли случайно удалить заголовок со страницы
+            if (pageTitleEl != null && !pageTitleEl.HasElements && !pageTitleEl.HasAttributes)
+                pageTitleEl.Remove();
+            
+            UseOneNoteApp(() => _app.UpdatePageContent(pageDoc.ToString(), DateTime.MinValue, OneNoteConstants.CurrentOneNoteSchema));
         }
 
         public void UpdatePageContent(string pageXml)
         {
             UseOneNoteApp(() => _app.UpdatePageContent(pageXml, DateTime.MinValue, OneNoteConstants.CurrentOneNoteSchema));
+        }
+
+        private static XmlNamespaceManager GetOneNoteXNM()
+        {
+            var xnm = new XmlNamespaceManager(new NameTable());
+            xnm.AddNamespace("one", OneNoteConstants.OneNoteXmlNs);
+
+            return xnm;
         }
 
         private void UseOneNoteApp(Action action, int attemptsCount = 0)

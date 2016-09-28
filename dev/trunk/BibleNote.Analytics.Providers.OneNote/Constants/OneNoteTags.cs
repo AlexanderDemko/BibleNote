@@ -3,15 +3,15 @@ namespace BibleNote.Analytics.Providers.OneNote.Constants
 {
     public static class OneNoteTags
     {
-        public const string Page = "one:page";
-        public const string Title = "one:title";
-        public const string OeChildren = "one:oechildren";
-        public const string Outline = "one:outline";        
-        public const string Oe = "one:oe";
-        public const string List = "one:list";
-        public const string T = "one:t";
-        public const string Table = "one:table";
-        public const string TableRow = "one:row";
-        public const string TableCell = "one:cell";
+        public const string Page = "Page";
+        public const string Title = "Title";
+        public const string OeChildren = "OEChildren";
+        public const string Outline = "Outline";        
+        public const string Oe = "OE";
+        public const string List = "List";
+        public const string T = "T";
+        public const string Table = "Table";
+        public const string TableRow = "Row";
+        public const string TableCell = "Cell";
     }
 }

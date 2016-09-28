@@ -68,6 +68,8 @@
     <Compile Include="Constants\OneNoteTags.cs" />
     <Compile Include="Constants\OneNoteConstants.cs" />
     <Compile Include="Contracts\IOneNoteDocumentConnector.cs" />
+    <Compile Include="Contracts\IXDocumentHandler.cs" />
+    <Compile Include="Services\XElementWrapper.cs" />
     <Compile Include="Services\OneNoteAppWrapper.cs" />
     <Compile Include="Services\OneNoteDocumentConnector.cs" />
     <Compile Include="Services\OneNoteDocumentHandler.cs" />

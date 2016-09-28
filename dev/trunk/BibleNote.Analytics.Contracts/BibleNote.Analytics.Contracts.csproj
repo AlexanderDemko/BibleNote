@@ -77,7 +77,6 @@
     <Compile Include="Providers\IDocumentHandler.cs" />
     <Compile Include="Providers\IDocumentId.cs" />
     <Compile Include="Providers\IDocumentConnector.cs" />
-    <Compile Include="Providers\IHtmlDocumentHandler.cs" />
     <Compile Include="VerseParsing\IDocumentParser.cs" />
     <Compile Include="VerseParsing\IDocumentParserFactory.cs" />
     <Compile Include="VerseParsing\IParagraphParser.cs" />

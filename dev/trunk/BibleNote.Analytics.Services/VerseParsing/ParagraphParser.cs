@@ -49,7 +49,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
             _docParseContext = docParseContext;
         }
 
-        public ParagraphParseResult ParseParagraph(HtmlNode node)
+        public ParagraphParseResult ParseParagraph(IXmlNode node)
         {
             if (_documentProvider == null)
                 throw new NotInitializedException("_documentProvider == null");
@@ -93,10 +93,10 @@ namespace BibleNote.Analytics.Services.VerseParsing
 
                     if (!_documentProvider.IsReadonly)
                     {
-                        if (!NodeIsLink(verseNode.NodeEntry.Node.ParentNode))
+                        if (!NodeIsLink(verseNode.NodeEntry.Node.GetParentNode()))
                             InsertVerseLink(verseNode, verseEntry);
                         else
-                            UpdateLinkNode(verseNode.NodeEntry.Node.ParentNode, verseEntry);
+                            UpdateLinkNode(verseNode.NodeEntry.Node.GetParentNode(), verseEntry);
                     }
 
                     _result.VerseEntries.Add(verseEntry);
@@ -140,11 +140,11 @@ namespace BibleNote.Analytics.Services.VerseParsing
             var verseInNodeStartIndex = verseInNodeEntry.StartIndex + verseInNodeEntry.NodeEntry.Shift;
             var verseInNodeEndIndex = verseInNodeEntry.EndIndex + verseInNodeEntry.NodeEntry.Shift + 1;
 
-            verseInNodeEntry.NodeEntry.Node.InnerHtml = string.Concat(
-                verseInNodeEntry.NodeEntry.Node.InnerHtml.Substring(0, verseInNodeStartIndex),
+            verseInNodeEntry.NodeEntry.Node.InnerXml = string.Concat(
+                verseInNodeEntry.NodeEntry.Node.InnerXml.Substring(0, verseInNodeStartIndex),
                 verseLink,
-                verseInNodeEndIndex < verseInNodeEntry.NodeEntry.Node.InnerHtml.Length
-                    ? verseInNodeEntry.NodeEntry.Node.InnerHtml.Substring(verseInNodeEndIndex)
+                verseInNodeEndIndex < verseInNodeEntry.NodeEntry.Node.InnerXml.Length
+                    ? verseInNodeEntry.NodeEntry.Node.InnerXml.Substring(verseInNodeEndIndex)
                     : string.Empty);
 
             var shift = verseLink.Length - verseEntry.VersePointer.OriginalVerseName.Length;
@@ -190,20 +190,11 @@ namespace BibleNote.Analytics.Services.VerseParsing
                             nodeEntry.Clean();  
 
                         var moveCharsCount = (verseEntryInfo.EndIndex > nodeEntry.EndIndex ? nodeEntry.EndIndex : verseEntryInfo.EndIndex) - nodeEntry.StartIndex + 1;
-                        var verseTextPart = nodeEntry.Node.InnerHtml.Substring(0, moveCharsCount);
+                        var verseTextPart = nodeEntry.Node.InnerXml.Substring(0, moveCharsCount);
                         result.EndIndex += moveCharsCount;
                         nodeEntry.StartIndex += moveCharsCount;     // здесь может быть ситуация, когда Startindex > EndIndex. Когда нода была из одного символа. Похоже, что это нормально. Так как мы больше нигде не используем эти ноды.
-
-#if DEBUG
-                        if (result.NodeEntry.Node.InnerHtml != result.NodeEntry.Node.InnerText)
-                            throw new InvalidOperationException("firstVerseNode.InnerHtml != firstVerseNode.InnerText");
-
-                        if (nodeEntry.Node.InnerHtml != nodeEntry.Node.InnerText)
-                            throw new InvalidOperationException("nodeEntry.Node.InnerHtml != nodeEntry.Node.InnerText");
-#endif
-
-                        result.NodeEntry.Node.InnerHtml += verseTextPart;
-                        nodeEntry.Node.InnerHtml = nodeEntry.Node.InnerHtml.Remove(0, moveCharsCount);
+                        result.NodeEntry.Node.InnerXml += verseTextPart;
+                        nodeEntry.Node.InnerXml = nodeEntry.Node.InnerXml.Remove(0, moveCharsCount);
 
                         if (verseEntryInfo.EndIndex <= nodeEntry.EndIndex)
                             break;
