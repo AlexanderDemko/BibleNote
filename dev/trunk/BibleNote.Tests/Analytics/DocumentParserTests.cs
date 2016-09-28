@@ -10,6 +10,7 @@ using BibleNote.Analytics.Models.VerseParsing;
 using BibleNote.Analytics.Models.Contracts.ParseContext;
 using BibleNote.Analytics.Models.VerseParsing.ParseContext;
 using System;
+using BibleNote.Tests.Analytics.TestsBase;
 
 namespace BibleNote.Tests.Analytics
 {

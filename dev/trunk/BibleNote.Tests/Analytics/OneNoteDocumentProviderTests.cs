@@ -10,13 +10,16 @@ using BibleNote.Analytics.Providers.FileSystem.Navigation;
 using BibleNote.Analytics.Providers.OneNote.Services;
 using BibleNote.Analytics.Providers.OneNote.Contracts;
 using BibleNote.Tests.Analytics.Mocks;
+using BibleNote.Tests.Analytics.TestsBase;
+using BibleNote.Analytics.Providers.OneNote.Navigation;
+using System.IO;
 
 namespace BibleNote.Tests.Analytics
 {
     [TestClass]
     public class OneNoteDocumentProviderTests : DocumentParserTestsBase
     {
-        private IDocumentProvider _documentProvider;        
+        private IDocumentProvider _documentProvider;
 
         [TestInitialize]
         public override void Init()
@@ -24,9 +27,9 @@ namespace BibleNote.Tests.Analytics
             base.Init();
 
             DIContainer.Container.RegisterType<IOneNoteDocumentConnector, MockOneNoteDocumentConnector>();
-            DIContainer.Container.RegisterType<IDocumentProvider, OneNoteProvider>("OneNote");
-            
-            _documentProvider = DIContainer.Resolve<IDocumentProvider>("OneNote");            
+            DIContainer.Container.RegisterType<IDocumentProvider, OneNoteProvider>();
+
+            _documentProvider = DIContainer.Resolve<IDocumentProvider>();
         }
 
         [TestCleanup]
@@ -66,6 +69,21 @@ namespace BibleNote.Tests.Analytics
                new string[] { "Ин 1:7" },
                new string[] { "Ин 1:8" },
                new string[] { "Ин 1:9" });
+        }
+
+        [TestMethod]
+        [TestCategory("IgnoreOnCI")]
+        public void ParseOneNote_TestCurrentPage()
+        {
+            DIContainer.Container.RegisterType<IOneNoteDocumentConnector, OneNoteDocumentConnector>();            
+            _documentProvider = DIContainer.Resolve<IDocumentProvider>();
+
+            using (var oneNoteApp = new OneNoteAppWrapper())
+            {
+                var currentPageId = oneNoteApp.GetCurrentPageId();
+
+                var parseResult = _documentProvider.ParseDocument(new OneNoteDocumentId(currentPageId));
+            }
         }
     }
 }

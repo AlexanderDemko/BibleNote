@@ -4,7 +4,7 @@ using BibleNote.Analytics.Services.Unity;
 using BibleNote.Tests.Analytics.Mocks;
 using Microsoft.Practices.Unity;
 
-namespace BibleNote.Tests.Analytics
+namespace BibleNote.Tests.Analytics.TestsBase
 {
     public abstract class TestsBase
     {

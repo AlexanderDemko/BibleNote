@@ -13,7 +13,7 @@ using BibleNote.Analytics.Models.Contracts.ParseContext;
 namespace BibleNote.Tests.Analytics
 {
     [TestClass]
-    public class ParagraphParserTests : TestsBase
+    public class ParagraphParserTests : TestsBase.TestsBase
     {
         public class TestResult
         {

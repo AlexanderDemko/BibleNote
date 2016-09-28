@@ -1,6 +1,7 @@
 ﻿using BibleNote.Analytics.Contracts.Logging;
 using BibleNote.Analytics.Providers.OneNote.Constants;
 using BibleNote.Analytics.Services.Unity;
+using HtmlAgilityPack;
 using Microsoft.Office.Interop.OneNote;
 using System;
 using System.Collections.Generic;
@@ -31,9 +32,60 @@ namespace BibleNote.Analytics.Providers.OneNote.Services
             return result;
         }
 
+        public string GetCurrentPageId()
+        {
+            string currentPageId = null;            
+
+            UseOneNoteApp(() =>
+            {
+                //if (_app.Windows.CurrentWindow == null)
+                //    throw new ProgramException(BibleCommon.Resources.Constants.Error_OpenedNotebookNotFound);
+
+                currentPageId = _app.Windows.CurrentWindow?.CurrentPageId;
+                //if (string.IsNullOrEmpty(currentPageId))
+                //    throw new ProgramException(BibleCommon.Resources.Constants.Error_OpenedNotePageNotFound);                
+            });
+
+            return currentPageId;
+        }
+
         public void Dispose()
         {
             ReleaseOneNoteApp();
+        }
+
+        public void UpdatePageContent(HtmlDocument pageDoc)
+        {
+            var inkNodes = pageDoc.DocumentNode.Elements("one:inkdrawing")
+                            .Union(pageDoc.DocumentNode.Elements("one:inkword"));
+
+            foreach (var inkNode in inkNodes)
+            {
+                if (inkNode.Element("one:t") == null)
+                {
+                    inkNode.Remove();
+                }
+                else
+                {
+                    foreach (var inkWord in inkNode.Elements("one:inkword")
+                                                   .Where(ink => ink.Element("one:callbackid") == null)
+                                                   .ToArray())
+                    {
+                        inkWord.Remove();
+                    }
+                }
+            }
+
+            var pageTitleEl = pageDoc.DocumentNode.Element("one:title");                // могли случайно удалить заголовок со страницы
+            if (pageTitleEl != null && !pageTitleEl.HasChildNodes && !pageTitleEl.HasAttributes)
+                pageTitleEl.Remove();            
+
+            UseOneNoteApp(() => _app.UpdatePageContent(pageDoc.DocumentNode.OuterHtml, DateTime.MinValue, OneNoteConstants.CurrentOneNoteSchema));
+        }
+
+        public void UpdatePageContent(string pageXml)
+        {
+            UseOneNoteApp(() => _app.UpdatePageContent(pageXml, DateTime.MinValue, OneNoteConstants.CurrentOneNoteSchema));
         }
 
         private void UseOneNoteApp(Action action, int attemptsCount = 0)
@@ -69,7 +121,7 @@ namespace BibleNote.Analytics.Providers.OneNote.Services
                 else
                     throw;
             }
-        }
+        }        
 
         private void ReleaseOneNoteApp()
         {
