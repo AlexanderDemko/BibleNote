@@ -1,5 +1,4 @@
-﻿using HtmlAgilityPack;
-using System;
+﻿using System;
 using System.Linq;
 using BibleNote.Analytics.Contracts.VerseParsing;
 using BibleNote.Analytics.Contracts.Providers;
@@ -8,6 +7,7 @@ using BibleNote.Analytics.Core.Helpers;
 using BibleNote.Analytics.Contracts.Environment;
 using BibleNote.Analytics.Models.VerseParsing;
 using BibleNote.Analytics.Models.Contracts.ParseContext;
+using BibleNote.Analytics.Core.Contracts;
 
 namespace BibleNote.Analytics.Services.VerseParsing
 {
@@ -120,22 +120,17 @@ namespace BibleNote.Analytics.Services.VerseParsing
             }
         }
 
-        private void UpdateLinkNode(HtmlNode node, VerseEntry verseEntry)
+        private void UpdateLinkNode(IXmlNode node, VerseEntry verseEntry)
         {
             var hrefAttrName = "href";
             var hrefAttrValue = $"bnVerse:{verseEntry.VersePointer}";           // todo: нужно вынести в сервис, который в том числе будут использовать все провайдеры
 
-            var hrefAttr = node.Attributes[hrefAttrName];
-
-            if (hrefAttr != null)
-                hrefAttr.Value = hrefAttrValue;
-            else
-                node.Attributes.Add(hrefAttrName, hrefAttrValue);
+            node.SetAttributeValue(hrefAttrName, hrefAttrValue);            
         }
 
-        private bool NodeIsLink(HtmlNode node)
+        private bool NodeIsLink(IXmlNode node)
         {
-            return node.NodeType == HtmlNodeType.Element && node.Name == "a";
+            return node.NodeType == IXmlNodeType.Element && node.Name == "a";
         }
 
         private void InsertVerseLink(VerseInNodeEntry verseInNodeEntry, VerseEntry verseEntry)

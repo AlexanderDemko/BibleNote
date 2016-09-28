@@ -48,6 +48,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="HtmlDocumentHandler.cs" />
+    <Compile Include="HtmlNodeWrapper.cs" />
     <Compile Include="HtmlProvider.cs" />
     <Compile Include="HtmlDocumentConnector.cs" />
     <Compile Include="IHtmlDocumentConnector.cs" />

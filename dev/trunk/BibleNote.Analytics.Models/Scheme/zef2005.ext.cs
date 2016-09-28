@@ -229,7 +229,7 @@ namespace BibleNote.Analytics.Models.Scheme
             if (contents.All(c => c == null))
                 return null;
             else
-                return string.Join(" ", contents.ToArray());
+                return string.Join(" ", contents);
         }
 
         public static string GetFullVerseString(int verseNumber, int? topVerseNumber, string verseText)
@@ -420,7 +420,7 @@ namespace BibleNote.Analytics.Models.Scheme
                                             return string.Format("{0} {1}", item.ToString(), ((GRAM)item).GetStrongNumbersString(strongPrefix));                                        
                                         else
                                             return item;
-                                    }).ToArray())
+                                    }))
                     .Trim()
                     .Replace("  ", " ");
         }
@@ -449,7 +449,7 @@ namespace BibleNote.Analytics.Models.Scheme
             return string.Join(" ", strongNumbers.Select(sn => 
                 string.Concat(strongPrefix, 
                                 int.Parse(sn).ToString("0000"))
-                ).ToArray());
+                ));
         }
     }
 
