@@ -52,7 +52,10 @@ namespace BibleNote.Analytics.Providers.OneNote.Services
         {
             if (!DocumentId.IsReadonly && DocumentId.Changed)
             {
-                throw new NotImplementedException();
+                using (var oneNoteApp = new OneNoteAppWrapper())
+                {
+                    oneNoteApp.UpdatePageContent(HtmlDocument);
+                }
             }
         }
     }

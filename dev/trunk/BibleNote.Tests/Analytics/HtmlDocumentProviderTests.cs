@@ -8,6 +8,7 @@ using BibleNote.Analytics.Models.VerseParsing;
 using BibleNote.Analytics.Contracts.VerseParsing;
 using BibleNote.Analytics.Providers.Html;
 using BibleNote.Analytics.Providers.FileSystem.Navigation;
+using BibleNote.Tests.Analytics.TestsBase;
 
 namespace BibleNote.Tests.Analytics
 {
@@ -22,9 +23,9 @@ namespace BibleNote.Tests.Analytics
             base.Init();
 
             DIContainer.Container.RegisterType<IHtmlDocumentConnector, HtmlDocumentConnector>();
-            DIContainer.Container.RegisterType<IDocumentProvider, HtmlProvider>("Html");
+            DIContainer.Container.RegisterType<IDocumentProvider, HtmlProvider>();
             
-            _documentProvider = DIContainer.Resolve<IDocumentProvider>("Html");            
+            _documentProvider = DIContainer.Resolve<IDocumentProvider>();            
         }
 
         [TestCleanup]

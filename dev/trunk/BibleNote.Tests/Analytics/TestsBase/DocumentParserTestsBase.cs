@@ -6,7 +6,7 @@ using FluentAssertions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Collections.Generic;
 
-namespace BibleNote.Tests.Analytics
+namespace BibleNote.Tests.Analytics.TestsBase
 {
     public abstract class DocumentParserTestsBase : TestsBase
     {

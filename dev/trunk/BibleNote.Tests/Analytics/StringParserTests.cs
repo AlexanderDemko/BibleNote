@@ -9,7 +9,7 @@ using BibleNote.Analytics.Models.VerseParsing;
 namespace BibleNote.Tests.Analytics
 {
     [TestClass]
-    public class StringParserTests : TestsBase
+    public class StringParserTests : TestsBase.TestsBase
     {
         private IStringParser _stringParser;
 
