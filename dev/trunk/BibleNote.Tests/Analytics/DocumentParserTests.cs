@@ -46,10 +46,8 @@ namespace BibleNote.Tests.Analytics
         }
 
         private static IXmlNode GetNode(string html)
-        {
-            var htmlDoc = new HtmlDocument();
-            htmlDoc.LoadHtml(html);
-            return new HtmlNodeWrapper(htmlDoc.DocumentNode);
+        {   
+            return new HtmlNodeWrapper(html);
         }
 
         [TestMethod]

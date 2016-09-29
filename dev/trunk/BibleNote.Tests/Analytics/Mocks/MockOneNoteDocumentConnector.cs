@@ -38,9 +38,7 @@ namespace BibleNote.Tests.Analytics.Mocks
             {
                 var filePath = ((FileDocumentId)documentId).FilePath;
                 var ext = Path.GetExtension(filePath);
-                xml = File.ReadAllText(filePath);
-                //html = Regex.Replace(html, "([^>])(\\n|&nbsp;)([^<])", "$1 $3");
-                //html = Regex.Replace(html, @"(<!\[CDATA\[)(((?!one:)[\s\S])*)(]]>)", "$2");
+                xml = File.ReadAllText(filePath);                                
             }
 
             if (xml != null)            

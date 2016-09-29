@@ -13,7 +13,7 @@ namespace BibleNote.Analytics.Core.Contracts
     public enum IXmlTextNodeMode
     {
         Exact,
-        Like
+        ElementWithTextNode
     }
 
     public interface IXmlNode

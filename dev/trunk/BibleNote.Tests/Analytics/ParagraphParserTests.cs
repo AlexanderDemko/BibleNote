@@ -63,21 +63,19 @@ namespace BibleNote.Tests.Analytics
 
             _documentParseContext.ClearContext();            
             initDocParseContext?.Invoke(_documentParseContext);
-
-            var htmlDoc = new HtmlDocument();
-            htmlDoc.LoadHtml(input);
-            var xDoc = new HtmlNodeWrapper(htmlDoc.DocumentNode);
+            
+            var htmlDoc = new HtmlNodeWrapper(input);
 
             ParagraphParseResult result;
             using (_documentParseContext.ParseParagraph())            
-                result = _parahraphParserService.ParseParagraph(xDoc);            
+                result = _parahraphParserService.ParseParagraph(htmlDoc);            
 
             Assert.AreEqual(verses.Length, result.VerseEntries.Count, "Verses length is not the same. Expected: {0}. Found: {1}", verses.Length, result.VerseEntries.Count);            
             var verseEntries = result.VerseEntries.Select(ve => ve.VersePointer);
             foreach (var verse in verses)
                 Assert.IsTrue(verseEntries.Contains(_versePointerFactory.CreateVersePointer(verse)), "Can not find the verse: '{0}'", verse);            
 
-            Assert.AreEqual(expectedOutput, xDoc.InnerXml, "The output html is wrong.");
+            Assert.AreEqual(expectedOutput, htmlDoc.InnerXml, "The output html is wrong.");
             Assert.AreEqual(new HtmlToTextConverter().SimpleConvert(input).Replace("&nbsp;", " "), result.Text, "Text parts do not contain the full input string.");
 
             if (notFoundVerses != null)
@@ -87,7 +85,7 @@ namespace BibleNote.Tests.Analytics
                     Assert.IsTrue(result.NotFoundVerses.Contains(_versePointerFactory.CreateVersePointer(verse)));
             }
 
-            return new TestResult() { Node = xDoc, Result = result };
+            return new TestResult() { Node = htmlDoc, Result = result };
         }
 
         private TestResult CheckVerses(string input, string expectedOutput, Action<IDocumentParseContextEditor> initDocParseContext, params string[] verses)

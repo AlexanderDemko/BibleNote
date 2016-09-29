@@ -32,7 +32,7 @@ namespace BibleNote.Analytics.Providers.OneNote.Services
             UseOneNoteApp(() => _app.GetPageContent(pageId, out result, pageInfo, OneNoteConstants.CurrentOneNoteSchema));
 
             return result;
-        }
+        }        
 
         public string GetCurrentPageId()
         {

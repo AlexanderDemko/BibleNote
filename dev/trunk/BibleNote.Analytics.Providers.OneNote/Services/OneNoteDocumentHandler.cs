@@ -29,8 +29,7 @@ namespace BibleNote.Analytics.Providers.OneNote.Services
                 using (var oneNoteApp = new OneNoteAppWrapper())
                 {
                     xml = oneNoteApp.GetPageContent(((OneNoteDocumentId)documentId).PageId);
-                    //html = Regex.Replace(html, "([^>])(\\n|&nbsp;)([^<])", "$1 $3");      // todo: разобраться, нужно ли это сейчас
-                    xml = Regex.Replace(xml, @"(<!\[CDATA\[)(((?!one:)[\s\S])*)(]]>)", "$2");
+                    //html = Regex.Replace(html, "([^>])(\\n|&nbsp;)([^<])", "$1 $3");      // todo: разобраться, нужно ли это сейчас                    
                 }
             }            
 

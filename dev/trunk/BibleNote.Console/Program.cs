@@ -1,12 +1,8 @@
 ﻿using BibleNote.Analytics.Contracts.Environment;
 using BibleNote.Analytics.Contracts.VerseParsing;
 using BibleNote.Analytics.Core.Helpers;
-using BibleNote.Analytics.Data;
 using BibleNote.Analytics.Models.Scheme;
-using BibleNote.Analytics.Services;
-using BibleNote.Analytics.Services.Environment;
 using BibleNote.Analytics.Services.Unity;
-using BibleNote.Analytics.Services.VerseParsing;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -14,11 +10,8 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using Microsoft.Practices.Unity;
 using BibleNote.Analytics.Models.Verse;
-using BibleNote.Analytics.Providers.OneNote.Services;
-using AngleSharp.Parser.Html;
 using System.Xml.Linq;
 
 namespace BibleNoteConsole
@@ -37,6 +30,24 @@ namespace BibleNoteConsole
 
         static void Main(string[] args)
         {
+            var sw = new Stopwatch();
+            //var testsP = new ParagraphParserTests();
+            //testsP.Init();
+
+            //var testsD = new DocumentParserTests();
+            //testsD.Init();
+
+            //sw.Start();
+
+            //for (var i = 0; i < 10000; i++)
+            //{
+            //    testsP.ParagraphParser_Test5();
+            //    testsD.DocParser_Test2();
+            //}
+
+            //sw.Stop();
+            //Console.WriteLine($"Total: {sw.Elapsed.TotalSeconds}");                        
+
             DIContainer.InitWithDefaults();
             DIContainer.Container.RegisterInstance<IConfigurationManager>(new MockConfigurationManager());
             ModulesManager = DIContainer.Resolve<IModulesManager>();
@@ -46,7 +57,7 @@ namespace BibleNoteConsole
             //SaveTextModule(@"c:\temp\nkrv.txt");
             //return;
 
-            var sw = new Stopwatch();
+            
 
             try
             {
