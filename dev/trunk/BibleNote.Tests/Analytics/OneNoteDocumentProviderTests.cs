@@ -82,7 +82,11 @@ namespace BibleNote.Tests.Analytics
             {
                 var currentPageId = oneNoteApp.GetCurrentPageId();
 
-                var parseResult = _documentProvider.ParseDocument(new OneNoteDocumentId(currentPageId));
+                if (!string.IsNullOrEmpty(currentPageId))
+                {
+                    var parseResult = _documentProvider.ParseDocument(new OneNoteDocumentId(currentPageId));
+                    var i = parseResult.ParagraphParseResults.Count;
+                }
             }
         }
     }

@@ -91,7 +91,7 @@ namespace BibleNote.Analytics.Core.Helpers
 
         private void FindParseStrings(IXmlNode node)
         {
-            if (!node.IsHierarchyNode(IXmlTextNodeMode.Like))
+            if (!node.IsHierarchyNode(IXmlTextNodeMode.ElementWithTextNode))
             {
                 AddParseString(BuildParseString(node.GetChildNodes()));
             }
@@ -101,7 +101,7 @@ namespace BibleNote.Analytics.Core.Helpers
 
                 foreach (var childNode in node.GetChildNodes())
                 {
-                    if (childNode.IsTextNode(IXmlTextNodeMode.Like))
+                    if (childNode.IsTextNode(IXmlTextNodeMode.ElementWithTextNode))
                     {
                         nodes.Add(childNode);
                         continue;

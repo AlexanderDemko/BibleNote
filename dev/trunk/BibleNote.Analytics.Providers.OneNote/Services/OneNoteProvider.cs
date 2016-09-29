@@ -3,7 +3,7 @@ using BibleNote.Analytics.Contracts.VerseParsing;
 using BibleNote.Analytics.Models.Verse;
 using BibleNote.Analytics.Models.VerseParsing;
 using BibleNote.Analytics.Providers.OneNote.Contracts;
-using System.Collections.Generic;
+using BibleNote.Analytics.Providers.OneNote.Extensions;
 using System.Linq;
 using BibleNote.Analytics.Core.Extensions;
 using BibleNote.Analytics.Models.Contracts.ParseContext;
@@ -11,6 +11,8 @@ using BibleNote.Analytics.Providers.OneNote.Constants;
 using BibleNote.Analytics.Core.Constants;
 using System.Xml.Linq;
 using BibleNote.Analytics.Core.Contracts;
+using BibleNote.Analytics.Providers.Html;
+using System.Xml;
 
 namespace BibleNote.Analytics.Providers.OneNote.Services
 {
@@ -66,21 +68,27 @@ namespace BibleNote.Analytics.Providers.OneNote.Services
             }
             else
             {
-                var nodeWrapper = new XElementWrapper(node);
-                if (node.HasElements || nodeWrapper.IsValuableTextNode(IXmlTextNodeMode.Exact))
-                    docParser.ParseParagraph(nodeWrapper);
+                if (!string.IsNullOrEmpty(node.Value.Trim()))
+                {
+                    var htmlNode = new HtmlNodeWrapper(node.Value);
+                    docParser.ParseParagraph(htmlNode);
+                    node.Value = htmlNode.InnerXml;
+                }
             }
         }
 
         private ElementType GetParagraphType(XElement node)
         {
-            if (node.Name == OneNoteTags.OeChildren
-                && node.Elements().First()?.Name.LocalName == OneNoteTags.Oe
-                && node.Elements().First().Elements().First()?.Name.LocalName == OneNoteTags.List)
-                return ElementType.List;
+            if (node.Name == OneNoteTags.OeChildren)
+            {
+                var firstElement = node.FirstElement();
+                if (firstElement?.Name.LocalName == OneNoteTags.Oe 
+                    && firstElement.FirstElement()?.Name.LocalName == OneNoteTags.List)
+                    return ElementType.List;
+            }
 
             if (node.Name == OneNoteTags.Oe 
-                && node.Elements().First()?.Name == OneNoteTags.List)
+                && node.FirstElement()?.Name == OneNoteTags.List)
                 return ElementType.ListElement;            
 
             switch (node.Name.LocalName)

@@ -10,6 +10,13 @@ namespace BibleNote.Analytics.Providers.Html
     {
         private HtmlNode _node;
 
+        public HtmlNodeWrapper(string html)
+        {
+            var htmlDoc = new HtmlDocument();
+            htmlDoc.LoadHtml(html);
+            _node = htmlDoc.DocumentNode;
+        }
+
         public HtmlNodeWrapper(HtmlNode node)
         {
             _node = node;
