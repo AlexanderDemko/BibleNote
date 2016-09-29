@@ -79,18 +79,6 @@ namespace BibleNote.Analytics.Providers.OneNote.Services
 
         private ElementType GetParagraphType(XElement node)
         {
-            if (node.Name == OneNoteTags.OeChildren)
-            {
-                var firstElement = node.FirstElement();
-                if (firstElement?.Name.LocalName == OneNoteTags.Oe 
-                    && firstElement.FirstElement()?.Name.LocalName == OneNoteTags.List)
-                    return ElementType.List;
-            }
-
-            if (node.Name == OneNoteTags.Oe 
-                && node.FirstElement()?.Name == OneNoteTags.List)
-                return ElementType.ListElement;            
-
             switch (node.Name.LocalName)
             {
                 case OneNoteTags.Table:
@@ -110,6 +98,18 @@ namespace BibleNote.Analytics.Providers.OneNote.Services
                 case OneNoteTags.OeChildren:
                     return ElementType.HierarchicalBlock;
             }
+
+            if (node.Name.LocalName == OneNoteTags.OeChildren)
+            {
+                var firstElement = node.FirstElement();
+                if (firstElement?.Name.LocalName == OneNoteTags.Oe
+                    && firstElement.FirstElement()?.Name.LocalName == OneNoteTags.List)
+                    return ElementType.List;
+            }
+
+            if (node.Name.LocalName == OneNoteTags.Oe
+                && node.FirstElement()?.Name.LocalName == OneNoteTags.List)
+                return ElementType.ListElement;
 
             return ElementType.SimpleBlock;
         }

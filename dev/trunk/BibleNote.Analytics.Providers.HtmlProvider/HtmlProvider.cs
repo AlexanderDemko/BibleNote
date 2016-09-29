@@ -72,6 +72,18 @@ namespace BibleNote.Analytics.Providers.Html
 
         private ElementType GetParagraphType(HtmlNode node)
         {
+            switch (node.Name)
+            {
+                case HtmlTags.Table:
+                    return ElementType.Table;
+                case HtmlTags.TableRow:
+                    return ElementType.TableRow;                
+                case HtmlTags.Head:
+                    if (node.ParentNode?.Name == HtmlTags.Html)
+                        return ElementType.Title;
+                    break;                
+            }
+
             if (HtmlTags.BlockElements.Contains(node.Name))
                 return ElementType.HierarchicalBlock;
 
@@ -86,18 +98,6 @@ namespace BibleNote.Analytics.Providers.Html
 
             if (HtmlTags.TableBodys.Contains(node.Name))
                 return ElementType.TableBody;
-
-            switch (node.Name)
-            {
-                case HtmlTags.Table:
-                    return ElementType.Table;
-                case HtmlTags.TableRow:
-                    return ElementType.TableRow;                
-                case HtmlTags.Head:
-                    if (node.ParentNode?.Name == HtmlTags.Html)
-                        return ElementType.Title;
-                    break;                
-            }            
 
             return ElementType.SimpleBlock;
         }
