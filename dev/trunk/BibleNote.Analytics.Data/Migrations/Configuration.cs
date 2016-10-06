@@ -9,7 +9,7 @@ namespace BibleNote.Analytics.Data.Migrations
     {
         public Configuration()
         {
-            AutomaticMigrationsEnabled = false;
+            AutomaticMigrationsEnabled = true;
         }
 
         protected override void Seed(BibleNote.Analytics.Data.AnalyticsContext context)
