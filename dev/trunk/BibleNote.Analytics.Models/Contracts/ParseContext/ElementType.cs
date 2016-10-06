@@ -11,8 +11,8 @@ namespace BibleNote.Analytics.Models.Contracts.ParseContext
         SimpleBlock,                
         HierarchicalBlock,
         ListElement,
-        Title,
         List,
+        Title,        
         Table,
         TableBody,
         TableRow,
@@ -24,12 +24,12 @@ namespace BibleNote.Analytics.Models.Contracts.ParseContext
     {
         public static bool IsHierarchical(this ElementType type)
         {
-            return type > ElementType.SimpleBlock;
+            return type >= ElementType.HierarchicalBlock;
         }
 
         public static bool IsSimpleHierarchical(this ElementType type)
         {
-            return type == ElementType.HierarchicalBlock;
+            return type >= ElementType.HierarchicalBlock && type <= ElementType.List;
         }
 
         public static bool CanBeLinear(this ElementType type)

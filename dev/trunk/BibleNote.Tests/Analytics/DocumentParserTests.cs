@@ -19,7 +19,7 @@ namespace BibleNote.Tests.Analytics
     public class DocumentParserTests : DocumentParserTestsBase
     {
         private IDocumentProviderInfo _documentProvider;
-        private IDocumentParserFactory _documentParserFactory;        
+        private IDocumentParserFactory _documentParserFactory;
         private IDocumentParseContextEditor _documentParseContext;
 
         [TestInitialize]
@@ -46,7 +46,7 @@ namespace BibleNote.Tests.Analytics
         }
 
         private static IXmlNode GetNode(string html)
-        {   
+        {
             return new HtmlNodeWrapper(html);
         }
 
@@ -99,7 +99,7 @@ namespace BibleNote.Tests.Analytics
                     }
                 }
 
-                CheckParseResults(docParser, 
+                CheckParseResults(docParser,
                     new string[] { "Мк 5:6" },
                     new string[] { "Ин 1:1" },
                     new string[] { "Ин 1:12", "Ин 1:13" },
@@ -110,7 +110,7 @@ namespace BibleNote.Tests.Analytics
         [TestMethod]
         public void DocParser_Test2_1()
         {
-            var node1 = GetNode("Мк 5:6");            
+            var node1 = GetNode("Мк 5:6");
             var node2 = GetNode("не с начала Лк 1:1");
             var verseNode = GetNode(":12 и :13");
 
@@ -132,7 +132,7 @@ namespace BibleNote.Tests.Analytics
                 }
 
                 CheckParseResults(docParser,
-                    new string[] { "Мк 5:6" },                                        
+                    new string[] { "Мк 5:6" },
                     new string[] { "Лк 1:1" },
                     new string[] { "Мк 5:12", "Мк 5:13" });
             }
@@ -377,7 +377,7 @@ namespace BibleNote.Tests.Analytics
             {
                 using (docParser.ParseHierarchyElement(ElementType.Title))
                 {
-                    docParser.ParseParagraph(titleNode);                    
+                    docParser.ParseParagraph(titleNode);
                 }
 
                 using (docParser.ParseHierarchyElement(ElementType.Table))
@@ -477,7 +477,7 @@ namespace BibleNote.Tests.Analytics
             var node1 = GetNode("Мф 1:1 - стих в начале");
             var node2 = GetNode("Стих не в начале - Мк 2:2");
             var node3 = GetNode("Лк 3-4 - несколько глав в начале");
-            var node4 = GetNode("Несколько глав не в начале - Ин 5-6");            
+            var node4 = GetNode("Несколько глав не в начале - Ин 5-6");
             var verseNode = GetNode(":12");
 
             using (var docParser = _documentParserFactory.Create(_documentProvider))
@@ -492,8 +492,8 @@ namespace BibleNote.Tests.Analytics
 
                 using (docParser.ParseHierarchyElement(ElementType.HierarchicalBlock))
                 {
-                    docParser.ParseParagraph(node1);                    
-                    docParser.ParseParagraph(node3);                    
+                    docParser.ParseParagraph(node1);
+                    docParser.ParseParagraph(node3);
                     docParser.ParseParagraph(verseNode);
                 }
 
@@ -563,7 +563,7 @@ namespace BibleNote.Tests.Analytics
                             }
 
                             using (docParser.ParseHierarchyElement(ElementType.ListElement))
-                            {                                
+                            {
                                 docParser.ParseParagraph(verseNode);
                             }
 
@@ -588,7 +588,7 @@ namespace BibleNote.Tests.Analytics
                         using (docParser.ParseHierarchyElement(ElementType.List))
                         {
                             using (docParser.ParseHierarchyElement(ElementType.ListElement))
-                            {                                
+                            {
                                 docParser.ParseParagraph(verseNode);
                             }
                         }
@@ -617,9 +617,8 @@ namespace BibleNote.Tests.Analytics
                     new string[] { "1Петр 3:12" },
                     new string[] { "Мк 2:2" },
                     new string[] { "1Петр 3:12" },
-                    new string[] { "1Петр 3:12" },
-                    new string[] { "Лк 3-4" },                    
-                    new string[] { "Ин 5-6" },                    
+                    new string[] { "Лк 3-4" },
+                    new string[] { "Ин 5-6" },
                     new string[] { "Мк 2:2" },
                     //new string[] { "Мк 2:12" }, ?????
                     new string[] { "Лк 3-4" });
@@ -686,7 +685,7 @@ namespace BibleNote.Tests.Analytics
                 {
                     using (docParser.ParseHierarchyElement(ElementType.ListElement))
                     {
-                        docParser.ParseParagraph(node);                        
+                        docParser.ParseParagraph(node);
                     }
 
                     using (docParser.ParseHierarchyElement(ElementType.ListElement))
@@ -714,9 +713,9 @@ namespace BibleNote.Tests.Analytics
 
         [TestMethod]
         public void DocParser_Test13()
-        {            
+        {
             var node1 = GetNode("Ин 1");
-            var node2 = GetNode("Тест Мф 1-2 и :5");            
+            var node2 = GetNode("Тест Мф 1-2 и :5");
             var verseNode = GetNode(":12");
 
             using (var docParser = _documentParserFactory.Create(_documentProvider))
@@ -766,7 +765,7 @@ namespace BibleNote.Tests.Analytics
                 }
 
                 CheckParseResults(docParser,
-                    new string[] { "Ин 1" },                    
+                    new string[] { "Ин 1" },
                     new string[] { "Ин 1:12" });
             }
         }
@@ -790,7 +789,7 @@ namespace BibleNote.Tests.Analytics
                                 using (docParser.ParseHierarchyElement(ElementType.HierarchicalBlock))
                                 {
                                     docParser.ParseParagraph(node1);
-                                }                                
+                                }
                             }
                         }
                     }

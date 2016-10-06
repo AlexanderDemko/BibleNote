@@ -87,7 +87,7 @@ namespace BibleNote.Analytics.Models.VerseParsing.ParseContext
                     if (entry?.ChapterPointer == null
                         || (_chapterEntry.ChapterPointer != null && entry.ChapterPointer?.Equals(_chapterEntry.ChapterPointer) == false))
                     {
-                        _chapterEntry.ChapterPointer = null;
+                        _chapterEntry = ChapterEntry.Terminator;
                         break;
                     }
 
@@ -123,13 +123,6 @@ namespace BibleNote.Analytics.Models.VerseParsing.ParseContext
             {
                 result = GetPreviousSiblingChapterEntry();
             }
-            //else if (ElementType.IsSimpleBlockOrSimpleHierarchical() || PreviousSibling?.ElementType.IsSimpleBlockOrSimpleHierarchical() == true)
-            //{
-            //    if (PreviousSibling?.ChapterEntry?.AtStartOfParagraph == true)
-            //        result = PreviousSibling.ChapterEntry;
-            //    else if (PreviousSibling?.ChapterEntry?.Found == true)
-            //        result = ChapterEntry.Terminator;
-            //}           
 
             return result;
         }
