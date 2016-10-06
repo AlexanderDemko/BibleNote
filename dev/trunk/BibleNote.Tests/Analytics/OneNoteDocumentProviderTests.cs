@@ -72,6 +72,26 @@ namespace BibleNote.Tests.Analytics
         }
 
         [TestMethod]
+        public void ParseOneNote_Test3()
+        {
+            var parseResult = _documentProvider.ParseDocument(new FileDocumentId(@"..\..\Analytics\TestData\OneNote_3.html", true));
+
+            CheckParseResults(parseResult.ParagraphParseResults,
+               new string[] { "1Пет 3:3" },
+               new string[] { "1Пет 3:9" },
+               new string[] { "Мф 1:1" },
+               new string[] { "Мф 1:10" },
+               new string[] { "1Пет 4:5" },
+               new string[] { "1Пет 4:11" },
+               new string[] { "Мк 2:2" },
+               new string[] { "1Пет 4:12" },
+               new string[] { "Лк 3-4" },
+               new string[] { "Ин 5-6" },
+               new string[] { "Мк 3:3" },
+               new string[] { "Лк 3-4" });
+        }
+
+        [TestMethod]
         [TestCategory("IgnoreOnCI")]
         public void ParseOneNote_TestCurrentPage()
         {
