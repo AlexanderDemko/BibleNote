@@ -91,7 +91,7 @@ namespace BibleNote.Tests.Analytics
                new string[] { "Лк 3-4" });
         }
 
-        [TestMethod]
+        //[TestMethod]
         [TestCategory("IgnoreOnCI")]
         public void ParseOneNote_TestCurrentPage()
         {

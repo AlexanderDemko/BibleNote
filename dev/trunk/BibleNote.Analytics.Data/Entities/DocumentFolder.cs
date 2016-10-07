@@ -1,10 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace BibleNote.Analytics.Data.Entities
 {
@@ -16,5 +11,13 @@ namespace BibleNote.Analytics.Data.Entities
 
         [Required]
         public string Name { get; set; }
+
+        [Required]
+        public string Path { get; set; }
+
+        [Required]
+        public string NavigationProviderName { get; set; }
+
+        public DocumentFolder ParentFolder { get; set; }
     }
 }

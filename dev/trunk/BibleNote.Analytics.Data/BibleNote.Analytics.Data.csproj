@@ -65,6 +65,8 @@
     <Compile Include="AnalyticsContext.cs" />
     <Compile Include="Entities\Document.cs" />
     <Compile Include="Entities\DocumentFolder.cs" />
+    <Compile Include="Entities\DocumentHierarchy.cs" />
+    <Compile Include="Entities\DocumentParagraph.cs" />
     <Compile Include="Migrations\201504151537190_Init.cs" />
     <Compile Include="Migrations\201504151537190_Init.Designer.cs">
       <DependentUpon>201504151537190_Init.cs</DependentUpon>
