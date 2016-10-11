@@ -8,10 +8,9 @@ using System;
 using BibleNote.Analytics.Models.VerseParsing;
 using FluentAssertions;
 using BibleNote.Analytics.Models.Contracts.ParseContext;
-using System.Xml.Linq;
 using BibleNote.Analytics.Core.Contracts;
 using BibleNote.Analytics.Providers.Html;
-using HtmlAgilityPack;
+using BibleNote.Analytics.Models.VerseParsing.ParseResult;
 
 namespace BibleNote.Tests.Analytics
 {
@@ -108,11 +107,11 @@ namespace BibleNote.Tests.Analytics
         [TestMethod]
         public void ParagraphParser_Test2()
         {
-            var input = "<div>Это тестовая Ин 3:16 строка<BR/>с переводом строки. Лк<br />5:6 - это первая ссылка, <p>Лк<font>7</font>:<font>8 и ещё </font><font class='test'>Мк 5:</font>6-7!!</p> - это вторая<p><font></font></p><p>1</p></div>";
-            var expected = "<div>Это тестовая <a href='bnVerse:Иоанна 3:16'>Ин 3:16</a> строка<br>с переводом строки. <a href='bnVerse:Луки 5:6'>Лк5:6</a><br> - это первая ссылка, <p><a href='bnVerse:Луки 7:8'>Лк7:8</a><font></font><font> и ещё </font><font class='test'><a href='bnVerse:Марка 5:6-7'>Мк 5:6-7</a></font>!!</p> - это вторая<p><font></font></p><p>1</p></div>";
-            var result = CheckVerses(input, expected, null, "Ин 3:16", "Лк 5:6", "Лк 7:8", "Мк 5:6-7");
+            var input = "<div><p>Мк 1:2</p><p>Это тестовая Ин 3:16 строка<BR/>с переводом строки. Лк<br />5:6 - это первая ссылка, <p>Лк<font>7</font>:<font>8 и ещё </font><font class='test'>Мк 5:</font>6-7!!</p> - это вторая<p><font></font></p><p>1</p></p></div>";
+            var expected = "<div><p><a href='bnVerse:Марка 1:2'>Мк 1:2</a></p><p>Это тестовая <a href='bnVerse:Иоанна 3:16'>Ин 3:16</a> строка<br>с переводом строки. <a href='bnVerse:Луки 5:6'>Лк5:6</a><br> - это первая ссылка, <p><a href='bnVerse:Луки 7:8'>Лк7:8</a><font></font><font> и ещё </font><font class='test'><a href='bnVerse:Марка 5:6-7'>Мк 5:6-7</a></font>!!</p> - это вторая<p><font></font></p><p>1</p></p></div>";
+            var result = CheckVerses(input, expected, null, "Мк 1:2", "Ин 3:16", "Лк 5:6", "Лк 7:8", "Мк 5:6-7");
 
-            var verseEntry = result.Result.VerseEntries[2];
+            var verseEntry = result.Result.VerseEntries[3];
             Assert.AreEqual("Лк7:8", result.Result.Text.Substring(verseEntry.StartIndex, verseEntry.EndIndex - verseEntry.StartIndex + 1));
             verseEntry = result.Result.VerseEntries.Last();
             Assert.AreEqual("Мк 5:6-7", result.Result.Text.Substring(verseEntry.StartIndex, verseEntry.EndIndex - verseEntry.StartIndex + 1));

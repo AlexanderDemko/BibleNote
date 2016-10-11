@@ -43,7 +43,7 @@ namespace BibleNote.Tests.Analytics
         {
             var parseResult = _documentProvider.ParseDocument(new FileDocumentId(@"..\..\Analytics\TestData\OneNote_1.html", true));
 
-            CheckParseResults(parseResult.ParagraphParseResults,
+            CheckParseResults(parseResult.GetAllParagraphParseResults().ToList(),
                 new string[] { "Ин 1:1" },
                 new string[] { "Исх 12:27" },
                 new string[] { "1Кор 5:7" },
@@ -61,7 +61,7 @@ namespace BibleNote.Tests.Analytics
         {
             var parseResult = _documentProvider.ParseDocument(new FileDocumentId(@"..\..\Analytics\TestData\OneNote_2.html", true));
 
-            CheckParseResults(parseResult.ParagraphParseResults,
+            CheckParseResults(parseResult.GetAllParagraphParseResults().ToList(),
                new string[] { "Ин 1" },
                new string[] { "Ин 1:5" },
                new string[] { "Мк 2:5" },
@@ -76,7 +76,7 @@ namespace BibleNote.Tests.Analytics
         {
             var parseResult = _documentProvider.ParseDocument(new FileDocumentId(@"..\..\Analytics\TestData\OneNote_3.html", true));
 
-            CheckParseResults(parseResult.ParagraphParseResults,
+            CheckParseResults(parseResult.GetAllParagraphParseResults().ToList(),
                new string[] { "1Пет 3:3" },
                new string[] { "1Пет 3:9" },
                new string[] { "Мф 1:1" },
@@ -105,7 +105,7 @@ namespace BibleNote.Tests.Analytics
                 if (!string.IsNullOrEmpty(currentPageId))
                 {
                     var parseResult = _documentProvider.ParseDocument(new OneNoteDocumentId(currentPageId));
-                    var i = parseResult.ParagraphParseResults.Count;
+                    var i = parseResult.GetAllParagraphParseResults().Count();
                 }
             }
         }

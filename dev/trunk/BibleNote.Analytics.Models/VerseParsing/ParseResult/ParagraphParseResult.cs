@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace BibleNote.Analytics.Models.VerseParsing
+namespace BibleNote.Analytics.Models.VerseParsing.ParseResult
 {
     public class ParagraphParseResult
     {

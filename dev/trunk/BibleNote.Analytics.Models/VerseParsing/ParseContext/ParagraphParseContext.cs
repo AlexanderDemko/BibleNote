@@ -1,5 +1,5 @@
-﻿using System;
-using BibleNote.Analytics.Models.Contracts.ParseContext;
+﻿using BibleNote.Analytics.Models.Contracts.ParseContext;
+using BibleNote.Analytics.Models.VerseParsing.ParseResult;
 
 namespace BibleNote.Analytics.Models.VerseParsing.ParseContext
 {
