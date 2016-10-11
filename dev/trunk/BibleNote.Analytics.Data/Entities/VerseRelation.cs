@@ -14,21 +14,21 @@ namespace BibleNote.Analytics.Data.Entities
         [Key, Column(Order = 0)]
         public long VerseId { get; set; }
 
-        [Key, Column(Order = 1)]
-        public long RelativeVerseId { get; set; }
-
-        [Key, Column(Order = 2)]
-        public int DocumentId { get; set; }
+        [Key, Column(Order = 1), Index("IX_RelativeVerseId")]
+        public long RelativeVerseId { get; set; }        
 
         [Key, Column(Order = 3)]
-        public int DocumentParagraphId { get; set; }        
+        public int DocumentParagraphId { get; set; }
 
-        public decimal RelationWeight { get; set; }
+        [Key, Column(Order = 4), ]
+        public int RelativeDocumentParagraphId { get; set; }
 
-        [ForeignKey("DocumentId")]
-        public virtual Document Document { get; set; }
+        public decimal RelationWeight { get; set; }        
 
         [ForeignKey("DocumentParagraphId")]
         public virtual DocumentParagraph DocumentParagraph { get; set; }
+
+        [ForeignKey("RelativeDocumentParagraphId")]
+        public virtual DocumentParagraph RelativeDocumentParagraph { get; set; }
     }
 }

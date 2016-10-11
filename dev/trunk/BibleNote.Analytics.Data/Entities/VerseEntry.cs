@@ -12,6 +12,8 @@ namespace BibleNote.Analytics.Data.Entities
         [Required]
         public long VerseId { get; set; }
 
+        public decimal Weight { get; set; }
+
         [Required]
         public int DocumentId { get; set; }
 
