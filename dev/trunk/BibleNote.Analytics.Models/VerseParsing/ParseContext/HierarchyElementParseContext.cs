@@ -1,28 +1,27 @@
 ﻿using BibleNote.Analytics.Core.Extensions;
-using BibleNote.Analytics.Models.Verse;
 using System.Collections.Generic;
 using System.Linq;
 using BibleNote.Analytics.Models.Contracts.ParseContext;
 using BibleNote.Analytics.Models.Contracts;
-using System;
+using BibleNote.Analytics.Models.VerseParsing.ParseResult;
 
 namespace BibleNote.Analytics.Models.VerseParsing.ParseContext
 {
     public class HierarchyElementParseContext : IHierarchyElementParseContext
     {
+        public bool Parsed { get; set; }
+
         public ElementType ElementType { get; private set; }
 
         public IHierarchyInfo HierarchyInfo { get; set; }
 
-        public List<ParagraphParseResult> ParagraphResults { get; private set; }
-
-        public List<IHierarchyElementParseContext> ChildHierarchies { get; private set; }
-
         public IHierarchyElementParseContext ParentHierarchy { get; private set; }
 
-        public IElementParseContext PreviousSibling { get; private set; }
+        public IElementParseContext PreviousSibling { get; private set; }        
 
-        public bool Parsed { get; set; }
+        public List<ParagraphParseResult> ParagraphResults { get; private set; }
+
+        public List<IHierarchyElementParseContext> ChildHierarchies { get; private set; }        
 
         private bool _chapterEntryWasSearched;
         private ChapterEntry _chapterEntry;

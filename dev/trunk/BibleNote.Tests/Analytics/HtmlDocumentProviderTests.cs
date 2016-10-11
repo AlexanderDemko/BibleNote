@@ -39,7 +39,7 @@ namespace BibleNote.Tests.Analytics
         {
             var parseResult = _documentProvider.ParseDocument(new FileDocumentId(@"..\..\Analytics\TestData\Html_1.html", true));
             
-            CheckParseResults(parseResult.ParagraphParseResults,
+            CheckParseResults(parseResult.GetAllParagraphParseResults().ToList(),
                 new string[] { "Ин 1:1" },
                 new string[] { "Исх 12:27" },
                 new string[] { "1Кор 5:7" },
@@ -57,7 +57,7 @@ namespace BibleNote.Tests.Analytics
         {
             var parseResult = _documentProvider.ParseDocument(new FileDocumentId(@"..\..\Analytics\TestData\Html_2.html", true));
 
-            CheckParseResults(parseResult.ParagraphParseResults,
+            CheckParseResults(parseResult.GetAllParagraphParseResults().ToList(),
                 new string[] { "Ин 1" },
                 new string[] { "Ин 2" },
                 new string[] { "Ин 1:3" },

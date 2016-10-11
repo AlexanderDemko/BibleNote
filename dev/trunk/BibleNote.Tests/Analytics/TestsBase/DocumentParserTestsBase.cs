@@ -5,6 +5,7 @@ using BibleNote.Analytics.Services.Unity;
 using FluentAssertions;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Collections.Generic;
+using BibleNote.Analytics.Models.VerseParsing.ParseResult;
 
 namespace BibleNote.Tests.Analytics.TestsBase
 {

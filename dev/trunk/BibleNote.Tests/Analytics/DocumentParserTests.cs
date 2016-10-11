@@ -12,6 +12,7 @@ using System.Xml.Linq;
 using BibleNote.Analytics.Providers.OneNote.Services;
 using BibleNote.Analytics.Providers.Html;
 using HtmlAgilityPack;
+using System.Linq;
 
 namespace BibleNote.Tests.Analytics
 {
@@ -42,7 +43,7 @@ namespace BibleNote.Tests.Analytics
 
         private void CheckParseResults(IDocumentParser docParser, params string[][] expectedResults)
         {
-            base.CheckParseResults(docParser.DocumentParseResult.ParagraphParseResults, expectedResults);
+            base.CheckParseResults(docParser.DocumentParseResult.GetAllParagraphParseResults().ToList(), expectedResults);
         }
 
         private static IXmlNode GetNode(string html)

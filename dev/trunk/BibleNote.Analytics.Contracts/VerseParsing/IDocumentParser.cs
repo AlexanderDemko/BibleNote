@@ -2,7 +2,7 @@
 using BibleNote.Analytics.Core.Contracts;
 using BibleNote.Analytics.Models.Common;
 using BibleNote.Analytics.Models.Contracts.ParseContext;
-using BibleNote.Analytics.Models.VerseParsing;
+using BibleNote.Analytics.Models.VerseParsing.ParseResult;
 using System;
 
 namespace BibleNote.Analytics.Contracts.VerseParsing

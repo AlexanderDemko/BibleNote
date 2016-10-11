@@ -91,7 +91,7 @@ namespace BibleNote.Analytics.Models.VerseParsing
 
         public VerseEntryType EntryType { get; set; }
 
-        public int StartIndex { get; set; }         // границы стиха в рамках TextNodesString.Value
+        public int StartIndex { get; set; }         // границы стиха в рамках параграфа
 
         public int EndIndex { get; set; }
 
