@@ -67,6 +67,8 @@
     <Compile Include="Entities\DocumentFolder.cs" />
     <Compile Include="Entities\DocumentHierarchy.cs" />
     <Compile Include="Entities\DocumentParagraph.cs" />
+    <Compile Include="Entities\VerseEntry.cs" />
+    <Compile Include="Entities\VerseRelation.cs" />
     <Compile Include="Migrations\201504151537190_Init.cs" />
     <Compile Include="Migrations\201504151537190_Init.Designer.cs">
       <DependentUpon>201504151537190_Init.cs</DependentUpon>

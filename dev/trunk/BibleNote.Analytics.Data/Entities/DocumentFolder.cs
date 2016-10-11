@@ -18,6 +18,9 @@ namespace BibleNote.Analytics.Data.Entities
         [Required]
         public string NavigationProviderName { get; set; }
 
+        public int? ParentFolderId { get; set; }
+
+        [ForeignKey("ParentFolderId")]
         public DocumentFolder ParentFolder { get; set; }
     }
 }

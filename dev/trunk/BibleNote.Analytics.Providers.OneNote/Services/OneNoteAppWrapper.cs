@@ -12,6 +12,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using System.Xml;
+using System.Globalization;
 
 namespace BibleNote.Analytics.Providers.OneNote.Services
 {
@@ -60,26 +61,48 @@ namespace BibleNote.Analytics.Providers.OneNote.Services
         {
             var xnm = GetOneNoteXNM();
 
-            var inkNodes = pageDoc.Root.XPathSelectElements("one:InkDrawing", xnm)
-                               .Union(pageDoc.Root.XPathSelectElements("//one:OE[.//one:InkDrawing]", xnm))
-                               .Union(pageDoc.Root.XPathSelectElements("one:Outline[.//one:InkWord]", xnm)).ToArray();
+            CleanPageContent(pageDoc, xnm);
 
-            foreach (var inkNode in inkNodes)
-            {
-                if (inkNode.XPathSelectElement(".//one:T", xnm) == null)
-                    inkNode.Remove();
-                else
-                {
-                    var inkWords = inkNode.XPathSelectElements(".//one:InkWord", xnm).Where(ink => ink.XPathSelectElement(".//one:CallbackID", xnm) == null).ToArray();
-                    inkWords.Remove();
-                }
-            }
-
-            var pageTitleEl = pageDoc.Root.XPathSelectElement("one:Title", xnm);                // могли случайно удалить заголовок со страницы
-            if (pageTitleEl != null && !pageTitleEl.HasElements && !pageTitleEl.HasAttributes)
-                pageTitleEl.Remove();
-            
             UseOneNoteApp(() => _app.UpdatePageContent(pageDoc.ToString(), DateTime.MinValue, OneNoteConstants.CurrentOneNoteSchema));
+        }
+
+        private void CleanPageContent(XDocument pageContent, XmlNamespaceManager xnm)
+        {
+            try
+            {
+                var pageTitleEl = pageContent.Root.XPathSelectElement("one:Title", xnm);                // могли случайно удалить заголовок со страницы
+                if (pageTitleEl != null && !pageTitleEl.HasElements && !pageTitleEl.HasAttributes)
+                    pageTitleEl.Remove();
+
+                var inkNodes = pageContent.Root.XPathSelectElements("one:InkDrawing", xnm)
+                                .Union(pageContent.Root.XPathSelectElements("//one:OE[.//one:InkDrawing]", xnm))
+                                .Union(pageContent.Root.XPathSelectElements("one:Outline[.//one:InkWord]", xnm)).ToList();
+                foreach (var inkNode in inkNodes)
+                {
+                    if (inkNode.XPathSelectElement(".//one:T", xnm) == null)
+                        inkNode.Remove();
+                    else
+                    {
+                        var inkWords = inkNode.XPathSelectElements(".//one:InkWord", xnm).Where(ink => ink.XPathSelectElement(".//one:CallbackID", xnm) == null).ToList();
+                        inkWords.Remove();
+                    }
+                }
+
+                var indentNodes = pageContent.Root.XPathSelectElements("//one:Indents/one:Indent", xnm).ToList();
+                foreach (var indentNode in indentNodes)
+                {
+                    var indent = (string)indentNode.Attribute("indent");
+                    if (!string.IsNullOrEmpty(indent))
+                    {
+                        var indentVal = double.Parse(indent.Replace("E", "E-"), CultureInfo.InvariantCulture);          // непонятно, что делать с E
+                        indentNode.SetAttributeValue("indent", indentVal.ToString("F", CultureInfo.InvariantCulture));
+                    }
+                }                
+            }
+            catch (Exception ex)
+            {
+                _log.Write(LogLevel.Error, ex.ToString());
+            }
         }
 
         public void UpdatePageContent(string pageXml)

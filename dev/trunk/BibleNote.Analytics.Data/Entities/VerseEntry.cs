@@ -3,24 +3,25 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace BibleNote.Analytics.Data.Entities
 {
-    [Table("DocumentParagraphs")]
-    public class DocumentParagraph
+    [Table("VerseEntries")]
+    public class VerseEntry
     {
         [Key, DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        public int DocumentParagraphId { get; set; }
+        public int VerseEntryId { get; set; }
 
-        public string Path { get; set; }
+        [Required]
+        public long VerseId { get; set; }
 
         [Required]
         public int DocumentId { get; set; }
 
         [Required]
-        public int DocumentHierarchyId { get; set; }        
+        public int DocumentParagraphId { get; set; }        
 
         [ForeignKey("DocumentId")]
         public virtual Document Document { get; set; }
 
-        [ForeignKey("DocumentHierarchyId")]
-        public virtual DocumentHierarchy DocumentHierarchy { get; set; }
+        [ForeignKey("DocumentParagraphId")]
+        public virtual DocumentParagraph DocumentParagraph { get; set; }
     }
 }
