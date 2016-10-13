@@ -15,13 +15,12 @@ namespace BibleNote.Analytics.Services.VerseParsing
 
         private IDocumentProviderInfo _documentProvider;
 
-        public DocumentParseResult DocumentParseResult { get; private set; }
+        public DocumentParseResult DocumentParseResult { get { return _docParseContext.DocumentParseResult; } }
 
         public DocumentParser(IParagraphParser paragraphParser, IDocumentParseContextEditor docParseContext)
         {            
             _paragraphParser = paragraphParser;
-            _docParseContext = docParseContext;
-            DocumentParseResult = new DocumentParseResult();
+            _docParseContext = docParseContext;            
         }
 
         public void Init(IDocumentProviderInfo documentProvider)
@@ -36,12 +35,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
         {   
             using (_docParseContext.ParseParagraph())
             {
-                var result = _paragraphParser.ParseParagraph(node);
-                не нравится, что так неочевидно здесь передаётся node в _docParseContext
-                if (result.IsValuable)
-                    DocumentParseResult.ParagraphParseResults.Add(result);
-
-                return result;
+                return _paragraphParser.ParseParagraph(node, _docParseContext.CurrentParagraphEditor);                
             }
         }
 

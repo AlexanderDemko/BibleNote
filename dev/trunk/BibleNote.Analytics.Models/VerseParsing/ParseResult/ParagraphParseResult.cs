@@ -34,6 +34,8 @@ namespace BibleNote.Analytics.Models.VerseParsing.ParseResult
             }
         }
 
+        public int ParagraphIndex { get; set; }
+
         public List<VerseEntry> VerseEntries { get; set; }
 
         public List<SimpleVersePointer> NotFoundVerses { get; set; }

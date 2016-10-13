@@ -1,36 +1,47 @@
-﻿using System;
+﻿using BibleNote.Analytics.Models.Contracts.ParseContext;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace BibleNote.Analytics.Models.VerseParsing.ParseResult
 {
     public class HierarchyParseResult
     {
-        public HierarchyParseResult ParentHierarchy { get; set; }
+        public ElementType ElementType { get; internal set; }
 
-        public List<HierarchyParseResult> ChildHierarchies { get; set; }
+        public HierarchyParseResult ParentHierarchyResults { get; internal set; }
 
-        public List<ParagraphParseResult> Paragraphs { get; set; }        
+        public List<HierarchyParseResult> ChildHierarchyResults { get; private set; }
 
-        public HierarchyParseResult()
+        public List<ParagraphParseResult> ParagraphResults { get; private set; }        
+
+        public HierarchyParseResult(ElementType elementType)
         {
-            ChildHierarchies = new List<HierarchyParseResult>();
-            Paragraphs = new List<ParagraphParseResult>();            
+            ElementType = elementType;
+
+            ChildHierarchyResults = new List<HierarchyParseResult>();
+            ParagraphResults = new List<ParagraphParseResult>();            
         }
 
-        /// <summary>
-        /// For dev only
-        /// </summary>
-        /// <returns></returns>
+        public IEnumerable<ParagraphParseResult> GetSimpleHierarchicalParagraphResults()
+        {
+            return ParagraphResults
+                    .Union(ChildHierarchyResults
+                        .Where(ch => ch.ElementType.IsSimpleHierarchical())
+                        .SelectMany(ch => ch.GetSimpleHierarchicalParagraphResults()));
+        }
+        
         public IEnumerable<ParagraphParseResult> GetAllParagraphParseResults()
         {
-            foreach (var paragraphResult in Paragraphs
-                                            .Union(ChildHierarchies.SelectMany(h => h.GetAllParagraphParseResults())))
-            {
-                yield return paragraphResult;
-            }
+            return ParagraphResults
+                    .Union(ChildHierarchyResults.SelectMany(h => h.GetAllParagraphParseResults()));
+        }
+
+        public HierarchyParseResult GetValuableHierarchyResult()
+        {
+            if (ParagraphResults.Any() || ChildHierarchyResults.Count > 1)
+                return this;
+
+            return ChildHierarchyResults.FirstOrDefault()?.GetValuableHierarchyResult();
         }
     }
 }

@@ -4,10 +4,11 @@ using System.Linq;
 using BibleNote.Analytics.Models.Contracts.ParseContext;
 using BibleNote.Analytics.Models.Contracts;
 using BibleNote.Analytics.Models.VerseParsing.ParseResult;
+using System;
 
 namespace BibleNote.Analytics.Models.VerseParsing.ParseContext
 {
-    public class HierarchyElementParseContext : IHierarchyElementParseContext
+    public class HierarchyParseContext : IHierarchyParseContext
     {
         public bool Parsed { get; set; }
 
@@ -15,13 +16,13 @@ namespace BibleNote.Analytics.Models.VerseParsing.ParseContext
 
         public IHierarchyInfo HierarchyInfo { get; set; }
 
-        public IHierarchyElementParseContext ParentHierarchy { get; private set; }
+        public IHierarchyParseContext ParentHierarchy { get; private set; }
 
-        public IElementParseContext PreviousSibling { get; private set; }        
+        public IElementParseContext PreviousSibling { get; private set; }
 
-        public List<ParagraphParseResult> ParagraphResults { get; private set; }
+        public HierarchyParseResult ParseResult { get; private set; }
 
-        public List<IHierarchyElementParseContext> ChildHierarchies { get; private set; }        
+        public List<IHierarchyParseContext> ChildHierarchies { get; private set; }        
 
         private bool _chapterEntryWasSearched;
         private ChapterEntry _chapterEntry;
@@ -36,15 +37,15 @@ namespace BibleNote.Analytics.Models.VerseParsing.ParseContext
             }
         }
 
-        public HierarchyElementParseContext(ElementType paragraphState, IElementParseContext previousSibling,
-            IHierarchyElementParseContext parentHierarchy)
+        public HierarchyParseContext(ElementType elementType, IElementParseContext previousSibling,
+            IHierarchyParseContext parentHierarchy)
         {
-            ElementType = paragraphState;
+            ElementType = elementType;
             PreviousSibling = previousSibling;
             ParentHierarchy = parentHierarchy;
 
-            ParagraphResults = new List<ParagraphParseResult>();
-            ChildHierarchies = new List<IHierarchyElementParseContext>();
+            ParseResult = new HierarchyParseResult(elementType);
+            ChildHierarchies = new List<IHierarchyParseContext>();
         }
 
         public ChapterEntry GetHierarchyChapterEntry()
@@ -57,15 +58,7 @@ namespace BibleNote.Analytics.Models.VerseParsing.ParseContext
                 return calculatedChapterEntry;
 
             return ParentHierarchy?.GetHierarchyChapterEntry();
-        }
-
-        public IEnumerable<ParagraphParseResult> GetAllParagraphResults()
-        {
-            return ParagraphResults
-                    .Union(ChildHierarchies
-                            .Where(ch => ch.ElementType.IsSimpleHierarchical())
-                            .SelectMany(ch => ch.GetAllParagraphResults()));
-        }
+        }        
 
         private ChapterEntry GetChapterEntry()
         {
@@ -74,7 +67,7 @@ namespace BibleNote.Analytics.Models.VerseParsing.ParseContext
                 _chapterEntryWasSearched = true;
 
                 _chapterEntry = new ChapterEntry();
-                foreach (var entry in GetAllParagraphResults().Select(pr => pr.ChapterEntry))
+                foreach (var entry in ParseResult.GetSimpleHierarchicalParagraphResults().Select(pr => pr.ChapterEntry))
                 {
                     if (entry?.Invalid == true)
                     {
@@ -135,8 +128,8 @@ namespace BibleNote.Analytics.Models.VerseParsing.ParseContext
                     && (PreviousSibling.ChapterEntry.Invalid || PreviousSibling.ChapterEntry.Found))
                         return PreviousSibling.ChapterEntry;
                 
-                if (PreviousSibling is IHierarchyElementParseContext)
-                    return ((IHierarchyElementParseContext)PreviousSibling)?.GetPreviousSiblingChapterEntry();
+                if (PreviousSibling is IHierarchyParseContext)
+                    return ((IHierarchyParseContext)PreviousSibling)?.GetPreviousSiblingChapterEntry();
             }
 
             return null;
@@ -144,12 +137,18 @@ namespace BibleNote.Analytics.Models.VerseParsing.ParseContext
 
         public void AddParagraphResult(ParagraphParseResult paragraphResult)
         {
-            ParagraphResults.Add(paragraphResult);
+            ParseResult.ParagraphResults.Add(paragraphResult);
+        }
+
+        public void AddHierarchyResult(HierarchyParseResult hierarchyResult)
+        {
+            ParseResult.ChildHierarchyResults.Add(hierarchyResult);
         }
 
         public void ChangeElementType(ElementType elementType)
         {
             ElementType = elementType;
+            ParseResult.ElementType = elementType;
         }
     }
 }
