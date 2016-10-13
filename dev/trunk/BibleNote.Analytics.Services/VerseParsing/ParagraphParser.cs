@@ -32,9 +32,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
 
         private IDocumentParseContext _docParseContext;
 
-        private IParagraphParseContextEditor _parseContextEditor;
-
-        private ParagraphParseResult _result { get; set; }        
+        private IParagraphParseContextEditor _paragraphContextEditor;
 
         public ParagraphParser(IStringParser stringParser, IVerseRecognitionService verseRecognitionService, IConfigurationManager configurationManager)
         {
@@ -49,26 +47,22 @@ namespace BibleNote.Analytics.Services.VerseParsing
             _docParseContext = docParseContext;
         }
 
-        public ParagraphParseResult ParseParagraph(IXmlNode node)
+        public ParagraphParseResult ParseParagraph(IXmlNode node, IParagraphParseContextEditor paragraphContextEditor)
         {
             if (_documentProvider == null)
                 throw new NotInitializedException("_documentProvider == null");
 
             if (_docParseContext == null)
-                throw new NotInitializedException("_docParseContext == null");            
+                throw new NotInitializedException("_docParseContext == null");
 
-            _parseContextEditor = (IParagraphParseContextEditor)_docParseContext.CurrentParagraph;
-
-            _result = new ParagraphParseResult();
-            _parseContextEditor.SetParagraphResult(_result);
+            _paragraphContextEditor = paragraphContextEditor;
 
             var parseString = new HtmlToTextConverter().Convert(node);
-            _result.Text = parseString.Value;
+            _paragraphContextEditor.ParseResult.Text = parseString.Value;
             ParseTextNodes(parseString);
 
-            _parseContextEditor.SetParsed();
-
-            return _result;
+            _paragraphContextEditor.SetParsed();
+            return _paragraphContextEditor.ParseResult;
         }
 
         private void ParseTextNodes(TextNodesString parseString)
@@ -99,13 +93,13 @@ namespace BibleNote.Analytics.Services.VerseParsing
                             UpdateLinkNode(verseNode.NodeEntry.Node.GetParentNode(), verseEntry);
                     }
 
-                    _result.VerseEntries.Add(verseEntry);
-                    _parseContextEditor.SetLatestVerseEntry(verseEntry);
+                    _paragraphContextEditor.ParseResult.VerseEntries.Add(verseEntry);
+                    _paragraphContextEditor.SetLatestVerseEntry(verseEntry);
                 }
 
                 if (verseEntry.VersePointer.SubVerses.NotFoundVerses.Count > 0)
                 {
-                    _result.NotFoundVerses.AddRange(verseEntry.VersePointer.SubVerses.NotFoundVerses);
+                    _paragraphContextEditor.ParseResult.NotFoundVerses.AddRange(verseEntry.VersePointer.SubVerses.NotFoundVerses);
                 }
 
                 var prevIndex = index;

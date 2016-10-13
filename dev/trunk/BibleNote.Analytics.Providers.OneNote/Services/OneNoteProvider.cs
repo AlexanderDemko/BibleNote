@@ -42,7 +42,7 @@ namespace BibleNote.Analytics.Providers.OneNote.Services
                     result = docParser.DocumentParseResult;
                 }
 
-                if (result.ParagraphParseResults.Any(pr => pr.IsValuable))
+                if (result.IsValuable)
                     docHandler.SetDocumentChanged();
             }
 

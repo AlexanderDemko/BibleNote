@@ -12,9 +12,7 @@ namespace BibleNote.Analytics.Models.Contracts.ParseContext
 
     public interface IParagraphParseContextEditor : IParagraphParseContext
     { 
-        void SetLatestVerseEntry(VerseEntry verseEntry);
-
-        void SetParagraphResult(ParagraphParseResult paragraphParseResult);
+        void SetLatestVerseEntry(VerseEntry verseEntry);        
 
         void SetParsed();
     }

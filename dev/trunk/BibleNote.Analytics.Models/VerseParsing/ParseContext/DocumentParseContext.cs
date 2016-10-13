@@ -1,17 +1,30 @@
 ﻿using BibleNote.Analytics.Models.Common;
 using BibleNote.Analytics.Models.Contracts.ParseContext;
+using BibleNote.Analytics.Models.VerseParsing.ParseResult;
+using System;
 
 namespace BibleNote.Analytics.Models.VerseParsing.ParseContext
 {
     public class DocumentParseContext : IDocumentParseContextEditor
     {
+        private int _currentParagraphIndex = -1;
+
         private IElementParseContext _previousElement;        
 
-        public ChapterEntry TitleChapter { get; private set; }        
+        public ChapterEntry TitleChapter { get; private set; }
 
-        public IHierarchyElementParseContext CurrentHierarchy { get; private set; }        
+        public DocumentParseResult DocumentParseResult { get; private set; }
+
+        public IHierarchyParseContext CurrentHierarchy { get; private set; }        
 
         public IParagraphParseContext CurrentParagraph { get; private set; }
+
+        public IParagraphParseContextEditor CurrentParagraphEditor { get { return (IParagraphParseContextEditor)CurrentParagraph; } }
+
+        public DocumentParseContext()
+        {
+            DocumentParseResult = new DocumentParseResult();
+        }
 
         public void SetTitleVerse(ChapterEntry titleChapter)
         {
@@ -20,11 +33,11 @@ namespace BibleNote.Analytics.Models.VerseParsing.ParseContext
 
         public DisposeHandler ParseParagraph()
         {
-            CurrentParagraph = new ParagraphParseContext(_previousElement);            
+            CurrentParagraph = new ParagraphParseContext(_previousElement, ++_currentParagraphIndex);            
 
             return new DisposeHandler(() =>
             {
-                if (CurrentHierarchy != null && CurrentParagraph.ParseResult.IsValuable)                
+                if (CurrentParagraph.ParseResult.IsValuable)                
                     CurrentHierarchy.AddParagraphResult(CurrentParagraph.ParseResult);
 
                 _previousElement = CurrentParagraph;
@@ -33,7 +46,7 @@ namespace BibleNote.Analytics.Models.VerseParsing.ParseContext
 
         public void EnterHierarchyElement(ElementType paragraphType)
         {            
-            CurrentHierarchy = new HierarchyElementParseContext(paragraphType, _previousElement, CurrentHierarchy);
+            CurrentHierarchy = new HierarchyParseContext(paragraphType, _previousElement, CurrentHierarchy);
             CurrentHierarchy.ParentHierarchy?.ChildHierarchies.Add(CurrentHierarchy);
             _previousElement = null;         // чтобы, когда мы войдём в параграф, у него PreviousSibling был null
 
@@ -88,28 +101,46 @@ namespace BibleNote.Analytics.Models.VerseParsing.ParseContext
 
             if (CurrentHierarchy.ElementType == ElementType.TableCell)
             {
-                var hierarchyInfo = (TableHierarchyInfo)CurrentHierarchy.ParentHierarchy.ParentHierarchy.HierarchyInfo;                
-                if (hierarchyInfo.CurrentRow == 0)                                    
-                    hierarchyInfo.FirstRowParseContexts.Add(CurrentHierarchy);                
+                var hierarchyInfo = (TableHierarchyInfo)CurrentHierarchy.ParentHierarchy.ParentHierarchy.HierarchyInfo;
+                if (hierarchyInfo.CurrentRow == 0)
+                    hierarchyInfo.FirstRowParseContexts.Add(CurrentHierarchy);
 
-                if (hierarchyInfo.CurrentColumn == 0)                   
-                    hierarchyInfo.FirstColumnParseContexts.Add(CurrentHierarchy);                
+                if (hierarchyInfo.CurrentColumn == 0)
+                    hierarchyInfo.FirstColumnParseContexts.Add(CurrentHierarchy);
             }
             else if (CurrentHierarchy.ElementType == ElementType.Title)
-            {   
+            {
                 SetTitleVerse(CurrentHierarchy.ChapterEntry);
             }
 
-            _previousElement = CurrentHierarchy;            
-            CurrentHierarchy = CurrentHierarchy.ParentHierarchy;            
+            var valuableHierarchyResult = CurrentHierarchy.ParseResult.GetValuableHierarchyResult();
+            _previousElement = CurrentHierarchy;
+            CurrentHierarchy = CurrentHierarchy.ParentHierarchy;
+            
+            if (valuableHierarchyResult != null)
+            {
+                if (CurrentHierarchy != null)
+                {
+                    CurrentHierarchy.AddHierarchyResult(valuableHierarchyResult);
+                }
+                else
+                {
+                    if (DocumentParseResult.RootHierarchyResult != null)
+                        throw new InvalidOperationException("DocumentParseResult.RootHierarchyResult != null");
+
+                    DocumentParseResult.RootHierarchyResult = valuableHierarchyResult;
+                }
+            }                
         }
-        
+
         public void ClearContext()
-        {
+        {   
             TitleChapter = null;            
             CurrentParagraph = null;
             CurrentHierarchy = null;
-            _previousElement = null;            
+            _previousElement = null;
+
+            DocumentParseResult = new DocumentParseResult();
         }
     }
 }

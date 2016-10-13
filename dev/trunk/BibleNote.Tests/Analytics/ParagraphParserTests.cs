@@ -11,6 +11,7 @@ using BibleNote.Analytics.Models.Contracts.ParseContext;
 using BibleNote.Analytics.Core.Contracts;
 using BibleNote.Analytics.Providers.Html;
 using BibleNote.Analytics.Models.VerseParsing.ParseResult;
+using Microsoft.Practices.Unity;
 
 namespace BibleNote.Tests.Analytics
 {
@@ -23,22 +24,22 @@ namespace BibleNote.Tests.Analytics
             public ParagraphParseResult Result { get; set; }
         }
 
-        private MockDocumentProviderInfo _mockDocumentProvider;        
-        private IParagraphParser _parahraphParserService;
+        private MockDocumentProviderInfo _documentProvider;
+        private IDocumentParserFactory _documentParserFactory;        
         private IVersePointerFactory _versePointerFactory;
-        private IDocumentParseContextEditor _documentParseContext;        
+        private IDocumentParseContextEditor _documentParseContext;
 
         [TestInitialize]
         public override void Init()
         {
             base.Init();
 
-            _documentParseContext = DIContainer.Resolve<IDocumentParseContextEditor>();
-            _versePointerFactory = DIContainer.Resolve<IVersePointerFactory>();
-            _parahraphParserService = DIContainer.Resolve<IParagraphParser>();
+            _documentProvider = new MockDocumentProviderInfo();
+            _versePointerFactory = DIContainer.Resolve<IVersePointerFactory>();                        
+            _documentParserFactory = DIContainer.Resolve<IDocumentParserFactory>();
 
-            _mockDocumentProvider = new MockDocumentProviderInfo();
-            _parahraphParserService.Init(_mockDocumentProvider, _documentParseContext);
+            _documentParseContext = DIContainer.Resolve<IDocumentParseContextEditor>();
+            DIContainer.Container.RegisterInstance(_documentParseContext);
         }
 
         [TestCleanup]
@@ -51,23 +52,23 @@ namespace BibleNote.Tests.Analytics
         {
             if (string.IsNullOrEmpty(expectedOutput) || input == expectedOutput)
             {
-                _mockDocumentProvider.IsReadonly = true;
+                _documentProvider.IsReadonly = true;
                 expectedOutput = input;
             }
             else
-                _mockDocumentProvider.IsReadonly = false;
+                _documentProvider.IsReadonly = false;
 
             if (verses == null)
                 verses = new string[0];
-
-            _documentParseContext.ClearContext();            
-            initDocParseContext?.Invoke(_documentParseContext);
             
-            var htmlDoc = new HtmlNodeWrapper(input);
+            initDocParseContext?.Invoke(_documentParseContext);
 
-            ParagraphParseResult result;
-            using (_documentParseContext.ParseParagraph())            
-                result = _parahraphParserService.ParseParagraph(htmlDoc);            
+            var htmlDoc = new HtmlNodeWrapper(input);
+            ParagraphParseResult result;            
+            using (var docParser = _documentParserFactory.Create(_documentProvider))
+            {                
+                result = docParser.ParseParagraph(htmlDoc);                
+            }
 
             Assert.AreEqual(verses.Length, result.VerseEntries.Count, "Verses length is not the same. Expected: {0}. Found: {1}", verses.Length, result.VerseEntries.Count);            
             var verseEntries = result.VerseEntries.Select(ve => ve.VersePointer);

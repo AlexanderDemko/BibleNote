@@ -15,19 +15,15 @@ namespace BibleNote.Analytics.Models.VerseParsing.ParseContext
 
         public ChapterEntry ChapterEntry { get { return ParseResult.ChapterEntry; } }
 
-        public ParagraphParseContext(IElementParseContext previousSibling)
+        public ParagraphParseContext(IElementParseContext previousSibling, int currentParagraphIndex)
         {
             PreviousSibling = previousSibling;
+            ParseResult = new ParagraphParseResult() { ParagraphIndex = currentParagraphIndex};               
         }
 
         public void SetLatestVerseEntry(VerseEntry verseEntry)
         {
             LatestVerseEntry = verseEntry;
-        }
-
-        public void SetParagraphResult(ParagraphParseResult paragraphParseResult)
-        {
-            ParseResult = paragraphParseResult;
         }
 
         public ChapterEntry GetHierarchyChapterEntry()

@@ -11,14 +11,14 @@ namespace BibleNote.Analytics.Models.VerseParsing
 
         public int CurrentColumn { get; set; }
 
-        public List<IHierarchyElementParseContext> FirstRowParseContexts { get; set; }
+        public List<IHierarchyParseContext> FirstRowParseContexts { get; set; }
 
-        public List<IHierarchyElementParseContext> FirstColumnParseContexts { get; set; }
+        public List<IHierarchyParseContext> FirstColumnParseContexts { get; set; }
 
         public TableHierarchyInfo()
         {
-            FirstRowParseContexts = new List<IHierarchyElementParseContext>();
-            FirstColumnParseContexts = new List<IHierarchyElementParseContext>();
+            FirstRowParseContexts = new List<IHierarchyParseContext>();
+            FirstColumnParseContexts = new List<IHierarchyParseContext>();
 
             CurrentRow = -1;
             CurrentColumn = -1;
