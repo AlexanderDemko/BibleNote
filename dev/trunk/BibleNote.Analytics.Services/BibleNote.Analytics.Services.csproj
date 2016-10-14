@@ -97,6 +97,8 @@
     <Compile Include="VerseParsing\VersePointerFactory.cs" />
     <Compile Include="VerseParsing\StringParser.cs" />
     <Compile Include="VerseParsing\VerseRecognitionService.cs" />
+    <Compile Include="VerseProcessing\SaveVerseRelationProcessing.cs" />
+    <Compile Include="VerseProcessing\SaveVerseEntriesProcessing.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\BibleNote.Analytics.Contracts\BibleNote.Analytics.Contracts.csproj">
