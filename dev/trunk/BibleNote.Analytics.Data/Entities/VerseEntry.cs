@@ -11,17 +11,13 @@ namespace BibleNote.Analytics.Data.Entities
 
         [Required]
         public long VerseId { get; set; }
-
+        
         public decimal Weight { get; set; }
 
-        [Required]
-        public int DocumentId { get; set; }
+        public string Suffix { get; set; }
 
         [Required]
         public int DocumentParagraphId { get; set; }        
-
-        [ForeignKey("DocumentId")]
-        public virtual Document Document { get; set; }
 
         [ForeignKey("DocumentParagraphId")]
         public virtual DocumentParagraph DocumentParagraph { get; set; }

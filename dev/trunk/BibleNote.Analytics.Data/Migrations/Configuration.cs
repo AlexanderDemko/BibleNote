@@ -7,9 +7,10 @@ namespace BibleNote.Analytics.Data.Migrations
         public Configuration()
         {
             AutomaticMigrationsEnabled = true;
+            AutomaticMigrationDataLossAllowed = true;
         }
 
-        protected override void Seed(BibleNote.Analytics.Data.AnalyticsContext context)
+        protected override void Seed(AnalyticsContext context)
         {
             //  This method will be called after migrating to the latest version.
 
