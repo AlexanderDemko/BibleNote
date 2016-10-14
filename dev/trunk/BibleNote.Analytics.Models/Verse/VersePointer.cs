@@ -1,4 +1,5 @@
 ﻿using BibleNote.Analytics.Models.Modules;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -32,6 +33,7 @@ namespace BibleNote.Analytics.Models.Verse
         /// </summary>
         public string OriginalVerseName { get; set; }
 
+        [JsonIgnore]
         public VersesListInfo<ModuleVersePointer> SubVerses { get; set; }
 
         public VersePointer(BibleBookInfo bookInfo, string moduleShortName, string originalVerseName, VerseNumber verseNumber, VerseNumber? topVerseNumber = null)

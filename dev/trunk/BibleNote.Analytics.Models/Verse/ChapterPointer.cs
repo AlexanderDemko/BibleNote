@@ -16,10 +16,10 @@ namespace BibleNote.Analytics.Models.Verse
 
         public override bool Equals(object obj)
         {
-            if (obj == null)
-                return false;
+            var otherObj = obj as ChapterPointer;
 
-            var otherObj = (ChapterPointer)obj;
+            if (otherObj == null)
+                return false;            
 
             return BookIndex == otherObj.BookIndex
                 && Chapter == otherObj.Chapter;

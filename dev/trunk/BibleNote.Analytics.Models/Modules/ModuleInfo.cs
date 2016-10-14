@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -28,7 +29,7 @@ namespace BibleNote.Analytics.Models.Modules
         [EditorBrowsable(EditorBrowsableState.Never)]
         public string XmlVersion { get; set; }
 
-        [XmlIgnore]
+        [XmlIgnore, JsonIgnore]
         public Version Version
         {
             get
@@ -51,7 +52,7 @@ namespace BibleNote.Analytics.Models.Modules
         [DefaultValue("")]
         public string XmlMinProgramVersion { get; set; }
 
-        [XmlIgnore]
+        [XmlIgnore, JsonIgnore]
         public Version MinProgramVersion
         {
             get
@@ -100,7 +101,7 @@ namespace BibleNote.Analytics.Models.Modules
         public BibleStructureInfo BibleStructure { get; set; }
 
         private int _maxBookNameLength;
-        [XmlIgnore]
+        [XmlIgnore, JsonIgnore]
         public int MaxBookNameLength
         {
             get 
