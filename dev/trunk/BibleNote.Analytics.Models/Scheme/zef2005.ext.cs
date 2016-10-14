@@ -5,6 +5,7 @@ using System.Xml.Serialization;
 using BibleNote.Analytics.Models.Exceptions;
 using BibleNote.Analytics.Core.Constants;
 using BibleNote.Analytics.Models.Verse;
+using Newtonsoft.Json;
 
 namespace BibleNote.Analytics.Models.Scheme
 {
@@ -12,7 +13,7 @@ namespace BibleNote.Analytics.Models.Scheme
     {
         public string ModuleShortName { get; set; }        
 
-        [XmlIgnore]
+        [XmlIgnore, JsonIgnore]
         public List<BIBLEBOOK> Books
         {
             get
@@ -26,7 +27,7 @@ namespace BibleNote.Analytics.Models.Scheme
 
         
         private Dictionary<int, BIBLEBOOK> _booksDictionary;
-        [XmlIgnore]
+        [XmlIgnore, JsonIgnore]
         public Dictionary<int, BIBLEBOOK> BooksDictionary
         {
             get
@@ -68,7 +69,7 @@ namespace BibleNote.Analytics.Models.Scheme
 
     public partial class BIBLEBOOK
     {
-        [XmlIgnore]
+        [XmlIgnore, JsonIgnore]
         public int Index
         {
             get
@@ -77,7 +78,7 @@ namespace BibleNote.Analytics.Models.Scheme
             }
         }
 
-        [XmlIgnore]
+        [XmlIgnore, JsonIgnore]
         public List<CHAPTER> Chapters
         {
             get
@@ -253,7 +254,7 @@ namespace BibleNote.Analytics.Models.Scheme
 
     public partial class CHAPTER
     {
-        [XmlIgnore]
+        [XmlIgnore, JsonIgnore]
         public int Index
         {
             get
@@ -262,7 +263,7 @@ namespace BibleNote.Analytics.Models.Scheme
             }
         }
 
-        [XmlIgnore]
+        [XmlIgnore, JsonIgnore]
         public List<VERS> Verses
         {
             get
@@ -334,7 +335,7 @@ namespace BibleNote.Analytics.Models.Scheme
 
     public partial class VERS
     {
-        [XmlIgnore]
+        [XmlIgnore, JsonIgnore]
         public int Index
         {
             get
@@ -343,7 +344,7 @@ namespace BibleNote.Analytics.Models.Scheme
             }
         }
 
-        [XmlIgnore]
+        [XmlIgnore, JsonIgnore]
         public int? TopIndex
         {
             get
@@ -352,7 +353,7 @@ namespace BibleNote.Analytics.Models.Scheme
             }
         }
 
-        [XmlIgnore]
+        [XmlIgnore, JsonIgnore]
         public bool IsMultiVerse 
         {
             get 
@@ -361,7 +362,7 @@ namespace BibleNote.Analytics.Models.Scheme
             }
         }
 
-        [XmlIgnore]
+        [XmlIgnore, JsonIgnore]
         public VerseIndex VerseIndex
         {
             get
@@ -370,7 +371,7 @@ namespace BibleNote.Analytics.Models.Scheme
             }
         }
 
-        [XmlIgnore]
+        [XmlIgnore, JsonIgnore]
         public static VERS Empty
         {
             get
@@ -379,7 +380,7 @@ namespace BibleNote.Analytics.Models.Scheme
             }
         }
 
-        [XmlIgnore]
+        [XmlIgnore, JsonIgnore]
         public bool IsEmpty
         {
             get
@@ -393,7 +394,7 @@ namespace BibleNote.Analytics.Models.Scheme
             return GetVerseText(this.Items, includeStrongNumbers, strongPrefix);
         }
 
-        [XmlIgnore]
+        [XmlIgnore, JsonIgnore]
         public string Value
         {
             get

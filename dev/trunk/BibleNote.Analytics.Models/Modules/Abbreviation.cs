@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -22,7 +23,7 @@ namespace BibleNote.Analytics.Models.Modules
         [DefaultValue("")]
         public string ModuleName { get; set; }
 
-        [XmlIgnore]
+        [XmlIgnore, JsonIgnore]
         public BibleBookInfo BibleBook { get; set; }
 
         public Abbreviation()

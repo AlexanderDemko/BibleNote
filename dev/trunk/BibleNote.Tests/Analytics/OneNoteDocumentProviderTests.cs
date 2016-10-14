@@ -13,6 +13,8 @@ using BibleNote.Tests.Analytics.Mocks;
 using BibleNote.Tests.Analytics.TestsBase;
 using BibleNote.Analytics.Providers.OneNote.Navigation;
 using System.IO;
+using BibleNote.Analytics.Core.Helpers;
+using Newtonsoft.Json;
 
 namespace BibleNote.Tests.Analytics
 {
@@ -42,6 +44,7 @@ namespace BibleNote.Tests.Analytics
         public void ParseOneNote_Test1()
         {
             var parseResult = _documentProvider.ParseDocument(new FileDocumentId(@"..\..\Analytics\TestData\OneNote_1.html", true));
+            //var s = JsonConvert.SerializeObject(parseResult.RootHierarchyResult); 
 
             CheckParseResults(parseResult.GetAllParagraphParseResults().ToList(),
                 new string[] { "Ин 1:1" },

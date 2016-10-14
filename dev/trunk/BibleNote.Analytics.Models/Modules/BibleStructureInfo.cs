@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -48,7 +49,7 @@ namespace BibleNote.Analytics.Models.Modules
         }
 
         private Dictionary<string, Abbreviation> _allAbbreviations;
-        [XmlIgnore]
+        [XmlIgnore, JsonIgnore]
         public Dictionary<string, Abbreviation> AllAbbreviations
         {
             get
