@@ -21,7 +21,7 @@ namespace BibleNote.Analytics.Models.VerseParsing.ParseContext
 
         public IParagraphParseContextEditor CurrentParagraphEditor { get { return (IParagraphParseContextEditor)CurrentParagraph; } }
 
-        public DocumentParseContext()
+        public void Init()
         {
             DocumentParseResult = new DocumentParseResult();
         }
@@ -139,8 +139,6 @@ namespace BibleNote.Analytics.Models.VerseParsing.ParseContext
             CurrentParagraph = null;
             CurrentHierarchy = null;
             _previousElement = null;
-
-            DocumentParseResult = new DocumentParseResult();
         }
     }
 }

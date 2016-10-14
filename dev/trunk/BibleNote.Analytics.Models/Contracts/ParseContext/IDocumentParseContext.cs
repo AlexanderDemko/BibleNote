@@ -15,6 +15,8 @@ namespace BibleNote.Analytics.Models.Contracts.ParseContext
     
     public interface IDocumentParseContextEditor : IDocumentParseContext
     {
+        void Init();
+
         DocumentParseResult DocumentParseResult { get; }
 
         IParagraphParseContextEditor CurrentParagraphEditor { get; }
