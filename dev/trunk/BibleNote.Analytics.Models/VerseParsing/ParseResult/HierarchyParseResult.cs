@@ -38,7 +38,7 @@ namespace BibleNote.Analytics.Models.VerseParsing.ParseResult
 
         public HierarchyParseResult GetValuableHierarchyResult()
         {
-            if (ParagraphResults.Any() || ChildHierarchyResults.Count > 1)
+            if (ParagraphResults.Any() || ChildHierarchyResults.Count > 1 || !ElementTypeHelper.CanBeLinear(ElementType))
                 return this;
 
             return ChildHierarchyResults.FirstOrDefault()?.GetValuableHierarchyResult();

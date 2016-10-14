@@ -3,16 +3,23 @@ using System.Linq;
 using BibleNote.Analytics.Services.Unity;
 using BibleNote.Analytics.Data;
 using BibleNote.Analytics.Data.Entities;
+using System.Data.Entity;
+using BibleNote.Analytics.Data.Migrations;
+using System.Data.Entity.Migrations;
 
 namespace BibleNote.Tests.Analytics
 { 
     [TestClass]
     public class DBTests
     {
+        private AnalyticsContext _analyticsContext;
+
         [TestInitialize]
         public void Init()
         {
             DIContainer.InitWithDefaults();
+
+            _analyticsContext = DIContainer.Resolve<AnalyticsContext>();            
         }
 
         [TestMethod]
@@ -20,25 +27,22 @@ namespace BibleNote.Tests.Analytics
         public void TestCreateAndDeleteFolder()
         {
             var foldersCount = 0;
-            var testFolderName = "Test1";
+            var testFolderName = "Test1";            
 
-            var analyticsContext = DIContainer.Resolve<AnalyticsContext>();
+            foldersCount = _analyticsContext.DocumentFolders.Count();
 
-            foldersCount = analyticsContext.DocumentFolders.Count();
+            var newFolder = new DocumentFolder() { Name = testFolderName, NavigationProviderName = "Html", Path = "c:\temp" };            
+            _analyticsContext.DocumentFolders.Add(newFolder);
+            _analyticsContext.SaveChanges();
 
-            var newFolder = new DocumentFolder();
-            newFolder.Name = testFolderName;
-            analyticsContext.DocumentFolders.Add(newFolder);
-            analyticsContext.SaveChanges();
-
-            Assert.AreEqual(foldersCount + 1, analyticsContext.DocumentFolders.Count());
-            var folder = analyticsContext.DocumentFolders.FirstOrDefault(f => f.Name == testFolderName);
+            Assert.AreEqual(foldersCount + 1, _analyticsContext.DocumentFolders.Count());
+            var folder = _analyticsContext.DocumentFolders.FirstOrDefault(f => f.Name == testFolderName);
             Assert.IsNotNull(folder);
-            analyticsContext.DocumentFolders.Remove(folder);
-            analyticsContext.SaveChanges();
+            _analyticsContext.DocumentFolders.Remove(folder);
+            _analyticsContext.SaveChanges();
 
-            Assert.AreEqual(foldersCount, analyticsContext.DocumentFolders.Count());
-            Assert.IsNull(analyticsContext.DocumentFolders.FirstOrDefault(f => f.Name == testFolderName));            
+            Assert.AreEqual(foldersCount, _analyticsContext.DocumentFolders.Count());
+            Assert.IsNull(_analyticsContext.DocumentFolders.FirstOrDefault(f => f.Name == testFolderName));            
         }
     }
 }

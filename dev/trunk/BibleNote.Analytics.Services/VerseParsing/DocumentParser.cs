@@ -28,6 +28,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
             _documentProvider = documentProvider;            
             _paragraphParser.Init(documentProvider, _docParseContext);
 
+            _docParseContext.Init();
             _docParseContext.EnterHierarchyElement(ElementType.Root);
         }
 
