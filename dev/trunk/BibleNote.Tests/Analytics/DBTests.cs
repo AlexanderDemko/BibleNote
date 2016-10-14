@@ -19,6 +19,7 @@ namespace BibleNote.Tests.Analytics
         {
             DIContainer.InitWithDefaults();
 
+            Database.SetInitializer(new MigrateDatabaseToLatestVersion<AnalyticsContext, Configuration>());
             _analyticsContext = DIContainer.Resolve<AnalyticsContext>();            
         }
 

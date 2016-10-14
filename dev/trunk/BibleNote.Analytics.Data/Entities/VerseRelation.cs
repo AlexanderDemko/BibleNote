@@ -1,27 +1,23 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace BibleNote.Analytics.Data.Entities
 {
-    [Table("VerseEntries")]
+    [Table("VerseRelations")]
     public class VerseRelation
     {
-        [Key, Column(Order = 0)]
+        [Key, DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        public int VerseRelationId { get; set; }
+
+        [Index("IX_VerseId")]
         public long VerseId { get; set; }
 
-        [Key, Column(Order = 1), Index("IX_RelativeVerseId")]
+        [Index("IX_RelativeVerseId")]
         public long RelativeVerseId { get; set; }        
+        
+        public int DocumentParagraphId { get; set; }        
 
-        [Key, Column(Order = 3)]
-        public int DocumentParagraphId { get; set; }
-
-        [Key, Column(Order = 4), ]
-        public int RelativeDocumentParagraphId { get; set; }
+        public int? RelativeDocumentParagraphId { get; set; }
 
         public decimal RelationWeight { get; set; }        
 

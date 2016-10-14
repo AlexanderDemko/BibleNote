@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace BibleNote.Analytics.Data.Entities
@@ -20,5 +21,7 @@ namespace BibleNote.Analytics.Data.Entities
 
         [ForeignKey("DocumentFolderId")]
         public DocumentFolder Folder { get; set; }
+
+        public virtual IList<DocumentParagraph> Paragraphs { get; set; }
     }
 }

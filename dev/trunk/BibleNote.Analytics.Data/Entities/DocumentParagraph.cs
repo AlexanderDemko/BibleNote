@@ -12,15 +12,9 @@ namespace BibleNote.Analytics.Data.Entities
         public string Path { get; set; }
 
         [Required]
-        public int DocumentId { get; set; }
-
-        [Required]
-        public int DocumentHierarchyId { get; set; }        
+        public int DocumentId { get; set; }              
 
         [ForeignKey("DocumentId")]
-        public virtual Document Document { get; set; }
-
-        [ForeignKey("DocumentHierarchyId")]
-        public virtual DocumentHierarchy DocumentHierarchy { get; set; }
+        public virtual Document Document { get; set; }        
     }
 }
