@@ -37,6 +37,8 @@ namespace BibleNote.Analytics.Models.VerseParsing.ParseContext
 
             return new DisposeHandler(() =>
             {
+                DocumentParseResult.DocumentLength += CurrentParagraph.ParseResult.Text.Length;
+
                 if (CurrentParagraph.ParseResult.IsValuable)                
                     CurrentHierarchy.AddParagraphResult(CurrentParagraph.ParseResult);
 

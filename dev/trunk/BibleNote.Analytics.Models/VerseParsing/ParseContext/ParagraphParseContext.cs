@@ -18,7 +18,7 @@ namespace BibleNote.Analytics.Models.VerseParsing.ParseContext
         public ParagraphParseContext(IElementParseContext previousSibling, int currentParagraphIndex)
         {
             PreviousSibling = previousSibling;
-            ParseResult = new ParagraphParseResult() { ParagraphIndex = currentParagraphIndex};               
+            ParseResult = new ParagraphParseResult() { ParagraphIndex = currentParagraphIndex };               
         }
 
         public void SetLatestVerseEntry(VerseEntry verseEntry)
