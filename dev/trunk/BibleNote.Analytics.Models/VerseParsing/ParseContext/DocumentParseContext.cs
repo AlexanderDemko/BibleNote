@@ -36,11 +36,8 @@ namespace BibleNote.Analytics.Models.VerseParsing.ParseContext
             CurrentParagraph = new ParagraphParseContext(_previousElement, ++_currentParagraphIndex);            
 
             return new DisposeHandler(() =>
-            {
-                DocumentParseResult.DocumentLength += CurrentParagraph.ParseResult.Text.Length;
-
-                if (CurrentParagraph.ParseResult.IsValuable)                
-                    CurrentHierarchy.AddParagraphResult(CurrentParagraph.ParseResult);
+            {                
+                CurrentHierarchy.AddParagraphResult(CurrentParagraph.ParseResult);                   
 
                 _previousElement = CurrentParagraph;
             });
@@ -130,7 +127,7 @@ namespace BibleNote.Analytics.Models.VerseParsing.ParseContext
                     if (DocumentParseResult.RootHierarchyResult != null)
                         throw new InvalidOperationException("DocumentParseResult.RootHierarchyResult != null");
 
-                    DocumentParseResult.RootHierarchyResult = valuableHierarchyResult;
+                    DocumentParseResult.RootHierarchyResult = valuableHierarchyResult;                    
                 }
             }                
         }

@@ -1,18 +1,15 @@
-﻿using BibleNote.Analytics.Core.Constants;
-using System;
-using System.Collections.Generic;
+﻿using System;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace BibleNote.Analytics.Core.Helpers
 {
     public static class VerseUtils
     {
-        // пока мы поддерживаем два пробела: 32 и 160. Это нужно в двух коллекциях здесь и в методе ModuleInfo.GetBibleBook(). Если понадобится большее количество, то целесообразно будет выделить в отдельную коллекцию.
+        // Now we support only two spaces: 32 и 160. It is required in two collections here and in method ModuleInfo.GetBibleBook(). 
+        // If there will be more supported spaces, then it would be appropriate to allocate separate collection.
 
         private static char[] _wordDelmiters = new char[] { ' ', ' ', ',', '.', ':', '-', '/', '\\', '>', '<', '=', '(', ')', '*', '\'', '"' };
-        private static char[] _midVerseChars = new char[] { '.', ' ', ' ', '(' };  // допустимые символы между книгой и главой.
+        private static char[] _midVerseChars = new char[] { '.', ' ', ' ', '(' };  // Allowable symbols between book and chapter
         private static char[] _dashes = new char[] { '-', '—', '‑', '–', '−' };
         private static char[] _startVerseAdditionalChars = new char[] { ',', ';', default(char) };
         private static char[] _defaultChapterVerseDelimiters = new char[] { ':' };
@@ -44,7 +41,7 @@ namespace BibleNote.Analytics.Core.Helpers
         }
 
         /// <summary>
-        /// Разделитель главы и стиха
+        /// Chapter and verse delimiter
         /// </summary>
         /// <param name="c"></param>
         /// <param name="useCommaDelimiter"></param>
@@ -62,7 +59,7 @@ namespace BibleNote.Analytics.Core.Helpers
             return _startVerseAdditionalChars.Contains(c) || IsChapterVerseDelimiter(c, useCommaDelimiter) || IsMidVerseChar(c);
         }
 
-        // Тестировал производительность. Данный подход самый быстрый.
+        // I have testes the performance. This approach is the fastest.
         public static int GetVerseNumber(char[] digits, int digitsCount)
         {
             switch (digitsCount)

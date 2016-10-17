@@ -29,7 +29,7 @@ namespace BibleNote.Analytics.Models.Verse
         public string ModuleShortName { get; set; }
 
         /// <summary>
-        /// первоначально переданная строка. Может быть пустой.
+        /// Original passed verse string. Can be empty.
         /// </summary>
         public string OriginalVerseName { get; set; }
 

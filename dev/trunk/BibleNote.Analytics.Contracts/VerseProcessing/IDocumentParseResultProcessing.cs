@@ -9,6 +9,6 @@ namespace BibleNote.Analytics.Contracts.VerseProcessing
 {
     public interface IDocumentParseResultProcessing
     {
-        void Process(DocumentParseResult documentResult);
+        void Process(int documentId, DocumentParseResult documentResult);
     }
 }

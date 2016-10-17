@@ -4,11 +4,10 @@ using BibleNote.Analytics.Services.Unity;
 using Microsoft.Practices.Unity;
 using FluentAssertions;
 using BibleNote.Analytics.Contracts.Providers;
-using BibleNote.Analytics.Models.VerseParsing;
-using BibleNote.Analytics.Contracts.VerseParsing;
 using BibleNote.Analytics.Providers.Html;
 using BibleNote.Analytics.Providers.FileSystem.Navigation;
 using BibleNote.Tests.Analytics.TestsBase;
+using BibleNote.Analytics.Services.VerseProcessing;
 
 namespace BibleNote.Tests.Analytics
 {
@@ -37,12 +36,12 @@ namespace BibleNote.Tests.Analytics
         [TestMethod]
         public void ParseHtml_Test1()
         {
-            var parseResult = _documentProvider.ParseDocument(new FileDocumentId(@"..\..\Analytics\TestData\Html_1.html", true));
+            var parseResult = _documentProvider.ParseDocument(new FileDocumentId(0, @"..\..\Analytics\TestData\Html_1.html", true));
             
             CheckParseResults(parseResult.GetAllParagraphParseResults().ToList(),
                 new string[] { "Ин 1:1" },
                 new string[] { "Исх 12:27" },
-                new string[] { "1Кор 5:7" },
+                new string[] { "1Кор 5:7-9" },
                 new string[] { "Ис 44" },
                 new string[] { "Ис 44:24" },
                 new string[] { "Евр 1:2", "Евр 1:10" },
@@ -50,12 +49,21 @@ namespace BibleNote.Tests.Analytics
                 new string[] { "Ин 1:17" },
                 new string[] { "Ис 44:5" },
                 new string[] { "Ис 44:6" });
+
+            parseResult.VersesCount.Should().Be(13);
+
+
+            var _analyticsContext = new BibleNote.Analytics.Data.AnalyticsContext();
+            var folder = _analyticsContext.DocumentFolders.Add(new BibleNote.Analytics.Data.Entities.DocumentFolder() { Name = "Temp", Path = "Test", NavigationProviderName = "Html" });
+            var document = _analyticsContext.Documents.Add(new BibleNote.Analytics.Data.Entities.Document() { Name = "Temp", Path = "Test", Folder = folder});
+            _analyticsContext.SaveChanges();
+            new SaveVerseEntriesProcessing(null).Process(document.DocumentId, parseResult);
         }
 
         [TestMethod]
         public void ParseHtml_Test2()
         {
-            var parseResult = _documentProvider.ParseDocument(new FileDocumentId(@"..\..\Analytics\TestData\Html_2.html", true));
+            var parseResult = _documentProvider.ParseDocument(new FileDocumentId(0, @"..\..\Analytics\TestData\Html_2.html", true));
 
             CheckParseResults(parseResult.GetAllParagraphParseResults().ToList(),
                 new string[] { "Ин 1" },

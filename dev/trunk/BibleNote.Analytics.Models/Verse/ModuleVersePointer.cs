@@ -129,5 +129,10 @@ namespace BibleNote.Analytics.Models.Verse
 
             return result;
         }
+
+        public long GetVerseDbId()      // todo: Is this a good place for that method? and try different approaches for serializing/deserializing VerseId.
+        {
+            return long.Parse($"{BookIndex:D2}{Chapter:D3}{Verse:D3}");
+        }
     }
 }

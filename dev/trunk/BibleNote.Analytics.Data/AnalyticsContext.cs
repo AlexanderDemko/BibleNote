@@ -9,6 +9,8 @@ namespace BibleNote.Analytics.Data
 
         public IDbSet<DocumentFolder> DocumentFolders { get; set; }
 
+        public IDbSet<DocumentParagraph> DocumentParagraphs { get; set; }
+
         public IDbSet<VerseEntry> VerseEntries { get; set; }
 
         public IDbSet<VerseRelation> VerseRelations { get; set; }

@@ -1,4 +1,5 @@
-﻿using BibleNote.Analytics.Models.Verse;
+﻿using BibleNote.Analytics.Models.Contracts.ParseResult;
+using BibleNote.Analytics.Models.Verse;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,12 +8,8 @@ using System.Threading.Tasks;
 
 namespace BibleNote.Analytics.Models.VerseParsing.ParseResult
 {
-    public class ParagraphParseResult
+    public class ParagraphParseResult : ICapacityInfo
     {
-        public string Text { get; set; }
-
-        public bool Parsed { get; set; }
-
         private bool _chapterEntryWasSearched;
         private ChapterEntry _chapterEntry;
         public ChapterEntry ChapterEntry
@@ -22,9 +19,11 @@ namespace BibleNote.Analytics.Models.VerseParsing.ParseResult
                 if (!Parsed)
                     return null;
 
-                return GetChapterEntry();              
+                return GetChapterEntry();
             }
         }
+
+        public string ParagraphPath { get; set; }
 
         public bool IsValuable
         {
@@ -34,11 +33,22 @@ namespace BibleNote.Analytics.Models.VerseParsing.ParseResult
             }
         }
 
+        public List<SimpleVersePointer> NotFoundVerses { get; set; }
+
         public int ParagraphIndex { get; set; }
+
+        public bool Parsed { get; set; }
+
+        public string Text { get; set; }        
+
+        public int TextLength { get { return Text.Length; } }
 
         public List<VerseEntry> VerseEntries { get; set; }
 
-        public List<SimpleVersePointer> NotFoundVerses { get; set; }
+        /// <summary>
+        /// Include subverses
+        /// </summary>
+        public int VersesCount { get; set; }            
 
         public ParagraphParseResult()
         {

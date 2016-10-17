@@ -35,7 +35,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
         }
 
         /// <summary>
-        /// После вызова надо быть аккуратным, так как versePointer может находиться в неконсистентном состоянии: IsMultiVerse и TopVerseNumber могут возвращать неактуальную информацию.
+        /// You should be careful after call this method: versePointer can be in inconsistent state - IsMultiVerse and TopVerseNumber can return not actual information.
         /// </summary>
         /// <param name="versePointer"></param>
         private void ExpandVerse(VersePointer versePointer, string moduleShortName)
