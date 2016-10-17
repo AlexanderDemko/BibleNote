@@ -52,12 +52,11 @@ namespace BibleNote.Tests.Analytics
 
             parseResult.VersesCount.Should().Be(13);
 
-
-            var _analyticsContext = new BibleNote.Analytics.Data.AnalyticsContext();
-            var folder = _analyticsContext.DocumentFolders.Add(new BibleNote.Analytics.Data.Entities.DocumentFolder() { Name = "Temp", Path = "Test", NavigationProviderName = "Html" });
-            var document = _analyticsContext.Documents.Add(new BibleNote.Analytics.Data.Entities.Document() { Name = "Temp", Path = "Test", Folder = folder});
-            _analyticsContext.SaveChanges();
-            new SaveVerseEntriesProcessing(null).Process(document.DocumentId, parseResult);
+            //var _analyticsContext = new BibleNote.Analytics.Data.AnalyticsContext();
+            //var folder = _analyticsContext.DocumentFolders.Add(new BibleNote.Analytics.Data.Entities.DocumentFolder() { Name = "Temp", Path = "Test", NavigationProviderName = "Html" });
+            //var document = _analyticsContext.Documents.Add(new BibleNote.Analytics.Data.Entities.Document() { Name = "Temp", Path = "Test", Folder = folder});
+            //_analyticsContext.SaveChanges();
+            //new SaveVerseEntriesProcessing(null).Process(document.DocumentId, parseResult);
         }
 
         [TestMethod]
