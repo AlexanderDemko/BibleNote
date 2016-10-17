@@ -120,7 +120,7 @@ namespace BibleNote.Analytics.Models.Verse
         }
 
         /// <summary>
-        /// Когда изначально не было понятно, стих это или глава (например ",5-6"), или когда "Иуд 5-6".
+        /// When there was no initial information if it is verse or chapter (for example ",5-6") or when "Иуд 5-6".
         /// </summary>
         /// <param name="newChapter"></param>
         public virtual void MoveChapterToVerse(int newChapter)
@@ -150,7 +150,7 @@ namespace BibleNote.Analytics.Models.Verse
         }
 
         /// <summary>
-        /// Строка в стихе после названия книги. (*| 5:6, :6, :6-7, 5-6...)
+        /// String in verse after book name (*| 5:6, :6, :6-7, 5-6...)
         /// </summary>
         /// <returns></returns>
         public virtual string GetFullVerseNumberString()

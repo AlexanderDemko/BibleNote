@@ -43,7 +43,7 @@ namespace BibleNote.Tests.Analytics
         [TestMethod]
         public void ParseOneNote_Test1()
         {
-            var parseResult = _documentProvider.ParseDocument(new FileDocumentId(@"..\..\Analytics\TestData\OneNote_1.html", true));
+            var parseResult = _documentProvider.ParseDocument(new FileDocumentId(0, @"..\..\Analytics\TestData\OneNote_1.html", true));
             //var s = JsonConvert.SerializeObject(parseResult.RootHierarchyResult); 
 
             CheckParseResults(parseResult.GetAllParagraphParseResults().ToList(),
@@ -62,7 +62,7 @@ namespace BibleNote.Tests.Analytics
         [TestMethod]
         public void ParseOneNote_Test2()
         {
-            var parseResult = _documentProvider.ParseDocument(new FileDocumentId(@"..\..\Analytics\TestData\OneNote_2.html", true));
+            var parseResult = _documentProvider.ParseDocument(new FileDocumentId(0, @"..\..\Analytics\TestData\OneNote_2.html", true));
 
             CheckParseResults(parseResult.GetAllParagraphParseResults().ToList(),
                new string[] { "Ин 1" },
@@ -77,7 +77,7 @@ namespace BibleNote.Tests.Analytics
         [TestMethod]
         public void ParseOneNote_Test3()
         {
-            var parseResult = _documentProvider.ParseDocument(new FileDocumentId(@"..\..\Analytics\TestData\OneNote_3.html", true));
+            var parseResult = _documentProvider.ParseDocument(new FileDocumentId(0, @"..\..\Analytics\TestData\OneNote_3.html", true));
 
             CheckParseResults(parseResult.GetAllParagraphParseResults().ToList(),
                new string[] { "1Пет 3:3" },
@@ -107,7 +107,7 @@ namespace BibleNote.Tests.Analytics
 
                 if (!string.IsNullOrEmpty(currentPageId))
                 {
-                    var parseResult = _documentProvider.ParseDocument(new OneNoteDocumentId(currentPageId));
+                    var parseResult = _documentProvider.ParseDocument(new OneNoteDocumentId(0, currentPageId));
                     var i = parseResult.GetAllParagraphParseResults().Count();
                 }
             }

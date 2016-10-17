@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace BibleNote.Analytics.Data.Entities
 {    
-    [Table("Documents")]
+    [Table(nameof(AnalyticsContext.Documents))]
     public class Document
     {
         [Key, DatabaseGenerated(DatabaseGeneratedOption.Identity)] 
@@ -16,10 +16,12 @@ namespace BibleNote.Analytics.Data.Entities
         [Required]
         public string Path { get; set; }
 
+        public decimal Weight { get; set; }
+
         [Required]
         public int DocumentFolderId { get; set; }
 
-        [ForeignKey("DocumentFolderId")]
+        [ForeignKey(nameof(DocumentFolderId))]
         public DocumentFolder Folder { get; set; }
 
         public virtual IList<DocumentParagraph> Paragraphs { get; set; }

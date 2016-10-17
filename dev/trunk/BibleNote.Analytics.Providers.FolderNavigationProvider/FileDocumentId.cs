@@ -1,17 +1,21 @@
-﻿using BibleNote.Analytics.Contracts.Providers;
+﻿using System;
+using BibleNote.Analytics.Contracts.Providers;
 
 namespace BibleNote.Analytics.Providers.FileSystem.Navigation
 {
     public class FileDocumentId: IDocumentId
     {
+        public int DocumentId { get; private set; }
+
         public string FilePath { get; private set; }
 
         public bool IsReadonly { get; private set; }
 
-        public bool Changed { get; set; }
+        public bool Changed { get; set; }        
 
-        public FileDocumentId(string filePath, bool isReadonly)
+        public FileDocumentId(int documentId, string filePath, bool isReadonly)
         {
+            DocumentId = documentId;
             FilePath = filePath;
             IsReadonly = isReadonly;
         }

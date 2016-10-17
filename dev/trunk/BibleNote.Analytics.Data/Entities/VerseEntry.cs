@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace BibleNote.Analytics.Data.Entities
 {
-    [Table("VerseEntries")]
+    [Table(nameof(AnalyticsContext.VerseEntries))]
     public class VerseEntry
     {
         [Key, DatabaseGenerated(DatabaseGeneratedOption.Identity)]
@@ -19,7 +19,7 @@ namespace BibleNote.Analytics.Data.Entities
         [Required]
         public int DocumentParagraphId { get; set; }        
 
-        [ForeignKey("DocumentParagraphId")]
+        [ForeignKey(nameof(DocumentParagraphId))]
         public virtual DocumentParagraph DocumentParagraph { get; set; }
     }
 }

@@ -24,6 +24,8 @@ namespace BibleNote.Analytics.Models.VerseParsing.ParseContext
         public void SetLatestVerseEntry(VerseEntry verseEntry)
         {
             LatestVerseEntry = verseEntry;
+
+            ParseResult.VersesCount += verseEntry.VersePointer.SubVerses.VersesCount;
         }
 
         public ChapterEntry GetHierarchyChapterEntry()

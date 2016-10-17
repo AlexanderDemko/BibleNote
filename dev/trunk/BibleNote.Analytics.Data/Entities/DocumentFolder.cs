@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace BibleNote.Analytics.Data.Entities
 {
-    [Table("DocumentFolders")]
+    [Table(nameof(AnalyticsContext.DocumentFolders))]
     public class DocumentFolder
     {
         [Key, DatabaseGenerated(DatabaseGeneratedOption.Identity)] 
@@ -20,7 +20,7 @@ namespace BibleNote.Analytics.Data.Entities
 
         public int? ParentFolderId { get; set; }
 
-        [ForeignKey("ParentFolderId")]
+        [ForeignKey(nameof(ParentFolderId))]
         public DocumentFolder ParentFolder { get; set; }
     }
 }

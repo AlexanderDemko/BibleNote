@@ -3,16 +3,16 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace BibleNote.Analytics.Data.Entities
 {
-    [Table("VerseRelations")]
+    [Table(nameof(AnalyticsContext.VerseRelations))]
     public class VerseRelation
     {
         [Key, DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int VerseRelationId { get; set; }
 
-        [Index("IX_VerseId")]
+        [Index]
         public long VerseId { get; set; }
 
-        [Index("IX_RelativeVerseId")]
+        [Index]
         public long RelativeVerseId { get; set; }        
         
         public int DocumentParagraphId { get; set; }        
@@ -21,10 +21,10 @@ namespace BibleNote.Analytics.Data.Entities
 
         public decimal RelationWeight { get; set; }        
 
-        [ForeignKey("DocumentParagraphId")]
+        [ForeignKey(nameof(DocumentParagraphId))]
         public virtual DocumentParagraph DocumentParagraph { get; set; }
 
-        [ForeignKey("RelativeDocumentParagraphId")]
+        [ForeignKey(nameof(RelativeDocumentParagraphId))]
         public virtual DocumentParagraph RelativeDocumentParagraph { get; set; }
     }
 }

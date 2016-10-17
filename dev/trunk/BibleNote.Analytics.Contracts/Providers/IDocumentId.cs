@@ -8,8 +8,10 @@ namespace BibleNote.Analytics.Contracts.Providers
 {
     public interface IDocumentId
     {
-        bool IsReadonly { get; }
+        int DocumentId { get; }
 
         bool Changed { get; set; }
+
+        bool IsReadonly { get; }        
     }
 }

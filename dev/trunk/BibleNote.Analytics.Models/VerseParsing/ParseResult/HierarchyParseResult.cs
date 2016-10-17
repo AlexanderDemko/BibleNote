@@ -1,11 +1,19 @@
 ﻿using BibleNote.Analytics.Models.Contracts.ParseContext;
+using BibleNote.Analytics.Models.Contracts.ParseResult;
 using System.Collections.Generic;
 using System.Linq;
 
 namespace BibleNote.Analytics.Models.VerseParsing.ParseResult
 {
-    public class HierarchyParseResult
+    public class HierarchyParseResult : ICapacityInfo
     {
+        public int TextLength { get; set; }
+
+        /// <summary>
+        /// Include subverses
+        /// </summary>
+        public int VersesCount { get; set; }
+
         public ElementType ElementType { get; internal set; }
 
         public HierarchyParseResult ParentHierarchyResults { get; internal set; }
