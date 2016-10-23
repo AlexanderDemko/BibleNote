@@ -41,3 +41,4 @@ The next version of http://BibleNote.pro
   - [ ] Installer core
   - [ ] Version detector
   - [ ] Regedit editor  
+- New web site
