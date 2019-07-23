@@ -9,6 +9,7 @@ using BibleNote.Analytics.Services.VerseParsing.Contracts.ParseContext;
 using BibleNote.Analytics.Services.VerseParsing;
 using BibleNote.Analytics.Services.VerseParsing.Models;
 using FluentAssertions;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace BibleNote.Tests.Analytics
 {
@@ -27,16 +28,14 @@ namespace BibleNote.Tests.Analytics
         private IDocumentParseContextEditor _documentParseContext;
 
         [TestInitialize]
-        public override void Init()
+        public void Init()
         {
             base.Init();
 
             _documentProvider = new MockDocumentProviderInfo();
-            _versePointerFactory = DIContainer.Resolve<IVersePointerFactory>();                        
-            _documentParserFactory = DIContainer.Resolve<IDocumentParserFactory>();
-
-            _documentParseContext = DIContainer.Resolve<IDocumentParseContextEditor>();
-            DIContainer.Container.RegisterInstance(_documentParseContext);
+            _versePointerFactory = ServiceProvider.GetService<IVersePointerFactory>();                        
+            _documentParserFactory = ServiceProvider.GetService<IDocumentParserFactory>();
+            _documentParseContext = ServiceProvider.GetService<IDocumentParseContextEditor>();            
         }
 
         [TestCleanup]
@@ -248,10 +247,10 @@ namespace BibleNote.Tests.Analytics
         {
             var input = "В Ин 1,1 написано. И в 1,3 веке про это писали! Про :4 - тоже";
 
-            _mockConfigurationManager.UseCommaDelimiter = false;
+            MockConfigurationManager.UseCommaDelimiter = false;
             CheckVerses(input, null, null, "Ин 1", "Ин 1:4");
 
-            _mockConfigurationManager.UseCommaDelimiter = true;
+            MockConfigurationManager.UseCommaDelimiter = true;
             CheckVerses(input, null, null, "Ин 1:1", "Ин 1:4");
         }
 
@@ -264,11 +263,11 @@ namespace BibleNote.Tests.Analytics
             //var expectedIfUseCommaDelimiter = "в 1 Ин 1:2-3 и в Иисуса Навина 2-3 было написано про 1-е Кор 1:2-3,4-5; 6-7, 8-9, 10 и в :7";
             //var expectedIfNotUseCommaDelimiter = "в 1 Ин 1, 2-3 и в Иисуса Навина 2-3 было написано про 1-е Кор 1, 2-3, 4-5; 6-7, 8-9, 10 и в :7";
 
-            _mockConfigurationManager.UseCommaDelimiter = false;
+            MockConfigurationManager.UseCommaDelimiter = false;
             CheckVerses(input, null, null, "1 Ин 1", "1 Ин 2-3", "Нав 2-3", "1Кор 1", "1Кор 2-3",
                                 "1Кор 4-5", "1Кор 6-7", "1Кор 8-9", "1Кор 10", "1Кор 10:7", "Ин 1", "Ин 2");
 
-            _mockConfigurationManager.UseCommaDelimiter = true;
+            MockConfigurationManager.UseCommaDelimiter = true;
             CheckVerses(input, null, null, "1 Ин 1:2-3", "Нав 2-3",
                                 "1Кор 1:2-3", "1Кор 1:4-5", "1Кор 6-7", "1Кор 8-9", "1Кор 10", "1Кор 10:7", "Ин 1:1", "Ин 2:1");
         }
@@ -280,10 +279,10 @@ namespace BibleNote.Tests.Analytics
             var expectedIfNotUseCommaDelimiter = "<a href='bnVerse:Иоанна 1'>Ин 1</a>,<a href='bnVerse:Иоанна 2'>2</a>,<a href='bnVerse:Иоанна 3'>3</a> и ещё: <a href='bnVerse:Марка 1'>Марка 1</a>,<a href='bnVerse:Марка 2'>2</a>, <a href='bnVerse:Марка 3'>3</a>: а потом <a href='bnVerse:Луки 1'>Лк 1</a>,<a href='bnVerse:Луки 2-3'>2- 3</a> и <a href='bnVerse:Исход 19'>Исх.19</a>,11";
             var expectedIfUseCommaDelimiter = "<a href='bnVerse:Иоанна 1:2'>Ин 1,2</a>,<a href='bnVerse:Иоанна 1:3'>3</a> и ещё: <a href='bnVerse:Марка 1:2'>Марка 1,2</a>, <a href='bnVerse:Марка 1:3'>3</a>: а потом <a href='bnVerse:Луки 1:2-3'>Лк 1,2- 3</a> и <a href='bnVerse:Исход 19:11'>Исх.19,11</a>";
 
-            _mockConfigurationManager.UseCommaDelimiter = false;
+            MockConfigurationManager.UseCommaDelimiter = false;
             CheckVerses(input, expectedIfNotUseCommaDelimiter, null, "Ин 1", "Ин 2", "Ин 3", "Мк 1", "Мк 2", "Мк 3", "Лк 1", "Лк 2-3", "Исх 19");
 
-            _mockConfigurationManager.UseCommaDelimiter = true;
+            MockConfigurationManager.UseCommaDelimiter = true;
             CheckVerses(input, expectedIfUseCommaDelimiter, null, "Ин 1:2", "Ин 1:3", "Мк 1:2", "Мк 1:3", "Лк 1:2-3", "Исх 19:11");
         }
 
@@ -304,10 +303,10 @@ namespace BibleNote.Tests.Analytics
             var expectedIfNotUseCommaDelimiter = "<span lang=\"ru\"><a href='bnVerse:Исход 13'>Исх. 13</a>,<a href='bnVerse:Исход 14'>14</a></span><span lang=\"ro\"></span><span lang=\"ru\">,</span><span lang=\"se-FI\"><a href='bnVerse:Исход 15'>15</a></span><span lang=\"ru\">,<a href='bnVerse:Исход 20'>20</a>.</span>";
             var expectedIfUseCommaDelimiter = "<span lang=\"ru\"><a href='bnVerse:Исход 13:14'>Исх. 13,14</a></span><span lang=\"ro\"></span><span lang=\"ru\">,</span><span lang=\"se-FI\"><a href='bnVerse:Исход 13:15'>15</a></span><span lang=\"ru\">,<a href='bnVerse:Исход 13:20'>20</a>.</span>";
 
-            _mockConfigurationManager.UseCommaDelimiter = false;
+            MockConfigurationManager.UseCommaDelimiter = false;
             CheckVerses(input, expectedIfNotUseCommaDelimiter, null, "Исх 13", "Исх 14", "Исх 15", "Исх 20");
 
-            _mockConfigurationManager.UseCommaDelimiter = true;
+            MockConfigurationManager.UseCommaDelimiter = true;
             CheckVerses(input, expectedIfUseCommaDelimiter, null, "Исх 13:14", "Исх 13:15", "Исх 13:20");
         }
 
@@ -343,10 +342,10 @@ namespace BibleNote.Tests.Analytics
             var expectedIfUseCommaDelimiter = "<a href='bnVerse:Исаия 43:4'>Ис 43,4</a>,<a href='bnVerse:Исаия 43:25'>25</a>,5,26,7";
 
 
-            _mockConfigurationManager.UseCommaDelimiter = false;
+            MockConfigurationManager.UseCommaDelimiter = false;
             CheckVerses(input, expectedIfNotUseCommaDelimiter, null, "Ис 43");
 
-            _mockConfigurationManager.UseCommaDelimiter = true;
+            MockConfigurationManager.UseCommaDelimiter = true;
             CheckVerses(input, expectedIfUseCommaDelimiter, null, "Ис 43:4", "Ис 43:25");
         }
 

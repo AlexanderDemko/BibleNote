@@ -1,6 +1,7 @@
 ﻿using BibleNote.Analytics.Services.VerseParsing.Contracts;
 using BibleNote.Analytics.Services.VerseParsing.Models;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace BibleNote.Tests.Analytics
 {
@@ -10,11 +11,11 @@ namespace BibleNote.Tests.Analytics
         private IStringParser _stringParser;
 
         [TestInitialize]
-        public override void Init()
+        public void Init()
         {
             base.Init();
 
-            _stringParser = DIContainer.Resolve<IStringParser>();
+            _stringParser = ServiceProvider.GetService<IStringParser>();
         }
 
         private void AssertVerseEntry(

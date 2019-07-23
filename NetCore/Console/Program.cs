@@ -1,9 +1,12 @@
-﻿using BibleNote.Analytics.Services.Configuration.Contracts;
+﻿using BibleNote.Analytics.Common.DiContainer;
+using BibleNote.Analytics.Services;
+using BibleNote.Analytics.Services.Configuration.Contracts;
 using BibleNote.Analytics.Services.ModulesManager;
 using BibleNote.Analytics.Services.ModulesManager.Contracts;
 using BibleNote.Analytics.Services.ModulesManager.Scheme.ZefaniaXml;
 using BibleNote.Analytics.Services.VerseParsing.Contracts;
 using BibleNote.Analytics.Services.VerseParsing.Models;
+using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -47,9 +50,14 @@ namespace BibleNoteConsole
             //sw.Stop();
             //Console.WriteLine($"Total: {sw.Elapsed.TotalSeconds}");                        
 
-            DIContainer.InitWithDefaults();
-            DIContainer.Container.RegisterInstance<IConfigurationManager>(new MockConfigurationManager());
-            ModulesManager = DIContainer.Resolve<IModulesManager>();
+            var serviceProvider = new ServiceCollection()
+                .AddApplicatonServices<ServicesModule>()
+                .AddScoped<IConfigurationManager>((sp) => new MockConfigurationManager())
+                .AddLogging()
+                .BuildServiceProvider();           
+
+            
+            ModulesManager = serviceProvider.GetService<IModulesManager>();
 
 
             //ConvertTextModule(@"C:\temp\nrkv.txt");
@@ -97,7 +105,7 @@ namespace BibleNoteConsole
 
 
 
-                var xdoc = XDocument.Parse(File.ReadAllText(@"..\..\HTMLPage1.html"));
+                var xdoc = XDocument.Parse(File.ReadAllText(@"..\..\..\HTMLPage1.html"));
 
                 //var _moduleInfo = ModulesManager.UploadModule(@"C:\prj\BibleNote v4\dev\trunk\Data\Modules\rst\rst.bnm", "rst");
                 //ModulesManager.SetCurrentModule("rst");

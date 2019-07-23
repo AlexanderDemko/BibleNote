@@ -8,6 +8,7 @@ using BibleNote.Analytics.Services.VerseParsing.Contracts;
 using BibleNote.Analytics.Services.VerseParsing.Contracts.ParseContext;
 using BibleNote.Analytics.Services.VerseParsing.Models.ParseContext;
 using BibleNote.Analytics.Services.VerseParsing.Models.ParseResult;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace BibleNote.Tests.Analytics
 {
@@ -19,15 +20,14 @@ namespace BibleNote.Tests.Analytics
         private IDocumentParseContextEditor _documentParseContext;
 
         [TestInitialize]
-        public override void Init()
+        public void Init()
         {
-            base.Init();
+            _documentParseContext = new DocumentParseContext();
+
+            base.Init(services => services.AddScoped(sp => _documentParseContext));
 
             _documentProvider = new MockDocumentProviderInfo() { IsReadonly = true };
-            _documentParserFactory = DIContainer.Resolve<IDocumentParserFactory>();
-
-            _documentParseContext = new DocumentParseContext();
-            DIContainer.Container.RegisterInstance(_documentParseContext);
+            _documentParserFactory = ServiceProvider.GetService<IDocumentParserFactory>();
         }
 
         [TestCleanup]

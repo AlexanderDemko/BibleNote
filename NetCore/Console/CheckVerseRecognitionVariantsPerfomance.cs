@@ -33,7 +33,7 @@ namespace BibleNoteConsole
         public CheckVerseRecognitionVariantsPerfomance()
         {
             _inputText = "амосибытие галатамвкоринф к Коринфск 2Ин".ToLower(); // "Вотором послании к Коринфской церкви";
-            ModulesManager = DIContainer.Resolve<IModulesManager>();
+            //ModulesManager = DIContainer.Resolve<IModulesManager>();
 
             Prepare();
         }

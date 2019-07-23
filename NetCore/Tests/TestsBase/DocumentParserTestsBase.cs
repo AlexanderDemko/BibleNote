@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using BibleNote.Analytics.Services.VerseParsing.Contracts;
 using BibleNote.Analytics.Services.VerseParsing.Models.ParseResult;
 using FluentAssertions;
+using Microsoft.Extensions.DependencyInjection;
+using System;
 
 namespace BibleNote.Tests.Analytics.TestsBase
 {
@@ -11,11 +13,11 @@ namespace BibleNote.Tests.Analytics.TestsBase
     {
         private IVersePointerFactory _versePointerFactory;
         
-        public override void Init()
+        public override void Init(Action<IServiceCollection> registerServicesAction = null)
         {
-            base.Init();
+            base.Init(registerServicesAction);
 
-            _versePointerFactory = DIContainer.Resolve<IVersePointerFactory>();
+            _versePointerFactory = ServiceProvider.GetService<IVersePointerFactory>();
         }
 
         protected void CheckParseResult(ParagraphParseResult parseResult, params string[] expectedVerses)

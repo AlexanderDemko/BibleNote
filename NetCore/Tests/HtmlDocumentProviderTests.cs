@@ -6,6 +6,7 @@ using BibleNote.Analytics.Providers.FileSystem.Navigation;
 using BibleNote.Tests.Analytics.TestsBase;
 using BibleNote.Analytics.Services.DocumentProvider.Contracts;
 using BibleNote.Analytics.Providers.Html.Contracts;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace BibleNote.Tests.Analytics
 {
@@ -15,14 +16,13 @@ namespace BibleNote.Tests.Analytics
         private IDocumentProvider _documentProvider;        
 
         [TestInitialize]
-        public override void Init()
+        public void Init()
         {
-            base.Init();
-
-            DIContainer.Container.RegisterType<IHtmlDocumentConnector, HtmlDocumentConnector>();
-            DIContainer.Container.RegisterType<IDocumentProvider, HtmlProvider>();
+            base.Init(services => services
+                .AddScoped<IHtmlDocumentConnector, HtmlDocumentConnector>()
+                .AddScoped<IDocumentProvider, HtmlProvider>());            
             
-            _documentProvider = DIContainer.Resolve<IDocumentProvider>();            
+            _documentProvider = ServiceProvider.GetService<IDocumentProvider>();            
         }
 
         [TestCleanup]
@@ -34,7 +34,7 @@ namespace BibleNote.Tests.Analytics
         [TestMethod]
         public void ParseHtml_Test1()
         {
-            var parseResult = _documentProvider.ParseDocument(new FileDocumentId(0, @"..\..\Analytics\TestData\Html_1.html", true));
+            var parseResult = _documentProvider.ParseDocument(new FileDocumentId(0, @"..\..\..\TestData\Html_1.html", true));
             
             CheckParseResults(parseResult.GetAllParagraphParseResults().ToList(),
                 new string[] { "Ин 1:1" },
@@ -60,7 +60,7 @@ namespace BibleNote.Tests.Analytics
         [TestMethod]
         public void ParseHtml_Test2()
         {
-            var parseResult = _documentProvider.ParseDocument(new FileDocumentId(0, @"..\..\Analytics\TestData\Html_2.html", true));
+            var parseResult = _documentProvider.ParseDocument(new FileDocumentId(0, @"..\..\..\TestData\Html_2.html", true));
 
             CheckParseResults(parseResult.GetAllParagraphParseResults().ToList(),
                 new string[] { "Ин 1" },

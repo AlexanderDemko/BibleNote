@@ -1,14 +1,13 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using BibleNote.Tests.Analytics.Mocks;
 using BibleNote.Analytics.Services.VerseParsing.Contracts;
 using BibleNote.Analytics.Services.ModulesManager.Models;
 using BibleNote.Analytics.Services.VerseParsing.Models;
-using BibleNote.Analytics.Services.Configuration.Contracts;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace BibleNote.Tests.Analytics
 {
     [TestClass]
-    public class VersePointerTests
+    public class VersePointerTests : TestsBase.TestsBase
     {
         private IVersePointerFactory _versePointerFactory;        
         private IVerseCorrectionService _verseCorrectionService;
@@ -16,11 +15,10 @@ namespace BibleNote.Tests.Analytics
         [TestInitialize]
         public void Init()
         {
-            DIContainer.InitWithDefaults();
-            DIContainer.Container.RegisterInstance<IConfigurationManager>(new MockConfigurationManager());
+            base.Init();
 
-            _versePointerFactory = DIContainer.Resolve<IVersePointerFactory>();            
-            _verseCorrectionService = DIContainer.Resolve<IVerseCorrectionService>();
+            _versePointerFactory = ServiceProvider.GetService<IVersePointerFactory>();            
+            _verseCorrectionService = ServiceProvider.GetService<IVerseCorrectionService>();
         }
 
         private VersePointer CheckVerseParsing(string originalVerse, SimpleVersePointer expectedVerse)
