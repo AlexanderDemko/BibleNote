@@ -1,0 +1,123 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{209F7653-C94E-48B1-9AD5-A99D1C368983}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>BibleNote.Analytics.Models</RootNamespace>
+    <AssemblyName>BibleNote.Analytics.Models</AssemblyName>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <SccProjectName>SAK</SccProjectName>
+    <SccLocalPath>SAK</SccLocalPath>
+    <SccAuxPath>SAK</SccAuxPath>
+    <SccProvider>SAK</SccProvider>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Newtonsoft.Json, Version=9.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.9.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.ComponentModel.DataAnnotations" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Common\DisposeHandler.cs" />
+    <Compile Include="Contracts\ParseContext\IHierarchyInfo.cs" />
+    <Compile Include="Contracts\ParseContext\ElementType.cs" />
+    <Compile Include="Contracts\ParseContext\IDocumentParseContext.cs" />
+    <Compile Include="Contracts\ParseContext\IElementParseContext.cs" />
+    <Compile Include="Contracts\ParseContext\IHierarchyParseContext.cs" />
+    <Compile Include="Contracts\ParseContext\IParagraphParseContext.cs" />
+    <Compile Include="Contracts\ParseResult\ICapacityInfo.cs" />
+    <Compile Include="Modules\Abbreviation.cs" />
+    <Compile Include="Modules\BibleBookDifference.cs" />
+    <Compile Include="Modules\BibleBookDifferences.cs" />
+    <Compile Include="Modules\BibleBookInfo.cs" />
+    <Compile Include="Modules\BibleStructureInfo.cs" />
+    <Compile Include="Modules\BibleTranslationDifferences.cs" />
+    <Compile Include="Modules\BibleTranslationDifferencesEx.cs" />
+    <Compile Include="Modules\BibleTranslationDifferencesFormula.cs" />
+    <Compile Include="VerseParsing\Boundaries.cs" />
+    <Compile Include="VerseParsing\ChapterEntry.cs" />
+    <Compile Include="VerseParsing\ParseResult\DocumentParseResult.cs" />
+    <Compile Include="Modules\ModuleInfo.cs" />
+    <Compile Include="VerseParsing\ParseResult\HierarchyParseResult.cs" />
+    <Compile Include="VerseParsing\TableHierarchyInfo.cs" />
+    <Compile Include="VerseParsing\ParseResult\ParagraphParseResult.cs" />
+    <Compile Include="VerseParsing\ParseContext\DocumentParseContext.cs" />
+    <Compile Include="VerseParsing\ParseContext\HierarchyParseContext.cs" />
+    <Compile Include="VerseParsing\ParseContext\ParagraphParseContext.cs" />
+    <Compile Include="VerseParsing\TextFragmentInfo.cs" />
+    <Compile Include="VerseParsing\VerseEntry.cs" />
+    <Compile Include="Exceptions\CustomExceptions.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="..\VersionInfo.cs">
+      <Link>Properties\VersionInfo.cs</Link>
+    </Compile>
+    <Compile Include="Scheme\zef2005.cs">
+      <DependentUpon>zef2005.xsd</DependentUpon>
+    </Compile>
+    <Compile Include="Scheme\zef2005.ext.cs" />
+    <Compile Include="Verse\ChapterPointer.cs" />
+    <Compile Include="Verse\ModuleVerse.cs" />
+    <Compile Include="Verse\ModuleVersePointer.cs" />
+    <Compile Include="Verse\SimpleVersePointer.cs" />
+    <Compile Include="Verse\VerseNumber.cs" />
+    <Compile Include="Verse\VersePointer.cs" />
+    <Compile Include="Verse\VersesListInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+    <None Include="Scheme\zef2005.xsc">
+      <DependentUpon>zef2005.xsd</DependentUpon>
+    </None>
+    <None Include="Scheme\zef2005.xsd">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="Scheme\zef2005.xss">
+      <DependentUpon>zef2005.xsd</DependentUpon>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\BibleNote.Analytics.Core\BibleNote.Analytics.Core.csproj">
+      <Project>{72939ebb-2258-4ee9-9645-4944a6450192}</Project>
+      <Name>BibleNote.Analytics.Core</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup />
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>

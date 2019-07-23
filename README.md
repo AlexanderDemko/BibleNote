@@ -35,7 +35,7 @@ The next version of http://BibleNote.pro
   - [ ] Background service
     - [ ] Automtic tasks
     - [ ] User actions handler
-  - [ ] Move to .NET Core for Linux and Mac support?
+  - [ ] Move to .NET Core for Linux and Mac support
 - UI
 - Installer
   - [ ] Installer core
