@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp2.2</TargetFramework>
+    <AssemblyName>BibleNote.Analytics.Providers.Pdf</AssemblyName>
+    <RootNamespace>BibleNote.Analytics.Providers.Pdf</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Services\Services.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -2,7 +2,6 @@ using System.Linq;
 using System.Collections.Generic;
 using System;
 using System.Xml.Serialization;
-using BibleNote.Analytics.Common.Constants;
 using Newtonsoft.Json;
 using BibleNote.Analytics.Services.ModulesManager.Models;
 using BibleNote.Analytics.Services.ModulesManager.Models.Exceptions;

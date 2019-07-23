@@ -1,6 +1,4 @@
 ﻿using System.Linq;
-using BibleNote.Analytics.Common.Helpers;
-using BibleNote.Analytics.Common.Contracts;
 using BibleNote.Analytics.Services.VerseParsing.Contracts;
 using BibleNote.Analytics.Services.Configuration.Contracts;
 using BibleNote.Analytics.Services.VerseParsing.Contracts.ParseContext;

@@ -1,6 +1,4 @@
-﻿using BibleNote.Analytics.Common.Constants;
-using BibleNote.Analytics.Common.Helpers;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -12,6 +10,7 @@ using BibleNote.Analytics.Services.ModulesManager.Scheme.Module;
 using BibleNote.Analytics.Services.ModulesManager.Scheme.ZefaniaXml;
 using BibleNote.Analytics.Services.ModulesManager.Models.Exceptions;
 using BibleNote.Analytics.Services.Configuration.Contracts;
+using System.Reflection;
 
 namespace BibleNote.Analytics.Services.ModulesManager
 {
@@ -120,7 +119,7 @@ namespace BibleNote.Analytics.Services.ModulesManager
 
         public string GetModulesDirectory()
         {
-            string directoryPath = SystemUtils.GetProgramDirectory();
+            string directoryPath = GetProgramDirectory();
 
             string modulesDirectory = Path.Combine(directoryPath, SystemConstants.ModulesDirectoryName);
 
@@ -132,7 +131,7 @@ namespace BibleNote.Analytics.Services.ModulesManager
 
         public string GetModulesPackagesDirectory()
         {
-            string directoryPath = SystemUtils.GetProgramDirectory();
+            string directoryPath = GetProgramDirectory();
 
             string modulesDirectory = Path.Combine(directoryPath, SystemConstants.ModulesPackagesDirectoryName);
 
@@ -140,7 +139,7 @@ namespace BibleNote.Analytics.Services.ModulesManager
                 Directory.CreateDirectory(modulesDirectory);
 
             return modulesDirectory;
-        }
+        }        
 
         public List<ModuleInfo> GetModules(bool correctOnly)
         {
@@ -193,7 +192,7 @@ namespace BibleNote.Analytics.Services.ModulesManager
 
             if (module.MinProgramVersion != null)
             {
-                var programVersion = SystemUtils.GetProgramVersion();
+                var programVersion = GetProgramVersion();
                 if (module.MinProgramVersion > programVersion)
                     throw new InvalidModuleException(
                         $"Version of this module is not supported. " +
@@ -243,7 +242,7 @@ namespace BibleNote.Analytics.Services.ModulesManager
 
         public ModuleInfo ReadModuleInfo(string moduleFilePath)
         {            
-            string destFolder = Path.Combine(SystemUtils.GetTempFolderPath(), Path.GetFileNameWithoutExtension(moduleFilePath));
+            string destFolder = Path.Combine(GetTempFolderPath(), Path.GetFileNameWithoutExtension(moduleFilePath));
             try
             {
                 if (Directory.Exists(destFolder))
@@ -296,6 +295,31 @@ namespace BibleNote.Analytics.Services.ModulesManager
         {
             _configurationManager.ModuleShortName = moduleShortName;
             _configurationManager.SaveChanges();
+        }
+
+        private static string GetTempFolderPath()
+        {
+            string s = Path.Combine(GetProgramDirectory(), SystemConstants.TempDirectoryName);
+            if (!Directory.Exists(s))
+                Directory.CreateDirectory(s);
+
+            return s;
+        }
+
+        private static string GetProgramDirectory()
+        {
+            string directoryPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), SystemConstants.ToolsName);
+
+            if (!Directory.Exists(directoryPath))
+                Directory.CreateDirectory(directoryPath);
+
+            return directoryPath;
+        }
+
+        private static Version GetProgramVersion()
+        {
+            var assembly = Assembly.GetExecutingAssembly();
+            return assembly.GetName().Version;
         }
 
         private void DeleteDirectory(object directoryPath)
