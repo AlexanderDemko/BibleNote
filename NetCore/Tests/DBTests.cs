@@ -1,43 +1,67 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using BibleNote.Analytics.Data.Contracts;
+using BibleNote.Analytics.Data.Entities;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using Microsoft.Extensions.DependencyInjection;
 using System.Linq;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
+using BibleNote.Analytics.Persistence;
 
 namespace BibleNote.Tests.Analytics
 {
-    //[TestClass]
-    //public class DBTests
-    //{
-    //    private AnalyticsContext _analyticsContext;
+    [TestClass]
+    public class DBTests : TestsBase.TestsBase
+    {
+        private IDbContext analyticsContext;
+        private AnalyticsContext concreteContext;
+        private SqliteConnection connection;
 
-    //    [TestInitialize]
-    //    public void Init()
-    //    {
-    //        DIContainer.InitWithDefaults();
+        [TestInitialize]
+        public void Init()
+        {
+            this.connection = new SqliteConnection(
+                //@"DataSource=..\..\..\..\Analytics\Persistence\BibleNote.Analytics.db"
+                "DataSource=:memory:"
+                );
+            connection.Open();
 
-    //        Database.SetInitializer(new MigrateDatabaseToLatestVersion<AnalyticsContext, Configuration>());
-    //        _analyticsContext = DIContainer.Resolve<AnalyticsContext>();            
-    //    }
+            base.Init(options =>
+                options.AddDbContext<IDbContext, AnalyticsContext>(opt => opt.UseSqlite(connection)));
 
-    //    [TestMethod]
-    //    [TestCategory("IgnoreOnCI")]
-    //    public void TestCreateAndDeleteFolder()
-    //    {
-    //        var foldersCount = 0;
-    //        var testFolderName = "Test1";            
+            this.analyticsContext = ServiceProvider.GetService<IDbContext>();
+            this.concreteContext = (AnalyticsContext)this.analyticsContext;
+            this.concreteContext.Database.Migrate();            
+            DbInitializer.Initialize(this.concreteContext);            
+        }
+        
+        [TestCleanup]
+        public void Cleanup()
+        {
+            this.connection.Close();
+        }
 
-    //        foldersCount = _analyticsContext.DocumentFolders.Count();
+        [TestMethod]        
+        public void TestCreateAndDeleteFolder()
+        {
+            var foldersCount = 0;
+            var testFolderName = "Test1";
 
-    //        var newFolder = new DocumentFolder() { Name = testFolderName, NavigationProviderName = "Html", Path = "c:\temp" };            
-    //        _analyticsContext.DocumentFolders.Add(newFolder);
-    //        _analyticsContext.SaveChanges();
+            foldersCount = this.analyticsContext.DocumentFolderRepository.Count();
 
-    //        Assert.AreEqual(foldersCount + 1, _analyticsContext.DocumentFolders.Count());
-    //        var folder = _analyticsContext.DocumentFolders.FirstOrDefault(f => f.Name == testFolderName);
-    //        Assert.IsNotNull(folder);
-    //        _analyticsContext.DocumentFolders.Remove(folder);
-    //        _analyticsContext.SaveChanges();
+            var newFolder = new DocumentFolder() { Name = testFolderName, NavigationProviderName = "Html", Path = "c:\temp" };
+            this.analyticsContext.DocumentFolderRepository.ToTrackingRepository().Add(newFolder);
+            this.analyticsContext.SaveChangesAsync();
 
-    //        Assert.AreEqual(foldersCount, _analyticsContext.DocumentFolders.Count());
-    //        Assert.IsNull(_analyticsContext.DocumentFolders.FirstOrDefault(f => f.Name == testFolderName));            
-    //    }
-    //}
+            this.concreteContext.Entry(newFolder).State = EntityState.Detached;
+
+            Assert.AreEqual(foldersCount + 1, this.analyticsContext.DocumentFolderRepository.Count());
+            var folder = this.analyticsContext.DocumentFolderRepository.FirstOrDefault(f => f.Name == testFolderName);
+            Assert.IsNotNull(folder);
+            this.analyticsContext.DocumentFolderRepository.ToTrackingRepository().Delete(folder);
+            this.analyticsContext.SaveChangesAsync();
+
+            Assert.AreEqual(foldersCount, this.analyticsContext.DocumentFolderRepository.Count());
+            Assert.IsNull(this.analyticsContext.DocumentFolderRepository.FirstOrDefault(f => f.Name == testFolderName));
+        }
+    }
 }

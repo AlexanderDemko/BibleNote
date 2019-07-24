@@ -13,14 +13,14 @@ namespace BibleNote.Tests.Analytics.TestsBase
     {
         protected ServiceProvider ServiceProvider { get; set; }
         protected IModulesManager ModulesManager { get; set; }
-        protected IConfigurationManager MockConfigurationManager { get; set; }
+        protected IConfigurationManager MockConfigurationManager { get; set; }        
 
         public virtual void Init(Action<IServiceCollection> registerServicesAction = null)
         {
-            MockConfigurationManager = new MockConfigurationManager();
+            MockConfigurationManager = new MockConfigurationManager();            
 
-             var services = new ServiceCollection()
-               .AddApplicatonServices<ServicesModule>()
+            var services = new ServiceCollection()
+               .AddApplicatonServices<ServicesModule>()               
                .AddScoped(sp => MockConfigurationManager);
 
             registerServicesAction?.Invoke(services);
@@ -40,6 +40,6 @@ namespace BibleNote.Tests.Analytics.TestsBase
                 ModulesManager.UploadModule(@"..\..\..\Data\Modules\rst\rst.bnm", "rst");
                 ModulesManager.UploadModule(@"..\..\..\Data\Modules\kjv\kjv.bnm", "kjv");
             }
-        }
+        }        
     }
 }

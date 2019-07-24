@@ -4,6 +4,7 @@
     <TargetFramework>netcoreapp2.2</TargetFramework>
     <AssemblyName>BibleNote.Analytics.Providers.OneNote</AssemblyName>
     <RootNamespace>BibleNote.Analytics.Providers.OneNote</RootNamespace>
+    <LangVersion>7.3</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>
