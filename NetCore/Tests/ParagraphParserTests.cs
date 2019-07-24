@@ -10,6 +10,7 @@ using BibleNote.Analytics.Services.VerseParsing;
 using BibleNote.Analytics.Services.VerseParsing.Models;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
+using BibleNote.Analytics.Services.VerseParsing.Models.ParseContext;
 
 namespace BibleNote.Tests.Analytics
 {
@@ -30,12 +31,12 @@ namespace BibleNote.Tests.Analytics
         [TestInitialize]
         public void Init()
         {
-            base.Init();
+            _documentParseContext = new DocumentParseContext();
+            base.Init(services => services.AddScoped(sp => _documentParseContext));
 
             _documentProvider = new MockDocumentProviderInfo();
             _versePointerFactory = ServiceProvider.GetService<IVersePointerFactory>();                        
-            _documentParserFactory = ServiceProvider.GetService<IDocumentParserFactory>();
-            _documentParseContext = ServiceProvider.GetService<IDocumentParseContextEditor>();            
+            _documentParserFactory = ServiceProvider.GetService<IDocumentParserFactory>();                        
         }
 
         [TestCleanup]
@@ -105,7 +106,7 @@ namespace BibleNote.Tests.Analytics
         public void ParagraphParser_Test2()
         {
             var input = "<div><p>Мк 1:2</p><p>Это тестовая Ин 3:16 строка<BR/>с переводом строки. Лк<br />5:6 - это первая ссылка, <p>Лк<font>7</font>:<font>8 и ещё </font><font class='test'>Мк 5:</font>6-7!!</p> - это вторая<p><font></font></p><p>1</p></p></div>";
-            var expected = "<div><p><a href='bnVerse:Марка 1:2'>Мк 1:2</a></p><p>Это тестовая <a href='bnVerse:Иоанна 3:16'>Ин 3:16</a> строка<br>с переводом строки. <a href='bnVerse:Луки 5:6'>Лк5:6</a><br> - это первая ссылка, <p><a href='bnVerse:Луки 7:8'>Лк7:8</a><font></font><font> и ещё </font><font class='test'><a href='bnVerse:Марка 5:6-7'>Мк 5:6-7</a></font>!!</p> - это вторая<p><font></font></p><p>1</p></p></div>";
+            var expected = "<div><p><a href='bnVerse:Марка 1:2'>Мк 1:2</a></p><p>Это тестовая <a href='bnVerse:Иоанна 3:16'>Ин 3:16</a> строка<br>с переводом строки. <a href='bnVerse:Луки 5:6'>Лк5:6</a><br> - это первая ссылка, <p><a href='bnVerse:Луки 7:8'>Лк7:8</a><font></font><font> и ещё </font><font class='test'><a href='bnVerse:Марка 5:6-7'>Мк 5:6-7</a></font>!!</p> - это вторая<p><font></font></p><p>1</p></div>";
             var result = CheckVerses(input, expected, null, "Мк 1:2", "Ин 3:16", "Лк 5:6", "Лк 7:8", "Мк 5:6-7");
 
             var verseEntry = result.Result.VerseEntries[3];
