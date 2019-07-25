@@ -32,9 +32,13 @@ namespace BibleNote.Analytics.Data.Contracts
 
         Task UpdateAsync(Expression<Func<T, T>> updateFactory, CancellationToken cancellationToken = default);
 
+        void Update(Expression<Func<T, T>> updateFactory);
+
         void Delete(T entity);
 
         Task DeleteAsync(Expression<Func<T, bool>> predicate = default, CancellationToken cancellationToken = default);
+
+        void Delete(Expression<Func<T, bool>> predicate = default);
     }
 
 }

@@ -216,6 +216,11 @@ namespace BibleNote.Analytics.Persistence.Repositories
             return Query.UpdateAsync(updateFactory, cancellationToken);
         }
 
+        public void Update(Expression<Func<T, T>> updateFactory)
+        {
+            Query.Update(updateFactory);
+        }
+
         public void Delete(T entity)
         {
             dbSet.Remove(entity);
@@ -225,6 +230,12 @@ namespace BibleNote.Analytics.Persistence.Repositories
         {
             var query = predicate == null ? this : dbSet.Where(predicate);
             return query.DeleteAsync(cancellationToken);
+        }
+
+        public void Delete(Expression<Func<T, bool>> predicate = default)
+        {
+            var query = predicate == null ? this : dbSet.Where(predicate);
+            query.Delete();
         }
 
         #endregion

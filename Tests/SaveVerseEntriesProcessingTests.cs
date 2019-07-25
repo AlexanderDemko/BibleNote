@@ -50,7 +50,7 @@ namespace BibleNote.Tests.Analytics
         [TestMethod]
         public void ParseHtml_Test1()
         {
-            var parseResult = this.documentProvider.ParseDocument(new FileDocumentId(0, @"..\..\..\TestData\Html_1.html", false));
+            var parseResult = this.documentProvider.ParseDocument(new FileDocumentId(0, @"..\..\..\TestData\Html_1.html", true));
             this.documentParseResultProcessing.Process(this.document.DocumentId, parseResult);
 
             this.AnalyticsContext.VerseEntryRepository
@@ -65,7 +65,7 @@ namespace BibleNote.Tests.Analytics
                 .Should()
                 .Be(11);
 
-            он анализирует стихи внутри <a href= 'bnVerse:Исаия 44:6' >
+            //он анализирует стихи внутри <a href= 'bnVerse:Исаия 44:6' >
         }        
     }
 }

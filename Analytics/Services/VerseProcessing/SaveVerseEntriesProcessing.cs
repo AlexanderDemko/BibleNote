@@ -29,16 +29,16 @@ namespace BibleNote.Analytics.Services.VerseProcessing
             RemovePreviousResult();
             ProcessHierarchy(documentResult.RootHierarchyResult);
 
-            this.analyticsContext.SaveChangesAsync();
+            this.analyticsContext.SaveChanges();
         }
 
         private void RemovePreviousResult()
         {   
             this.analyticsContext.VerseEntryRepository.ToTrackingRepository()
-                .DeleteAsync(v => v.DocumentParagraph.DocumentId == this.documentId);
+                .Delete(v => v.DocumentParagraph.DocumentId == this.documentId);
 
             this.analyticsContext.DocumentParagraphRepository.ToTrackingRepository()
-                .DeleteAsync(p => p.DocumentId == documentId);                
+                .Delete(p => p.DocumentId == documentId);            
         }
 
         private void ProcessHierarchy(HierarchyParseResult hierarchyResult)

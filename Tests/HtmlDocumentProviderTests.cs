@@ -35,6 +35,8 @@ namespace BibleNote.Tests.Analytics
         public void ParseHtml_Test1()
         {
             var parseResult = _documentProvider.ParseDocument(new FileDocumentId(0, @"..\..\..\TestData\Html_1.html", true));
+
+            здесь почему-то он ищет в аттрибуте (после первого обновления файла)
             
             CheckParseResults(parseResult.GetAllParagraphParseResults().ToList(),
                 new string[] { "Ин 1:1" },
