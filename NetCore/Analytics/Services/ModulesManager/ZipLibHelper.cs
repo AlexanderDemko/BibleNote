@@ -12,7 +12,7 @@ namespace BibleNote.Analytics.Services.ModulesManager
             if (!Directory.Exists(directoryPath))
                 Directory.CreateDirectory(directoryPath);
 
-            ZipStrings.CodePage = 866;
+            ZipStrings.CodePage = 65001;
 
             using (MemoryStream ms = new MemoryStream(fileData))
             {
@@ -51,7 +51,8 @@ namespace BibleNote.Analytics.Services.ModulesManager
 
         public static void PackfilesToZip(string tempFolderPath, string targetFilePath)
         {
-            ZipStrings.CodePage = 866;
+            ZipStrings.CodePage = 65001;
+
             // Depending on the directory this could be very large and would require more attention
             // in a commercial package.
             string[] filenames = Directory.GetFiles(tempFolderPath);
