@@ -6,6 +6,8 @@ namespace BibleNote.Analytics.Services.VerseProcessing
 {
     class SaveVerseRelationProcessing : IDocumentParseResultProcessing
     {
+        public int Order => 1;
+
         public void Process(int documentId, DocumentParseResult documentResult)
         {
             throw new NotImplementedException();

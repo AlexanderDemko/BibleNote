@@ -110,7 +110,11 @@ namespace BibleNote.Analytics.Services.ModulesManager.Models
             for (var i = Verse; i <= MostTopVerse; i++)
             {
                 result.Verses.Add(new ModuleVersePointer(BookIndex, Chapter, i)
-                { IsEmpty = IsEmpty, SkipCheck = SkipCheck, EmptyVerseContent = EmptyVerseContent });
+                {
+                    IsEmpty = IsEmpty,
+                    SkipCheck = SkipCheck,
+                    EmptyVerseContent = EmptyVerseContent
+                });
             }
 
             result.VersesCount = result.Verses.Count();
@@ -126,7 +130,7 @@ namespace BibleNote.Analytics.Services.ModulesManager.Models
             return result;
         }
 
-        public long GetVerseDbId()      // todo: Is this a good place for that method? and try different approaches for serializing/deserializing VerseId.
+        public long GetVerseId()      // todo: Is this a good place for that method? and try different approaches for serializing/deserializing VerseId.
         {
             return long.Parse($"{BookIndex:D2}{Chapter:D3}{Verse:D3}");
         }

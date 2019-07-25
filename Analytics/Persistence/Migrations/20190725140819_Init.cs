@@ -47,7 +47,7 @@ namespace BibleNote.Analytics.Persistence.Migrations
                         column: x => x.DocumentFolderId,
                         principalTable: "DocumentFolders",
                         principalColumn: "DocumentFolderId",
-                        onDelete: ReferentialAction.Restrict);
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -58,8 +58,7 @@ namespace BibleNote.Analytics.Persistence.Migrations
                         .Annotation("Sqlite:Autoincrement", true),
                     Path = table.Column<string>(nullable: true),
                     DocumentId = table.Column<int>(nullable: false),
-                    Index = table.Column<int>(nullable: false),
-                    DocumentId1 = table.Column<int>(nullable: true)
+                    Index = table.Column<int>(nullable: false)
                 },
                 constraints: table =>
                 {
@@ -69,13 +68,7 @@ namespace BibleNote.Analytics.Persistence.Migrations
                         column: x => x.DocumentId,
                         principalTable: "Documents",
                         principalColumn: "DocumentId",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "FK_DocumentParagraphs_Documents_DocumentId1",
-                        column: x => x.DocumentId1,
-                        principalTable: "Documents",
-                        principalColumn: "DocumentId",
-                        onDelete: ReferentialAction.Restrict);
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -97,7 +90,7 @@ namespace BibleNote.Analytics.Persistence.Migrations
                         column: x => x.DocumentParagraphId,
                         principalTable: "DocumentParagraphs",
                         principalColumn: "DocumentParagraphId",
-                        onDelete: ReferentialAction.Restrict);
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -118,13 +111,13 @@ namespace BibleNote.Analytics.Persistence.Migrations
                         column: x => x.RelativeVerseId,
                         principalTable: "VerseEntries",
                         principalColumn: "VerseEntryId",
-                        onDelete: ReferentialAction.Restrict);
+                        onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_VerseRelations_VerseEntries_VerseId",
                         column: x => x.VerseId,
                         principalTable: "VerseEntries",
                         principalColumn: "VerseEntryId",
-                        onDelete: ReferentialAction.Restrict);
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateIndex(
@@ -136,11 +129,6 @@ namespace BibleNote.Analytics.Persistence.Migrations
                 name: "IX_DocumentParagraphs_DocumentId",
                 table: "DocumentParagraphs",
                 column: "DocumentId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_DocumentParagraphs_DocumentId1",
-                table: "DocumentParagraphs",
-                column: "DocumentId1");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Documents_DocumentFolderId",

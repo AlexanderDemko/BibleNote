@@ -9,6 +9,8 @@ using BibleNote.Analytics.Services.VerseParsing;
 using BibleNote.Analytics.Services.VerseParsing.Contracts;
 using BibleNote.Analytics.Services.VerseParsing.Contracts.ParseContext;
 using BibleNote.Analytics.Services.VerseParsing.Models.ParseContext;
+using BibleNote.Analytics.Services.VerseProcessing;
+using BibleNote.Analytics.Services.VerseProcessing.Contracts;
 
 namespace BibleNote.Analytics.Services
 {
@@ -26,6 +28,8 @@ namespace BibleNote.Analytics.Services
                 .AddScoped<IApplicationManager, ApplicationManager>()
                 .AddScoped<IVerseCorrectionService, VerseCorrectionService>()
                 .AddScoped<IDocumentParserFactory, DocumentParserFactory>()
+                .AddScoped<IDocumentParseResultProcessing, SaveVerseEntriesProcessing>()
+                .AddScoped<IDocumentParseResultProcessing, SaveVerseRelationProcessing>()
                 .AddTransient<IStringParser, StringParser>()
                 .AddTransient<IParagraphParser, ParagraphParser>()
                 .AddTransient<IDocumentParser, DocumentParser>()

@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BibleNote.Analytics.Persistence.Migrations
 {
     [DbContext(typeof(AnalyticsContext))]
-    [Migration("20190725081219_Init")]
+    [Migration("20190725140819_Init")]
     partial class Init
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -70,8 +70,6 @@ namespace BibleNote.Analytics.Persistence.Migrations
 
                     b.Property<int>("DocumentId");
 
-                    b.Property<int?>("DocumentId1");
-
                     b.Property<int>("Index");
 
                     b.Property<string>("Path");
@@ -79,8 +77,6 @@ namespace BibleNote.Analytics.Persistence.Migrations
                     b.HasKey("DocumentParagraphId");
 
                     b.HasIndex("DocumentId");
-
-                    b.HasIndex("DocumentId1");
 
                     b.ToTable("DocumentParagraphs");
                 });
@@ -130,27 +126,22 @@ namespace BibleNote.Analytics.Persistence.Migrations
                     b.HasOne("BibleNote.Analytics.Data.Entities.DocumentFolder", "Folder")
                         .WithMany()
                         .HasForeignKey("DocumentFolderId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.Cascade);
                 });
 
             modelBuilder.Entity("BibleNote.Analytics.Data.Entities.DocumentFolder", b =>
                 {
                     b.HasOne("BibleNote.Analytics.Data.Entities.DocumentFolder", "ParentFolder")
                         .WithMany()
-                        .HasForeignKey("ParentFolderId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .HasForeignKey("ParentFolderId");
                 });
 
             modelBuilder.Entity("BibleNote.Analytics.Data.Entities.DocumentParagraph", b =>
                 {
                     b.HasOne("BibleNote.Analytics.Data.Entities.Document", "Document")
-                        .WithMany()
-                        .HasForeignKey("DocumentId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("BibleNote.Analytics.Data.Entities.Document")
                         .WithMany("Paragraphs")
-                        .HasForeignKey("DocumentId1");
+                        .HasForeignKey("DocumentId")
+                        .OnDelete(DeleteBehavior.Cascade);
                 });
 
             modelBuilder.Entity("BibleNote.Analytics.Data.Entities.VerseEntry", b =>
@@ -158,7 +149,7 @@ namespace BibleNote.Analytics.Persistence.Migrations
                     b.HasOne("BibleNote.Analytics.Data.Entities.DocumentParagraph", "DocumentParagraph")
                         .WithMany()
                         .HasForeignKey("DocumentParagraphId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.Cascade);
                 });
 
             modelBuilder.Entity("BibleNote.Analytics.Data.Entities.VerseRelation", b =>
@@ -166,12 +157,12 @@ namespace BibleNote.Analytics.Persistence.Migrations
                     b.HasOne("BibleNote.Analytics.Data.Entities.VerseEntry", "RelativeVerse")
                         .WithMany()
                         .HasForeignKey("RelativeVerseId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.HasOne("BibleNote.Analytics.Data.Entities.VerseEntry", "Verse")
                         .WithMany()
                         .HasForeignKey("VerseId")
-                        .OnDelete(DeleteBehavior.Restrict);
+                        .OnDelete(DeleteBehavior.Cascade);
                 });
 #pragma warning restore 612, 618
         }

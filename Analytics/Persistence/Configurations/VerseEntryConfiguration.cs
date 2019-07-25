@@ -11,12 +11,6 @@ namespace BibleNote.Analytics.Persistence.Configurations
             builder.ToTable(nameof(AnalyticsContext.VerseEntries));
 
             builder.Property(v => v.VerseId).IsRequired(true);            
-
-            builder
-                .HasOne(v => v.DocumentParagraph)
-                .WithMany()
-                .HasForeignKey(v => v.DocumentParagraphId)
-                .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }

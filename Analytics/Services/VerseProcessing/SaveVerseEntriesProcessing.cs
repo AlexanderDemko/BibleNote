@@ -3,15 +3,18 @@ using BibleNote.Analytics.Data.Entities;
 using BibleNote.Analytics.Services.ModulesManager.Models;
 using BibleNote.Analytics.Services.VerseParsing.Models.ParseResult;
 using BibleNote.Analytics.Services.VerseProcessing.Contracts;
+using System;
 
 namespace BibleNote.Analytics.Services.VerseProcessing
 {
     class SaveVerseEntriesProcessing : IDocumentParseResultProcessing
     {
-        private IDbContext analyticsContext;
-        private int documentId;
+        private readonly IDbContext analyticsContext;
         private DocumentParseResult documentResult;
+        private int documentId;        
         private int insertedRows = 0;
+
+        public int Order => 0;
 
         public SaveVerseEntriesProcessing(IDbContext analyticsContext)
         {
@@ -24,7 +27,9 @@ namespace BibleNote.Analytics.Services.VerseProcessing
             this.documentResult = documentResult;
             
             RemovePreviousResult();
-            ProcessHierarchy(documentResult.RootHierarchyResult);            
+            ProcessHierarchy(documentResult.RootHierarchyResult);
+
+            this.analyticsContext.SaveChangesAsync();
         }
 
         private void RemovePreviousResult()
@@ -51,7 +56,8 @@ namespace BibleNote.Analytics.Services.VerseProcessing
                 foreach (var verseEntry in paragraphResult.VerseEntries)
                 {
                     var suffix = verseEntry.VersePointer.IsMultiVerse == MultiVerse.None
-                                    ? string.Empty : $"({verseEntry.VersePointer.GetFullVerseNumberString()})";
+                                    ? null
+                                    : $"({verseEntry.VersePointer.GetFullVerseNumberString()})";
 
                     foreach (var verse in verseEntry.VersePointer.SubVerses.Verses)
                     {
@@ -60,12 +66,13 @@ namespace BibleNote.Analytics.Services.VerseProcessing
                             {
                                 DocumentParagraph = paragraph,
                                 Suffix = suffix,
-                                VerseId = verse.GetVerseDbId()
+                                VerseId = verse.GetVerseId(),
+                                Weight = Math.Round(1M / verseEntry.VersePointer.SubVerses.VersesCount, 2)
                             });
 
                         this.insertedRows++;                        
                     }
-                }
+                }                
             }
 
             foreach (var childHierarchy in hierarchyResult.ChildHierarchyResults)

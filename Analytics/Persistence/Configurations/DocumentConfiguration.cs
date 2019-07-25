@@ -11,13 +11,7 @@ namespace BibleNote.Analytics.Persistence.Configurations
             builder.ToTable(nameof(AnalyticsContext.Documents));
 
             builder.Property(d => d.Name).IsRequired(true);
-            builder.Property(d => d.Path).IsRequired(true);            
-
-            builder
-                .HasOne(d => d.Folder)
-                .WithMany()
-                .HasForeignKey(d => d.DocumentFolderId)
-                .OnDelete(DeleteBehavior.Restrict);
+            builder.Property(d => d.Path).IsRequired(true);                        
         }
     }
 }

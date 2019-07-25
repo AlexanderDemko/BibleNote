@@ -12,18 +12,6 @@ namespace BibleNote.Analytics.Persistence.Configurations
 
             builder.HasIndex(v => v.VerseId);
             builder.HasIndex(v => v.RelativeVerseId);
-            
-            builder
-                .HasOne(v => v.Verse)
-                .WithMany()
-                .HasForeignKey(v => v.VerseId)
-                .OnDelete(DeleteBehavior.Restrict);
-
-            builder
-                .HasOne(v => v.RelativeVerse)
-                .WithMany()
-                .HasForeignKey(v => v.RelativeVerseId)
-                .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }

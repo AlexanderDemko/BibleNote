@@ -119,7 +119,7 @@ namespace BibleNote.Analytics.Services.ModulesManager.Models
         /// When there was no initial information if it is verse or chapter (for example ",5-6") or when "Иуд 5-6".
         /// </summary>
         /// <param name="newChapter"></param>
-        public virtual void MoveChapterToVerse(int newChapter)
+        internal virtual void MoveChapterToVerse(int newChapter)
         {
             VerseNumber = new VerseNumber(newChapter, VerseNumber.Chapter);
             if (TopVerseNumber.HasValue && TopVerseNumber.Value.IsChapter)

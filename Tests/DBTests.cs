@@ -1,43 +1,24 @@
-﻿using BibleNote.Analytics.Data.Contracts;
-using BibleNote.Analytics.Data.Entities;
+﻿using BibleNote.Analytics.Data.Entities;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using Microsoft.Extensions.DependencyInjection;
 using System.Linq;
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using BibleNote.Analytics.Persistence;
+using BibleNote.Tests.Analytics.TestsBase;
 
 namespace BibleNote.Tests.Analytics
 {
     [TestClass]
-    public class DBTests : TestsBase.TestsBase
+    public class DbTests : DbTestsBase
     {
-        private IDbContext analyticsContext;
-        private AnalyticsContext concreteContext;
-        private SqliteConnection connection;
-
         [TestInitialize]
         public void Init()
         {
-            this.connection = new SqliteConnection(
-                //@"DataSource=..\..\..\..\Analytics\Persistence\BibleNote.Analytics.db"
-                "DataSource=:memory:"
-                );
-            connection.Open();
-
-            base.Init(options =>
-                options.AddDbContext<IDbContext, AnalyticsContext>(opt => opt.UseSqlite(connection)));
-
-            this.analyticsContext = ServiceProvider.GetService<IDbContext>();
-            this.concreteContext = (AnalyticsContext)this.analyticsContext;
-            this.concreteContext.Database.Migrate();            
-            DbInitializer.Initialize(this.concreteContext);            
+            base.Init();        
         }
         
         [TestCleanup]
-        public void Cleanup()
+        public override void Cleanup()
         {
-            this.connection.Close();
+            base.Cleanup();
         }
 
         [TestMethod]        
@@ -46,22 +27,22 @@ namespace BibleNote.Tests.Analytics
             var foldersCount = 0;
             var testFolderName = "Test1";
 
-            foldersCount = this.analyticsContext.DocumentFolderRepository.Count();
+            foldersCount = this.AnalyticsContext.DocumentFolderRepository.Count();
 
             var newFolder = new DocumentFolder() { Name = testFolderName, NavigationProviderName = "Html", Path = "c:\temp" };
-            this.analyticsContext.DocumentFolderRepository.ToTrackingRepository().Add(newFolder);
-            this.analyticsContext.SaveChangesAsync();
+            this.AnalyticsContext.DocumentFolderRepository.ToTrackingRepository().Add(newFolder);
+            this.AnalyticsContext.SaveChangesAsync();
 
-            this.concreteContext.Entry(newFolder).State = EntityState.Detached;
+            this.ConcreteContext.Entry(newFolder).State = EntityState.Detached;
 
-            Assert.AreEqual(foldersCount + 1, this.analyticsContext.DocumentFolderRepository.Count());
-            var folder = this.analyticsContext.DocumentFolderRepository.FirstOrDefault(f => f.Name == testFolderName);
+            Assert.AreEqual(foldersCount + 1, this.AnalyticsContext.DocumentFolderRepository.Count());
+            var folder = this.AnalyticsContext.DocumentFolderRepository.FirstOrDefault(f => f.Name == testFolderName);
             Assert.IsNotNull(folder);
-            this.analyticsContext.DocumentFolderRepository.ToTrackingRepository().Delete(folder);
-            this.analyticsContext.SaveChangesAsync();
+            this.AnalyticsContext.DocumentFolderRepository.ToTrackingRepository().Delete(folder);
+            this.AnalyticsContext.SaveChangesAsync();
 
-            Assert.AreEqual(foldersCount, this.analyticsContext.DocumentFolderRepository.Count());
-            Assert.IsNull(this.analyticsContext.DocumentFolderRepository.FirstOrDefault(f => f.Name == testFolderName));
+            Assert.AreEqual(foldersCount, this.AnalyticsContext.DocumentFolderRepository.Count());
+            Assert.IsNull(this.AnalyticsContext.DocumentFolderRepository.FirstOrDefault(f => f.Name == testFolderName));
         }
     }
 }

@@ -8,13 +8,7 @@ namespace BibleNote.Analytics.Persistence.Configurations
     {
         public void Configure(EntityTypeBuilder<DocumentParagraph> builder)
         {
-            builder.ToTable(nameof(AnalyticsContext.DocumentParagraphs));
-
-            builder
-                .HasOne(d => d.Document)
-                .WithMany()
-                .HasForeignKey(d => d.DocumentId)
-                .OnDelete(DeleteBehavior.Restrict);
+            builder.ToTable(nameof(AnalyticsContext.DocumentParagraphs));      
         }
     }
 }

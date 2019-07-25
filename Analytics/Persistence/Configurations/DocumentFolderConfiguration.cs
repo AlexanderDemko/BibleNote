@@ -13,12 +13,6 @@ namespace BibleNote.Analytics.Persistence.Configurations
             builder.Property(f => f.Name).IsRequired(true);
             builder.Property(f => f.Path).IsRequired(true);
             builder.Property(f => f.NavigationProviderName).IsRequired(true);
-
-            builder
-                .HasOne(f => f.ParentFolder)
-                .WithMany()
-                .HasForeignKey(f => f.ParentFolderId)
-                .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }

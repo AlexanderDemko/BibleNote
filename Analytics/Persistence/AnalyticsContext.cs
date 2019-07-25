@@ -40,9 +40,21 @@ namespace BibleNote.Analytics.Persistence
             return result;
         }
 
+        public IList<T> ToList<T>(IQueryable<T> query)
+        {
+            var result = query.ToList();
+            return result;
+        }
+
         public async Task<T> SingleAsync<T>(IQueryable<T> query, CancellationToken cancellationToken = default)
         {
             var result = await query.SingleAsync(cancellationToken);
+            return result;
+        }
+
+        public T Single<T>(IQueryable<T> query)
+        {
+            var result = query.Single();
             return result;
         }
 
@@ -52,9 +64,21 @@ namespace BibleNote.Analytics.Persistence
             return result;
         }
 
+        public T SingleOrDefault<T>(IQueryable<T> query)
+        {
+            var result = query.SingleOrDefault();
+            return result;
+        }
+
         public async Task<T> FirstAsync<T>(IQueryable<T> query, CancellationToken cancellationToken = default)
         {
             var result = await query.FirstAsync(cancellationToken);
+            return result;
+        }
+
+        public T First<T>(IQueryable<T> query)
+        {
+            var result = query.First();
             return result;
         }
 
@@ -64,14 +88,30 @@ namespace BibleNote.Analytics.Persistence
             return result;
         }
 
+        public T FirstOrDefault<T>(IQueryable<T> query)
+        {
+            var result = query.FirstOrDefault();
+            return result;
+        }
+
         public Task<bool> AnyAsync<T>(IQueryable<T> query, CancellationToken cancellationToken = default)
         {
             return query.AnyAsync(cancellationToken);
         }
 
+        public bool Any<T>(IQueryable<T> query)
+        {
+            return query.Any();
+        }
+
         public Task<int> CountAsync<T>(IQueryable<T> query, CancellationToken cancellationToken = default)
         {
             return query.CountAsync(cancellationToken);
+        }
+
+        public int Count<T>(IQueryable<T> query)
+        {
+            return query.Count();
         }
 
         public IQueryable<T> Include<T, TProperty>(
@@ -86,7 +126,7 @@ namespace BibleNote.Analytics.Persistence
 
         private bool customConfiguration = false;
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-        {
+        {            
             if (!customConfiguration)
             {
                 optionsBuilder.UseSqlite("Data Source=BibleNote.Analytics.db");
