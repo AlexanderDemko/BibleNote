@@ -1,0 +1,27 @@
+﻿using BibleNote.Analytics.Services.DocumentProvider.Contracts;
+using System;
+
+namespace BibleNote.Analytics.Providers.Web.Navigation
+{
+    public class WebDocumentId : IDocumentId
+    {
+        public int DocumentId { get; private set; }
+
+        public Uri Uri { get; private set; }
+
+        public bool IsReadonly => true;
+
+        public bool Changed => false;
+
+        public WebDocumentId(int documentId, Uri uri)
+        {
+            DocumentId = documentId;
+            Uri = uri;
+        }
+
+        public void SetChanged()
+        {
+            throw new NotSupportedException();
+        }
+    }
+}
