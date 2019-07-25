@@ -4,8 +4,10 @@
     {
         int DocumentId { get; }
 
-        bool Changed { get; set; }
+        bool Changed { get; }
 
-        bool IsReadonly { get; }        
+        bool IsReadonly { get; }
+
+        void SetChanged();
     }
 }

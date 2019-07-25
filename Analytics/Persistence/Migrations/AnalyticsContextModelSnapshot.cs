@@ -108,21 +108,13 @@ namespace BibleNote.Analytics.Persistence.Migrations
                     b.Property<int>("VerseRelationId")
                         .ValueGeneratedOnAdd();
 
-                    b.Property<int>("DocumentParagraphId");
-
                     b.Property<decimal>("RelationWeight");
 
-                    b.Property<int?>("RelativeDocumentParagraphId");
+                    b.Property<int>("RelativeVerseId");
 
-                    b.Property<long>("RelativeVerseId");
-
-                    b.Property<long>("VerseId");
+                    b.Property<int>("VerseId");
 
                     b.HasKey("VerseRelationId");
-
-                    b.HasIndex("DocumentParagraphId");
-
-                    b.HasIndex("RelativeDocumentParagraphId");
 
                     b.HasIndex("RelativeVerseId");
 
@@ -169,14 +161,14 @@ namespace BibleNote.Analytics.Persistence.Migrations
 
             modelBuilder.Entity("BibleNote.Analytics.Data.Entities.VerseRelation", b =>
                 {
-                    b.HasOne("BibleNote.Analytics.Data.Entities.DocumentParagraph", "DocumentParagraph")
+                    b.HasOne("BibleNote.Analytics.Data.Entities.VerseEntry", "RelativeVerse")
                         .WithMany()
-                        .HasForeignKey("DocumentParagraphId")
+                        .HasForeignKey("RelativeVerseId")
                         .OnDelete(DeleteBehavior.Restrict);
 
-                    b.HasOne("BibleNote.Analytics.Data.Entities.DocumentParagraph", "RelativeDocumentParagraph")
+                    b.HasOne("BibleNote.Analytics.Data.Entities.VerseEntry", "Verse")
                         .WithMany()
-                        .HasForeignKey("RelativeDocumentParagraphId")
+                        .HasForeignKey("VerseId")
                         .OnDelete(DeleteBehavior.Restrict);
                 });
 #pragma warning restore 612, 618

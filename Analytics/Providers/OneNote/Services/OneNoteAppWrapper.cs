@@ -53,7 +53,7 @@ namespace BibleNote.Analytics.Providers.OneNote.Services
 
         public void Dispose()
         {
-            ReleaseOneNoteApp();
+            ReleaseOneNoteApp();        // todo: и не надо каждый раз удалять
         }
 
         public void UpdatePageContent(XDocument pageDoc)

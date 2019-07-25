@@ -9,14 +9,19 @@ namespace BibleNote.Analytics.Providers.Web.Navigation
 
         public Uri Uri { get; private set; }
 
-        public bool IsReadonly { get { return true; } }
+        public bool IsReadonly => true;
 
-        public bool Changed { get { return false; } set { } }
+        public bool Changed => false;
 
         public WebDocumentId(int documentId, Uri uri)
         {
             DocumentId = documentId;
             Uri = uri;
+        }
+
+        public void SetChanged()
+        {
+            throw new NotSupportedException();
         }
     }
 }

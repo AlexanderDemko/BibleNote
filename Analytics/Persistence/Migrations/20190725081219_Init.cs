@@ -106,26 +106,24 @@ namespace BibleNote.Analytics.Persistence.Migrations
                 {
                     VerseRelationId = table.Column<int>(nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
-                    VerseId = table.Column<long>(nullable: false),
-                    RelativeVerseId = table.Column<long>(nullable: false),
-                    DocumentParagraphId = table.Column<int>(nullable: false),
-                    RelativeDocumentParagraphId = table.Column<int>(nullable: true),
+                    VerseId = table.Column<int>(nullable: false),
+                    RelativeVerseId = table.Column<int>(nullable: false),
                     RelationWeight = table.Column<decimal>(nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_VerseRelations", x => x.VerseRelationId);
                     table.ForeignKey(
-                        name: "FK_VerseRelations_DocumentParagraphs_DocumentParagraphId",
-                        column: x => x.DocumentParagraphId,
-                        principalTable: "DocumentParagraphs",
-                        principalColumn: "DocumentParagraphId",
+                        name: "FK_VerseRelations_VerseEntries_RelativeVerseId",
+                        column: x => x.RelativeVerseId,
+                        principalTable: "VerseEntries",
+                        principalColumn: "VerseEntryId",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
-                        name: "FK_VerseRelations_DocumentParagraphs_RelativeDocumentParagraphId",
-                        column: x => x.RelativeDocumentParagraphId,
-                        principalTable: "DocumentParagraphs",
-                        principalColumn: "DocumentParagraphId",
+                        name: "FK_VerseRelations_VerseEntries_VerseId",
+                        column: x => x.VerseId,
+                        principalTable: "VerseEntries",
+                        principalColumn: "VerseEntryId",
                         onDelete: ReferentialAction.Restrict);
                 });
 
@@ -155,16 +153,6 @@ namespace BibleNote.Analytics.Persistence.Migrations
                 column: "DocumentParagraphId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_VerseRelations_DocumentParagraphId",
-                table: "VerseRelations",
-                column: "DocumentParagraphId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_VerseRelations_RelativeDocumentParagraphId",
-                table: "VerseRelations",
-                column: "RelativeDocumentParagraphId");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_VerseRelations_RelativeVerseId",
                 table: "VerseRelations",
                 column: "RelativeVerseId");
@@ -178,10 +166,10 @@ namespace BibleNote.Analytics.Persistence.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
-                name: "VerseEntries");
+                name: "VerseRelations");
 
             migrationBuilder.DropTable(
-                name: "VerseRelations");
+                name: "VerseEntries");
 
             migrationBuilder.DropTable(
                 name: "DocumentParagraphs");

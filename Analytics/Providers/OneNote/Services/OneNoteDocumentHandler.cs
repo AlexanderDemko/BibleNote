@@ -43,7 +43,7 @@ namespace BibleNote.Analytics.Providers.OneNote.Services
 
         public void SetDocumentChanged()
         {
-            DocumentId.Changed = true;
+            DocumentId.SetChanged();
         }
 
         public void Dispose()

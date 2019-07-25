@@ -4,18 +4,14 @@
     {
         public int VerseRelationId { get; set; }
 
-        public long VerseId { get; set; }
+        public int VerseId { get; set; }
 
-        public long RelativeVerseId { get; set; }        
-        
-        public int DocumentParagraphId { get; set; }        
-
-        public int? RelativeDocumentParagraphId { get; set; }
+        public int RelativeVerseId { get; set; }        
 
         public decimal RelationWeight { get; set; }        
 
-        public virtual DocumentParagraph DocumentParagraph { get; set; }
+        public virtual VerseEntry Verse { get; set; }
 
-        public virtual DocumentParagraph RelativeDocumentParagraph { get; set; }
+        public virtual VerseEntry RelativeVerse { get; set; }
     }
 }

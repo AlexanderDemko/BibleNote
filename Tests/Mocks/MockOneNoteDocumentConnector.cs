@@ -47,7 +47,7 @@ namespace BibleNote.Tests.Analytics.Mocks
 
         public void SetDocumentChanged()
         {
-            DocumentId.Changed = true;
+            DocumentId.SetChanged();
         }
 
         public void Dispose()

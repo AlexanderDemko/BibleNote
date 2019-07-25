@@ -82,20 +82,32 @@ namespace BibleNote.Analytics.Persistence
 
         #endregion
 
+        #region Config
+
+        private bool customConfiguration = false;
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            //optionsBuilder.UseSqlite("Data Source=BibleNote.Analytics.db");
+            if (!customConfiguration)
+            {
+                optionsBuilder.UseSqlite("Data Source=BibleNote.Analytics.db");
+            }
         }
 
         public AnalyticsContext(DbContextOptions<AnalyticsContext> options)
             : base (options)
         {
+            this.customConfiguration = true;
+        }
 
+        public AnalyticsContext()            
+        {            
         }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.ApplyConfigurationsFromAssembly(typeof(AnalyticsContext).Assembly);
         }
+
+        #endregion
     }
 }

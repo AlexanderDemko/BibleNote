@@ -11,7 +11,11 @@
         TableBody,
         TableRow,
         TableCell,
-        Root        // может быть несколько. Не обязательно корневой элемент.
+
+        /// <summary>
+        /// Может быть несколько. Не обязательно корневой элемент всего документа.
+        /// </summary>
+        Root
     }
 
     public static class ElementTypeHelper

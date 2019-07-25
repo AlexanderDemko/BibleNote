@@ -1,99 +1,75 @@
-﻿//using BibleNote.Analytics.Services.ModulesManager.Models;
-//using BibleNote.Analytics.Services.VerseParsing.Models.ParseResult;
-//using BibleNote.Analytics.Services.VerseProcessing.Contracts;
+﻿using BibleNote.Analytics.Data.Contracts;
+using BibleNote.Analytics.Data.Entities;
+using BibleNote.Analytics.Services.ModulesManager.Models;
+using BibleNote.Analytics.Services.VerseParsing.Models.ParseResult;
+using BibleNote.Analytics.Services.VerseProcessing.Contracts;
 
-//namespace BibleNote.Analytics.Services.VerseProcessing
-//{
-//    class SaveVerseEntriesProcessing : IDocumentParseResultProcessing
-//    {
-//        private AnalyticsContext _analyticsContext;
-//        private int _documentId;
-//        private DocumentParseResult _documentResult;
-//        private int _insertedRows = 0;
+namespace BibleNote.Analytics.Services.VerseProcessing
+{
+    class SaveVerseEntriesProcessing : IDocumentParseResultProcessing
+    {
+        private IDbContext analyticsContext;
+        private int documentId;
+        private DocumentParseResult documentResult;
+        private int insertedRows = 0;
 
-//        public SaveVerseEntriesProcessing(AnalyticsContext analyticsContext)
-//        {
-//            _analyticsContext = null; //  analyticsContext;
-//            // todo: check the https://github.com/MikaelEliasson/EntityFramework.Utilities#batch-insert-entities
-//        }
+        public SaveVerseEntriesProcessing(IDbContext analyticsContext)
+        {
+            this.analyticsContext = analyticsContext;            
+        }
 
-//        public void Process(int documentId, DocumentParseResult documentResult)
-//        {
-//            _documentId = documentId;
-//            _documentResult = documentResult;
+        public void Process(int documentId, DocumentParseResult documentResult)
+        {
+            this.documentId = documentId;
+            this.documentResult = documentResult;
+            
+            RemovePreviousResult();
+            ProcessHierarchy(documentResult.RootHierarchyResult);            
+        }
 
-//            RecreateContextIfNeeded();
-//            RemovePreviousResult();
-//            ProcessHierarchy(documentResult.RootHierarchyResult);
-//            _analyticsContext.SaveChanges();        // todo: revise
-//            _analyticsContext.Dispose();
-//        }
+        private void RemovePreviousResult()
+        {   
+            this.analyticsContext.VerseEntryRepository.ToTrackingRepository()
+                .DeleteAsync(v => v.DocumentParagraph.DocumentId == this.documentId);
 
-//        private void RemovePreviousResult()
-//        {
-//            _analyticsContext.Database.ExecuteSqlCommand(
-//                $@"delete from {nameof(_analyticsContext.VerseEntries)}
-//                   where exists 
-//                   (
-//                       select * from {nameof(_analyticsContext.DocumentParagraphs)} p
-//                       where {nameof(VerseEntry.DocumentParagraphId)} = p.{nameof(DocumentParagraph.DocumentParagraphId)} 
-//                        and p.{nameof(DocumentParagraph.DocumentId)} = {_documentId} 
-//                   )");
+            this.analyticsContext.DocumentParagraphRepository.ToTrackingRepository()
+                .DeleteAsync(p => p.DocumentId == documentId);                
+        }
 
-//            _analyticsContext.Database.ExecuteSqlCommand(
-//                $@"delete from {nameof(_analyticsContext.DocumentParagraphs)}
-//                   where {nameof(DocumentParagraph.DocumentId)} = {_documentId}");
-//        }
+        private void ProcessHierarchy(HierarchyParseResult hierarchyResult)
+        {
+            foreach (var paragraphResult in hierarchyResult.ParagraphResults)
+            {
+                var paragraph = new DocumentParagraph()
+                {
+                    DocumentId = this.documentId,
+                    Index = paragraphResult.ParagraphIndex,
+                    Path = paragraphResult.ParagraphPath
+                };
+                this.analyticsContext.DocumentParagraphRepository.ToTrackingRepository().Add(paragraph);
 
-//        private void ProcessHierarchy(HierarchyParseResult hierarchyResult)
-//        {
-//            foreach (var paragraphResult in hierarchyResult.ParagraphResults)
-//            {
-//                var paragraph = _analyticsContext.DocumentParagraphs.Add(new DocumentParagraph()
-//                {
-//                    DocumentId = _documentId,
-//                    Index = paragraphResult.ParagraphIndex,
-//                    Path = paragraphResult.ParagraphPath
-//                });
+                foreach (var verseEntry in paragraphResult.VerseEntries)
+                {
+                    var suffix = verseEntry.VersePointer.IsMultiVerse == MultiVerse.None
+                                    ? string.Empty : $"({verseEntry.VersePointer.GetFullVerseNumberString()})";
 
-//                foreach (var verseEntry in paragraphResult.VerseEntries)
-//                {
-//                    var suffix = verseEntry.VersePointer.IsMultiVerse == MultiVerse.None 
-//                                    ? string.Empty : $"({verseEntry.VersePointer.GetFullVerseNumberString()})";
+                    foreach (var verse in verseEntry.VersePointer.SubVerses.Verses)
+                    {
+                        this.analyticsContext.VerseEntryRepository.ToTrackingRepository()
+                            .Add(new VerseEntry()
+                            {
+                                DocumentParagraph = paragraph,
+                                Suffix = suffix,
+                                VerseId = verse.GetVerseDbId()
+                            });
 
-//                    foreach (var verse in verseEntry.VersePointer.SubVerses.Verses)
-//                    {
-//                        _analyticsContext.VerseEntries.Add(new VerseEntry()
-//                        {
-//                            DocumentParagraph = paragraph,
-//                            Suffix = suffix,
-//                            VerseId = verse.GetVerseDbId()
-//                        });
+                        this.insertedRows++;                        
+                    }
+                }
+            }
 
-//                        _insertedRows++;
-//                        RecreateContextIfNeeded();
-//                    }
-//                }
-//            }
-
-//            foreach (var childHierarchy in hierarchyResult.ChildHierarchyResults)
-//                ProcessHierarchy(childHierarchy);
-//        }
-
-//        private void RecreateContextIfNeeded()
-//        {
-//            if (_insertedRows % 100 == 0 || _analyticsContext == null)
-//            {
-//                if (_analyticsContext != null)
-//                {
-//                    _analyticsContext.SaveChanges();        // todo: SaveChangesAsync()?
-//                    _analyticsContext.Dispose();
-//                }
-
-//                _analyticsContext = new AnalyticsContext();
-//                _analyticsContext.Configuration.AutoDetectChangesEnabled = false;
-//                _analyticsContext.Configuration.ValidateOnSaveEnabled = false;
-//            }
-//        }
-//    }
-//}
+            foreach (var childHierarchy in hierarchyResult.ChildHierarchyResults)
+                ProcessHierarchy(childHierarchy);
+        }       
+    }
+}

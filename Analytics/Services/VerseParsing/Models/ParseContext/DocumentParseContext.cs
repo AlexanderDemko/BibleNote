@@ -46,7 +46,7 @@ namespace BibleNote.Analytics.Services.VerseParsing.Models.ParseContext
         {            
             CurrentHierarchy = new HierarchyParseContext(paragraphType, _previousElement, CurrentHierarchy);
             CurrentHierarchy.ParentHierarchy?.ChildHierarchies.Add(CurrentHierarchy);
-            _previousElement = null;         // чтобы, когда мы войдём в параграф, у него PreviousSibling был null
+            _previousElement = null;         // чтобы когда мы войдём в параграф, у него PreviousSibling был null
 
             switch (paragraphType)
             {

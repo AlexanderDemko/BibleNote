@@ -8,14 +8,19 @@ namespace BibleNote.Analytics.Providers.OneNote.Navigation
 
         public string PageId { get; private set; }
 
-        public bool IsReadonly { get { return false; } }
+        public bool IsReadonly => false;
 
-        public bool Changed { get; set; }        
+        public bool Changed { get; private set; }        
 
         public OneNoteDocumentId(int documentId, string pageId)
         {
             DocumentId = documentId;
             PageId = pageId;            
+        }
+
+        public void SetChanged()
+        {
+            Changed = true;
         }
     }
 }

@@ -25,35 +25,35 @@ namespace BibleNote.Analytics.Providers.Html
         {
             string html = null;
 
-            if (documentId is FileDocumentId)
+            if (documentId is FileDocumentId fileDocumentId)
             {
-                var filePath = ((FileDocumentId)documentId).FilePath;
+                var filePath = fileDocumentId.FilePath;
                 var ext = Path.GetExtension(filePath);
                 html = File.ReadAllText(filePath);
 
                 if (ext == ".txt")
                 {
                     //todo: надо обернуть каждый обзац в <p></p>
+                    //и надо по-другому проверять, что файл содержит только текст
                 }
             }
-            else if (documentId is WebDocumentId)
+            else if (documentId is WebDocumentId webDocumentId)
             {
                 throw new NotImplementedException();
             }
-
-            if (html != null)
+            else
             {
-                var htmlDoc = new HtmlDocument();
-                htmlDoc.LoadHtml(html);
-                return htmlDoc;
+                throw new NotSupportedException(documentId.GetType().Name);
             }
 
-            throw new NotSupportedException(documentId.GetType().Name);
+            var htmlDoc = new HtmlDocument();
+            htmlDoc.LoadHtml(html);
+            return htmlDoc;
         }
 
         public void SetDocumentChanged()
         {
-            DocumentId.Changed = true;
+            DocumentId.SetChanged();
         }
 
         public void Dispose()

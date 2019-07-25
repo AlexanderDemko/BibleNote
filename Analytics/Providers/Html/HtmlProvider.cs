@@ -40,7 +40,7 @@ namespace BibleNote.Analytics.Providers.Html
                     result = docParser.DocumentParseResult;
                 }
 
-                if (result.IsValuable)
+                if (result.IsValuable && !documentId.IsReadonly)
                     docHandler.SetDocumentChanged();
             }
 

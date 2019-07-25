@@ -14,15 +14,15 @@ namespace BibleNote.Analytics.Persistence.Configurations
             builder.HasIndex(v => v.RelativeVerseId);
             
             builder
-                .HasOne(v => v.DocumentParagraph)
+                .HasOne(v => v.Verse)
                 .WithMany()
-                .HasForeignKey(v => v.DocumentParagraphId)
+                .HasForeignKey(v => v.VerseId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             builder
-                .HasOne(v => v.RelativeDocumentParagraph)
+                .HasOne(v => v.RelativeVerse)
                 .WithMany()
-                .HasForeignKey(v => v.RelativeDocumentParagraphId)
+                .HasForeignKey(v => v.RelativeVerseId)
                 .OnDelete(DeleteBehavior.Restrict);
         }
     }

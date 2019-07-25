@@ -17,7 +17,7 @@ namespace BibleNote.Analytics.Providers.OneNote.Services
 
         private readonly IOneNoteDocumentConnector _oneNoteDocumentConnector;
 
-        public bool IsReadonly { get { return false; } }
+        public bool IsReadonly => false;
 
         public OneNoteProvider(IDocumentParserFactory documentParserFactory, IOneNoteDocumentConnector oneNoteDocumentConnector)
         {
