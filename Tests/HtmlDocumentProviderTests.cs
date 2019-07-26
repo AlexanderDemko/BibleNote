@@ -34,14 +34,18 @@ namespace BibleNote.Tests.Analytics
         [TestMethod]
         public void ParseHtml_Test1()
         {
-            var parseResult = _documentProvider.ParseDocument(new FileDocumentId(0, @"..\..\..\TestData\Html_1.html", true));
+            var parseResult = _documentProvider.ParseDocument(new FileDocumentId(0, @"..\..\..\TestData\Html_1.html", false));
 
-            здесь почему-то он ищет в аттрибуте (после первого обновления файла)
-            
+            здесь куча ошибок.
+            //    1. Если в title есть ссылка, то в первый раз он её преобразует в <a>, а во второй раз парсер не видит этой ссылки, так как нельзя, чтобы в title была ссылка. И надо бы добавить тест на это (тест, который будет копировать исходный файл, прогонять анализ и изменять его, а потом ещё раз анализ).
+            //    2. Почему то только при третьем прогоне обнаружилась ссылка Ин 1:17. Хотя он вообще не должна обнаруживаться, если мы вынесли ссылку из Title
+            //    3. При повторном прогоне не находится ссылка Евр 1:10.
+
             CheckParseResults(parseResult.GetAllParagraphParseResults().ToList(),
                 new string[] { "Ин 1:1" },
                 new string[] { "Исх 12:27" },
-                new string[] { "1Кор 5:7-9" },
+                new string[] { "Ин 1:50-2:3" },
+                new string[] { "Ин 3:16", "1Кор 5:7-9" },
                 new string[] { "Ис 44" },
                 new string[] { "Ис 44:24" },
                 new string[] { "Евр 1:2", "Евр 1:10" },
@@ -50,13 +54,7 @@ namespace BibleNote.Tests.Analytics
                 new string[] { "Ис 44:5" },
                 new string[] { "Ис 44:6" });
 
-            parseResult.VersesCount.Should().Be(13);
-
-            //var _analyticsContext = new BibleNote.Analytics.Data.AnalyticsContext();
-            //var folder = _analyticsContext.DocumentFolders.Add(new BibleNote.Analytics.Data.Entities.DocumentFolder() { Name = "Temp", Path = "Test", NavigationProviderName = "Html" });
-            //var document = _analyticsContext.Documents.Add(new BibleNote.Analytics.Data.Entities.Document() { Name = "Temp", Path = "Test", Folder = folder});
-            //_analyticsContext.SaveChanges();
-            //new SaveVerseEntriesProcessing(null).Process(document.DocumentId, parseResult);
+            parseResult.VersesCount.Should().Be(19);            
         }
 
         [TestMethod]

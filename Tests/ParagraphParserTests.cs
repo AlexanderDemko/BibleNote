@@ -47,7 +47,7 @@ namespace BibleNote.Tests.Analytics
 
         private TestResult CheckVerses(string input, string expectedOutput, Action<IDocumentParseContextEditor> initDocParseContext, string[] notFoundVerses, params string[] verses)
         {
-            if (string.IsNullOrEmpty(expectedOutput) || input == expectedOutput)
+            if (string.IsNullOrEmpty(expectedOutput))
             {
                 _documentProvider.IsReadonly = true;
                 expectedOutput = input;
@@ -565,5 +565,14 @@ lang=ru>&nbsp;Тим&nbsp;</span><span style='color:#444444' lang=en-US>2:2). </
             var expected = "<span style='color:#444444' lang=\"ru\">Когда Бог сотворил человека, Он предупредил его об опасности нарушения Его воли, сказав о дереве познания добра и зла: &quot;если вкусишь от него, смертью умрёшь&quot; (<a href='bnVerse:Бытие 2:17'>Быт 2:17</a></span><span style='color:#444444' lang=\"en-US\">). </span>\r\n<span lang=\"ru\">И вас, мертвых по преступлениям и грехам вашим, в которых вы некогда жили, по обычаю мира сего, по воле князя, господствующего в воздухе, духа, действующего ныне в сынах противления, между которыми и мы все жили некогда по нашим плотским похотям, исполняя желания плоти и помыслов, и были по природе чадами гнева, как и прочие. (<a href='bnVerse:Ефесянам 2:1-3'>Еф 2:1-3</a></span><span lang=\"en-US\">)</span>\r\n<span lang=\"en-US\">...</span><span lang=\"ru\">как написано: нет праведного ни одного; нет разумевающего; никто не ищет Бога; все совратились с пути, до одного негодны; нет делающего добро, нет ни одного. (<a href='bnVerse:Римлянам 3:10-12'>Рим 3:10-12</a></span><span lang=\"en-US\">)</span><span style='font-weight:bold;color:#333333' lang=\"ru\"><a href='bnVerse:1Петра 3:1-6'>1 Петра 3:1-6</a></span><span style='font-weight:bold;color:#333333' lang=\"en-US\"></span><span style='color:#444444' lang=\"ru\">&nbsp;</span><span style='font-weight:bold;color:#333333' lang=\"ru\"><a href='bnVerse:Притчи 14:1'>Притчи 14:1</a></span><span style='font-weight:bold;color:#333333' lang=\"en-US\"></span><span style='color:#444444' lang=\"ru\">&nbsp;</span><span style='color:#444444' lang=\"ru\"> (<a href='bnVerse:1Фессалоникийцам 2:8'>1 Фес 2:8</a></span><span style='color:#444444' lang=\"en-US\">). Именно за это, пастыри дадут особый отчет перед Богом (</span>\r\n<span style='color:#444444' lang=\"ru\">и апостолами (<a href='bnVerse:1Петра 5:1-3'>1 Пет 5:1-3</a></span><span style='color:#444444' lang=\"en-US\">, <a href='bnVerse:2Тимофею 2:2'>2 Тим 2:2</a></span><span style='color:#444444' lang=\"ru\"></span><span style='color:#444444' lang=\"en-US\">). </span>";
             CheckVerses(input, expected, null, "Быт 2:17", "Еф 2:1-3", "Рим 3:10-12", "1Пет 3:1-6", "Притч 14:1", "1Фес 2:8", "1Пет 5:1-3", "2Тим 2:2");
         }     
+
+        [TestMethod]
+        public void ParagraphParser_Test44()
+        {
+            var input = @"
+        Троица (<a href='bnVerse:Иоанна 1:1'>Ин 1:1</a>)
+    ";
+            CheckVerses(input, input, null, "Ин 1:1");
+        }
     }
 }

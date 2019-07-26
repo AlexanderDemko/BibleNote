@@ -57,15 +57,13 @@ namespace BibleNote.Tests.Analytics
                 .Where(v => v.DocumentParagraph.DocumentId == this.document.DocumentId)
                 .Count()
                 .Should()
-                .Be(66);
+                .Be(19);
 
             this.AnalyticsContext.DocumentParagraphRepository
                 .Where(p => p.DocumentId == this.document.DocumentId)
                 .Count()
                 .Should()
-                .Be(11);
-
-            //он анализирует стихи внутри <a href= 'bnVerse:Исаия 44:6' >
+                .Be(11);            
         }        
     }
 }
