@@ -1,9 +1,7 @@
 ﻿using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using BibleNote.Analytics.Providers.FileSystem.Navigation;
 using BibleNote.Analytics.Providers.OneNote.Services;
 using BibleNote.Analytics.Providers.OneNote.Contracts;
-using BibleNote.Tests.Analytics.Mocks;
 using BibleNote.Tests.Analytics.TestsBase;
 using BibleNote.Analytics.Providers.OneNote.Navigation;
 using BibleNote.Analytics.Services.DocumentProvider.Contracts;
@@ -33,8 +31,7 @@ namespace BibleNote.Tests.Analytics
 
         }
 
-        //[TestMethod]
-        [TestCategory("IgnoreOnCI")]
+        //[TestMethod]        
         public void ParseOneNote_TestCurrentPage()
         {   
             var log = ServiceProvider.GetService<ILogger>();

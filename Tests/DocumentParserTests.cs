@@ -24,16 +24,10 @@ namespace BibleNote.Tests.Analytics
         {
             _documentParseContext = new DocumentParseContext();
 
-            base.Init(services => services.AddScoped(sp => _documentParseContext));
+            base.Init( services => services.AddScoped(sp => _documentParseContext));
 
             _documentProvider = new MockDocumentProviderInfo() { IsReadonly = true };
             _documentParserFactory = ServiceProvider.GetService<IDocumentParserFactory>();
-        }
-
-        [TestCleanup]
-        public void Done()
-        {
-
         }
 
         private void CheckParseResults(DocumentParseResult docParseResult, params string[][] expectedResults)

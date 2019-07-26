@@ -50,20 +50,20 @@ namespace BibleNote.Tests.Analytics
         [TestMethod]
         public void ParseHtml_Test1()
         {
-            var parseResult = this.documentProvider.ParseDocument(new FileDocumentId(0, @"..\..\..\TestData\Html_1.html", true));
+            var parseResult = this.documentProvider.ParseDocument(new FileDocumentId(0, @"..\..\..\TestData\Html_CheckFullPage.html", true));
             this.documentParseResultProcessing.Process(this.document.DocumentId, parseResult);
 
             this.AnalyticsContext.VerseEntryRepository
                 .Where(v => v.DocumentParagraph.DocumentId == this.document.DocumentId)
                 .Count()
                 .Should()
-                .Be(19);
+                .Be(18);
 
             this.AnalyticsContext.DocumentParagraphRepository
                 .Where(p => p.DocumentId == this.document.DocumentId)
                 .Count()
                 .Should()
-                .Be(11);            
+                .Be(10);            
         }        
     }
 }

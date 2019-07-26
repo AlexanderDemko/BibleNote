@@ -1,45 +1,36 @@
-﻿using System.Linq;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using BibleNote.Analytics.Providers.FileSystem.Navigation;
+﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using BibleNote.Analytics.Providers.OneNote.Services;
 using BibleNote.Analytics.Providers.OneNote.Contracts;
 using BibleNote.Tests.Analytics.Mocks;
 using BibleNote.Tests.Analytics.TestsBase;
-using BibleNote.Analytics.Providers.OneNote.Navigation;
 using BibleNote.Analytics.Services.DocumentProvider.Contracts;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace BibleNote.Tests.Analytics
 {
     [TestClass]
-    public class MockOneNoteDocumentProviderTests : DocumentParserTestsBase
+    public class MockOneNoteDocumentProviderTests : FileDocumentParserTestsBase
     {
-        private IDocumentProvider _documentProvider;
+        private const string TempFolderName = "MockOneNoteDocumentProviderTests";
 
         [TestInitialize]
         public void Init()
         {
-            base.Init(services => services
+            base.Init(TempFolderName, services => services
                 .AddScoped<IOneNoteDocumentConnector, MockOneNoteDocumentConnector>()
-                .AddScoped<IDocumentProvider, OneNoteProvider>());
-
-            _documentProvider = ServiceProvider.GetService<IDocumentProvider>();
+                .AddScoped<IDocumentProvider, OneNoteProvider>());            
         }
 
         [TestCleanup]
-        public void Done()
+        public override void Cleanup()
         {
-
+            base.Cleanup();
         }
 
         [TestMethod]
         public void ParseOneNote_Test1()
         {
-            var parseResult = _documentProvider.ParseDocument(new FileDocumentId(0, @"..\..\..\TestData\OneNote_1.html", true));
-            //var s = JsonConvert.SerializeObject(parseResult.RootHierarchyResult); 
-
-            CheckParseResults(parseResult.GetAllParagraphParseResults().ToList(),
+            TestFile(@"..\..\..\TestData\OneNote_1.html", 
                 new string[] { "Ин 1:1" },
                 new string[] { "Исх 12:27" },
                 new string[] { "1Кор 5:7" },
@@ -55,9 +46,7 @@ namespace BibleNote.Tests.Analytics
         [TestMethod]
         public void ParseOneNote_Test2()
         {
-            var parseResult = _documentProvider.ParseDocument(new FileDocumentId(0, @"..\..\..\TestData\OneNote_2.html", true));
-
-            CheckParseResults(parseResult.GetAllParagraphParseResults().ToList(),
+            TestFile(@"..\..\..\TestData\OneNote_2.html",
                new string[] { "Ин 1" },
                new string[] { "Ин 1:5" },
                new string[] { "Мк 2:5" },
@@ -70,9 +59,7 @@ namespace BibleNote.Tests.Analytics
         [TestMethod]
         public void ParseOneNote_Test3()
         {
-            var parseResult = _documentProvider.ParseDocument(new FileDocumentId(0, @"..\..\..\TestData\OneNote_3.html", true));
-
-            CheckParseResults(parseResult.GetAllParagraphParseResults().ToList(),
+            TestFile(@"..\..\..\TestData\OneNote_3.html", 
                new string[] { "1Пет 3:3" },
                new string[] { "1Пет 3:9" },
                new string[] { "Мф 1:1" },
@@ -86,25 +73,5 @@ namespace BibleNote.Tests.Analytics
                new string[] { "Мк 3:3" },
                new string[] { "Лк 3-4" });
         }
-
-        ////[TestMethod]
-        //[TestCategory("IgnoreOnCI")]
-        //public void ParseOneNote_TestCurrentPage()
-        //{
-        //    DIContainer.Container.RegisterType<IOneNoteDocumentConnector, OneNoteDocumentConnector>();            
-        //    _documentProvider = DIContainer.Resolve<IDocumentProvider>();
-        //    var log = DIContainer.Resolve<ILogger>();
-
-        //    using (var oneNoteApp = new OneNoteAppWrapper(log))
-        //    {
-        //        var currentPageId = oneNoteApp.GetCurrentPageId();
-
-        //        if (!string.IsNullOrEmpty(currentPageId))
-        //        {
-        //            var parseResult = _documentProvider.ParseDocument(new OneNoteDocumentId(0, currentPageId));
-        //            var i = parseResult.GetAllParagraphParseResults().Count();
-        //        }
-        //    }
-        //}
     }
 }
