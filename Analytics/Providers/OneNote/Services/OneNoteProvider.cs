@@ -25,6 +25,8 @@ namespace BibleNote.Analytics.Providers.OneNote.Services
             _oneNoteDocumentConnector = oneNoteDocumentConnector;
         }
 
+        public bool IsReadonlyElement(ElementType elementType) => false;        
+
         public string GetVersePointerLink(VersePointer versePointer)
         {
             return string.Format($"<a href='bnVerse:{versePointer}'>{versePointer.GetOriginalVerseString()}</a>");

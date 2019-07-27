@@ -1,4 +1,5 @@
 ﻿using BibleNote.Analytics.Services.DocumentProvider.Contracts;
+using BibleNote.Analytics.Services.VerseParsing.Contracts.ParseContext;
 using BibleNote.Analytics.Services.VerseParsing.Models;
 
 namespace BibleNote.Tests.Analytics.Mocks
@@ -10,6 +11,8 @@ namespace BibleNote.Tests.Analytics.Mocks
         public string GetVersePointerLink(VersePointer versePointer)
         {
             return string.Format($"<a href='bnVerse:{versePointer}'>{versePointer.GetOriginalVerseString()}</a>");
-        }        
+        }
+
+        public bool IsReadonlyElement(ElementType elementType) => false;
     }
 }

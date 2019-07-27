@@ -32,11 +32,20 @@ namespace BibleNote.Tests.Analytics.TestsBase
 
         protected void TestFile(string filePath, params string[][] expectedResults)
         {
-            var newFilePath = Path.Combine(this.tempFolderPath, Path.GetFileName(filePath));
-            File.Copy(filePath, newFilePath);
+            TestFile(filePath, true, true, expectedResults);
+        }
+
+        protected void TestFile(string filePath, bool copyFile, bool shouldChange, params string[][] expectedResults)
+        {
+            var newFilePath = filePath;
+            if (copyFile)
+            {
+                newFilePath = Path.Combine(this.tempFolderPath, Path.GetFileName(filePath));
+                File.Copy(filePath, newFilePath);
+            }
 
             var fileContent = File.ReadAllText(newFilePath);
-            for (var i = 0; i <= 2; i++)
+            for (var i = 0; i <= 1; i++)
             {
                 var parseResult = this.documentProvider.ParseDocument(new FileDocumentId(0, newFilePath, false));
                 CheckParseResults(parseResult.GetAllParagraphParseResults().ToList(), expectedResults);
@@ -44,11 +53,18 @@ namespace BibleNote.Tests.Analytics.TestsBase
                 if (i == 0)
                 {
                     var newFileContent = File.ReadAllText(newFilePath);
-                    newFileContent.Should().NotBe(fileContent);
-                    fileContent = newFileContent;
+                    if (shouldChange)
+                    {
+                        newFileContent.Should().NotBe(fileContent);
+                        fileContent = newFileContent;
+                    }                    
+                    else
+                    {
+                        newFileContent.Should().Be(fileContent);
+                        break;
+                    }                    
                 }
-
-                if (i > 0)
+                else
                 {
                     var newFileContent = File.ReadAllText(newFilePath);
                     newFileContent.Should().Be(fileContent);

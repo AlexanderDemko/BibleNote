@@ -7,8 +7,6 @@ using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using BibleNote.Analytics.Services.DocumentProvider.Contracts;
-using System.IO;
-using BibleNote.Analytics.Providers.FileSystem.Navigation;
 
 namespace BibleNote.Tests.Analytics.TestsBase
 {
@@ -18,7 +16,7 @@ namespace BibleNote.Tests.Analytics.TestsBase
         protected IDocumentProvider documentProvider;
      
 
-        public void Init(Action<IServiceCollection> registerServicesAction = null)
+        public override void Init(Action<IServiceCollection> registerServicesAction = null)
         {
             base.Init(registerServicesAction);
 

@@ -8,7 +8,7 @@ namespace BibleNote.Analytics.Providers.OneNote.Services
     {
         private readonly ILogger _log;
 
-        public OneNoteDocumentConnector(ILogger log)
+        public OneNoteDocumentConnector(ILogger<OneNoteDocumentConnector> log)
         {
             _log = log;
         }

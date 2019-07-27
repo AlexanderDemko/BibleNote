@@ -5,6 +5,7 @@ using BibleNote.Analytics.Services.ModulesManager.Contracts;
 using BibleNote.Analytics.Services.ModulesManager.Models.Exceptions;
 using BibleNote.Tests.Analytics.Mocks;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using System;
 
 namespace BibleNote.Tests.Analytics.TestsBase
@@ -21,6 +22,7 @@ namespace BibleNote.Tests.Analytics.TestsBase
 
             var services = new ServiceCollection()
                .AddApplicatonServices<ServicesModule>()               
+               //.AddLogging(configure => configure.AddConsole())
                .AddScoped(sp => MockConfigurationManager);
 
             registerServicesAction?.Invoke(services);

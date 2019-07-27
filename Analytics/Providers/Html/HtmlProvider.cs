@@ -24,6 +24,11 @@ namespace BibleNote.Analytics.Providers.Html
             _htmlDocumentConnector = htmlDocumentConnector;
         }
 
+        public bool IsReadonlyElement(ElementType elementType)
+        {
+            return elementType == ElementType.Title;                
+        }
+
         public string GetVersePointerLink(VersePointer versePointer)
         {
             return string.Format($"<a href='bnVerse:{versePointer}'>{versePointer.GetOriginalVerseString()}</a>");

@@ -48,7 +48,7 @@ namespace BibleNote.Tests.Analytics
         }                        
 
         [TestMethod]
-        public void ParseHtml_Test1()
+        public void Test1()
         {
             var parseResult = this.documentProvider.ParseDocument(new FileDocumentId(0, @"..\..\..\TestData\Html_CheckFullPage.html", true));
             this.documentParseResultProcessing.Process(this.document.DocumentId, parseResult);

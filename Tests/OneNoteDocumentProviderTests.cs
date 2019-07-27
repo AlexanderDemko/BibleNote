@@ -32,9 +32,9 @@ namespace BibleNote.Tests.Analytics
         }
 
         //[TestMethod]        
-        public void ParseOneNote_TestCurrentPage()
+        public void TestCurrentPage()
         {   
-            var log = ServiceProvider.GetService<ILogger>();
+            var log = ServiceProvider.GetService<ILogger<OneNoteDocumentProviderTests>>();
 
             using (var oneNoteApp = new OneNoteAppWrapper(log))
             {

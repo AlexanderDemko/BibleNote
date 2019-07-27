@@ -28,9 +28,9 @@ namespace BibleNote.Tests.Analytics
         }
 
         [TestMethod]
-        public void ParseOneNote_Test1()
+        public void Test1()
         {
-            TestFile(@"..\..\..\TestData\OneNote_1.html", 
+            TestFile(@"..\..\..\TestData\OneNote_1.html",
                 new string[] { "Ин 1:1" },
                 new string[] { "Исх 12:27" },
                 new string[] { "1Кор 5:7" },
@@ -44,7 +44,7 @@ namespace BibleNote.Tests.Analytics
         }
 
         [TestMethod]
-        public void ParseOneNote_Test2()
+        public void Test2()
         {
             TestFile(@"..\..\..\TestData\OneNote_2.html",
                new string[] { "Ин 1" },
@@ -57,7 +57,7 @@ namespace BibleNote.Tests.Analytics
         }
 
         [TestMethod]
-        public void ParseOneNote_Test3()
+        public void Test3()
         {
             TestFile(@"..\..\..\TestData\OneNote_3.html", 
                new string[] { "1Пет 3:3" },
