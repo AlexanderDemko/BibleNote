@@ -57,13 +57,13 @@ namespace BibleNote.Tests.Analytics
                 .Where(v => v.DocumentParagraph.DocumentId == this.document.DocumentId)
                 .Count()
                 .Should()
-                .Be(18);
+                .Be(19);
 
             this.AnalyticsContext.DocumentParagraphRepository
                 .Where(p => p.DocumentId == this.document.DocumentId)
                 .Count()
                 .Should()
-                .Be(10);            
+                .Be(11);            
         }        
     }
 }
