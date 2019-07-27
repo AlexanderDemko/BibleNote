@@ -83,7 +83,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
                 {                    
                     var verseNode = FindNodeAndMoveVerseTextInOneNodeIfNotReadonly(parseString, verseEntry, ref skipNodes);
 
-                    if (!_documentProvider.IsReadonly && !_documentProvider.IsReadonlyElement(_docParseContext.CurrentHierarchy.ElementType))
+                    if (!_documentProvider.IsReadonly && !parseString.IsReadonly)
                     {
                         if (!NodeIsLink(verseNode.NodeEntry.Node.GetParentNode()))
                             InsertVerseLink(verseNode, verseEntry);
@@ -169,7 +169,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
                             result.StartIndex = verseEntryInfo.StartIndex - nodeEntry.StartIndex;
                             result.EndIndex = (nodeEntry.EndIndex >= verseEntryInfo.EndIndex ? verseEntryInfo.EndIndex : nodeEntry.EndIndex) - nodeEntry.StartIndex;
 
-                            if (_documentProvider.IsReadonly || _documentProvider.IsReadonlyElement(_docParseContext.CurrentHierarchy.ElementType))
+                            if (_documentProvider.IsReadonly || parseString.IsReadonly)
                                 break;
 
                             if (nodeEntry.EndIndex >= verseEntryInfo.EndIndex)

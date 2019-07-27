@@ -46,6 +46,8 @@ namespace BibleNote.Analytics.Services.VerseParsing.Contracts
 
         bool IsValuableTextNode(IXmlTextNodeMode textNodeMode);
 
-        IXmlNode GetTextNode();        
+        IXmlNode GetTextNode();
+
+        bool IsReadonly { get; }
     }    
 }

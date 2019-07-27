@@ -11,8 +11,6 @@ namespace BibleNote.Tests.Analytics.Mocks
         public string GetVersePointerLink(VersePointer versePointer)
         {
             return string.Format($"<a href='bnVerse:{versePointer}'>{versePointer.GetOriginalVerseString()}</a>");
-        }
-
-        public bool IsReadonlyElement(ElementType elementType) => false;
+        }        
     }
 }

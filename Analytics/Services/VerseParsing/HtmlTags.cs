@@ -5,10 +5,11 @@ namespace BibleNote.Analytics.Services.VerseParsing
     {
         public const string Br = "br";
         public const string Table = "table";
-        public const string TableRow = "tr";        
+        public const string TableRow = "tr";
+        public const string A = "a";
         public const string Nbsp = "&nbsp;";        
         public const string Head = "head";
-        public const string Html = "html";
+        public const string Html = "html";        
 
         public static readonly string[] TableCells = new string[] { "td", "th" };
         public static readonly string[] ListElements = new string[] { "li", "dt" };

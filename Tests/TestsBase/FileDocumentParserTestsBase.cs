@@ -17,8 +17,12 @@ namespace BibleNote.Tests.Analytics.TestsBase
 
             this.tempFolderPath = Path.Combine(Environment.CurrentDirectory, tempFolderName);
             if (Directory.Exists(this.tempFolderPath))
-                Directory.Delete(this.tempFolderPath, true);
-            Directory.CreateDirectory(this.tempFolderPath);
+            {
+                foreach (var file in Directory.GetFiles(this.tempFolderPath))
+                    File.Delete(file);
+            }
+            else
+                Directory.CreateDirectory(this.tempFolderPath);
         }
 
         public virtual void Cleanup()

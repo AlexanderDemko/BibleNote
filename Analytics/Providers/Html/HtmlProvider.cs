@@ -7,6 +7,7 @@ using BibleNote.Analytics.Services.DocumentProvider.Contracts;
 using BibleNote.Analytics.Providers.Html.Contracts;
 using BibleNote.Analytics.Services.VerseParsing.Models;
 using BibleNote.Analytics.Services.VerseParsing.Models.ParseResult;
+using System;
 
 namespace BibleNote.Analytics.Providers.Html
 {
@@ -24,15 +25,10 @@ namespace BibleNote.Analytics.Providers.Html
             _htmlDocumentConnector = htmlDocumentConnector;
         }
 
-        public bool IsReadonlyElement(ElementType elementType)
-        {
-            return elementType == ElementType.Title;                
-        }
-
         public string GetVersePointerLink(VersePointer versePointer)
         {
             return string.Format($"<a href='bnVerse:{versePointer}'>{versePointer.GetOriginalVerseString()}</a>");
-        }        
+        }
 
         public DocumentParseResult ParseDocument(IDocumentId documentId)
         {
@@ -52,25 +48,49 @@ namespace BibleNote.Analytics.Providers.Html
             return result;
         }
 
-        private void ParseNode(IDocumentParser docParser, HtmlNode node)
+        private void ParseNode(IDocumentParser docParser, HtmlNode node, bool isReadonly = false)
         {
             var state = GetParagraphType(node);
             if (state.IsHierarchical())
             {
                 using (docParser.ParseHierarchyElement(state))
                 {
-                    foreach (var childNode in node.ChildNodes)
+                    if (IsHerarchy(node))
                     {
-                        ParseNode(docParser, childNode);
+                        foreach (var childNode in node.ChildNodes)
+                        {
+                            ParseNode(docParser, childNode, state == ElementType.Title || isReadonly);
+                        }
+                    }
+                    else
+                    {
+                        ParseParagraph(docParser, node, state == ElementType.Title || isReadonly);
                     }
                 }
             }
             else
             {
-                var nodeWrapper = new HtmlNodeWrapper(node);
-                if (node.HasChildNodes || nodeWrapper.IsValuableTextNode(IXmlTextNodeMode.Exact))
-                    docParser.ParseParagraph(nodeWrapper);
+                ParseParagraph(docParser, node, isReadonly);
             }
+        }
+
+        private static void ParseParagraph(IDocumentParser docParser, HtmlNode node, bool isReadonly)
+        {
+            var nodeWrapper = new HtmlNodeWrapper(node, isReadonly);
+            if (node.HasChildNodes || nodeWrapper.IsValuableTextNode(IXmlTextNodeMode.Exact))
+            {
+                docParser.ParseParagraph(nodeWrapper);
+            }
+        }
+
+        private bool IsHerarchy(HtmlNode node)
+        {
+            var result = node.ChildNodes.Any(n =>
+                n.NodeType != HtmlNodeType.Text
+                && n.NodeType != HtmlNodeType.Comment
+                && n.Name != HtmlTags.A);            
+
+            return result;
         }
 
         private ElementType GetParagraphType(HtmlNode node)
@@ -80,11 +100,11 @@ namespace BibleNote.Analytics.Providers.Html
                 case HtmlTags.Table:
                     return ElementType.Table;
                 case HtmlTags.TableRow:
-                    return ElementType.TableRow;                
+                    return ElementType.TableRow;
                 case HtmlTags.Head:
                     if (node.ParentNode?.Name == HtmlTags.Html)
                         return ElementType.Title;
-                    break;                
+                    break;
             }
 
             if (HtmlTags.BlockElements.Contains(node.Name))

@@ -13,12 +13,7 @@ namespace BibleNote.Analytics.Providers.Word
         public string GetVersePointerLink(VersePointer versePointer)
         {
             throw new NotImplementedException();
-        }
-
-        public bool IsReadonlyElement(ElementType elementType)
-        {
-            throw new NotImplementedException();
-        }
+        }        
 
         public DocumentParseResult ParseDocument(IDocumentId documentId)
         {

@@ -23,9 +23,7 @@ namespace BibleNote.Analytics.Providers.OneNote.Services
         {
             _documentParserFactory = documentParserFactory;
             _oneNoteDocumentConnector = oneNoteDocumentConnector;
-        }
-
-        public bool IsReadonlyElement(ElementType elementType) => false;        
+        }        
 
         public string GetVersePointerLink(VersePointer versePointer)
         {

@@ -17,9 +17,10 @@ namespace BibleNote.Analytics.Providers.Html
             _node = htmlDoc.DocumentNode;
         }
 
-        public HtmlNodeWrapper(HtmlNode node)
+        public HtmlNodeWrapper(HtmlNode node, bool isReadonly = false)
         {
             _node = node;
+            this.IsReadonly = isReadonly;
         }
 
         public string InnerXml { get { return _node.InnerHtml; } set { _node.InnerHtml = value; } }
@@ -49,6 +50,8 @@ namespace BibleNote.Analytics.Providers.Html
                 }
             }
         }
+
+        public bool IsReadonly { get; private set; }
 
         public IXmlNode GetParentNode()
         {

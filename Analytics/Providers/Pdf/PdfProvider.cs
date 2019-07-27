@@ -15,11 +15,6 @@ namespace BibleNote.Analytics.Providers.Pdf
             throw new NotImplementedException();
         }
 
-        public bool IsReadonlyElement(ElementType elementType)
-        {
-            throw new NotImplementedException();
-        }
-
         public DocumentParseResult ParseDocument(IDocumentId documentId)
         {
             throw new NotImplementedException();

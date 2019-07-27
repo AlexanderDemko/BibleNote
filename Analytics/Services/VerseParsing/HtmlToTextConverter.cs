@@ -38,6 +38,8 @@ namespace BibleNote.Analytics.Services.VerseParsing
 
         public List<TextNodeEntry> NodesInfo { get; set; }
 
+        public bool IsReadonly { get; set; }
+
         public TextNodesString()
         {
             NodesInfo = new List<TextNodeEntry>();
@@ -82,6 +84,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
             }
 
             result.Value = sb.ToString();
+            result.IsReadonly = node.IsReadonly;
             return result;
         }
 
