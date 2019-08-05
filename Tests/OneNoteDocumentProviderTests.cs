@@ -7,13 +7,15 @@ using BibleNote.Analytics.Providers.OneNote.Navigation;
 using BibleNote.Analytics.Services.DocumentProvider.Contracts;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
+using BibleNote.Analytics.Services.VerseProcessing.Contracts;
 
 namespace BibleNote.Tests.Analytics
 {
     [TestClass]
-    public class OneNoteDocumentProviderTests : DocumentParserTestsBase
+    public class OneNoteDocumentProviderTests : DbTestsBase
     {
         private IDocumentProvider _documentProvider;
+        private IDocumentParseResultProcessing documentParseResultProcessing;
 
         [TestInitialize]
         public void Init()
@@ -23,6 +25,11 @@ namespace BibleNote.Tests.Analytics
                 .AddScoped<IDocumentProvider, OneNoteProvider>());
 
             _documentProvider = ServiceProvider.GetService<IDocumentProvider>();
+
+            this.documentParseResultProcessing = ServiceProvider.GetServices<IDocumentParseResultProcessing>()
+               .OrderBy(rp => rp.Order)
+               .Skip(1)
+               .First();
         }
 
         [TestCleanup]
@@ -31,7 +38,7 @@ namespace BibleNote.Tests.Analytics
 
         }
 
-        //[TestMethod]        
+        [TestMethod]        
         public void TestCurrentPage()
         {   
             var log = ServiceProvider.GetService<ILogger<OneNoteDocumentProviderTests>>();
@@ -42,8 +49,9 @@ namespace BibleNote.Tests.Analytics
 
                 if (!string.IsNullOrEmpty(currentPageId))
                 {
-                    var parseResult = _documentProvider.ParseDocument(new OneNoteDocumentId(0, currentPageId));
-                    var i = parseResult.GetAllParagraphParseResults().Count();
+                    var documentId = new OneNoteDocumentId(0, currentPageId);
+                    var parseResult = _documentProvider.ParseDocument(documentId);
+                    this.documentParseResultProcessing.Process(documentId.DocumentId, parseResult);
                 }
             }
         }

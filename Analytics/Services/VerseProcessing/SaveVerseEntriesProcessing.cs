@@ -9,11 +9,6 @@ namespace BibleNote.Analytics.Services.VerseProcessing
 {
     class SaveVerseEntriesProcessing : IDocumentParseResultProcessing
     {
-        private readonly IDbContext analyticsContext;
-        private DocumentParseResult documentResult;
-        private int documentId;        
-        private int insertedRows = 0;
-
         public int Order => 0;
 
         public SaveVerseEntriesProcessing(IDbContext analyticsContext)
@@ -23,8 +18,7 @@ namespace BibleNote.Analytics.Services.VerseProcessing
 
         public void Process(int documentId, DocumentParseResult documentResult)
         {
-            this.documentId = documentId;
-            this.documentResult = documentResult;
+            this.documentId = documentId;            
             
             RemovePreviousResult();
             ProcessHierarchy(documentResult.RootHierarchyResult);
@@ -32,8 +26,15 @@ namespace BibleNote.Analytics.Services.VerseProcessing
             this.analyticsContext.SaveChanges();
         }
 
+        private readonly IDbContext analyticsContext;        
+        private int documentId;
+        private int insertedRows = 0;
+
         private void RemovePreviousResult()
-        {   
+        {
+            this.analyticsContext.VerseRelationRepository.ToTrackingRepository()
+                .Delete(v => v.Verse.DocumentParagraph.DocumentId == this.documentId);
+
             this.analyticsContext.VerseEntryRepository.ToTrackingRepository()
                 .Delete(v => v.DocumentParagraph.DocumentId == this.documentId);
 

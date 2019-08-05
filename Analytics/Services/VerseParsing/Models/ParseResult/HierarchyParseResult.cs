@@ -51,5 +51,10 @@ namespace BibleNote.Analytics.Services.VerseParsing.Models.ParseResult
 
             return ChildHierarchyResults.FirstOrDefault()?.GetValuableHierarchyResult();
         }
+
+        public override string ToString()
+        {
+            return this.ElementType.ToString();
+        }
     }
 }
