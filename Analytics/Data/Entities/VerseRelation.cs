@@ -4,9 +4,11 @@
     {
         public int VerseRelationId { get; set; }
 
-        public int VerseId { get; set; }
+        public int VerseEntryId { get; set; }
 
-        public int RelativeVerseId { get; set; }        
+        так здесь VerseEntryId или VerseId??
+
+        public int RelativeVerseEntryId { get; set; }        
 
         public decimal RelationWeight { get; set; }        
 

@@ -195,7 +195,7 @@ namespace BibleNote.Analytics.Persistence.Repositories
             dbSet.Add(entity);
         }
 
-        public void AddRange(params T[] entities)
+        public void AddRange(IEnumerable<T> entities)
         {
             dbSet.AddRange(entities);
         }

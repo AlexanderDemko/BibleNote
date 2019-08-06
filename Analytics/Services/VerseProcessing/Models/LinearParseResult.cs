@@ -1,8 +1,5 @@
 ﻿using BibleNote.Analytics.Services.VerseParsing.Models.ParseResult;
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 namespace BibleNote.Analytics.Services.VerseProcessing.Models
 {
@@ -10,27 +7,27 @@ namespace BibleNote.Analytics.Services.VerseProcessing.Models
     {
         public int Depth { get; set; }
 
-        ParagraphParseResult ParagraphParseResult { get; set; }
+        public ParagraphParseResult ParagraphResult { get; set; }        
 
-        public ParagraphParseResultExt(ParagraphParseResult paragraphParseResult, int depth)
+        public ParagraphParseResultExt(ParagraphParseResult paragraphResult, int depth)
         {
-            this.ParagraphParseResult = paragraphParseResult;
+            this.ParagraphResult = paragraphResult;
             this.Depth = depth;
-        }
+        }        
 
         public override string ToString()
         {
-            return $"{Depth} - {ParagraphParseResult}";
+            return $"{Depth} - {ParagraphResult}";
         }
     }
 
     public class LinearParseResult
     {
-        public List<ParagraphParseResultExt> Paragraphs { get; set; }
+        public LinkedList<ParagraphParseResultExt> Paragraphs { get; set; }
 
         public LinearParseResult()
         {
-            Paragraphs = new List<ParagraphParseResultExt>();
+            Paragraphs = new LinkedList<ParagraphParseResultExt>();
         }
 
         public static LinearParseResult FromHierarchyParseResult(HierarchyParseResult hierarchyResult)
@@ -44,8 +41,8 @@ namespace BibleNote.Analytics.Services.VerseProcessing.Models
 
         private static void AddParagraphsFromHierarchy(HierarchyParseResult hierarchyResult, LinearParseResult result, int depth)
         {
-            result.Paragraphs.AddRange(
-                hierarchyResult.ParagraphResults.Select(p => new ParagraphParseResultExt(p, depth)));
+            foreach (var paragraph in hierarchyResult.ParagraphResults)
+                result.Paragraphs.AddLast(new ParagraphParseResultExt(paragraph, depth));
 
             foreach (var childHierarchy in hierarchyResult.ChildHierarchyResults)
                 AddParagraphsFromHierarchy(childHierarchy, result, depth + 1);

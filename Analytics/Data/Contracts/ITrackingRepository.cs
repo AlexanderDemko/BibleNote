@@ -26,7 +26,7 @@ namespace BibleNote.Analytics.Data.Contracts
 
         void Add(T entity);
 
-        void AddRange(params T[] entities);
+        void AddRange(IEnumerable<T> entities);
 
         void Update(T entity);
 
