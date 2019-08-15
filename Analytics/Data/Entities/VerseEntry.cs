@@ -2,7 +2,7 @@
 {
     public class VerseEntry
     {
-        public int VerseEntryId { get; set; }
+        public int Id { get; set; }
 
         public long VerseId { get; set; }
         

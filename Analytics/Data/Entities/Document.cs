@@ -4,7 +4,7 @@ namespace BibleNote.Analytics.Data.Entities
 {    
     public class Document
     {     
-        public int DocumentId { get; set; }
+        public int Id { get; set; }
      
         public string Name { get; set; }
         

@@ -51,16 +51,16 @@ namespace BibleNote.Tests.Analytics
         public void Test1()
         {
             var parseResult = this.documentProvider.ParseDocument(new FileDocumentId(0, @"..\..\..\TestData\Html_CheckFullPage.html", true));
-            this.documentParseResultProcessing.Process(this.document.DocumentId, parseResult);
+            this.documentParseResultProcessing.Process(this.document.Id, parseResult);
 
             this.AnalyticsContext.VerseEntryRepository
-                .Where(v => v.DocumentParagraph.DocumentId == this.document.DocumentId)
+                .Where(v => v.DocumentParagraph.DocumentId == this.document.Id)
                 .Count()
                 .Should()
                 .Be(19);
 
             this.AnalyticsContext.DocumentParagraphRepository
-                .Where(p => p.DocumentId == this.document.DocumentId)
+                .Where(p => p.DocumentId == this.document.Id)
                 .Count()
                 .Should()
                 .Be(11);            

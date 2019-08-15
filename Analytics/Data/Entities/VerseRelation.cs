@@ -1,19 +1,38 @@
-﻿namespace BibleNote.Analytics.Data.Entities
+﻿using BibleNote.Analytics.Common.Contracts;
+using System;
+
+namespace BibleNote.Analytics.Data.Entities
 {
-    public class VerseRelation
+    public class VerseRelation : ICloneable<VerseRelation>
     {
-        public int VerseRelationId { get; set; }
+        public int Id { get; set; }
 
-        public int VerseEntryId { get; set; }
+        public long VerseId { get; set; }
 
-        так здесь VerseEntryId или VerseId??
+        public long RelativeVerseId { get; set; }
 
-        public int RelativeVerseEntryId { get; set; }        
+        public int DocumentParagraphId { get; set; }
 
-        public decimal RelationWeight { get; set; }        
+        public int? RelativeDocumentParagraphId { get; set; }
 
-        public virtual VerseEntry Verse { get; set; }
+        public decimal RelationWeight { get; set; }
 
-        public virtual VerseEntry RelativeVerse { get; set; }
+        public virtual DocumentParagraph DocumentParagraph { get; set; }
+
+        public virtual DocumentParagraph RelativeDocumentParagraph { get; set; }
+
+        public VerseRelation Clone()
+        {
+            return new VerseRelation()
+            {
+                VerseId = VerseId,
+                RelativeVerseId = RelativeVerseId,
+                DocumentParagraphId = DocumentParagraphId,
+                DocumentParagraph = DocumentParagraph,
+                RelativeDocumentParagraphId = RelativeDocumentParagraphId,
+                RelativeDocumentParagraph = RelativeDocumentParagraph,
+                RelationWeight = RelationWeight
+            };
+        }
     }
 }

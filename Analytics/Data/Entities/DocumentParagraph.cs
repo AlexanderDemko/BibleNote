@@ -2,7 +2,7 @@
 {
     public class DocumentParagraph
     {
-        public int DocumentParagraphId { get; set; }
+        public int Id { get; set; }
 
         public string Path { get; set; }        
 

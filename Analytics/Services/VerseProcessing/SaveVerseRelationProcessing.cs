@@ -26,7 +26,7 @@ namespace BibleNote.Analytics.Services.VerseProcessing
 
             ProcessLinearResult(linearResult);
 
-            this.analyticsContext.SaveChanges();
+            //this.analyticsContext.SaveChanges();
         }
 
         private void ProcessLinearResult(LinearParseResult linearResult)
@@ -35,12 +35,28 @@ namespace BibleNote.Analytics.Services.VerseProcessing
             {
                 var paragraphNode = linearResult.Paragraphs.Find(paragraph);
 
+                var paragraphVerseRelations = FindParagraphVerseRelations(paragraphNode);
+
                 for (var currentVerseIndex = 0; currentVerseIndex < paragraph.ParagraphResult.VerseEntries.Count; currentVerseIndex++)
                 {
                     ProcessVerse(paragraphNode, currentVerseIndex);
 
+                    var verseRelations = paragraphVerseRelations.Select(vr =>
+                    {
+                        var verseRelation = vr.Clone();
+                    });
+
+
+                    foreach (var verseRelation in paragraphVerseRelations)
+                    {   
+                    }
                 }
             }            
+        }
+
+        private IEnumerable<VerseRelation> FindParagraphVerseRelations(LinkedListNode<ParagraphParseResultExt> paragraphNode)
+        {
+            throw new NotImplementedException();
         }
 
         private void ProcessVerse(LinkedListNode<ParagraphParseResultExt> paragraphNode, int currentVerseIndex)
@@ -57,10 +73,12 @@ namespace BibleNote.Analytics.Services.VerseProcessing
                         {
                             VerseId = v.GetVerseId(),
                             RelativeVerseId = rv.GetVerseId(),
+                            DocumentParagraph = paragraphNode.Value.ParagraphResult.Paragraph,                            
                             RelationWeight = GetWithinParagraphRelationWeight(verseEntry, relativeVerseEntry)
                         });
                 });
                 this.analyticsContext.VerseRelationRepository.ToTrackingRepository().AddRange(verseRelations);
+                this.analyticsContext.SaveChanges();
             }
         }
 

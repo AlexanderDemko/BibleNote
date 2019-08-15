@@ -33,7 +33,7 @@ namespace BibleNote.Analytics.Services.VerseProcessing
         private void RemovePreviousResult()
         {
             this.analyticsContext.VerseRelationRepository.ToTrackingRepository()
-                .Delete(v => v.Verse.DocumentParagraph.DocumentId == this.documentId);
+                .Delete(v => v.DocumentParagraph.DocumentId == this.documentId);
 
             this.analyticsContext.VerseEntryRepository.ToTrackingRepository()
                 .Delete(v => v.DocumentParagraph.DocumentId == this.documentId);
@@ -46,13 +46,13 @@ namespace BibleNote.Analytics.Services.VerseProcessing
         {
             foreach (var paragraphResult in hierarchyResult.ParagraphResults)
             {
-                var paragraph = new DocumentParagraph()
+                paragraphResult.Paragraph = new DocumentParagraph()
                 {
                     DocumentId = this.documentId,
                     Index = paragraphResult.ParagraphIndex,
                     Path = paragraphResult.ParagraphPath
                 };
-                this.analyticsContext.DocumentParagraphRepository.ToTrackingRepository().Add(paragraph);
+                this.analyticsContext.DocumentParagraphRepository.ToTrackingRepository().Add(paragraphResult.Paragraph);                 
 
                 foreach (var verseEntry in paragraphResult.VerseEntries)
                 {
@@ -65,7 +65,7 @@ namespace BibleNote.Analytics.Services.VerseProcessing
                         this.analyticsContext.VerseEntryRepository.ToTrackingRepository()
                             .Add(new VerseEntry()
                             {
-                                DocumentParagraph = paragraph,
+                                DocumentParagraph = paragraphResult.Paragraph,
                                 Suffix = suffix,
                                 VerseId = verse.GetVerseId(),
                                 Weight = Math.Round(1M / verseEntry.VersePointer.SubVerses.VersesCount, 2)

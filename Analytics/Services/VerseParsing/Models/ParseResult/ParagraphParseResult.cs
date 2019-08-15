@@ -1,4 +1,5 @@
-﻿using BibleNote.Analytics.Services.ModulesManager.Models;
+﻿using BibleNote.Analytics.Data.Entities;
+using BibleNote.Analytics.Services.ModulesManager.Models;
 using BibleNote.Analytics.Services.VerseParsing.Contracts.ParseResult;
 using System.Collections.Generic;
 using System.Linq;
@@ -39,6 +40,8 @@ namespace BibleNote.Analytics.Services.VerseParsing.Models.ParseResult
         public string Text { get; set; }        
 
         public int TextLength { get { return Text.Length; } }
+
+        public DocumentParagraph Paragraph { get; set; }
 
         public List<VerseEntry> VerseEntries { get; set; }
 
