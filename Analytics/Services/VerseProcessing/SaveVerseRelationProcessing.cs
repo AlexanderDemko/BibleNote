@@ -1,6 +1,5 @@
 ﻿using BibleNote.Analytics.Data.Contracts;
 using BibleNote.Analytics.Data.Entities;
-using BibleNote.Analytics.Services.VerseParsing.Models;
 using BibleNote.Analytics.Services.VerseParsing.Models.ParseResult;
 using BibleNote.Analytics.Services.VerseProcessing.Contracts;
 using BibleNote.Analytics.Services.VerseProcessing.Models;
@@ -65,11 +64,40 @@ namespace BibleNote.Analytics.Services.VerseProcessing
                     var verseRelation = vr.Clone();
                     verseRelation.VerseId = v.GetVerseId();
                     return verseRelation;
-                });                    
+                });
             });
         }
 
         private IEnumerable<VerseRelation> FindParagraphVerseRelations(LinkedListNode<ParagraphParseResultExt> paragraphNode)
+        {
+            var result = new List<VerseRelation>();
+
+            var nextNode = paragraphNode.Next;
+            while (nextNode != null)
+            {
+                var relationWeight = GetParagraphsWeight(paragraphNode.Value, nextNode.Value);
+
+                result.AddRange(nextNode.Value.ParagraphResult.VerseEntries.SelectMany(ve =>
+                {
+                    return ve.VersePointer.SubVerses.Verses.Select(v =>
+                    {
+                        return new VerseRelation()
+                        {
+                            RelativeVerseId = v.GetVerseId(),
+                            DocumentParagraph = paragraphNode.Value.ParagraphResult.Paragraph,
+                            RelativeDocumentParagraph = nextNode.Value.ParagraphResult.Paragraph,
+                            RelationWeight = relationWeight
+                        };
+                    });
+                }));
+
+                nextNode = paragraphNode.Next;
+            }
+
+            return result;
+        }
+
+        private decimal GetParagraphsWeight(ParagraphParseResultExt node, ParagraphParseResultExt relationNode)
         {
             throw new NotImplementedException();
         }
