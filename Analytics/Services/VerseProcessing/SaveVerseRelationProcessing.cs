@@ -1,5 +1,6 @@
 ﻿using BibleNote.Analytics.Data.Contracts;
 using BibleNote.Analytics.Data.Entities;
+using BibleNote.Analytics.Services.VerseParsing.Models;
 using BibleNote.Analytics.Services.VerseParsing.Models.ParseResult;
 using BibleNote.Analytics.Services.VerseProcessing.Contracts;
 using BibleNote.Analytics.Services.VerseProcessing.Models;
@@ -11,26 +12,29 @@ namespace BibleNote.Analytics.Services.VerseProcessing
 {
     class SaveVerseRelationProcessing : IDocumentParseResultProcessing
     {
-        public int Order => 1;        
+        public int Order => 1;
 
         public SaveVerseRelationProcessing(IDbContext analyticsContext)
         {
             this.analyticsContext = analyticsContext;
         }
 
-        readonly IDbContext analyticsContext;        
+        readonly IDbContext analyticsContext;
 
         public void Process(int documentId, DocumentParseResult documentResult)
         {
             var linearResult = LinearParseResult.FromHierarchyParseResult(documentResult.RootHierarchyResult);
 
-            ProcessLinearResult(linearResult);
+            var verseRelations = ProcessLinearResult(linearResult);
 
-            //this.analyticsContext.SaveChanges();
+            this.analyticsContext.VerseRelationRepository.ToTrackingRepository().AddRange(verseRelations);
+            this.analyticsContext.SaveChanges();    // todo: перевести на BulkInsert
         }
 
-        private void ProcessLinearResult(LinearParseResult linearResult)
+        private IEnumerable<VerseRelation> ProcessLinearResult(LinearParseResult linearResult)
         {
+            var verseRelations = new List<VerseRelation>();
+
             foreach (var paragraph in linearResult.Paragraphs)
             {
                 var paragraphNode = linearResult.Paragraphs.Find(paragraph);
@@ -39,19 +43,30 @@ namespace BibleNote.Analytics.Services.VerseProcessing
 
                 for (var currentVerseIndex = 0; currentVerseIndex < paragraph.ParagraphResult.VerseEntries.Count; currentVerseIndex++)
                 {
-                    ProcessVerse(paragraphNode, currentVerseIndex);
+                    var verseEntry = paragraphNode.Value.ParagraphResult.VerseEntries[currentVerseIndex];
 
-                    var verseRelations = paragraphVerseRelations.Select(vr =>
-                    {
-                        var verseRelation = vr.Clone();
-                    });
-
-
-                    foreach (var verseRelation in paragraphVerseRelations)
-                    {   
-                    }
+                    verseRelations.AddRange(ProcessVerseEntryInsideParagraph(verseEntry, currentVerseIndex, paragraphNode));
+                    verseRelations.AddRange(ProcessVerseEntryInsideAllDocument(verseEntry, paragraphNode, paragraphVerseRelations));
                 }
-            }            
+            }
+
+            return verseRelations;
+        }
+
+        private IEnumerable<VerseRelation> ProcessVerseEntryInsideAllDocument(
+            VerseParsing.Models.VerseEntry verseEntry,
+            LinkedListNode<ParagraphParseResultExt> paragraphNode,
+            IEnumerable<VerseRelation> paragraphVerseRelations)
+        {
+            return paragraphVerseRelations.SelectMany(vr =>
+            {
+                return verseEntry.VersePointer.SubVerses.Verses.Select(v =>
+                {
+                    var verseRelation = vr.Clone();
+                    verseRelation.VerseId = v.GetVerseId();
+                    return verseRelation;
+                });                    
+            });
         }
 
         private IEnumerable<VerseRelation> FindParagraphVerseRelations(LinkedListNode<ParagraphParseResultExt> paragraphNode)
@@ -59,12 +74,15 @@ namespace BibleNote.Analytics.Services.VerseProcessing
             throw new NotImplementedException();
         }
 
-        private void ProcessVerse(LinkedListNode<ParagraphParseResultExt> paragraphNode, int currentVerseIndex)
+        private IEnumerable<VerseRelation> ProcessVerseEntryInsideParagraph(
+            VerseParsing.Models.VerseEntry verseEntry,
+            int currentVerseIndex,
+            LinkedListNode<ParagraphParseResultExt> paragraphNode)
         {
-            var verseEntry = paragraphNode.Value.ParagraphResult.VerseEntries[currentVerseIndex];
+            var result = new List<VerseRelation>();
 
             for (var i = currentVerseIndex + 1; i < paragraphNode.Value.ParagraphResult.VerseEntries.Count; i++)
-            {                
+            {
                 var verseRelations = verseEntry.VersePointer.SubVerses.Verses.SelectMany(v =>
                 {
                     var relativeVerseEntry = paragraphNode.Value.ParagraphResult.VerseEntries[i];
@@ -73,13 +91,14 @@ namespace BibleNote.Analytics.Services.VerseProcessing
                         {
                             VerseId = v.GetVerseId(),
                             RelativeVerseId = rv.GetVerseId(),
-                            DocumentParagraph = paragraphNode.Value.ParagraphResult.Paragraph,                            
+                            DocumentParagraph = paragraphNode.Value.ParagraphResult.Paragraph,
                             RelationWeight = GetWithinParagraphRelationWeight(verseEntry, relativeVerseEntry)
                         });
                 });
-                this.analyticsContext.VerseRelationRepository.ToTrackingRepository().AddRange(verseRelations);
-                this.analyticsContext.SaveChanges();
+                result.AddRange(verseRelations);
             }
+
+            return result;
         }
 
         private decimal GetWithinParagraphRelationWeight(VerseParsing.Models.VerseEntry verseEntry, VerseParsing.Models.VerseEntry relativeVerseEntry)
