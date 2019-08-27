@@ -8,14 +8,18 @@ using BibleNote.Analytics.Services.DocumentProvider.Contracts;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using BibleNote.Analytics.Services.VerseProcessing.Contracts;
+using System.Diagnostics;
+using System;
+using BibleNote.Analytics.Domain.Entities;
 
 namespace BibleNote.Tests.Analytics
 {
     [TestClass]
     public class OneNoteDocumentProviderTests : DbTestsBase
     {
-        private IDocumentProvider _documentProvider;
-        private IDocumentParseResultProcessing documentParseResultProcessing;
+        private IDocumentProvider documentProvider;
+        private IOrderedEnumerable<IDocumentParseResultProcessing> documentParseResultProcessings;
+        private Document document;
 
         [TestInitialize]
         public void Init()
@@ -24,12 +28,18 @@ namespace BibleNote.Tests.Analytics
                 .AddScoped<IOneNoteDocumentConnector, OneNoteDocumentConnector>()
                 .AddScoped<IDocumentProvider, OneNoteProvider>());
 
-            _documentProvider = ServiceProvider.GetService<IDocumentProvider>();
+            this.documentProvider = ServiceProvider.GetService<IDocumentProvider>();
+            this.documentParseResultProcessings = ServiceProvider.GetServices<IDocumentParseResultProcessing>()
+                .OrderBy(rp => rp.Order);
 
-            this.documentParseResultProcessing = ServiceProvider.GetServices<IDocumentParseResultProcessing>()
-               .OrderBy(rp => rp.Order)
-               .Skip(1)
-               .First();
+            this.document = this.AnalyticsContext.DocumentRepository.FirstOrDefault();
+            if (this.document == null)
+            {
+                var folder = new DocumentFolder() { Name = "Temp", Path = "Test", NavigationProviderName = "Html" };
+                this.document = new Document() { Name = "Temp", Path = "Test", Folder = folder };
+                this.AnalyticsContext.DocumentRepository.ToTrackingRepository().Add(document);
+                this.AnalyticsContext.SaveChanges();
+            }
         }
 
         [TestCleanup]
@@ -50,8 +60,21 @@ namespace BibleNote.Tests.Analytics
                 if (!string.IsNullOrEmpty(currentPageId))
                 {
                     var documentId = new OneNoteDocumentId(0, currentPageId);
-                    var parseResult = _documentProvider.ParseDocument(documentId);
-                    this.documentParseResultProcessing.Process(documentId.DocumentId, parseResult);
+                    var parseResult = documentProvider.ParseDocument(documentId);
+
+                    var sw = new Stopwatch();
+                    sw.Start();
+
+                    this.documentParseResultProcessings.First().Process(this.document.Id, parseResult);
+
+                    sw.Stop();
+
+                    sw.Restart();
+
+                    this.documentParseResultProcessings.Skip(1).First().Process(this.document.Id, parseResult);
+                    
+                    sw.Stop();
+                    throw new Exception($"Total: {sw.Elapsed.TotalSeconds}");
                 }
             }
         }

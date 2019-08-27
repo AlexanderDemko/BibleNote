@@ -1,4 +1,4 @@
-﻿using BibleNote.Analytics.Data.Entities;
+﻿using BibleNote.Analytics.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 

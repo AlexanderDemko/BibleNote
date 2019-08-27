@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace BibleNote.Analytics.Data.Entities
+namespace BibleNote.Analytics.Domain.Entities
 {    
     public class Document
     {     

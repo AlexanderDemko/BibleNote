@@ -1,4 +1,4 @@
-﻿using BibleNote.Analytics.Data.Entities;
+﻿using BibleNote.Analytics.Domain.Entities;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Linq;
 using Microsoft.EntityFrameworkCore;

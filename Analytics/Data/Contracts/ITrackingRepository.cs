@@ -4,7 +4,7 @@ using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace BibleNote.Analytics.Data.Contracts
+namespace BibleNote.Analytics.Domain.Contracts
 {
     public interface ITrackingRepository<T> : IReadOnlyRepository<T> where T : class
     {

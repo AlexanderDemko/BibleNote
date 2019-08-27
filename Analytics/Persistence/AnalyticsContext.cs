@@ -1,5 +1,5 @@
-﻿using BibleNote.Analytics.Data.Contracts;
-using BibleNote.Analytics.Data.Entities;
+﻿using BibleNote.Analytics.Domain.Contracts;
+using BibleNote.Analytics.Domain.Entities;
 using BibleNote.Analytics.Persistence.Repositories;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -122,12 +122,35 @@ namespace BibleNote.Analytics.Persistence
 
         #endregion
 
-        #region Config
+        #region IBulkUnitOfWork
 
-        private bool customConfiguration = false;
+        public void BulkDelete<T>(IEnumerable<T> items) where T : class
+        {
+            DbContextExtensions.BulkDelete(this, items);
+        }
+
+        public void BulkInsert<T>(IEnumerable<T> items) where T : class
+        {
+            DbContextExtensions.BulkInsert(this, items);
+        }
+
+        public void BulkSaveChanges<T>() where T : class
+        {
+            DbContextExtensions.BulkSaveChanges(this);
+        }
+
+        public void BulkUpdate<T>(IEnumerable<T> items) where T : class
+        {
+            DbContextExtensions.BulkUpdate(this, items);
+        }
+
+        #endregion
+
+        #region Config
+        
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-        {            
-            if (!customConfiguration)
+        {   
+            if (!optionsBuilder.IsConfigured)
             {
                 optionsBuilder.UseSqlite("Data Source=BibleNote.Analytics.db");
             }
@@ -135,8 +158,7 @@ namespace BibleNote.Analytics.Persistence
 
         public AnalyticsContext(DbContextOptions<AnalyticsContext> options)
             : base (options)
-        {
-            this.customConfiguration = true;
+        {   
         }
 
         public AnalyticsContext()            

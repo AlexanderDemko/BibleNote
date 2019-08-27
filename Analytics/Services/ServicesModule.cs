@@ -29,7 +29,7 @@ namespace BibleNote.Analytics.Services
                 .AddScoped<IVerseCorrectionService, VerseCorrectionService>()
                 .AddScoped<IDocumentParserFactory, DocumentParserFactory>()
                 .AddScoped<IDocumentParseResultProcessing, SaveVerseEntriesProcessing>()
-                .AddScoped<IDocumentParseResultProcessing, SaveVerseRelationProcessing>()
+                .AddScoped<IDocumentParseResultProcessing, SaveVerseRelationsProcessing>()
                 .AddTransient<IStringParser, StringParser>()
                 .AddTransient<IParagraphParser, ParagraphParser>()
                 .AddTransient<IDocumentParser, DocumentParser>()

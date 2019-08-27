@@ -13,10 +13,10 @@ using BibleNote.Analytics.Domain.Entities;
 namespace BibleNote.Tests.Analytics
 {
     [TestClass]
-    public class SaveVerseEntriesProcessingTests : DbTestsBase
+    public class SaveVerseRelationsProcessingTests : DbTestsBase
     {
         private IDocumentProvider documentProvider;
-        private IDocumentParseResultProcessing documentParseResultProcessing;        
+        private IOrderedEnumerable<IDocumentParseResultProcessing> documentParseResultProcessings;
         private Document document;
 
         [TestInitialize]
@@ -27,9 +27,8 @@ namespace BibleNote.Tests.Analytics
                 .AddScoped<IDocumentProvider, HtmlProvider>());
 
             this.documentProvider = ServiceProvider.GetService<IDocumentProvider>();
-            this.documentParseResultProcessing = ServiceProvider.GetServices<IDocumentParseResultProcessing>()
-                .OrderBy(rp => rp.Order)
-                .First();
+            this.documentParseResultProcessings = ServiceProvider.GetServices<IDocumentParseResultProcessing>()
+                .OrderBy(rp => rp.Order);                
 
             this.document = this.AnalyticsContext.DocumentRepository.FirstOrDefault();
             if (this.document == null)
@@ -51,7 +50,8 @@ namespace BibleNote.Tests.Analytics
         public void Test1()
         {
             var parseResult = this.documentProvider.ParseDocument(new FileDocumentId(0, @"..\..\..\TestData\Html_CheckFullPage.html", true));
-            this.documentParseResultProcessing.Process(this.document.Id, parseResult);
+            this.documentParseResultProcessings.First().Process(this.document.Id, parseResult);
+            this.documentParseResultProcessings.Skip(1).First().Process(this.document.Id, parseResult);
 
             this.AnalyticsContext.VerseEntryRepository
                 .Where(v => v.DocumentParagraph.DocumentId == this.document.Id)
@@ -67,3 +67,4 @@ namespace BibleNote.Tests.Analytics
         }        
     }
 }
+

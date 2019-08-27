@@ -1,4 +1,4 @@
-﻿using BibleNote.Analytics.Data.Entities;
+﻿using BibleNote.Analytics.Domain.Entities;
 using BibleNote.Analytics.Services.ModulesManager.Models;
 using BibleNote.Analytics.Services.VerseParsing.Contracts.ParseResult;
 using System.Collections.Generic;

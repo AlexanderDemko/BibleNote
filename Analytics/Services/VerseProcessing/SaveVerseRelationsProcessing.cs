@@ -1,19 +1,18 @@
-﻿using BibleNote.Analytics.Data.Contracts;
-using BibleNote.Analytics.Data.Entities;
+﻿using BibleNote.Analytics.Domain.Contracts;
+using BibleNote.Analytics.Domain.Entities;
 using BibleNote.Analytics.Services.VerseParsing.Models.ParseResult;
 using BibleNote.Analytics.Services.VerseProcessing.Contracts;
 using BibleNote.Analytics.Services.VerseProcessing.Models;
-using System;
 using System.Collections.Generic;
 using System.Linq;
 
 namespace BibleNote.Analytics.Services.VerseProcessing
 {
-    class SaveVerseRelationProcessing : IDocumentParseResultProcessing
+    class SaveVerseRelationsProcessing : IDocumentParseResultProcessing
     {
         public int Order => 1;
 
-        public SaveVerseRelationProcessing(IDbContext analyticsContext)
+        public SaveVerseRelationsProcessing(IDbContext analyticsContext)
         {
             this.analyticsContext = analyticsContext;
         }
@@ -23,11 +22,8 @@ namespace BibleNote.Analytics.Services.VerseProcessing
         public void Process(int documentId, DocumentParseResult documentResult)
         {
             var linearResult = LinearParseResult.FromHierarchyParseResult(documentResult.RootHierarchyResult);
-
             var verseRelations = ProcessLinearResult(linearResult);
-
-            this.analyticsContext.VerseRelationRepository.ToTrackingRepository().AddRange(verseRelations);
-            this.analyticsContext.SaveChanges();    // todo: перевести на BulkInsert
+            this.analyticsContext.BulkInsert(verseRelations);
         }
 
         private IEnumerable<VerseRelation> ProcessLinearResult(LinearParseResult linearResult)
@@ -75,7 +71,7 @@ namespace BibleNote.Analytics.Services.VerseProcessing
             var nextNode = paragraphNode.Next;
             while (nextNode != null)
             {
-                var relationWeight = GetParagraphsWeight(paragraphNode.Value, nextNode.Value);
+                var relationWeight = GetParagraphsWeight(paragraphNode, nextNode);
 
                 result.AddRange(nextNode.Value.ParagraphResult.VerseEntries.SelectMany(ve =>
                 {
@@ -85,21 +81,49 @@ namespace BibleNote.Analytics.Services.VerseProcessing
                         {
                             RelativeVerseId = v.GetVerseId(),
                             DocumentParagraph = paragraphNode.Value.ParagraphResult.Paragraph,
+                            DocumentParagraphId = paragraphNode.Value.ParagraphResult.Paragraph.Id,
                             RelativeDocumentParagraph = nextNode.Value.ParagraphResult.Paragraph,
+                            RelativeDocumentParagraphId = nextNode.Value.ParagraphResult.Paragraph.Id,
                             RelationWeight = relationWeight
                         };
                     });
                 }));
 
-                nextNode = paragraphNode.Next;
+                nextNode = nextNode.Next;
             }
 
             return result;
         }
 
-        private decimal GetParagraphsWeight(ParagraphParseResultExt node, ParagraphParseResultExt relationNode)
+        private decimal GetParagraphsWeight(LinkedListNode<ParagraphParseResultExt> node, LinkedListNode<ParagraphParseResultExt> relationNode)
         {
-            throw new NotImplementedException();
+            var minWeight = 0.01M;
+
+            if (relationNode.Value.Depth < node.Value.Depth)
+                return minWeight;
+
+            var result = 0.5M;
+
+            var nextNode = node.Next;
+            while (nextNode != relationNode && result > minWeight)
+            {
+                if (nextNode.Value.Depth >= node.Value.Depth)
+                {
+                    result = result / 2;
+                }
+                else
+                {
+                    result = minWeight;
+                    break;
+                }
+
+                nextNode = nextNode.Next;
+            }
+
+            if (result < minWeight)
+                result = minWeight;
+
+            return result;
         }
 
         private IEnumerable<VerseRelation> ProcessVerseEntryInsideParagraph(
@@ -120,6 +144,9 @@ namespace BibleNote.Analytics.Services.VerseProcessing
                             VerseId = v.GetVerseId(),
                             RelativeVerseId = rv.GetVerseId(),
                             DocumentParagraph = paragraphNode.Value.ParagraphResult.Paragraph,
+                            DocumentParagraphId = paragraphNode.Value.ParagraphResult.Paragraph.Id,
+                            RelativeDocumentParagraph = paragraphNode.Value.ParagraphResult.Paragraph,
+                            RelativeDocumentParagraphId = paragraphNode.Value.ParagraphResult.Paragraph.Id,
                             RelationWeight = GetWithinParagraphRelationWeight(verseEntry, relativeVerseEntry)
                         });
                 });

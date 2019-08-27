@@ -1,5 +1,5 @@
-﻿using BibleNote.Analytics.Data.Contracts;
-using BibleNote.Analytics.Data.Entities;
+﻿using BibleNote.Analytics.Domain.Contracts;
+using BibleNote.Analytics.Domain.Entities;
 using BibleNote.Analytics.Services.ModulesManager.Models;
 using BibleNote.Analytics.Services.VerseParsing.Models.ParseResult;
 using BibleNote.Analytics.Services.VerseProcessing.Contracts;

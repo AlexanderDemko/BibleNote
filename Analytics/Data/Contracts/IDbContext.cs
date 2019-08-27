@@ -1,6 +1,6 @@
-﻿namespace BibleNote.Analytics.Data.Contracts
+﻿namespace BibleNote.Analytics.Domain.Contracts
 {
-    public interface IDbContext: IRepositoryContainer, IUnitOfWork
+    public interface IDbContext: IRepositoryContainer, IUnitOfWork, IBulkUnitOfWork
     {
     }
 }

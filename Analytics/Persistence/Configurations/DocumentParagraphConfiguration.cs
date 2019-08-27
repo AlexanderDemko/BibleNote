@@ -1,6 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using BibleNote.Analytics.Data.Entities;
+using BibleNote.Analytics.Domain.Entities;
 
 namespace BibleNote.Analytics.Persistence.Configurations
 {

@@ -1,4 +1,4 @@
-﻿using BibleNote.Analytics.Data.Contracts;
+﻿using BibleNote.Analytics.Domain.Contracts;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;

@@ -33,9 +33,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Console", "Console\Console.
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Tests", "Tests\Tests.csproj", "{4B58F0E0-E3BB-49F7-A2AC-A9BF77EA4456}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Data", "Analytics\Data\Data.csproj", "{C75A04CC-2356-4311-9D26-AA677A78E90A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Domain", "Analytics\Data\Domain.csproj", "{C75A04CC-2356-4311-9D26-AA677A78E90A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Persistence", "Analytics\Persistence\Persistence.csproj", "{C1E43424-F3A5-480D-8285-A789F694ECC7}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Persistence", "Analytics\Persistence\Persistence.csproj", "{C1E43424-F3A5-480D-8285-A789F694ECC7}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

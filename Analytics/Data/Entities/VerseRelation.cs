@@ -1,7 +1,7 @@
 ﻿using BibleNote.Analytics.Common.Contracts;
 using System;
 
-namespace BibleNote.Analytics.Data.Entities
+namespace BibleNote.Analytics.Domain.Entities
 {
     public class VerseRelation : ICloneable<VerseRelation>
     {
@@ -15,7 +15,18 @@ namespace BibleNote.Analytics.Data.Entities
 
         public int? RelativeDocumentParagraphId { get; set; }
 
-        public decimal RelationWeight { get; set; }
+        private decimal relationWeight;
+        public decimal RelationWeight
+        {
+            get
+            {
+                return relationWeight;
+            }
+            set
+            {
+                relationWeight = Math.Round(value, 4);
+            }
+        }
 
         public virtual DocumentParagraph DocumentParagraph { get; set; }
 
