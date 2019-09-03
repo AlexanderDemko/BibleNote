@@ -29,9 +29,9 @@ The next version of http://BibleNote.pro
       - [ ] OneNote addin
     - [ ] Word support
     - [ ] Pdf support
-  - [ ] DB Storage
-    - [ ] Verse entries processing
-    - [ ] Verse relation processing
+  - [x] DB Storage
+    - [x] Verse entries processing
+    - [x] Verse relation processing
   - [ ] Background service
     - [ ] Automtic tasks
     - [ ] User actions handler
