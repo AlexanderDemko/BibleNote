@@ -9,6 +9,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Services\Services.csproj" />
+    <ProjectReference Include="..\Html\Html.csproj" />
+    <ProjectReference Include="..\Web.DocumentId\Web.DocumentId.csproj" />
   </ItemGroup>
 
 </Project>

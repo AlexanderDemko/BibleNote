@@ -4,6 +4,7 @@ using BibleNote.Analytics.Services.ModulesManager.Models;
 using BibleNote.Analytics.Services.VerseParsing.Models.ParseResult;
 using BibleNote.Analytics.Services.VerseProcessing.Contracts;
 using System;
+using System.Threading;
 
 namespace BibleNote.Analytics.Services.VerseProcessing
 {
@@ -11,34 +12,34 @@ namespace BibleNote.Analytics.Services.VerseProcessing
     {
         public int Order => 0;
 
-        public SaveVerseEntriesProcessing(IDbContext analyticsContext)
+        public SaveVerseEntriesProcessing(ITrackingDbContext analyticsContext)
         {
             this.analyticsContext = analyticsContext;            
         }
 
-        public void Process(int documentId, DocumentParseResult documentResult)
+        public async void Process(int documentId, DocumentParseResult documentResult, CancellationToken cancellationToken = default)
         {
             this.documentId = documentId;            
             
             RemovePreviousResult();
             ProcessHierarchy(documentResult.RootHierarchyResult);
 
-            this.analyticsContext.SaveChanges();
+            await this.analyticsContext.SaveChangesAsync(cancellationToken);
         }
 
-        private readonly IDbContext analyticsContext;        
+        private readonly ITrackingDbContext analyticsContext;        
         private int documentId;
         private int insertedRows = 0;
 
         private void RemovePreviousResult()
         {
-            this.analyticsContext.VerseRelationRepository.ToTrackingRepository()
+            this.analyticsContext.VerseRelationRepository
                 .Delete(v => v.DocumentParagraph.DocumentId == this.documentId);
 
-            this.analyticsContext.VerseEntryRepository.ToTrackingRepository()
+            this.analyticsContext.VerseEntryRepository
                 .Delete(v => v.DocumentParagraph.DocumentId == this.documentId);
 
-            this.analyticsContext.DocumentParagraphRepository.ToTrackingRepository()
+            this.analyticsContext.DocumentParagraphRepository
                 .Delete(p => p.DocumentId == documentId);            
         }
 
@@ -52,7 +53,7 @@ namespace BibleNote.Analytics.Services.VerseProcessing
                     Index = paragraphResult.ParagraphIndex,
                     Path = paragraphResult.ParagraphPath
                 };
-                this.analyticsContext.DocumentParagraphRepository.ToTrackingRepository().Add(paragraphResult.Paragraph);                 
+                this.analyticsContext.DocumentParagraphRepository.Add(paragraphResult.Paragraph);                 
 
                 foreach (var verseEntry in paragraphResult.VerseEntries)
                 {
@@ -62,7 +63,7 @@ namespace BibleNote.Analytics.Services.VerseProcessing
 
                     foreach (var verse in verseEntry.VersePointer.SubVerses.Verses)
                     {
-                        this.analyticsContext.VerseEntryRepository.ToTrackingRepository()
+                        this.analyticsContext.VerseEntryRepository
                             .Add(new VerseEntry()
                             {
                                 DocumentParagraph = paragraphResult.Paragraph,

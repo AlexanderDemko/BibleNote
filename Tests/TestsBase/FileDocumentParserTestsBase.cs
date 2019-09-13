@@ -3,7 +3,7 @@ using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.IO;
-using BibleNote.Analytics.Providers.FileSystem.Navigation;
+using BibleNote.Analytics.Providers.FileSystem.DocumentId;
 
 namespace BibleNote.Tests.Analytics.TestsBase
 {

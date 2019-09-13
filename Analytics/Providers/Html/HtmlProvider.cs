@@ -13,17 +13,16 @@ namespace BibleNote.Analytics.Providers.Html
 {
     public class HtmlProvider : IDocumentProvider
     {
+        public bool IsReadonly { get { return false; } }   // todo: надо дополнительно этот параметр вынести выше - на уровень NavigationProviderInstance        
+
         private readonly IDocumentParserFactory _documentParserFactory;
-
         private readonly IHtmlDocumentConnector _htmlDocumentConnector;
-
-        public bool IsReadonly { get { return false; } }   // todo: надо дополнительно этот параметр вынести выше - на уровень NavigationProviderInstance
 
         public HtmlProvider(IDocumentParserFactory documentParserFactory, IHtmlDocumentConnector htmlDocumentConnector)
         {
             _documentParserFactory = documentParserFactory;
             _htmlDocumentConnector = htmlDocumentConnector;
-        }
+        }        
 
         public string GetVersePointerLink(VersePointer versePointer)
         {

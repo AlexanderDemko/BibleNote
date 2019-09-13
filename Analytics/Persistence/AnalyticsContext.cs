@@ -3,15 +3,12 @@ using BibleNote.Analytics.Domain.Entities;
 using BibleNote.Analytics.Persistence.Repositories;
 using Microsoft.EntityFrameworkCore;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace BibleNote.Analytics.Persistence
 {
-    public partial class AnalyticsContext : DbContext, IDbContext
+    public partial class AnalyticsContext : DbContext, ITrackingDbContext, IReadOnlyDbContext
     {
         public DbSet<Document> Documents { get; set; }
 
@@ -23,133 +20,47 @@ namespace BibleNote.Analytics.Persistence
 
         public DbSet<VerseRelation> VerseRelations { get; set; }
 
-        #region IRepositoryContainer
-        public IReadOnlyRepository<Document> DocumentRepository => new EfRepository<Document>(this);
-        public IReadOnlyRepository<DocumentFolder> DocumentFolderRepository => new EfRepository<DocumentFolder>(this);
-        public IReadOnlyRepository<DocumentParagraph> DocumentParagraphRepository => new EfRepository<DocumentParagraph>(this);
-        public IReadOnlyRepository<VerseEntry> VerseEntryRepository => new EfRepository<VerseEntry>(this);
-        public IReadOnlyRepository<VerseRelation> VerseRelationRepository => new EfRepository<VerseRelation>(this);
+        #region IReadOnlyDbContext
+
+        IReadOnlyRepository<Document> IReadOnlyDbContext.DocumentRepository => new EfRepository<Document>(this, asNoTracking: true);
+        IReadOnlyRepository<DocumentFolder> IReadOnlyDbContext.DocumentFolderRepository => new EfRepository<DocumentFolder>(this, asNoTracking: true);
+        IReadOnlyRepository<DocumentParagraph> IReadOnlyDbContext.DocumentParagraphRepository => new EfRepository<DocumentParagraph>(this, asNoTracking: true);
+        IReadOnlyRepository<VerseEntry> IReadOnlyDbContext.VerseEntryRepository => new EfRepository<VerseEntry>(this, asNoTracking: true);
+        IReadOnlyRepository<VerseRelation> IReadOnlyDbContext.VerseRelationRepository => new EfRepository<VerseRelation>(this, asNoTracking: true);
 
         #endregion
 
-        #region IUnitOfWork
+        #region ITrackingDbContext
 
-        public async Task<IList<T>> ToListAsync<T>(IQueryable<T> query, CancellationToken cancellationToken = default)
-        {
-            var result = await query.ToListAsync(cancellationToken);
-            return result;
-        }
-
-        public IList<T> ToList<T>(IQueryable<T> query)
-        {
-            var result = query.ToList();
-            return result;
-        }
-
-        public async Task<T> SingleAsync<T>(IQueryable<T> query, CancellationToken cancellationToken = default)
-        {
-            var result = await query.SingleAsync(cancellationToken);
-            return result;
-        }
-
-        public T Single<T>(IQueryable<T> query)
-        {
-            var result = query.Single();
-            return result;
-        }
-
-        public async Task<T> SingleOrDefaultAsync<T>(IQueryable<T> query, CancellationToken cancellationToken = default)
-        {
-            var result = await query.SingleOrDefaultAsync(cancellationToken);
-            return result;
-        }
-
-        public T SingleOrDefault<T>(IQueryable<T> query)
-        {
-            var result = query.SingleOrDefault();
-            return result;
-        }
-
-        public async Task<T> FirstAsync<T>(IQueryable<T> query, CancellationToken cancellationToken = default)
-        {
-            var result = await query.FirstAsync(cancellationToken);
-            return result;
-        }
-
-        public T First<T>(IQueryable<T> query)
-        {
-            var result = query.First();
-            return result;
-        }
-
-        public async Task<T> FirstOrDefaultAsync<T>(IQueryable<T> query, CancellationToken cancellationToken = default)
-        {
-            var result = await query.FirstOrDefaultAsync(cancellationToken);
-            return result;
-        }
-
-        public T FirstOrDefault<T>(IQueryable<T> query)
-        {
-            var result = query.FirstOrDefault();
-            return result;
-        }
-
-        public Task<bool> AnyAsync<T>(IQueryable<T> query, CancellationToken cancellationToken = default)
-        {
-            return query.AnyAsync(cancellationToken);
-        }
-
-        public bool Any<T>(IQueryable<T> query)
-        {
-            return query.Any();
-        }
-
-        public Task<int> CountAsync<T>(IQueryable<T> query, CancellationToken cancellationToken = default)
-        {
-            return query.CountAsync(cancellationToken);
-        }
-
-        public int Count<T>(IQueryable<T> query)
-        {
-            return query.Count();
-        }
-
-        public IQueryable<T> Include<T, TProperty>(
-            IQueryable<T> query, Expression<Func<T, TProperty>> path, CancellationToken cancellationToken = default) where T : class
-        {
-            return query.Include(path);
-        }
+        ITrackingRepository<Document> ITrackingDbContext.DocumentRepository => new EfRepository<Document>(this, asNoTracking: false);
+        ITrackingRepository<DocumentFolder> ITrackingDbContext.DocumentFolderRepository => new EfRepository<DocumentFolder>(this, asNoTracking: false);
+        ITrackingRepository<DocumentParagraph> ITrackingDbContext.DocumentParagraphRepository => new EfRepository<DocumentParagraph>(this, asNoTracking: false);
+        ITrackingRepository<VerseEntry> ITrackingDbContext.VerseEntryRepository => new EfRepository<VerseEntry>(this, asNoTracking: false);
+        ITrackingRepository<VerseRelation> ITrackingDbContext.VerseRelationRepository => new EfRepository<VerseRelation>(this, asNoTracking: false);
 
         #endregion
 
-        #region IBulkUnitOfWork
-
-        public void BulkDelete<T>(IEnumerable<T> items) where T : class
+        public async Task DoInTransactionAsync(Func<CancellationToken, Task> action, CancellationToken cancellationToken = default)
         {
-            DbContextExtensions.BulkDelete(this, items);
+            using (var transaction = await Database.BeginTransactionAsync(cancellationToken))
+            {
+                try
+                {
+                    await action(cancellationToken);
+                    transaction.Commit();
+                }
+                catch
+                {
+                    transaction.Rollback();
+                    throw;
+                }
+            }
         }
-
-        public void BulkInsert<T>(IEnumerable<T> items) where T : class
-        {
-            DbContextExtensions.BulkInsert(this, items);
-        }
-
-        public void BulkSaveChanges<T>() where T : class
-        {
-            DbContextExtensions.BulkSaveChanges(this);
-        }
-
-        public void BulkUpdate<T>(IEnumerable<T> items) where T : class
-        {
-            DbContextExtensions.BulkUpdate(this, items);
-        }
-
-        #endregion
 
         #region Config
-        
+
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-        {   
+        {
             if (!optionsBuilder.IsConfigured)
             {
                 optionsBuilder.UseSqlite("Data Source=BibleNote.Analytics.db");
@@ -157,12 +68,12 @@ namespace BibleNote.Analytics.Persistence
         }
 
         public AnalyticsContext(DbContextOptions<AnalyticsContext> options)
-            : base (options)
-        {   
+            : base(options)
+        {
         }
 
-        public AnalyticsContext()            
-        {            
+        public AnalyticsContext()
+        {
         }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)

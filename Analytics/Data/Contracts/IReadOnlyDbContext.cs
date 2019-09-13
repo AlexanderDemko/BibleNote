@@ -2,12 +2,12 @@
 
 namespace BibleNote.Analytics.Domain.Contracts
 {
-    public interface IRepositoryContainer
+    public interface IReadOnlyDbContext : IUnitOfWork
     {
         IReadOnlyRepository<Document> DocumentRepository { get; }
         IReadOnlyRepository<DocumentFolder> DocumentFolderRepository { get; }
         IReadOnlyRepository<DocumentParagraph> DocumentParagraphRepository { get; }
         IReadOnlyRepository<VerseEntry> VerseEntryRepository { get; }
-        IReadOnlyRepository<VerseRelation> VerseRelationRepository { get; }        
+        IReadOnlyRepository<VerseRelation> VerseRelationRepository { get; }
     }
 }

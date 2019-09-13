@@ -18,7 +18,7 @@ namespace BibleNote.Analytics.Persistence.Repositories
 
         public IQueryable<T> Query { get; private set; }
 
-        public EfRepository(DbContext dbContext, bool asNoTracking = true)
+        public EfRepository(DbContext dbContext, bool asNoTracking)
         {
             this.dbContext = dbContext;
             dbSet = dbContext.Set<T>();
@@ -62,11 +62,6 @@ namespace BibleNote.Analytics.Persistence.Repositories
         ITrackingRepository<T> ITrackingRepository<T>.Include<TProperty>(Expression<Func<T, TProperty>> navigationPropertyPath)
         {
             return Include(navigationPropertyPath) as ITrackingRepository<T>;
-        }
-
-        public ITrackingRepository<T> ToTrackingRepository()
-        {
-            return new EfRepository<T>(dbContext, asNoTracking: false);
         }
 
         public IReadOnlyRepository<T> Where(Expression<Func<T, bool>> predicate)
@@ -195,6 +190,11 @@ namespace BibleNote.Analytics.Persistence.Repositories
             dbSet.Add(entity);
         }
 
+        public void AddRange(params T[] entities)
+        {
+            dbSet.AddRange(entities);
+        }
+
         public void AddRange(IEnumerable<T> entities)
         {
             dbSet.AddRange(entities);
@@ -211,25 +211,19 @@ namespace BibleNote.Analytics.Persistence.Repositories
             entry.State = EntityState.Modified;
         }
 
-        public Task UpdateAsync(Expression<Func<T, T>> updateFactory, CancellationToken cancellationToken = default)
-        {
-            return Query.UpdateAsync(updateFactory, cancellationToken);
-        }
-
         public void Update(Expression<Func<T, T>> updateFactory)
         {
             Query.Update(updateFactory);
         }
 
+        public Task UpdateAsync(Expression<Func<T, T>> updateFactory, CancellationToken cancellationToken = default)
+        {
+            return Query.UpdateAsync(updateFactory, cancellationToken);
+        }
+
         public void Delete(T entity)
         {
             dbSet.Remove(entity);
-        }
-
-        public Task DeleteAsync(Expression<Func<T, bool>> predicate = default, CancellationToken cancellationToken = default)
-        {
-            var query = predicate == null ? this : dbSet.Where(predicate);
-            return query.DeleteAsync(cancellationToken);
         }
 
         public void Delete(Expression<Func<T, bool>> predicate = default)
@@ -238,7 +232,12 @@ namespace BibleNote.Analytics.Persistence.Repositories
             query.Delete();
         }
 
-        #endregion
+        public Task DeleteAsync(Expression<Func<T, bool>> predicate = default, CancellationToken cancellationToken = default)
+        {
+            var query = predicate == null ? this : dbSet.Where(predicate);
+            return query.DeleteAsync(cancellationToken);
+        }
 
+        #endregion
     }
 }

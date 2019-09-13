@@ -1,7 +1,7 @@
 ﻿using BibleNote.Analytics.Common.Helpers;
-using BibleNote.Analytics.Providers.FileSystem.Navigation;
+using BibleNote.Analytics.Providers.FileSystem.DocumentId;
 using BibleNote.Analytics.Providers.Html.Contracts;
-using BibleNote.Analytics.Providers.Web.Navigation;
+using BibleNote.Analytics.Providers.Web.DocumentId;
 using BibleNote.Analytics.Services.DocumentProvider.Contracts;
 using HtmlAgilityPack;
 using System;

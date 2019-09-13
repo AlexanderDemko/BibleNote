@@ -1,6 +1,8 @@
 ﻿using BibleNote.Analytics.Common.DiContainer;
 using BibleNote.Analytics.Services.Configuration;
 using BibleNote.Analytics.Services.Configuration.Contracts;
+using BibleNote.Analytics.Services.DocumentProvider;
+using BibleNote.Analytics.Services.DocumentProvider.Contracts;
 using BibleNote.Analytics.Services.ModulesManager;
 using BibleNote.Analytics.Services.ModulesManager.Contracts;
 using BibleNote.Analytics.Services.ParallelVerses;
@@ -33,7 +35,9 @@ namespace BibleNote.Analytics.Services
                 .AddTransient<IStringParser, StringParser>()
                 .AddTransient<IParagraphParser, ParagraphParser>()
                 .AddTransient<IDocumentParser, DocumentParser>()
-                .AddTransient<IDocumentParseContextEditor, DocumentParseContext>();
+                .AddTransient<IDocumentParseContextEditor, DocumentParseContext>()
+                .AddTransient<IAnalyzer, Analyzer>()
+                ;
         }
     }
 }

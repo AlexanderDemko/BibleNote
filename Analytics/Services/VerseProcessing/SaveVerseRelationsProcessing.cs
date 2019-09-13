@@ -5,6 +5,7 @@ using BibleNote.Analytics.Services.VerseProcessing.Contracts;
 using BibleNote.Analytics.Services.VerseProcessing.Models;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 
 namespace BibleNote.Analytics.Services.VerseProcessing
 {
@@ -12,18 +13,22 @@ namespace BibleNote.Analytics.Services.VerseProcessing
     {
         public int Order => 1;
 
-        public SaveVerseRelationsProcessing(IDbContext analyticsContext)
+        public SaveVerseRelationsProcessing(ITrackingDbContext analyticsContext)
         {
             this.analyticsContext = analyticsContext;
         }
 
-        readonly IDbContext analyticsContext;
+        readonly ITrackingDbContext analyticsContext;
 
-        public void Process(int documentId, DocumentParseResult documentResult)
+        public async void Process(int documentId, DocumentParseResult documentResult, CancellationToken cancellationToken = default)
         {
             var linearResult = LinearParseResult.FromHierarchyParseResult(documentResult.RootHierarchyResult);
             var verseRelations = ProcessLinearResult(linearResult);
-            this.analyticsContext.BulkInsert(verseRelations);
+            await this.analyticsContext.DoInTransactionAsync(async (token) =>
+            {
+                this.analyticsContext.VerseRelationRepository.AddRange(verseRelations);
+                await this.analyticsContext.SaveChangesAsync(token);
+            }, cancellationToken);
         }
 
         private IEnumerable<VerseRelation> ProcessLinearResult(LinearParseResult linearResult)

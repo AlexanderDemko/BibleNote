@@ -1,14 +1,15 @@
-﻿using System.Linq;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using FluentAssertions;
+﻿using BibleNote.Analytics.Domain.Entities;
+using BibleNote.Analytics.Providers.FileSystem.DocumentId;
 using BibleNote.Analytics.Providers.Html;
-using BibleNote.Analytics.Providers.FileSystem.Navigation;
-using BibleNote.Tests.Analytics.TestsBase;
-using BibleNote.Analytics.Services.DocumentProvider.Contracts;
 using BibleNote.Analytics.Providers.Html.Contracts;
-using Microsoft.Extensions.DependencyInjection;
+using BibleNote.Analytics.Services.DocumentProvider.Contracts;
 using BibleNote.Analytics.Services.VerseProcessing.Contracts;
-using BibleNote.Analytics.Domain.Entities;
+using BibleNote.Tests.Analytics.TestsBase;
+using FluentAssertions;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace BibleNote.Tests.Analytics
 {
@@ -20,7 +21,7 @@ namespace BibleNote.Tests.Analytics
         private Document document;
 
         [TestInitialize]
-        public void Init()
+        public async Task Init()
         {
             base.Init(services => services
                 .AddScoped<IHtmlDocumentConnector, HtmlDocumentConnector>()
@@ -28,15 +29,15 @@ namespace BibleNote.Tests.Analytics
 
             this.documentProvider = ServiceProvider.GetService<IDocumentProvider>();
             this.documentParseResultProcessings = ServiceProvider.GetServices<IDocumentParseResultProcessing>()
-                .OrderBy(rp => rp.Order);                
+                .OrderBy(rp => rp.Order);
 
             this.document = this.AnalyticsContext.DocumentRepository.FirstOrDefault();
             if (this.document == null)
             {
                 var folder = new DocumentFolder() { Name = "Temp", Path = "Test", NavigationProviderName = "Html" };
                 this.document = new Document() { Name = "Temp", Path = "Test", Folder = folder };
-                this.AnalyticsContext.DocumentRepository.ToTrackingRepository().Add(document);
-                this.AnalyticsContext.SaveChanges();
+                this.AnalyticsContext.DocumentRepository.Add(document);
+                await this.AnalyticsContext.SaveChangesAsync();
             }
         }
 
@@ -44,7 +45,7 @@ namespace BibleNote.Tests.Analytics
         public override void Cleanup()
         {
             base.Cleanup();
-        }                        
+        }
 
         [TestMethod]
         public void Test1()
@@ -63,8 +64,8 @@ namespace BibleNote.Tests.Analytics
                 .Where(p => p.DocumentId == this.document.Id)
                 .Count()
                 .Should()
-                .Be(11);            
-        }        
+                .Be(11);
+        }
     }
 }
 

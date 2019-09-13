@@ -11,6 +11,7 @@ using BibleNote.Analytics.Services.VerseProcessing.Contracts;
 using System.Diagnostics;
 using System;
 using BibleNote.Analytics.Domain.Entities;
+using System.Threading.Tasks;
 
 namespace BibleNote.Tests.Analytics
 {
@@ -22,7 +23,7 @@ namespace BibleNote.Tests.Analytics
         private Document document;
 
         [TestInitialize]
-        public void Init()
+        public async Task Init()
         {
             base.Init(services => services
                 .AddScoped<IOneNoteDocumentConnector, OneNoteDocumentConnector>()
@@ -37,8 +38,8 @@ namespace BibleNote.Tests.Analytics
             {
                 var folder = new DocumentFolder() { Name = "Temp", Path = "Test", NavigationProviderName = "Html" };
                 this.document = new Document() { Name = "Temp", Path = "Test", Folder = folder };
-                this.AnalyticsContext.DocumentRepository.ToTrackingRepository().Add(document);
-                this.AnalyticsContext.SaveChanges();
+                this.AnalyticsContext.DocumentRepository.Add(document);
+                await this.AnalyticsContext.SaveChangesAsync();
             }
         }
 
@@ -74,7 +75,7 @@ namespace BibleNote.Tests.Analytics
                     this.documentParseResultProcessings.Skip(1).First().Process(this.document.Id, parseResult);
                     
                     sw.Stop();
-                    throw new Exception($"Total: {sw.Elapsed.TotalSeconds}");
+                    //throw new Exception($"Total: {sw.Elapsed.TotalSeconds}");
                 }
             }
         }

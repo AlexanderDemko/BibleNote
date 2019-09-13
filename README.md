@@ -33,8 +33,9 @@ The next version of http://BibleNote.pro
     - [x] Verse entries processing
     - [x] Verse relation processing
   - [ ] Background service
-    - [ ] Automtic tasks
+    - [ ] Automatic tasks
     - [ ] User actions handler
+	- [ ] Divide reading and parsing documents into two different threads
   - [x] Move to .NET Core
 - UI
 - Installer

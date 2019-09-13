@@ -9,7 +9,7 @@ namespace BibleNote.Tests.Analytics.TestsBase
 {
     public class DbTestsBase : TestsBase
     {
-        protected IDbContext AnalyticsContext { get; set; }
+        protected ITrackingDbContext AnalyticsContext { get; set; }
         protected AnalyticsContext ConcreteContext { get; set; }
 
         private SqliteConnection connection;
@@ -24,11 +24,11 @@ namespace BibleNote.Tests.Analytics.TestsBase
 
             base.Init(options =>
             {
-                options.AddDbContext<IDbContext, AnalyticsContext>(opt => opt.UseSqlite(connection));
+                options.AddDbContext<ITrackingDbContext, AnalyticsContext>(opt => opt.UseSqlite(connection));
                 registerServicesAction?.Invoke(options);
             });
 
-            this.AnalyticsContext = ServiceProvider.GetService<IDbContext>();
+            this.AnalyticsContext = ServiceProvider.GetService<ITrackingDbContext>();
             this.ConcreteContext = (AnalyticsContext)this.AnalyticsContext;
             this.ConcreteContext.Database.Migrate();            
             DbInitializer.Initialize(this.ConcreteContext);            

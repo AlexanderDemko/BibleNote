@@ -13,13 +13,11 @@ namespace BibleNote.Analytics.Domain.Contracts
 
         IReadOnlyRepository<T> Include<TProperty>(Expression<Func<T, TProperty>> navigationPropertyPath);
 
-        ITrackingRepository<T> ToTrackingRepository();
-
         IReadOnlyRepository<T> Where(Expression<Func<T, bool>> predicate);
 
-        IReadOnlyRepository<TResult> Select<TResult>(Expression<Func<T, TResult>> selector) where TResult: class;
+        IReadOnlyRepository<TResult> Select<TResult>(Expression<Func<T, TResult>> selector) where TResult : class;
 
-        IReadOnlyRepository<TResult> SelectMany<TResult>(Expression<Func<T, IEnumerable<TResult>>> selector) where TResult: class;
+        IReadOnlyRepository<TResult> SelectMany<TResult>(Expression<Func<T, IEnumerable<TResult>>> selector) where TResult : class;
 
         IReadOnlyRepository<T> Skip(int count);
 
@@ -43,5 +41,4 @@ namespace BibleNote.Analytics.Domain.Contracts
 
         Task<int> CountAsync(CancellationToken cancellationToken = default);
     }
-
 }

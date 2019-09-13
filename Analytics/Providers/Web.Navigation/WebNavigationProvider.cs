@@ -1,23 +1,37 @@
-﻿using BibleNote.Analytics.Services.DocumentProvider.Contracts;
+﻿using BibleNote.Analytics.Providers.Html;
+using BibleNote.Analytics.Providers.Html.Contracts;
+using BibleNote.Analytics.Providers.Web.DocumentId;
+using BibleNote.Analytics.Services.DocumentProvider.Contracts;
+using BibleNote.Analytics.Services.VerseParsing.Contracts;
+using System;
+using System.Collections.Generic;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace BibleNote.Analytics.Providers.Web.Navigation
 {
-    public class WebNavigationProvider : INavigationProvider
+    public class WebNavigationProvider : INavigationProvider<WebDocumentId>
     {
-        public string Name
+        public string Name { get; set; }
+        public string Description { get; set; }
+        public bool IsReadonly { get; set; }
+
+        private readonly IServiceProvider scopeProvider;
+
+        public WebNavigationProvider(IServiceProvider scopeProvider)
         {
-            get
-            {
-                return "WebNavigationProvider";
-            }
+            this.scopeProvider = scopeProvider;
         }
 
-        public string Description
+        public IDocumentProvider GetProvider(WebDocumentId document)
         {
-            get
-            {
-                return "Internet documents (.txt, .html, .docx, .doc.)";
-            }
+            return new HtmlProvider(
+                        this.scopeProvider.GetService<IDocumentParserFactory>(),
+                        this.scopeProvider.GetService<IHtmlDocumentConnector>());
+        }
+
+        public IEnumerable<WebDocumentId> GetDocuments(bool newOnly)
+        {
+            throw new System.NotImplementedException();
         }
     }
 }

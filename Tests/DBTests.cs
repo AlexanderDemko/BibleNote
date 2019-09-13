@@ -30,7 +30,7 @@ namespace BibleNote.Tests.Analytics
             foldersCount = this.AnalyticsContext.DocumentFolderRepository.Count();
 
             var newFolder = new DocumentFolder() { Name = testFolderName, NavigationProviderName = "Html", Path = "c:\temp" };
-            this.AnalyticsContext.DocumentFolderRepository.ToTrackingRepository().Add(newFolder);
+            this.AnalyticsContext.DocumentFolderRepository.Add(newFolder);
             this.AnalyticsContext.SaveChangesAsync();
 
             this.ConcreteContext.Entry(newFolder).State = EntityState.Detached;
@@ -38,7 +38,7 @@ namespace BibleNote.Tests.Analytics
             Assert.AreEqual(foldersCount + 1, this.AnalyticsContext.DocumentFolderRepository.Count());
             var folder = this.AnalyticsContext.DocumentFolderRepository.FirstOrDefault(f => f.Name == testFolderName);
             Assert.IsNotNull(folder);
-            this.AnalyticsContext.DocumentFolderRepository.ToTrackingRepository().Delete(folder);
+            this.AnalyticsContext.DocumentFolderRepository.Delete(folder);
             this.AnalyticsContext.SaveChangesAsync();
 
             Assert.AreEqual(foldersCount, this.AnalyticsContext.DocumentFolderRepository.Count());

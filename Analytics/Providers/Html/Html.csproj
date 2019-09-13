@@ -13,8 +13,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Services\Services.csproj" />
-    <ProjectReference Include="..\FileSystem.Navigation\FileSystem.Navigation.csproj" />
-    <ProjectReference Include="..\Web.Navigation\Web.Navigation.csproj" />
+    <ProjectReference Include="..\FileSystem.DocumentId\FileSystem.DocumentId.csproj" />
+    <ProjectReference Include="..\Web.DocumentId\Web.DocumentId.csproj" />
   </ItemGroup>
 
 </Project>

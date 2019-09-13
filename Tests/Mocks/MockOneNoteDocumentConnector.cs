@@ -1,5 +1,5 @@
 ﻿using BibleNote.Analytics.Common.Helpers;
-using BibleNote.Analytics.Providers.FileSystem.Navigation;
+using BibleNote.Analytics.Providers.FileSystem.DocumentId;
 using BibleNote.Analytics.Providers.OneNote.Contracts;
 using BibleNote.Analytics.Services.DocumentProvider.Contracts;
 using System;
@@ -36,11 +36,11 @@ namespace BibleNote.Tests.Analytics.Mocks
             {
                 var filePath = ((FileDocumentId)documentId).FilePath;
                 var ext = Path.GetExtension(filePath);
-                xml = File.ReadAllText(filePath);                                
+                xml = File.ReadAllText(filePath);
             }
 
-            if (xml != null)            
-                return XDocument.Parse(xml);                                            
+            if (xml != null)
+                return XDocument.Parse(xml);
 
             throw new NotSupportedException(documentId.GetType().Name);
         }

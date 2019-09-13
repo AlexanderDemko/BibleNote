@@ -26,19 +26,20 @@ namespace BibleNote.Analytics.Domain.Contracts
 
         void Add(T entity);
 
+        void AddRange(params T[] entities);
+
         void AddRange(IEnumerable<T> entities);
 
         void Update(T entity);
 
-        Task UpdateAsync(Expression<Func<T, T>> updateFactory, CancellationToken cancellationToken = default);
-
         void Update(Expression<Func<T, T>> updateFactory);
+
+        Task UpdateAsync(Expression<Func<T, T>> updateFactory, CancellationToken cancellationToken = default);
 
         void Delete(T entity);
 
-        Task DeleteAsync(Expression<Func<T, bool>> predicate = default, CancellationToken cancellationToken = default);
-
         void Delete(Expression<Func<T, bool>> predicate = default);
-    }
 
+        Task DeleteAsync(Expression<Func<T, bool>> predicate = default, CancellationToken cancellationToken = default);
+    }
 }

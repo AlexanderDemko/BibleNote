@@ -9,6 +9,10 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Services\Services.csproj" />
+    <ProjectReference Include="..\FileSystem.DocumentId\FileSystem.DocumentId.csproj" />
+    <ProjectReference Include="..\Html\Html.csproj" />
+    <ProjectReference Include="..\Pdf\Pdf.csproj" />
+    <ProjectReference Include="..\Word\Word.csproj" />
   </ItemGroup>
 
 </Project>
