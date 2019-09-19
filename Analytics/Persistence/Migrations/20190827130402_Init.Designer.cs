@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace BibleNote.Analytics.Persistence.Migrations
 {
-    [DbContext(typeof(AnalyticsContext))]
+    [DbContext(typeof(AnalyticsDbContext))]
     [Migration("20190827130402_Init")]
     partial class Init
     {

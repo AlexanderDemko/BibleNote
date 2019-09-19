@@ -26,6 +26,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Analytics\Data\Domain.csproj" />
     <ProjectReference Include="..\Analytics\Persistence\Persistence.csproj" />
+    <ProjectReference Include="..\Analytics\Providers\FileSystem.Navigation\FileSystem.Navigation.csproj" />
     <ProjectReference Include="..\Analytics\Providers\OneNote\OneNote.csproj" />
     <ProjectReference Include="..\Analytics\Services\Services.csproj" />
   </ItemGroup>

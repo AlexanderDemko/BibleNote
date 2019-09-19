@@ -8,7 +8,7 @@ namespace BibleNote.Analytics.Persistence.Configurations
     {
         public void Configure(EntityTypeBuilder<VerseRelation> builder)
         {
-            builder.ToTable(nameof(AnalyticsContext.VerseRelations));
+            builder.ToTable(nameof(AnalyticsDbContext.VerseRelations));
 
             builder.HasIndex(v => v.VerseId);
             builder.HasIndex(v => v.RelativeVerseId);

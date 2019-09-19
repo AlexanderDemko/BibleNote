@@ -8,7 +8,7 @@ namespace BibleNote.Analytics.Persistence.Configurations
     {
         public void Configure(EntityTypeBuilder<VerseEntry> builder)
         {
-            builder.ToTable(nameof(AnalyticsContext.VerseEntries));
+            builder.ToTable(nameof(AnalyticsDbContext.VerseEntries));
 
             builder.Property(v => v.VerseId).IsRequired(true);            
         }

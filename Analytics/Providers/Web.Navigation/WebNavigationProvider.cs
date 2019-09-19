@@ -6,6 +6,8 @@ using BibleNote.Analytics.Services.VerseParsing.Contracts;
 using System;
 using System.Collections.Generic;
 using Microsoft.Extensions.DependencyInjection;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace BibleNote.Analytics.Providers.Web.Navigation
 {
@@ -29,9 +31,9 @@ namespace BibleNote.Analytics.Providers.Web.Navigation
                         this.scopeProvider.GetService<IHtmlDocumentConnector>());
         }
 
-        public IEnumerable<WebDocumentId> GetDocuments(bool newOnly)
+        public async Task<IEnumerable<WebDocumentId>> GetDocuments(bool newOnly, CancellationToken cancellationToken = default)
         {
-            throw new System.NotImplementedException();
+            throw new NotImplementedException();
         }
     }
 }

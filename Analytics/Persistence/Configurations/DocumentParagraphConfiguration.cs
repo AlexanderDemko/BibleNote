@@ -8,7 +8,7 @@ namespace BibleNote.Analytics.Persistence.Configurations
     {
         public void Configure(EntityTypeBuilder<DocumentParagraph> builder)
         {
-            builder.ToTable(nameof(AnalyticsContext.DocumentParagraphs));      
+            builder.ToTable(nameof(AnalyticsDbContext.DocumentParagraphs));      
         }
     }
 }

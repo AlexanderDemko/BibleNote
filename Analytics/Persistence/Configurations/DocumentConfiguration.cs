@@ -8,7 +8,7 @@ namespace BibleNote.Analytics.Persistence.Configurations
     {
         public void Configure(EntityTypeBuilder<Document> builder)
         {
-            builder.ToTable(nameof(AnalyticsContext.Documents));
+            builder.ToTable(nameof(AnalyticsDbContext.Documents));
 
             builder.Property(d => d.Name).IsRequired(true);
             builder.Property(d => d.Path).IsRequired(true);                        

@@ -5,6 +5,7 @@ using BibleNote.Analytics.Services.VerseParsing.Models.ParseResult;
 using BibleNote.Analytics.Services.VerseProcessing.Contracts;
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace BibleNote.Analytics.Services.VerseProcessing
 {
@@ -17,7 +18,7 @@ namespace BibleNote.Analytics.Services.VerseProcessing
             this.analyticsContext = analyticsContext;            
         }
 
-        public async void Process(int documentId, DocumentParseResult documentResult, CancellationToken cancellationToken = default)
+        public async Task Process(int documentId, DocumentParseResult documentResult, CancellationToken cancellationToken = default)
         {
             this.documentId = documentId;            
             

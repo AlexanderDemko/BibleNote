@@ -6,6 +6,7 @@ using BibleNote.Analytics.Services.VerseProcessing.Models;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace BibleNote.Analytics.Services.VerseProcessing
 {
@@ -20,7 +21,7 @@ namespace BibleNote.Analytics.Services.VerseProcessing
 
         readonly ITrackingDbContext analyticsContext;
 
-        public async void Process(int documentId, DocumentParseResult documentResult, CancellationToken cancellationToken = default)
+        public async Task Process(int documentId, DocumentParseResult documentResult, CancellationToken cancellationToken = default)
         {
             var linearResult = LinearParseResult.FromHierarchyParseResult(documentResult.RootHierarchyResult);
             var verseRelations = ProcessLinearResult(linearResult);

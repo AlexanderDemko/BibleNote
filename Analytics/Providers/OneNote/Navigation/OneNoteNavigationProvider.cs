@@ -5,6 +5,8 @@ using BibleNote.Analytics.Services.VerseParsing.Contracts;
 using System;
 using Microsoft.Extensions.DependencyInjection;
 using System.Collections.Generic;
+using System.Threading.Tasks;
+using System.Threading;
 
 namespace BibleNote.Analytics.Providers.OneNote.Navigation
 {
@@ -28,7 +30,7 @@ namespace BibleNote.Analytics.Providers.OneNote.Navigation
                    this.scopeProvider.GetService<IOneNoteDocumentConnector>());
         }
 
-        public IEnumerable<OneNoteDocumentId> GetDocuments(bool newOnly)
+        public async Task<IEnumerable<OneNoteDocumentId>> GetDocuments(bool newOnly, CancellationToken cancellationToken = default)
         {
             throw new NotImplementedException();
         }

@@ -7,8 +7,8 @@ using System.Threading;
 using System.Threading.Tasks;
 
 namespace BibleNote.Analytics.Persistence
-{
-    public partial class AnalyticsContext : DbContext, ITrackingDbContext, IReadOnlyDbContext
+{    
+    public partial class AnalyticsDbContext : DbContext, ITrackingDbContext, IReadOnlyDbContext
     {
         public DbSet<Document> Documents { get; set; }
 
@@ -67,18 +67,18 @@ namespace BibleNote.Analytics.Persistence
             }
         }
 
-        public AnalyticsContext(DbContextOptions<AnalyticsContext> options)
+        public AnalyticsDbContext(DbContextOptions<AnalyticsDbContext> options)
             : base(options)
         {
         }
 
-        public AnalyticsContext()
+        public AnalyticsDbContext()
         {
         }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            modelBuilder.ApplyConfigurationsFromAssembly(typeof(AnalyticsContext).Assembly);
+            modelBuilder.ApplyConfigurationsFromAssembly(typeof(AnalyticsDbContext).Assembly);
         }
 
         #endregion

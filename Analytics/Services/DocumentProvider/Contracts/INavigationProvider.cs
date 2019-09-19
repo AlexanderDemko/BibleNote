@@ -1,4 +1,6 @@
 ﻿using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace BibleNote.Analytics.Services.DocumentProvider.Contracts
 {
@@ -12,6 +14,6 @@ namespace BibleNote.Analytics.Services.DocumentProvider.Contracts
 
         IDocumentProvider GetProvider(T document);
 
-        IEnumerable<T> GetDocuments(bool newOnly);        
+        Task<IEnumerable<T>> GetDocuments(bool newOnly, CancellationToken cancellationToken = default);        
     }
 }

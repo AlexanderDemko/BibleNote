@@ -3,6 +3,8 @@ using BibleNote.Analytics.Services.DocumentProvider.Models;
 using BibleNote.Analytics.Services.VerseProcessing.Contracts;
 using Microsoft.Extensions.DependencyInjection;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace BibleNote.Analytics.Services.DocumentProvider
 {
@@ -20,12 +22,15 @@ namespace BibleNote.Analytics.Services.DocumentProvider
                 .OrderBy(rp => rp.Order);
         }
 
-        public void Analyze(INavigationProvider<IDocumentId> navigationProvider, AnalyzerOptions options)
+        public async Task Analyze(
+            INavigationProvider<IDocumentId> navigationProvider, 
+            AnalyzerOptions options, 
+            CancellationToken cancellationToken = default)
         {
             this.navigationProvider = navigationProvider;
             this.options = options;
 
-            var documents = navigationProvider.GetDocuments(options.Depth == AnalyzeDepth.NewOnly);
+            var documents = await navigationProvider.GetDocuments(options.Depth == AnalyzeDepth.NewOnly, cancellationToken);
 
             foreach (var document in documents)
             {
@@ -34,9 +39,9 @@ namespace BibleNote.Analytics.Services.DocumentProvider
 
                 foreach (var processor in this.documentParseResultProcessing)
                 {
-                    processor.Process(document.DocumentId, parseResult);
+                    await processor.Process(document.DocumentId, parseResult);
                 }
             }
-        }
+        }        
     }
 }

@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace BibleNote.Analytics.Persistence.Migrations
 {
-    [DbContext(typeof(AnalyticsContext))]
+    [DbContext(typeof(AnalyticsDbContext))]
     partial class AnalyticsContextModelSnapshot : ModelSnapshot
     {
         protected override void BuildModel(ModelBuilder modelBuilder)

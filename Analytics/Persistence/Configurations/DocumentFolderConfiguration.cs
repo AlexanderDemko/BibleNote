@@ -8,7 +8,7 @@ namespace BibleNote.Analytics.Persistence.Configurations
     {
         public void Configure(EntityTypeBuilder<DocumentFolder> builder)
         {
-            builder.ToTable(nameof(AnalyticsContext.DocumentFolders));
+            builder.ToTable(nameof(AnalyticsDbContext.DocumentFolders));
 
             builder.Property(f => f.Name).IsRequired(true);
             builder.Property(f => f.Path).IsRequired(true);

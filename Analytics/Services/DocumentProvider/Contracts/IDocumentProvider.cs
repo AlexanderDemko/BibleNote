@@ -1,5 +1,7 @@
 ﻿using BibleNote.Analytics.Services.VerseParsing.Models;
 using BibleNote.Analytics.Services.VerseParsing.Models.ParseResult;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace BibleNote.Analytics.Services.DocumentProvider.Contracts
 {
