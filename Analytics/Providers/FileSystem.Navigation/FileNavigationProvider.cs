@@ -20,7 +20,7 @@ namespace BibleNote.Analytics.Providers.FileSystem.Navigation
     /// <summary>
     /// Folder with files .txt, .html, .docx, .doc.
     /// </summary>
-    public class FileNavigationProvider : INavigationProvider
+    public class FileNavigationProvider : INavigationProvider<FileDocumentId>
     {
         public readonly string[] supportedFileExtensions = new[] { ".txt", ".html", ".doc", ".docx", ".pdf" };
 
@@ -29,14 +29,14 @@ namespace BibleNote.Analytics.Providers.FileSystem.Navigation
         public bool IsReadonly { get; set; }
         public string FolderPath { get; set; }
 
-        private readonly IServiceProvider scopeProvider;
+        private readonly IServiceProvider serviceProvider;
         private readonly ITrackingDbContext dbContext;
 
         public FileNavigationProvider(
-            IServiceProvider scopeProvider,
+            IServiceProvider serviceProvider,
             ITrackingDbContext dbContext)
         {
-            this.scopeProvider = scopeProvider;
+            this.serviceProvider = serviceProvider;
             this.dbContext = dbContext;
         }
 
@@ -49,8 +49,8 @@ namespace BibleNote.Analytics.Providers.FileSystem.Navigation
                 case ".txt":
                 case ".html":
                     return new HtmlProvider(
-                        this.scopeProvider.GetService<IDocumentParserFactory>(),
-                        this.scopeProvider.GetService<IHtmlDocumentConnector>());
+                        this.serviceProvider.GetService<IDocumentParserFactory>(),
+                        this.serviceProvider.GetService<IHtmlDocumentConnector>());
                 case ".doc":
                 case ".docx":
                     return new WordProvider();

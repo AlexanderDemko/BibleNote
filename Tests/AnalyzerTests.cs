@@ -37,12 +37,12 @@ namespace BibleNote.Tests.Analytics
         [TestMethod]
         public void Test1()
         {
-            var navigationProvider = this.ServiceProvider.GetService<FileNavigationProvider>();
+            var navigationProvider = ActivatorUtilities.CreateInstance<FileNavigationProvider>(ServiceProvider);
             navigationProvider.FolderPath = @"C:\temp\testData";
             this.analyzer.Analyze(navigationProvider, new AnalyzerOptions()
             {
                 Depth = AnalyzeDepth.All
-            });
+            }).Wait();
         }
     }
 }

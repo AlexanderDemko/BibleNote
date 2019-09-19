@@ -2,6 +2,7 @@
 using BibleNote.Analytics.Services.DocumentProvider.Models;
 using BibleNote.Analytics.Services.VerseProcessing.Contracts;
 using Microsoft.Extensions.DependencyInjection;
+using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,7 +16,7 @@ namespace BibleNote.Analytics.Services.DocumentProvider
         INavigationProvider<IDocumentId> navigationProvider;
         AnalyzerOptions options;
 
-        public Analyzer(ServiceProvider ServiceProvider)
+        public Analyzer(IServiceProvider ServiceProvider)
         {
             this.documentParseResultProcessing = ServiceProvider
                 .GetServices<IDocumentParseResultProcessing>()
