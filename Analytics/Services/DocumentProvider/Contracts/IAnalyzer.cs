@@ -4,11 +4,12 @@ using System.Threading.Tasks;
 
 namespace BibleNote.Analytics.Services.DocumentProvider.Contracts
 {
-    public interface IAnalyzer
+    public interface IAnalyzer        
     {
-        Task Analyze(
-            INavigationProvider<IDocumentId> navigationProvider, 
+        Task Analyze<T>(
+            INavigationProvider<T> navigationProvider,
             AnalyzerOptions options,
-            CancellationToken cancellationToken = default);
+            CancellationToken cancellationToken = default)
+            where T : IDocumentId;
     }
 }

@@ -1,31 +1,23 @@
-﻿using BibleNote.Analytics.Domain.Entities;
-using BibleNote.Analytics.Providers.FileSystem.DocumentId;
-using BibleNote.Analytics.Providers.FileSystem.Navigation;
-using BibleNote.Analytics.Providers.Html;
-using BibleNote.Analytics.Providers.Html.Contracts;
+﻿using BibleNote.Analytics.Providers.FileSystem.Navigation;
 using BibleNote.Analytics.Services.DocumentProvider.Contracts;
 using BibleNote.Analytics.Services.DocumentProvider.Models;
-using BibleNote.Analytics.Services.VerseProcessing.Contracts;
 using BibleNote.Tests.Analytics.TestsBase;
-using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace BibleNote.Tests.Analytics
 {
     [TestClass]
     public class AnalyzerTests : DbTestsBase
     {
-        private IAnalyzer analyzer;                
+        private IAnalyzer analyzer;
 
         [TestInitialize]
         public void Init()
         {
             base.Init();
 
-            this.analyzer = ServiceProvider.GetService<IAnalyzer>();            
+            this.analyzer = ServiceProvider.GetService<IAnalyzer>();
         }
 
         [TestCleanup]

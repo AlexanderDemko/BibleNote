@@ -72,7 +72,7 @@ namespace BibleNote.Analytics.Providers.FileSystem.Navigation
         public IEnumerable<Document> GetFolderDocuments(string folderPath, DocumentFolder parentFolder, bool newOnly)
         {
             var result = new List<Document>();
-            var folders = GetRootFolders(folderPath, parentFolder);
+            var folders = GetSubFolders(folderPath, parentFolder);
 
             foreach (var folder in folders)
             {
@@ -92,11 +92,10 @@ namespace BibleNote.Analytics.Providers.FileSystem.Navigation
                             Path = file                            
                         };
 
-                        this.dbContext.DocumentRepository.Add(dbFile);
-                            
+                        this.dbContext.DocumentRepository.Add(dbFile);                            
                     }
 
-                    if (!newOnly || dbFile.Id == default)
+                    if (!newOnly || dbFile.Id <= 0) // По непонятным причинам EF Core для нового файла выставляет Id = -2147482647
                         result.Add(dbFile);
                 }
 
@@ -106,7 +105,7 @@ namespace BibleNote.Analytics.Providers.FileSystem.Navigation
             return result;
         }
 
-        private List<DocumentFolder> GetRootFolders(string folderPath, DocumentFolder parentFolder)
+        private List<DocumentFolder> GetSubFolders(string folderPath, DocumentFolder parentFolder)
         {
             var result = new List<DocumentFolder>();
             var folders = Directory.GetDirectories(folderPath, "*", SearchOption.TopDirectoryOnly);
@@ -120,7 +119,8 @@ namespace BibleNote.Analytics.Providers.FileSystem.Navigation
                     {
                         Name = Path.GetFileName(folder),
                         ParentFolder = parentFolder,
-                        Path = folder
+                        Path = folder,
+                        NavigationProviderName = nameof(FileNavigationProvider)
                     };
 
                     this.dbContext.DocumentFolderRepository.Add(dbFolder);                    

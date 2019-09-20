@@ -1,4 +1,6 @@
 ﻿using BibleNote.Analytics.Common.DiContainer;
+using BibleNote.Analytics.Providers.Html;
+using BibleNote.Analytics.Providers.OneNote;
 using BibleNote.Analytics.Services;
 using BibleNote.Analytics.Services.Configuration.Contracts;
 using BibleNote.Analytics.Services.ModulesManager.Contracts;
@@ -21,7 +23,9 @@ namespace BibleNote.Tests.Analytics.TestsBase
             MockConfigurationManager = new MockConfigurationManager();            
 
             var services = new ServiceCollection()
-               .AddApplicatonServices<ServicesModule>()               
+               .AddApplicatonServices<ServicesModule>()       
+               .AddApplicatonServices<HtmlModule>()
+               .AddApplicatonServices<OneNoteModule>()
                //.AddLogging(configure => configure.AddConsole())
                .AddScoped(sp => MockConfigurationManager);
 

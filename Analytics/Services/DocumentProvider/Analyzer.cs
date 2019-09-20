@@ -9,12 +9,9 @@ using System.Threading.Tasks;
 
 namespace BibleNote.Analytics.Services.DocumentProvider
 {
-    class Analyzer : IAnalyzer
+    class Analyzer : IAnalyzer        
     {
-        readonly IOrderedEnumerable<IDocumentParseResultProcessing> documentParseResultProcessing;
-
-        INavigationProvider<IDocumentId> navigationProvider;
-        AnalyzerOptions options;
+        readonly IOrderedEnumerable<IDocumentParseResultProcessing> documentParseResultProcessing;              
 
         public Analyzer(IServiceProvider ServiceProvider)
         {
@@ -23,19 +20,17 @@ namespace BibleNote.Analytics.Services.DocumentProvider
                 .OrderBy(rp => rp.Order);
         }
 
-        public async Task Analyze(
-            INavigationProvider<IDocumentId> navigationProvider, 
+        public async Task Analyze<T>(
+            INavigationProvider<T> navigationProvider, 
             AnalyzerOptions options, 
             CancellationToken cancellationToken = default)
-        {
-            this.navigationProvider = navigationProvider;
-            this.options = options;
-
+            where T : IDocumentId
+        {   
             var documents = await navigationProvider.GetDocuments(options.Depth == AnalyzeDepth.NewOnly, cancellationToken);
 
             foreach (var document in documents)
             {
-                var provider = this.navigationProvider.GetProvider(document);
+                var provider = navigationProvider.GetProvider(document);
                 var parseResult = provider.ParseDocument(document);
 
                 foreach (var processor in this.documentParseResultProcessing)
