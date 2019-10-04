@@ -13,7 +13,7 @@ The next version of http://BibleNote.pro
   - [x] Document parser
   - [ ] Providers
     - [ ] FileSystem navigation provider
-      - [ ] Directory reader
+      - [x] Directory reader
       - [ ] File change watcher      
     - [ ] Web navigation provider
       - [ ] Web page loading
