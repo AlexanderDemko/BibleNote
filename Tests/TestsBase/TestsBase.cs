@@ -43,8 +43,8 @@ namespace BibleNote.Tests.Analytics.TestsBase
             }
             catch (ModuleNotFoundException)
             {
-                ModulesManager.UploadModule(@"..\..\..\Data\Modules\rst\rst.bnm", "rst");
-                ModulesManager.UploadModule(@"..\..\..\Data\Modules\kjv\kjv.bnm", "kjv");
+                ModulesManager.UploadModule(@"..\..\..\..\Data\Modules\rst\rst.bnm", "rst");
+                ModulesManager.UploadModule(@"..\..\..\..\Data\Modules\kjv\kjv.bnm", "kjv");
             }
         }        
     }

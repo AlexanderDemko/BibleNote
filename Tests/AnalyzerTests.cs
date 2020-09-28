@@ -30,7 +30,7 @@ namespace BibleNote.Tests.Analytics
         public void Test1()
         {
             var navigationProvider = ActivatorUtilities.CreateInstance<FileNavigationProvider>(ServiceProvider);
-            navigationProvider.FolderPath = @"C:\temp\testData";
+            navigationProvider.FolderPath = @"C:\prj\BibleNote\Tests\TestData";
             this.analyzer.Analyze(navigationProvider, new AnalyzerOptions()
             {
                 Depth = AnalyzeDepth.All
