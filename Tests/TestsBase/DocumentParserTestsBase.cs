@@ -14,7 +14,6 @@ namespace BibleNote.Tests.Analytics.TestsBase
     {   
         private IVersePointerFactory versePointerFactory;
         protected IDocumentProvider documentProvider;
-     
 
         public override void Init(Action<IServiceCollection> registerServicesAction = null)
         {

@@ -68,9 +68,9 @@ namespace BibleNote.Tests.Analytics
             }
 
             Assert.AreEqual(verses.Length, result.VerseEntries.Count, "Verses length is not the same. Expected: {0}. Found: {1}", verses.Length, result.VerseEntries.Count);            
-            var verseEntries = result.VerseEntries.Select(ve => ve.VersePointer);
+            var versePointers = result.VerseEntries.Select(ve => ve.VersePointer);
             foreach (var verse in verses)
-                Assert.IsTrue(verseEntries.Contains(_versePointerFactory.CreateVersePointer(verse)), "Can not find the verse: '{0}'", verse);            
+                Assert.IsTrue(versePointers.Contains(_versePointerFactory.CreateVersePointer(verse)), "Can not find the verse: '{0}'", verse);            
 
             Assert.AreEqual(expectedOutput, htmlDoc.InnerXml, "The output html is wrong.");
             Assert.AreEqual(new HtmlToTextConverter().SimpleConvert(input).Replace("&nbsp;", " "), result.Text, "Text parts do not contain the full input string.");
@@ -580,6 +580,43 @@ lang=ru>&nbsp;Тим&nbsp;</span><span style='color:#444444' lang=en-US>2:2). </
         {
             var input = @"Всё сотворено Им и для Него (<a href='bnVerse:Евреям 1:2'>Евр.1:2</a>, <a href='bnVerse:Евреям 1:10'>10</a>)";
             CheckVerses(input, input, null, "Евр.1:2", "Евр.1:10");
+        }
+
+        [TestMethod]
+        public void Test46()
+        {
+            var input = @"Ps 56:4";
+            CheckVerses(input, null, null, "Пс 55:5");
+        }
+
+
+        [TestMethod]
+        public void Test47()
+        {
+            var input = @"Ps 56:5,6";
+            CheckVerses(input, null, null, "Пс 55:6", "Пс 55:7");
+        }
+
+        [TestMethod]
+        public void Test48()
+        {
+            var input = @" Ps 56:7-8,9";
+            CheckVerses(input, null, null, "Пс 55:8-9", "Пс 55:10");
+        }
+
+        [TestMethod]
+        public void Test49()
+        {
+            var input = @" Ps 56:7-8,9, 57:4-5,6";
+            CheckVerses(input, null, null, "Пс 55:8-9", "Пс 55:10", "Пс 56:5-6", "Пс 56:7");
+        }
+
+
+        [TestMethod]
+        public void Test50()
+        {
+            var input = @" Ps 56:7 and 57:4 and :5";
+            CheckVerses(input, null, null, "Пс 55:8", "Пс 56:5", "Пс 56:6");
         }
     }
 }
