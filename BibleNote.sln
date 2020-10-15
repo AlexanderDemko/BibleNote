@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.28307.757
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30523.141
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Analytics", "Analytics", "{03F0A965-F7AC-4C1B-9F47-21ABF684441D}"
 EndProject
@@ -37,9 +37,11 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Domain", "Analytics\Data\Do
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Persistence", "Analytics\Persistence\Persistence.csproj", "{C1E43424-F3A5-480D-8285-A789F694ECC7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FileSystem.DocumentId", "Analytics\Providers\FileSystem.DocumentId\FileSystem.DocumentId.csproj", "{4B2B1B6E-0225-4419-8860-6E5F38D37457}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FileSystem.DocumentId", "Analytics\Providers\FileSystem.DocumentId\FileSystem.DocumentId.csproj", "{4B2B1B6E-0225-4419-8860-6E5F38D37457}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Web.DocumentId", "Analytics\Providers\Web.DocumentId\Web.DocumentId.csproj", "{BBDD8398-5B35-444F-AB82-043F02617DF4}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Web.DocumentId", "Analytics\Providers\Web.DocumentId\Web.DocumentId.csproj", "{BBDD8398-5B35-444F-AB82-043F02617DF4}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "VerseDifferencesFinder", "UI\VerseDifferencesFinder\VerseDifferencesFinder.csproj", "{4A1C3C2E-C4E0-45B0-99EC-4E8F48D88A44}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -103,6 +105,10 @@ Global
 		{BBDD8398-5B35-444F-AB82-043F02617DF4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BBDD8398-5B35-444F-AB82-043F02617DF4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BBDD8398-5B35-444F-AB82-043F02617DF4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4A1C3C2E-C4E0-45B0-99EC-4E8F48D88A44}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4A1C3C2E-C4E0-45B0-99EC-4E8F48D88A44}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4A1C3C2E-C4E0-45B0-99EC-4E8F48D88A44}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4A1C3C2E-C4E0-45B0-99EC-4E8F48D88A44}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
