@@ -18,7 +18,11 @@ namespace BibleNote.Analytics.Services.ModulesManager.Models
 
         public VerseNumber VerseNumber { get; set; }
 
+        public VerseNumber OriginalVerseNumber { get; set; }
+
         public VerseNumber? TopVerseNumber { get; set; }
+
+        public VerseNumber? OriginalTopVerseNumber { get; set; }
 
         public int Chapter
         {
@@ -28,11 +32,27 @@ namespace BibleNote.Analytics.Services.ModulesManager.Models
             }
         }
 
+        public int OriginalChapter
+        {
+            get
+            {
+                return OriginalVerseNumber.Chapter;
+            }
+        }
+
         public int Verse
         {
             get
             {
                 return VerseNumber.Verse;
+            }
+        }
+
+        public int OriginalVerse
+        {
+            get
+            {
+                return OriginalVerseNumber.Verse;
             }
         }
 
@@ -47,6 +67,17 @@ namespace BibleNote.Analytics.Services.ModulesManager.Models
             }
         }
 
+        public int OriginalMostTopChapter
+        {
+            get
+            {
+                if (OriginalTopVerseNumber.HasValue)
+                    return OriginalTopVerseNumber.Value.Chapter;
+
+                return OriginalChapter;
+            }
+        }
+
         public int MostTopVerse
         {
             get
@@ -55,6 +86,17 @@ namespace BibleNote.Analytics.Services.ModulesManager.Models
                     return TopVerseNumber.Value.Verse;
 
                 return Verse;
+            }
+        }
+
+        public int OriginalMostTopVerse
+        {
+            get
+            {
+                if (OriginalTopVerseNumber.HasValue)
+                    return OriginalTopVerseNumber.Value.Verse;
+
+                return OriginalVerse;
             }
         }
 
