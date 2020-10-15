@@ -59,21 +59,27 @@ namespace BibleNote.Analytics.Services.VerseParsing
             if (docParseContext.CurrentParagraph.LatestVerseEntry != null
                 && StringUtils.CheckDivergence(docParseContext.CurrentParagraph.ParseResult.Text, docParseContext.CurrentParagraph.LatestVerseEntry.EndIndex, verseEntry.StartIndex, 2, ','))
             {
-                verseEntry.VersePointer.Book = docParseContext.CurrentParagraph.LatestVerseEntry.VersePointer.Book;                
-                verseEntry.EntryType = docParseContext.CurrentParagraph.LatestVerseEntry.VersePointer.VerseNumber.IsChapter 
+                var latestVp = docParseContext.CurrentParagraph.LatestVerseEntry.VersePointer;
+
+                verseEntry.VersePointer.Book = latestVp.Book;
+                verseEntry.VersePointer.ModuleShortName = latestVp.ModuleShortName;
+                verseEntry.EntryType = latestVp.VerseNumber.IsChapter 
                     ? VerseEntryType.Chapter 
                     : VerseEntryType.Verse;
 
-                if (verseEntry.EntryType == VerseEntryType.Verse)
-                {   
-                    verseEntry.VersePointer.MoveChapterToVerse(docParseContext.CurrentParagraph.LatestVerseEntry.VersePointer.MostTopChapter);
+                var latestTopChapter = string.IsNullOrEmpty(latestVp.ModuleShortName) ? latestVp.MostTopChapter : latestVp.OriginalMostTopChapter;
 
-                    if (verseEntry.VersePointer.Verse <= docParseContext.CurrentParagraph.LatestVerseEntry.VersePointer.MostTopVerse)
+                if (verseEntry.EntryType == VerseEntryType.Verse)
+                {
+                    verseEntry.VersePointer.MoveChapterToVerse(latestTopChapter);
+
+                    var latestTopVerse = string.IsNullOrEmpty(latestVp.ModuleShortName) ? latestVp.MostTopVerse : latestVp.OriginalMostTopVerse;
+                    if (verseEntry.VersePointer.Verse <= latestTopVerse)
                         return false;
                 }
                 else
                 {
-                    if (verseEntry.VersePointer.Chapter <= docParseContext.CurrentParagraph.LatestVerseEntry.VersePointer.MostTopChapter)
+                    if (verseEntry.VersePointer.Chapter <= latestTopChapter)
                         return false;
                 }
                                 
@@ -94,7 +100,9 @@ namespace BibleNote.Analytics.Services.VerseParsing
         {            
             if (docParseContext.CurrentParagraph.LatestVerseEntry != null)
             {
-                verseEntry.VersePointer.Book = docParseContext.CurrentParagraph.LatestVerseEntry.VersePointer.Book;
+                var latestVp = docParseContext.CurrentParagraph.LatestVerseEntry.VersePointer;
+                verseEntry.VersePointer.Book = latestVp.Book;
+                verseEntry.VersePointer.ModuleShortName = latestVp.ModuleShortName;
                 return true;
             }                        
 
@@ -109,22 +117,25 @@ namespace BibleNote.Analytics.Services.VerseParsing
         /// <returns></returns>
         private static bool VerseRule(VerseEntry verseEntry, IDocumentParseContext docParseContext)
         {
-            var parentVerse = docParseContext.CurrentParagraph.LatestVerseEntry?.VersePointer;
-            if (parentVerse == null)
+            var latestVp = docParseContext.CurrentParagraph.LatestVerseEntry?.VersePointer;
+            if (latestVp == null)
             {
                 var chapterEntry = docParseContext.CurrentParagraph.GetHierarchyChapterEntry()
                                 ?? docParseContext.CurrentHierarchy?.GetHierarchyChapterEntry();
 
                 if (chapterEntry?.Found == true)                
-                    parentVerse = chapterEntry.ChapterPointer;
+                    latestVp = chapterEntry.ChapterPointer;
                 else if (docParseContext.TitleChapter?.Found == true)
-                    parentVerse = docParseContext.TitleChapter.ChapterPointer;
+                    latestVp = docParseContext.TitleChapter.ChapterPointer;
             }               
 
-            if (parentVerse != null && parentVerse.IsMultiVerse <= MultiVerse.OneChapter)
+            if (latestVp != null && latestVp.IsMultiVerse <= MultiVerse.OneChapter)
             {
-                verseEntry.VersePointer.Book = parentVerse.Book;
-                verseEntry.VersePointer.SetChapter(parentVerse.MostTopChapter);
+                verseEntry.VersePointer.Book = latestVp.Book;
+                verseEntry.VersePointer.ModuleShortName = latestVp.ModuleShortName;
+
+                var latestTopChapter = string.IsNullOrEmpty(latestVp.ModuleShortName) ? latestVp.MostTopChapter : latestVp.OriginalMostTopChapter;
+                verseEntry.VersePointer.SetChapter(latestTopChapter);
                 return true;
             }
 
@@ -141,7 +152,9 @@ namespace BibleNote.Analytics.Services.VerseParsing
         {
             if (docParseContext.CurrentParagraph.LatestVerseEntry != null)
             {
-                verseEntry.VersePointer.Book = docParseContext.CurrentParagraph.LatestVerseEntry.VersePointer.Book;                
+                var latestVp = docParseContext.CurrentParagraph.LatestVerseEntry.VersePointer;
+                verseEntry.VersePointer.Book = latestVp.Book;
+                verseEntry.VersePointer.ModuleShortName = latestVp.ModuleShortName;
                 return true;
             }            
 

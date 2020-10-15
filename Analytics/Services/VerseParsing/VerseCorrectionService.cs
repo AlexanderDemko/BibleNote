@@ -111,6 +111,9 @@ namespace BibleNote.Analytics.Services.VerseParsing
             var parallelVersePointers = _bibleParallelTranslationConnectorManager.GetParallelVersePointer(
                                                 versePointer.SubVerses.Verses.First(), versePointer.ModuleShortName);
 
+            versePointer.OriginalVerseNumber = versePointer.VerseNumber;
+            versePointer.OriginalTopVerseNumber = versePointer.TopVerseNumber;
+
             versePointer.VerseNumber = parallelVersePointers.First().VerseNumber;
 
             if (versePointer.SubVerses.Verses.Count == 1)
