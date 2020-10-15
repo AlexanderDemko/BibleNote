@@ -6,6 +6,8 @@ using BibleNote.Analytics.Services.DocumentProvider.Contracts;
 using HtmlAgilityPack;
 using System;
 using System.IO;
+using System.Linq;
+using System.Net;
 
 namespace BibleNote.Analytics.Providers.Html
 {
@@ -33,8 +35,11 @@ namespace BibleNote.Analytics.Providers.Html
 
                 if (ext == ".txt")
                 {
-                    //todo: надо обернуть каждый обзац в <p></p>
-                    //и надо по-другому проверять, что файл содержит только текст
+                    html = string.Concat(
+                        html.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries)
+                            .Select(p => $"<p>{p}</p>"));
+
+                    //todo: надо по-другому проверять, что файл содержит только текст
                 }
             }
             else if (documentId is WebDocumentId webDocumentId)
