@@ -150,9 +150,19 @@ namespace BibleNote.Analytics.Services.VerseParsing
                 if (char.IsDigit(c))
                 {
                     if (!chapterWasFound)
+                    {
+                        if (chapterIndex >= chapterDigits.Length)
+                            break;
+
                         chapterDigits[chapterIndex++] = c;
+                    }
                     else
+                    {
+                        if (verseIndex >= verseDigits.Length)
+                            break;
+                        
                         verseDigits[verseIndex++] = c;
+                    }
 
                     lastValuableCharIndex = cursorIndex;
                     spaceWasFound = false;

@@ -73,8 +73,8 @@ namespace BibleNote.Analytics.Providers.Html
         {
             switch (node.LocalName)
             {
+                case "body":
                 case "p":
-                    return ElementType.HierarchicalBlock;
                 case "r":
                     return ElementType.HierarchicalBlock;
                 case "t":

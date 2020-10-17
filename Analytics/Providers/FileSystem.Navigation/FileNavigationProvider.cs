@@ -10,7 +10,6 @@ using BibleNote.Analytics.Providers.FileSystem.DocumentId;
 using BibleNote.Analytics.Providers.Html;
 using BibleNote.Analytics.Providers.Html.Contracts;
 using BibleNote.Analytics.Providers.Pdf;
-using BibleNote.Analytics.Providers.Word;
 using BibleNote.Analytics.Services.DocumentProvider.Contracts;
 using BibleNote.Analytics.Services.VerseParsing.Contracts;
 using Microsoft.Extensions.DependencyInjection;
@@ -53,7 +52,8 @@ namespace BibleNote.Analytics.Providers.FileSystem.Navigation
                         this.serviceProvider.GetService<IHtmlDocumentConnector>());
                 case ".doc":
                 case ".docx":
-                    return new WordProvider();
+                    throw new NotImplementedException();
+                    //return new WordProvider(); // todo
                 case ".pdf":
                     return new PdfProvider();
                 default:

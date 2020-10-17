@@ -19,9 +19,9 @@ namespace BibleNote.Tests.Analytics
         }
 
         private void AssertVerseEntry(
-            VerseEntry verseEntryInfo, 
-            int startIndex, 
-            int endIndex, 
+            VerseEntry verseEntryInfo,
+            int startIndex,
+            int endIndex,
             VerseEntryType verseEntryType,
             VerseEntryOptions? verseEntryOptions = null)
         {
@@ -79,6 +79,15 @@ namespace BibleNote.Tests.Analytics
 
             verseEntry = _stringParser.TryGetVerse(s, verseEntry.EndIndex + 1);
             AssertVerseEntry(verseEntry, 110, 112, VerseEntryType.ChapterVerse);
+        }
+
+        [TestMethod]
+        public void Test2()
+        {
+            var s = "Лют ера в 1 5 1 7го и Мф 5:6";
+
+            var verseEntry = _stringParser.TryGetVerse(s, 0);
+            AssertVerseEntry(verseEntry, 22, 27, VerseEntryType.BookChapterVerse);
         }
     }
 }
