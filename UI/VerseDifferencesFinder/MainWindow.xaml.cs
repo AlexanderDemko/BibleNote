@@ -25,7 +25,7 @@ namespace VerseDifferencesFinder
         public MainWindow()
         {
             InitializeComponent();
-            cbModules.ItemsSource = GetModules().Keys;
+            cbModules.ItemsSource = GetModules()?.Keys;
             cbModules.SelectedItem = "rst";
         }
 
@@ -170,6 +170,13 @@ namespace VerseDifferencesFinder
 
         private Dictionary<string, string> GetModules()
         {
+            if (!Directory.Exists(ModulesFolderName))
+            {
+                MessageBox.Show($"{ModulesFolderName} folder was not found");
+                Application.Current.Shutdown();
+                return null;
+            }
+
             var modules = Directory.GetFiles(ModulesFolderName, "*.bnm", SearchOption.TopDirectoryOnly);
             return modules.ToDictionary(f => Path.GetFileNameWithoutExtension(f));
         }
