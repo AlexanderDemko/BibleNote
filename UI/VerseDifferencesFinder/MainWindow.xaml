@@ -10,9 +10,9 @@
         <Button Content="Start" HorizontalAlignment="Left" Margin="276,108,0,0" VerticalAlignment="Top" Height="28" Width="120" Click="Button_Click"/>
         <ComboBox HorizontalAlignment="Left" Margin="310,20,0,0" VerticalAlignment="Top" Width="86" Name="cbModules"/>
         <Label Content="Target Bible module" HorizontalAlignment="Left" Margin="10,17,0,0" VerticalAlignment="Top" Height="25" Width="186"/>
-        <Label Content="Source file (.txt, .pdf, .docx)" HorizontalAlignment="Left" Margin="10,58,0,0" VerticalAlignment="Top" Height="25" Width="186"/>
-        <TextBox HorizontalAlignment="Left" Margin="185,62,0,0" Text="" TextWrapping="NoWrap" VerticalAlignment="Top" Width="180" Name="tbSourceFile" IsReadOnly="True" />
-        <Button Content="..." HorizontalAlignment="Left" Margin="376,62,0,0" VerticalAlignment="Top" Height="18" Width="20" Name="btnSelectSourceFile" Click="btnSelectSourceFile_Click"/>
+        <Label Content="Source file (.docx, .html, .txt, .pdf)" HorizontalAlignment="Left" Margin="10,58,0,0" VerticalAlignment="Top" Height="25" Width="186"/>
+        <TextBox HorizontalAlignment="Left" Margin="201,62,0,0" Text="" TextWrapping="NoWrap" VerticalAlignment="Top" Width="164" Name="tbSourceFile" IsReadOnly="True" />
+        <Button Content="···" HorizontalAlignment="Left" Margin="376,62,0,0" VerticalAlignment="Top" Width="20" Name="btnSelectSourceFile" Click="btnSelectSourceFile_Click" Height="17.96"/>
 
     </Grid>
 </Window>

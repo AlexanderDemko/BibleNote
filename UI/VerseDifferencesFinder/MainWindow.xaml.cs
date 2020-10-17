@@ -11,7 +11,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Windows;
-using TikaOnDotNet.TextExtraction;
 
 namespace VerseDifferencesFinder
 {
@@ -34,13 +33,13 @@ namespace VerseDifferencesFinder
         {
             if (cbModules.SelectedItem == null)
             {
-                MessageBox.Show("Please select target module");
+                MessageBox.Show("Please select a target module");
                 return;
             }
 
             if (string.IsNullOrEmpty(tbSourceFile.Text))
             {
-                MessageBox.Show("Please select source file");
+                MessageBox.Show("Please select a source file");
                 return;
             }
 
@@ -55,13 +54,25 @@ namespace VerseDifferencesFinder
         private string GetTextFilePath(string userFilePath)
         {
             var fileExtension = Path.GetExtension(userFilePath);
-            if (fileExtension == ".txt" || fileExtension == ".docx")
+            if (fileExtension == ".txt" || fileExtension == ".html" || fileExtension == ".docx")
                 return userFilePath;
 
             var tempFilePath = Path.Combine(Directory.GetCurrentDirectory(), TempFileName);
-            var text = GetPdfText(userFilePath);
-            File.WriteAllText(TempFileName, text);
+            var fileText = GetPdfText(userFilePath);
+            File.WriteAllText(tempFilePath, fileText);
             return tempFilePath;
+        }
+
+        private string GetPdfText(string userFilePath)
+        {
+            using var reader = new iTextSharp.text.pdf.PdfReader(userFilePath);
+            var text = string.Empty;
+            for (int page = 1; page <= reader.NumberOfPages; page++)
+            {
+                text += iTextSharp.text.pdf.parser.PdfTextExtractor.GetTextFromPage(reader, page);
+            }
+            reader.Close();
+            return text;
         }
 
         private void SaveResults(List<string> result)
@@ -100,6 +111,7 @@ namespace VerseDifferencesFinder
             switch (Path.GetExtension(sourceFilePath))
             {
                 case ".txt":
+                case ".html":
                     documentProvider = ServiceProvider.GetService<HtmlProvider>();
                     break;
                 case ".docx":
@@ -147,7 +159,7 @@ namespace VerseDifferencesFinder
         {
             var dlg = new Microsoft.Win32.OpenFileDialog
             {
-                Filter = "Text files (*.txt)|*.txt|Word files (*.docx)|*.docx|PDF Files (*.pdf)|*.pdf"
+                Filter = "Word files (*.docx)|*.docx|Html files (*.html)|*.html|Text files (*.txt)|*.txt|PDF Files (*.pdf)|*.pdf"
             };
 
             if (dlg.ShowDialog() == true)
@@ -165,15 +177,6 @@ namespace VerseDifferencesFinder
         private void btnSelectSourceFile_Click(object sender, RoutedEventArgs e)
         {
             tbSourceFile.Text = GetSourceFileName();
-        }       
-
-        public static string GetPdfText(string filePath)
-        {
-            return new TextExtractor().Extract(filePath, (text, metadata) =>
-            {
-                var metaDataDictionary = metadata.names().ToDictionary(name => name, metadata.getValues);
-                return text;
-            });
-        }
+        }     
     }
 }
