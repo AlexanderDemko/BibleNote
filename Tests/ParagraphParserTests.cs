@@ -210,7 +210,7 @@ namespace BibleNote.Tests.Analytics
 
             CheckVerses(input, null,
                 docParseContext => docParseContext.SetTitleVerse(new ChapterEntry(_versePointerFactory.CreateVersePointer("1Кор 1").ToChapterPointer())),
-                "1Кор 1:1-2", "1Кор 1:3", "1Кор 1:4-5", "1Кор 6", "1Кор 7:8");      // возможно, не надо поддерживать два последних VersePointer-a
+                "1Кор 1:1-2", "1Кор 1:3", "1Кор 1:4-5", "1Кор 6", "1Кор 7:8");      // todo: возможно, не надо поддерживать два последних VersePointer-a
 
             CheckVerses(input, null,
                 docParseContext => docParseContext.SetTitleVerse(new ChapterEntry(_versePointerFactory.CreateVersePointer("1Кор 1:1").ToChapterPointer())),
@@ -615,8 +615,15 @@ lang=ru>&nbsp;Тим&nbsp;</span><span style='color:#444444' lang=en-US>2:2). </
         [TestMethod]
         public void Test50()
         {
-            var input = @" Ps 56:7 and 57:4 and :5";
+            var input = "\nPs 56:7 and 57:4 and :5";
             CheckVerses(input, null, null, "Пс 55:8", "Пс 56:5", "Пс 56:6");
+        }
+
+        [TestMethod]
+        public void Test51()
+        {
+            var input = @"Luke 0:7 and Лк 7:0 and Lk 0 and :6 and Lk 5";
+            CheckVerses(input, null, null, "Лк 7", "Лк 7:6", "Лк 5");       // todo: возможно, не надо поддерживать два первых VersePointer-a
         }
     }
 }

@@ -35,7 +35,7 @@ namespace BibleNote.Analytics.Providers.Html
                 if (ext == ".txt")
                 {
                     html = string.Concat(
-                        html.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries)
+                        html.Split(new string[] { Environment.NewLine, "\n" }, StringSplitOptions.RemoveEmptyEntries)
                             .Select(p => $"<p>{p}</p>"));
 
                     //todo: надо по-другому проверять, что файл содержит только текст

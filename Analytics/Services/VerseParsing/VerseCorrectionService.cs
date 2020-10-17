@@ -22,6 +22,9 @@ namespace BibleNote.Analytics.Services.VerseParsing
 
         public bool CheckAndCorrectVerse(VersePointer versePointer)
         {
+            if (versePointer.Chapter == 0)
+                return false;
+
             ChangeIfOneChapterBook(versePointer);
 
             if (!string.IsNullOrEmpty(versePointer.ModuleShortName))

@@ -8,7 +8,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
         // Now we support only two spaces: 32 и 160. It is required in two collections here and in method ModuleInfo.GetBibleBook(). 
         // If there will be more supported spaces, then it would be appropriate to allocate separate collection.
 
-        private static char[] _wordDelmiters = new char[] { ' ', ' ', ',', '.', ':', '-', '/', '\\', '>', '<', '=', '(', ')', '*', '\'', '"' };
+        private static char[] _wordDelmiters = new char[] { ' ', ' ', ',', '.', ':', '-', '/', '\\', '>', '<', '=', '(', ')', '*', '\'', '"', '\n' };
         private static char[] _midVerseChars = new char[] { '.', ' ', ' ', '(' };  // Allowable symbols between book and chapter
         private static char[] _dashes = new char[] { '-', '—', '‑', '–', '−' };
         private static char[] _startVerseAdditionalChars = new char[] { ',', ';', default(char) };
