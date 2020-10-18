@@ -10,8 +10,7 @@ namespace BibleNote.Analytics.Common.DiContainer
         {
             var module = (ModuleBase)Activator.CreateInstance(typeof(TModule));
 
-            foreach (var service in module.GetServices())
-                services.Add(service);
+            module.InitServices(services);
 
             return services;
         }

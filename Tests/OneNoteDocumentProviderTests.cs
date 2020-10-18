@@ -9,7 +9,6 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using BibleNote.Analytics.Services.VerseProcessing.Contracts;
 using System.Diagnostics;
-using System;
 using BibleNote.Analytics.Domain.Entities;
 using System.Threading.Tasks;
 

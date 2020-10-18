@@ -13,12 +13,13 @@ using BibleNote.Analytics.Services.VerseParsing.Contracts.ParseContext;
 using BibleNote.Analytics.Services.VerseParsing.Models.ParseContext;
 using BibleNote.Analytics.Services.VerseProcessing;
 using BibleNote.Analytics.Services.VerseProcessing.Contracts;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace BibleNote.Analytics.Services
 {
     public class ServicesModule : ModuleBase
     {
-        protected override void InitServices(ServiceDescriptorsList services)
+        protected override void InitServices(IServiceCollection services)
         {
             services
                 .AddScoped<IConfigurationManager, ConfigurationManager>()
