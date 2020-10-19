@@ -10,7 +10,8 @@ namespace BibleNote.Analytics.Providers.Html
         {
             services
                 .AddScoped<IHtmlDocumentConnector, HtmlDocumentConnector>()     // todo: А почему Scoped?
-                .AddScoped<IHtmlDocumentHandler, HtmlDocumentHandler>()    
+                .AddScoped<IHtmlDocumentHandler, HtmlDocumentHandler>()
+                .AddScoped<HtmlProvider>();
                 ;
         }
     }

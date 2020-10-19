@@ -9,9 +9,9 @@ using System.Threading.Tasks;
 
 namespace BibleNote.Analytics.Services.DocumentProvider
 {
-    class Analyzer : IAnalyzer        
+    class Analyzer : IAnalyzer
     {
-        readonly IOrderedEnumerable<IDocumentParseResultProcessing> documentParseResultProcessing;              
+        readonly IOrderedEnumerable<IDocumentParseResultProcessing> documentParseResultProcessing;
 
         public Analyzer(IServiceProvider ServiceProvider)
         {
@@ -21,16 +21,20 @@ namespace BibleNote.Analytics.Services.DocumentProvider
         }
 
         public async Task Analyze<T>(
-            INavigationProvider<T> navigationProvider, 
-            AnalyzerOptions options, 
+            INavigationProvider<T> navigationProvider,
+            AnalyzerOptions options,
             CancellationToken cancellationToken = default)
             where T : IDocumentId
-        {   
-            var documents = await navigationProvider.GetDocuments(options.Depth == AnalyzeDepth.NewOnly, cancellationToken);
+        {
+            var documents = await navigationProvider.LoadDocuments(newOnly: options.Depth == AnalyzeDepth.NewOnly, updateDb: true, cancellationToken);
 
             foreach (var document in documents)
             {
                 var provider = navigationProvider.GetProvider(document);
+
+                if (provider.IsReadonly)
+                    document.SetReadonly();     // todo: вроде как это лишнее, потому что FileNavigationProvider.IsReadonly должен быть true в таком случае
+
                 var parseResult = provider.ParseDocument(document);
 
                 foreach (var processor in this.documentParseResultProcessing)
@@ -38,6 +42,6 @@ namespace BibleNote.Analytics.Services.DocumentProvider
                     await processor.Process(document.DocumentId, parseResult);
                 }
             }
-        }        
+        }
     }
 }

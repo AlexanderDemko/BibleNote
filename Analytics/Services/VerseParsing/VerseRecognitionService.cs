@@ -129,7 +129,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
                     latestVp = docParseContext.TitleChapter.ChapterPointer;
             }               
 
-            if (latestVp != null && latestVp.IsMultiVerse <= MultiVerse.OneChapter)
+            if (latestVp != null && latestVp.MultiVerseType <= MultiVerse.OneChapter)
             {
                 verseEntry.VersePointer.Book = latestVp.Book;
                 verseEntry.VersePointer.ModuleShortName = latestVp.ModuleShortName;

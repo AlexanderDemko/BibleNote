@@ -10,7 +10,7 @@ namespace BibleNote.Analytics.Services.VerseParsing.Contracts
     {
         DocumentParseResult DocumentParseResult { get; }
 
-        void Init(IDocumentProviderInfo documentProvider);                
+        void Init(IDocumentProviderInfo documentProvider, IDocumentId documentId);                
 
         ParagraphParseResult ParseParagraph(IXmlNode node);
 

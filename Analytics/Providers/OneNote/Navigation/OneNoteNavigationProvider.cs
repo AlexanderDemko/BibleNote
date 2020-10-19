@@ -1,7 +1,5 @@
-﻿using BibleNote.Analytics.Providers.OneNote.Contracts;
-using BibleNote.Analytics.Providers.OneNote.Services;
+﻿using BibleNote.Analytics.Providers.OneNote.Services;
 using BibleNote.Analytics.Services.DocumentProvider.Contracts;
-using BibleNote.Analytics.Services.VerseParsing.Contracts;
 using System;
 using Microsoft.Extensions.DependencyInjection;
 using System.Collections.Generic;
@@ -25,14 +23,12 @@ namespace BibleNote.Analytics.Providers.OneNote.Navigation
 
         public IDocumentProvider GetProvider(OneNoteDocumentId document)
         {
-            return new OneNoteProvider(
-                   this.scopeProvider.GetService<IDocumentParserFactory>(),
-                   this.scopeProvider.GetService<IOneNoteDocumentConnector>());
+            return this.scopeProvider.GetService<OneNoteProvider>();
         }
 
-        public async Task<IEnumerable<OneNoteDocumentId>> GetDocuments(bool newOnly, CancellationToken cancellationToken = default)
+        public Task<IEnumerable<OneNoteDocumentId>> LoadDocuments(bool newOnly, bool updateDb = false, CancellationToken cancellationToken = default)
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException();   // todo
         }
     }
 }

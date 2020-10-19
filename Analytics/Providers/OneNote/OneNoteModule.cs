@@ -12,6 +12,7 @@ namespace BibleNote.Analytics.Providers.OneNote
             services
                 .AddScoped<IOneNoteDocumentConnector, OneNoteDocumentConnector>()
                 .AddScoped<IXDocumentHandler, OneNoteDocumentHandler>()
+                .AddScoped<OneNoteProvider>()
                 ;
         }
     }

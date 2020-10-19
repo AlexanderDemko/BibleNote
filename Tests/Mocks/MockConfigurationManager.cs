@@ -16,7 +16,6 @@ namespace BibleNote.Tests.Analytics.Mocks
 
         public void SaveChanges()
         {
-            //throw new NotImplementedException();
         }
     }
 }

@@ -79,7 +79,7 @@ namespace BibleNote.Analytics.Services.VerseParsing.Models
 
         public virtual ChapterPointer ToChapterPointer()
         {
-            if (IsMultiVerse > MultiVerse.OneChapter)
+            if (MultiVerseType > MultiVerse.OneChapter)
                 throw new InvalidOperationException("Must be only one chapter in verse.");
 
             return new ChapterPointer(Book, ModuleShortName, Chapter);

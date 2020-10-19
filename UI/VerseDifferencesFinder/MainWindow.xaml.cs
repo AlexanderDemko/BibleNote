@@ -1,4 +1,5 @@
 ﻿using BibleNote.Analytics.Common.DiContainer;
+using BibleNote.Analytics.Domain.Enums;
 using BibleNote.Analytics.Providers.FileSystem.DocumentId;
 using BibleNote.Analytics.Providers.Html;
 using BibleNote.Analytics.Services;
@@ -107,21 +108,17 @@ namespace VerseDifferencesFinder
 
         private IDocumentProvider GetDocumentProvider(string sourceFilePath)
         {
-            IDocumentProvider documentProvider;
-            switch (Path.GetExtension(sourceFilePath))
+            var fileType = FileTypeHelper.GetFileType(sourceFilePath);
+            switch (fileType)
             {
-                case ".txt":
-                case ".html":
-                    documentProvider = ServiceProvider.GetService<HtmlProvider>();
-                    break;
-                case ".docx":
-                    documentProvider = ServiceProvider.GetService<WordProvider>();
-                    break;
+                case FileType.Html:
+                case FileType.Text:
+                    return ServiceProvider.GetService<HtmlProvider>();
+                case FileType.Word:
+                    return ServiceProvider.GetService<WordProvider>();
                 default:
-                    throw new NotSupportedException(sourceFilePath);
+                    throw new NotSupportedException(fileType.ToString());
             }
-
-            return documentProvider;
         }
 
         private void InitApp(string moduleShortName)

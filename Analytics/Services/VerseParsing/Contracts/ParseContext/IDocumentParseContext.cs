@@ -1,10 +1,13 @@
-﻿using BibleNote.Analytics.Services.VerseParsing.Models;
+﻿using BibleNote.Analytics.Services.DocumentProvider.Contracts;
+using BibleNote.Analytics.Services.VerseParsing.Models;
 using BibleNote.Analytics.Services.VerseParsing.Models.ParseResult;
 
 namespace BibleNote.Analytics.Services.VerseParsing.Contracts.ParseContext
 {
     public interface IDocumentParseContext
     {
+        IDocumentId DocumentId { get; }
+
         ChapterEntry TitleChapter { get; }
 
         IParagraphParseContext CurrentParagraph { get; }
@@ -14,7 +17,7 @@ namespace BibleNote.Analytics.Services.VerseParsing.Contracts.ParseContext
     
     public interface IDocumentParseContextEditor : IDocumentParseContext
     {
-        void Init();
+        void Init(IDocumentId documentId);
 
         DocumentParseResult DocumentParseResult { get; }
 

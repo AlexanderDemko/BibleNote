@@ -58,7 +58,7 @@ namespace BibleNote.Analytics.Services.VerseProcessing
 
                 foreach (var verseEntry in paragraphResult.VerseEntries)
                 {
-                    var suffix = verseEntry.VersePointer.IsMultiVerse == MultiVerse.None
+                    var suffix = verseEntry.VersePointer.MultiVerseType == MultiVerse.None
                                     ? null
                                     : $"({verseEntry.VersePointer.GetFullVerseNumberString()})";
 

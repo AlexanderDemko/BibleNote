@@ -9,25 +9,29 @@ using BibleNote.Analytics.Services.VerseParsing.Contracts.ParseContext;
 using BibleNote.Analytics.Services.VerseParsing.Models.ParseContext;
 using BibleNote.Analytics.Services.VerseParsing.Models.ParseResult;
 using Microsoft.Extensions.DependencyInjection;
+using BibleNote.Analytics.Providers.FileSystem.DocumentId;
 
 namespace BibleNote.Tests.Analytics
 {
     [TestClass]
     public class DocumentParserTests : DocumentParserTestsBase
     {
-        private IDocumentProviderInfo _documentProvider;
-        private IDocumentParserFactory _documentParserFactory;
-        private IDocumentParseContextEditor _documentParseContext;
+        private IDocumentProviderInfo documentProvider;
+        private IDocumentParserFactory documentParserFactory;
+        private IDocumentParseContextEditor documentParseContext;
+        private IDocumentId mockDocumentId;
 
         [TestInitialize]
         public void Init()
         {
-            _documentParseContext = new DocumentParseContext();
+            this.documentParseContext = new DocumentParseContext();
 
-            base.Init(services => services.AddScoped(sp => _documentParseContext));
+            base.Init(services => services.AddScoped(sp => documentParseContext));
 
-            _documentProvider = new MockDocumentProviderInfo() { IsReadonly = true };
-            _documentParserFactory = ServiceProvider.GetService<IDocumentParserFactory>();
+            this.documentProvider = new MockDocumentProviderInfo(ServiceProvider.GetService<IVerseLinkService>()) { IsReadonly = true };
+            this.documentParserFactory = ServiceProvider.GetService<IDocumentParserFactory>();
+
+            this.mockDocumentId = new FileDocumentId(0, null, true);
         }
 
         private void CheckParseResults(DocumentParseResult docParseResult, params string[][] expectedResults)
@@ -45,7 +49,7 @@ namespace BibleNote.Tests.Analytics
         {
             var node = GetNode("<div>Это <p>тестовая <font>Мк 5:</font>6-7!!</p> строка</div>");
             DocumentParseResult docParseResult;
-            using (var docParser = _documentParserFactory.Create(_documentProvider))
+            using (var docParser = this.documentParserFactory.Create(this.documentProvider, this.mockDocumentId))
             {
                 docParser.ParseParagraph(node);
                 docParseResult = docParser.DocumentParseResult;
@@ -63,7 +67,7 @@ namespace BibleNote.Tests.Analytics
             var verseNode = GetNode(":12 и :13");
 
             DocumentParseResult docParseResult;
-            using (var docParser = _documentParserFactory.Create(_documentProvider))
+            using (var docParser = this.documentParserFactory.Create(this.documentProvider, this.mockDocumentId))
             {
                 docParser.ParseParagraph(node1);
 
@@ -111,7 +115,7 @@ namespace BibleNote.Tests.Analytics
             var verseNode = GetNode(":12 и :13");
 
             DocumentParseResult docParseResult;
-            using (var docParser = _documentParserFactory.Create(_documentProvider))
+            using (var docParser = this.documentParserFactory.Create(this.documentProvider, this.mockDocumentId))
             {
                 docParser.ParseParagraph(node1);
 
@@ -146,7 +150,7 @@ namespace BibleNote.Tests.Analytics
             var verseNode = GetNode(":12");
 
             DocumentParseResult docParseResult;
-            using (var docParser = _documentParserFactory.Create(_documentProvider))
+            using (var docParser = this.documentParserFactory.Create(this.documentProvider, this.mockDocumentId))
             {
                 using (docParser.ParseHierarchyElement(ElementType.Table))
                 {
@@ -195,7 +199,7 @@ namespace BibleNote.Tests.Analytics
             var verseNode = GetNode(":12");
 
             DocumentParseResult docParseResult;
-            using (var docParser = _documentParserFactory.Create(_documentProvider))
+            using (var docParser = this.documentParserFactory.Create(this.documentProvider, this.mockDocumentId))
             {
                 using (docParser.ParseHierarchyElement(ElementType.Table))
                 {
@@ -315,7 +319,7 @@ namespace BibleNote.Tests.Analytics
             var verseNode = GetNode(":12");
 
             DocumentParseResult docParseResult;
-            using (var docParser = _documentParserFactory.Create(_documentProvider))
+            using (var docParser = this.documentParserFactory.Create(this.documentProvider, this.mockDocumentId))
             {
                 docParser.ParseParagraph(node1);
 
@@ -382,7 +386,7 @@ namespace BibleNote.Tests.Analytics
             var titleNode = GetNode("Лк 3");
 
             DocumentParseResult docParseResult;
-            using (var docParser = _documentParserFactory.Create(_documentProvider))
+            using (var docParser = this.documentParserFactory.Create(this.documentProvider, this.mockDocumentId))
             {
                 using (docParser.ParseHierarchyElement(ElementType.Title))
                 {
@@ -464,7 +468,7 @@ namespace BibleNote.Tests.Analytics
             var verseNode = GetNode(":12");
 
             DocumentParseResult docParseResult;
-            using (var docParser = _documentParserFactory.Create(_documentProvider))
+            using (var docParser = this.documentParserFactory.Create(this.documentProvider, this.mockDocumentId))
             {
                 using (docParser.ParseHierarchyElement(ElementType.Title))
                 {
@@ -495,7 +499,7 @@ namespace BibleNote.Tests.Analytics
             var verseNode = GetNode(":12");
 
             DocumentParseResult docParseResult;
-            using (var docParser = _documentParserFactory.Create(_documentProvider))
+            using (var docParser = this.documentParserFactory.Create(this.documentProvider, this.mockDocumentId))
             {
                 using (docParser.ParseHierarchyElement(ElementType.HierarchicalBlock))
                 {
@@ -545,7 +549,7 @@ namespace BibleNote.Tests.Analytics
             var verseNode = GetNode(":12");
 
             DocumentParseResult docParseResult;
-            using (var docParser = _documentParserFactory.Create(_documentProvider))
+            using (var docParser = this.documentParserFactory.Create(this.documentProvider, this.mockDocumentId))
             {
                 using (docParser.ParseHierarchyElement(ElementType.List))
                 {
@@ -652,7 +656,7 @@ namespace BibleNote.Tests.Analytics
             var verseNode = GetNode(":12");
 
             DocumentParseResult docParseResult;
-            using (var docParser = _documentParserFactory.Create(_documentProvider))
+            using (var docParser = this.documentParserFactory.Create(this.documentProvider, this.mockDocumentId))
             {
                 docParser.ParseParagraph(node);
                 docParser.ParseParagraph(verseNode);
@@ -672,7 +676,7 @@ namespace BibleNote.Tests.Analytics
             var verseNode = GetNode(":12");
 
             DocumentParseResult docParseResult;
-            using (var docParser = _documentParserFactory.Create(_documentProvider))
+            using (var docParser = this.documentParserFactory.Create(this.documentProvider, this.mockDocumentId))
             {
                 using (docParser.ParseHierarchyElement(ElementType.HierarchicalBlock))
                 {
@@ -706,7 +710,7 @@ namespace BibleNote.Tests.Analytics
             var verseNode2 = GetNode(":12");
 
             DocumentParseResult docParseResult;
-            using (var docParser = _documentParserFactory.Create(_documentProvider))
+            using (var docParser = this.documentParserFactory.Create(this.documentProvider, this.mockDocumentId))
             {
                 using (docParser.ParseHierarchyElement(ElementType.List))
                 {
@@ -748,7 +752,7 @@ namespace BibleNote.Tests.Analytics
             var verseNode = GetNode(":12");
 
             DocumentParseResult docParseResult;
-            using (var docParser = _documentParserFactory.Create(_documentProvider))
+            using (var docParser = this.documentParserFactory.Create(this.documentProvider, this.mockDocumentId))
             {
                 docParser.ParseParagraph(node1);
                 docParser.ParseParagraph(node2);
@@ -770,7 +774,7 @@ namespace BibleNote.Tests.Analytics
             var verseNode = GetNode(":12");
 
             DocumentParseResult docParseResult;
-            using (var docParser = _documentParserFactory.Create(_documentProvider))
+            using (var docParser = this.documentParserFactory.Create(this.documentProvider, this.mockDocumentId))
             {
                 using (docParser.ParseHierarchyElement(ElementType.Table))
                 {
@@ -812,7 +816,7 @@ namespace BibleNote.Tests.Analytics
             var verseNode = GetNode(":12");
 
             DocumentParseResult docParseResult;
-            using (var docParser = _documentParserFactory.Create(_documentProvider))
+            using (var docParser = this.documentParserFactory.Create(this.documentProvider, this.mockDocumentId))
             {
                 using (docParser.ParseHierarchyElement(ElementType.Table))
                 {

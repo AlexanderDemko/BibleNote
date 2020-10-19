@@ -26,14 +26,12 @@ namespace BibleNote.Analytics.Providers.Web.Navigation
 
         public IDocumentProvider GetProvider(WebDocumentId document)
         {
-            return new HtmlProvider(
-                        this.scopeProvider.GetService<IDocumentParserFactory>(),
-                        this.scopeProvider.GetService<IHtmlDocumentConnector>());
+            return this.scopeProvider.GetService<HtmlProvider>();
         }
 
-        public async Task<IEnumerable<WebDocumentId>> GetDocuments(bool newOnly, CancellationToken cancellationToken = default)
+        public Task<IEnumerable<WebDocumentId>> LoadDocuments(bool newOnly, bool updateDb = false, CancellationToken cancellationToken = default)
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException(); // todo
         }
     }
 }

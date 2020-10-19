@@ -11,6 +11,10 @@ using BibleNote.Analytics.Services.VerseParsing.Models;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using BibleNote.Analytics.Services.VerseParsing.Models.ParseContext;
+using BibleNote.Analytics.Services.DocumentProvider.Contracts;
+using DocumentFormat.OpenXml.Vml.Spreadsheet;
+using BibleNote.Analytics.Providers.FileSystem.DocumentId;
+using ICSharpCode.SharpZipLib.Zip.Compression.Streams;
 
 namespace BibleNote.Tests.Analytics
 {
@@ -23,20 +27,20 @@ namespace BibleNote.Tests.Analytics
             public ParagraphParseResult Result { get; set; }
         }
 
-        private MockDocumentProviderInfo _documentProvider;
-        private IDocumentParserFactory _documentParserFactory;        
-        private IVersePointerFactory _versePointerFactory;
-        private IDocumentParseContextEditor _documentParseContext;
+        private MockDocumentProviderInfo documentProvider;
+        private IDocumentParserFactory documentParserFactory;        
+        private IVersePointerFactory versePointerFactory;
+        private IDocumentParseContextEditor documentParseContext;
 
         [TestInitialize]
         public void Init()
         {
-            _documentParseContext = new DocumentParseContext();
-            base.Init(services => services.AddScoped(sp => _documentParseContext));
+            documentParseContext = new DocumentParseContext();
+            base.Init(services => services.AddScoped(sp => documentParseContext));
 
-            _documentProvider = new MockDocumentProviderInfo();
-            _versePointerFactory = ServiceProvider.GetService<IVersePointerFactory>();                        
-            _documentParserFactory = ServiceProvider.GetService<IDocumentParserFactory>();                        
+            documentProvider = new MockDocumentProviderInfo(ServiceProvider.GetService<IVerseLinkService>());
+            versePointerFactory = ServiceProvider.GetService<IVersePointerFactory>();                        
+            documentParserFactory = ServiceProvider.GetService<IDocumentParserFactory>();                        
         }
 
         [TestCleanup]
@@ -47,22 +51,23 @@ namespace BibleNote.Tests.Analytics
 
         private TestResult CheckVerses(string input, string expectedOutput, Action<IDocumentParseContextEditor> initDocParseContext, string[] notFoundVerses, params string[] verses)
         {
+            var isReadonly = false;
             if (string.IsNullOrEmpty(expectedOutput))
             {
-                _documentProvider.IsReadonly = true;
+                isReadonly = true;
                 expectedOutput = input;
             }
-            else
-                _documentProvider.IsReadonly = false;
+
+            var mockDocumentId = new FileDocumentId(0, null, isReadonly);
 
             if (verses == null)
                 verses = new string[0];
             
-            initDocParseContext?.Invoke(_documentParseContext);
+            initDocParseContext?.Invoke(documentParseContext);
 
             var htmlDoc = new HtmlNodeWrapper(input);
             ParagraphParseResult result;            
-            using (var docParser = _documentParserFactory.Create(_documentProvider))
+            using (var docParser = this.documentParserFactory.Create(documentProvider, mockDocumentId))
             {                
                 result = docParser.ParseParagraph(htmlDoc);                
             }
@@ -70,7 +75,7 @@ namespace BibleNote.Tests.Analytics
             Assert.AreEqual(verses.Length, result.VerseEntries.Count, "Verses length is not the same. Expected: {0}. Found: {1}", verses.Length, result.VerseEntries.Count);            
             var versePointers = result.VerseEntries.Select(ve => ve.VersePointer);
             foreach (var verse in verses)
-                Assert.IsTrue(versePointers.Contains(_versePointerFactory.CreateVersePointer(verse)), "Can not find the verse: '{0}'", verse);            
+                Assert.IsTrue(versePointers.Contains(this.versePointerFactory.CreateVersePointer(verse)), "Can not find the verse: '{0}'", verse);            
 
             Assert.AreEqual(expectedOutput, htmlDoc.InnerXml, "The output html is wrong.");
             Assert.AreEqual(new HtmlToTextConverter().SimpleConvert(input).Replace("&nbsp;", " "), result.Text, "Text parts do not contain the full input string.");
@@ -79,7 +84,7 @@ namespace BibleNote.Tests.Analytics
             {   
                 Assert.AreEqual(notFoundVerses.Length, result.NotFoundVerses.Count);
                 foreach (var verse in notFoundVerses)
-                    Assert.IsTrue(result.NotFoundVerses.Contains(_versePointerFactory.CreateVersePointer(verse)));
+                    Assert.IsTrue(result.NotFoundVerses.Contains(this.versePointerFactory.CreateVersePointer(verse)));
             }
 
             return new TestResult() { Node = htmlDoc, Result = result };
@@ -209,19 +214,19 @@ namespace BibleNote.Tests.Analytics
             var input = "2,3 и :1-2 как и в :3,4-5;6 и 7:8";
 
             CheckVerses(input, null,
-                docParseContext => docParseContext.SetTitleVerse(new ChapterEntry(_versePointerFactory.CreateVersePointer("1Кор 1").ToChapterPointer())),
+                docParseContext => docParseContext.SetTitleVerse(new ChapterEntry(versePointerFactory.CreateVersePointer("1Кор 1").ToChapterPointer())),
                 "1Кор 1:1-2", "1Кор 1:3", "1Кор 1:4-5", "1Кор 6", "1Кор 7:8");      // todo: возможно, не надо поддерживать два последних VersePointer-a
 
             CheckVerses(input, null,
-                docParseContext => docParseContext.SetTitleVerse(new ChapterEntry(_versePointerFactory.CreateVersePointer("1Кор 1:1").ToChapterPointer())),
+                docParseContext => docParseContext.SetTitleVerse(new ChapterEntry(versePointerFactory.CreateVersePointer("1Кор 1:1").ToChapterPointer())),
                 "1Кор 1:1-2", "1Кор 1:3", "1Кор 1:4-5", "1Кор 6", "1Кор 7:8");      
 
             CheckVerses(input, null,
-                docParseContext => docParseContext.SetTitleVerse(new ChapterEntry(_versePointerFactory.CreateVersePointer("1Кор 1:1-2").ToChapterPointer())),
+                docParseContext => docParseContext.SetTitleVerse(new ChapterEntry(versePointerFactory.CreateVersePointer("1Кор 1:1-2").ToChapterPointer())),
                 "1Кор 1:1-2", "1Кор 1:3", "1Кор 1:4-5", "1Кор 6", "1Кор 7:8");      
 
             Action action = () => CheckVerses(input, null,
-                docParseContext => docParseContext.SetTitleVerse(new ChapterEntry(_versePointerFactory.CreateVersePointer("1Кор 1-2").ToChapterPointer())));
+                docParseContext => docParseContext.SetTitleVerse(new ChapterEntry(versePointerFactory.CreateVersePointer("1Кор 1-2").ToChapterPointer())));
             action.Should().Throw<InvalidOperationException>("Must be only one chapter in verse.");
         }
 
@@ -379,7 +384,7 @@ namespace BibleNote.Tests.Analytics
         {
             CheckVerses("Ин 5:6 и 7 стих, 8ст, ст9-11, ст.12,13", null, null, "Ин 5:6", "Ин 5:7", "Ин 5:8", "Ин 5:9-11", "Ин 5:12", "Ин 5:13");
             CheckVerses("ст. 22-23, стихи 23-24, стих 12, гл. 2-3, главы 3-4, глава 6", null,
-                docParseContext => docParseContext.SetTitleVerse(new ChapterEntry(_versePointerFactory.CreateVersePointer("Ин 3").ToChapterPointer())),
+                docParseContext => docParseContext.SetTitleVerse(new ChapterEntry(versePointerFactory.CreateVersePointer("Ин 3").ToChapterPointer())),
                 "Ин 3:22-23", "Ин 3:23-24", "Ин 3:12", "Ин 2-3", "Ин 3-4", "Ин 6");
         }
 

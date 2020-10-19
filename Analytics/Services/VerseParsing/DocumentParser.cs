@@ -8,48 +8,46 @@ namespace BibleNote.Analytics.Services.VerseParsing
 {
     class DocumentParser : IDocumentParser
     {       
-        private readonly IParagraphParser _paragraphParser;
+        private readonly IParagraphParser paragraphParser;
+        private readonly IDocumentParseContextEditor docParseContext;        
 
-        private readonly IDocumentParseContextEditor _docParseContext;        
+        public DocumentParseResult DocumentParseResult { get { return docParseContext.DocumentParseResult; } }     
 
-        private IDocumentProviderInfo _documentProvider;
-
-        public DocumentParseResult DocumentParseResult { get { return _docParseContext.DocumentParseResult; } }
-
-        public DocumentParser(IParagraphParser paragraphParser, IDocumentParseContextEditor docParseContext)
+        public DocumentParser(
+            IParagraphParser paragraphParser, 
+            IDocumentParseContextEditor docParseContext)
         {            
-            _paragraphParser = paragraphParser;
-            _docParseContext = docParseContext;            
+            this.paragraphParser = paragraphParser;
+            this.docParseContext = docParseContext;            
         }
 
-        public void Init(IDocumentProviderInfo documentProvider)
-        {
-            _documentProvider = documentProvider;            
-            _paragraphParser.Init(documentProvider, _docParseContext);
+        public void Init(IDocumentProviderInfo documentProvider, IDocumentId documentId)
+        {            
+            paragraphParser.Init(documentProvider, docParseContext);
 
-            _docParseContext.Init();
-            _docParseContext.EnterHierarchyElement(ElementType.Root);
+            docParseContext.Init(documentId);
+            docParseContext.EnterHierarchyElement(ElementType.Root);
         }
 
         public ParagraphParseResult ParseParagraph(IXmlNode node)
         {   
-            using (_docParseContext.ParseParagraph())
+            using (docParseContext.ParseParagraph())
             {
-                return _paragraphParser.ParseParagraph(node, _docParseContext.CurrentParagraphEditor);                
+                return paragraphParser.ParseParagraph(node, docParseContext.CurrentParagraphEditor);                
             }
         }
 
         public DisposeHandler ParseHierarchyElement(ElementType paragraphType)
         {
-            _docParseContext.EnterHierarchyElement(paragraphType);            
+            docParseContext.EnterHierarchyElement(paragraphType);            
 
-            return new DisposeHandler(() => _docParseContext.ExitHierarchyElement());
+            return new DisposeHandler(() => docParseContext.ExitHierarchyElement());
         }
 
         public void Dispose()
         {
-            _docParseContext.ExitHierarchyElement();
-            _docParseContext.ClearContext();
+            docParseContext.ExitHierarchyElement();
+            docParseContext.ClearContext();
         }
     }
 }

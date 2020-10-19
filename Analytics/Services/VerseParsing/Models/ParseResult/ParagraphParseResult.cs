@@ -87,7 +87,7 @@ namespace BibleNote.Analytics.Services.VerseParsing.Models.ParseResult
                         if (verseEntry.StartIndex == 0)
                             _chapterEntry.AtStartOfParagraph = true;
 
-                        if (verseEntry.VersePointer.IsMultiVerse <= MultiVerse.OneChapter)
+                        if (verseEntry.VersePointer.MultiVerseType <= MultiVerse.OneChapter)
                         {
                             if (verseEntry.EntryType == VerseEntryType.BookChapter || verseEntry.EntryType == VerseEntryType.BookChapterVerse)
                                 _chapterEntry.CorrectType = true;

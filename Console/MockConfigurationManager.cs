@@ -19,7 +19,7 @@ namespace BibleNoteConsole
 
         public void SaveChanges()
         {
-            //throw new NotImplementedException();
+           
         }
     }
 }

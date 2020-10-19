@@ -5,17 +5,17 @@ namespace BibleNote.Analytics.Services.VerseParsing
 {
     class DocumentParserFactory : IDocumentParserFactory
     {
-        private readonly IDocumentParser _documentParser;
+        private readonly IDocumentParser documentParser;
 
         public DocumentParserFactory(IDocumentParser documentParser)
         {
-            _documentParser = documentParser;
+            this.documentParser = documentParser;
         }
 
-        public IDocumentParser Create(IDocumentProviderInfo documentProvider)
+        public IDocumentParser Create(IDocumentProviderInfo documentProvider, IDocumentId documentId)
         {            
-            _documentParser.Init(documentProvider);
-            return _documentParser;
+            this.documentParser.Init(documentProvider, documentId);
+            return documentParser;
         }
     }
 }

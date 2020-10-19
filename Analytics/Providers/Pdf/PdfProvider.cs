@@ -1,5 +1,5 @@
-﻿using BibleNote.Analytics.Services.DocumentProvider.Contracts;
-using BibleNote.Analytics.Services.VerseParsing.Contracts.ParseContext;
+﻿using BibleNote.Analytics.Domain.Enums;
+using BibleNote.Analytics.Services.DocumentProvider.Contracts;
 using BibleNote.Analytics.Services.VerseParsing.Models;
 using BibleNote.Analytics.Services.VerseParsing.Models.ParseResult;
 using System;
@@ -10,14 +10,16 @@ namespace BibleNote.Analytics.Providers.Pdf
     {
         public bool IsReadonly { get { return true; } }
 
+        public FileType[] SupportedFileTypes => new [] { FileType.Pdf };
+
         public string GetVersePointerLink(VersePointer versePointer)
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException(); // todo
         }
 
         public DocumentParseResult ParseDocument(IDocumentId documentId)
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException(); // todo
         }
     }
 }

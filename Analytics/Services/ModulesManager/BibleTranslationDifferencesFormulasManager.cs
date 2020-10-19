@@ -45,7 +45,7 @@ namespace BibleNote.Analytics.Services.ModulesManager.Models
         {
             get
             {
-                return BaseVersePointer.IsMultiVerse != MultiVerse.None;
+                return BaseVersePointer.MultiVerseType != MultiVerse.None;
             }
         }
 

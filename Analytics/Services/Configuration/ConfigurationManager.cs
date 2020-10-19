@@ -10,12 +10,12 @@ namespace BibleNote.Analytics.Services.Configuration
 
         public ConfigurationManager()
         {            
-            throw new NotImplementedException();
+            throw new NotImplementedException(); // todo
         }
 
         public void SaveChanges()
         {
-            //throw new NotImplementedException();
+            throw new NotImplementedException(); // todo
         }
     }
 }

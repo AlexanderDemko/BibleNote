@@ -1,4 +1,5 @@
 ﻿using BibleNote.Analytics.Services.DocumentProvider.Contracts;
+using System;
 
 namespace BibleNote.Analytics.Providers.OneNote.Navigation
 {
@@ -21,6 +22,11 @@ namespace BibleNote.Analytics.Providers.OneNote.Navigation
         public void SetChanged()
         {
             Changed = true;
+        }
+
+        public void SetReadonly()
+        {
+            throw new NotSupportedException("OneNote pages cannot be readonly");
         }
     }
 }

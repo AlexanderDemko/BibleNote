@@ -16,7 +16,6 @@ namespace VerseDifferencesFinder
 
         public void SaveChanges()
         {
-            //throw new NotImplementedException();
         }
     }
 }

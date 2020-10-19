@@ -8,34 +8,42 @@ using BibleNote.Analytics.Services.VerseParsing.Models;
 using BibleNote.Analytics.Services.VerseParsing.Models.ParseResult;
 using BibleNote.Analytics.Services.VerseParsing.Contracts.ParseContext;
 using BibleNote.Analytics.Providers.Html;
+using BibleNote.Analytics.Domain.Enums;
 
 namespace BibleNote.Analytics.Providers.OneNote.Services
 {
     public class OneNoteProvider : IDocumentProvider
     {
-        private readonly IDocumentParserFactory _documentParserFactory;
-
-        private readonly IOneNoteDocumentConnector _oneNoteDocumentConnector;
+        private readonly IDocumentParserFactory documentParserFactory;
+        private readonly IOneNoteDocumentConnector oneNoteDocumentConnector;
+        private readonly IVerseLinkService verseLinkService;
 
         public bool IsReadonly => false;
 
-        public OneNoteProvider(IDocumentParserFactory documentParserFactory, IOneNoteDocumentConnector oneNoteDocumentConnector)
+        public FileType[] SupportedFileTypes => new[] { FileType.OneNote };
+
+        public OneNoteProvider(
+            IDocumentParserFactory documentParserFactory, 
+            IOneNoteDocumentConnector oneNoteDocumentConnector,
+            IVerseLinkService verseLinkService)
         {
-            _documentParserFactory = documentParserFactory;
-            _oneNoteDocumentConnector = oneNoteDocumentConnector;
+            this.documentParserFactory = documentParserFactory;
+            this.oneNoteDocumentConnector = oneNoteDocumentConnector;
+            this.verseLinkService = verseLinkService;
         }        
 
         public string GetVersePointerLink(VersePointer versePointer)
         {
-            return string.Format($"<a href='bnVerse:{versePointer}'>{versePointer.GetOriginalVerseString()}</a>");
+            var verseLink = this.verseLinkService.GetVerseLink(versePointer);
+            return string.Format($"<a href='{verseLink}'>{versePointer.GetOriginalVerseString()}</a>");
         }
 
         public DocumentParseResult ParseDocument(IDocumentId documentId)
         {
             DocumentParseResult result;
-            using (var docHandler = _oneNoteDocumentConnector.Connect(documentId))
+            using (var docHandler = oneNoteDocumentConnector.Connect(documentId))
             {
-                using (var docParser = _documentParserFactory.Create(this))
+                using (var docParser = documentParserFactory.Create(this, documentId))
                 {
                     ParseNode(docParser, docHandler.Document.Root);
                     result = docParser.DocumentParseResult;

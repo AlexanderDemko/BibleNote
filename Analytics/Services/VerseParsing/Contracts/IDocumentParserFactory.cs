@@ -4,6 +4,6 @@ namespace BibleNote.Analytics.Services.VerseParsing.Contracts
 {
     public interface IDocumentParserFactory
     {
-        IDocumentParser Create(IDocumentProviderInfo documentProvider);
+        IDocumentParser Create(IDocumentProviderInfo documentProvider, IDocumentId documentId);
     }
 }

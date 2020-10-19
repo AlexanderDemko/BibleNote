@@ -20,70 +20,71 @@ namespace BibleNote.Analytics.Services.VerseParsing
             internal int EndIndex { get; set; }
         }
 
-        private readonly IStringParser _stringParser;
+        private readonly IStringParser stringParser;
+        private readonly IVerseRecognitionService verseRecognitionService;
+        private readonly IConfigurationManager configurationManager;
+        private readonly IVerseLinkService verseLinkService;
+        private IDocumentProviderInfo documentProvider;
+        private IDocumentParseContext docParseContext;
+        private IParagraphParseContextEditor paragraphContextEditor;
 
-        private readonly IVerseRecognitionService _verseRecognitionService;
-
-        private readonly IConfigurationManager _configurationManager;
-
-        private IDocumentProviderInfo _documentProvider;
-
-        private IDocumentParseContext _docParseContext;
-
-        private IParagraphParseContextEditor _paragraphContextEditor;
-
-        public ParagraphParser(IStringParser stringParser, IVerseRecognitionService verseRecognitionService, IConfigurationManager configurationManager)
+        public ParagraphParser(
+            IStringParser stringParser, 
+            IVerseRecognitionService verseRecognitionService, 
+            IConfigurationManager configurationManager,
+            IVerseLinkService verseLinkService)
         {
-            _stringParser = stringParser;
-            _verseRecognitionService = verseRecognitionService;
-            _configurationManager = configurationManager;
+            this.stringParser = stringParser;
+            this.verseRecognitionService = verseRecognitionService;
+            this.configurationManager = configurationManager;
+            this.verseLinkService = verseLinkService;
         }
 
         public void Init(IDocumentProviderInfo documentProvider, IDocumentParseContext docParseContext)
         {
-            _documentProvider = documentProvider;
-            _docParseContext = docParseContext;
+            this.documentProvider = documentProvider;
+            this.docParseContext = docParseContext;
         }
 
         public ParagraphParseResult ParseParagraph(IXmlNode node, IParagraphParseContextEditor paragraphContextEditor)
         {
-            if (_documentProvider == null)
-                throw new Exception("_documentProvider == null");
+            if (documentProvider == null)
+                throw new ArgumentNullException(nameof(documentProvider));
 
-            if (_docParseContext == null)
-                throw new Exception("_docParseContext == null");
+            if (docParseContext == null)
+                throw new ArgumentNullException(nameof(docParseContext));
 
-            _paragraphContextEditor = paragraphContextEditor;
+            this.paragraphContextEditor = paragraphContextEditor;
 
             var parseString = new HtmlToTextConverter().Convert(node);
-            _paragraphContextEditor.ParseResult.Text = parseString.Value;
+            this.paragraphContextEditor.ParseResult.Text = parseString.Value;
             ParseTextNodes(parseString);
 
-            _paragraphContextEditor.SetParsed();
-            return _paragraphContextEditor.ParseResult;
+            this.paragraphContextEditor.SetParsed();
+            return this.paragraphContextEditor.ParseResult;
         }
 
         private void ParseTextNodes(TextNodesString parseString)
         {
             var index = 0;         // чтобы анализировать с первого символа, так как теперь поддерживаем ещё и такие ссылки, как "5:6 - ..."
-            var verseEntry = _stringParser.TryGetVerse(parseString.Value, index);
+            var verseEntry = stringParser.TryGetVerse(parseString.Value, index);
 
             var skipNodes = 0;
             while (verseEntry.VersePointerFound)
             {
-                var verseWasRecognized = _verseRecognitionService.TryRecognizeVerse(verseEntry, _docParseContext);
-                if (!verseWasRecognized && _configurationManager.UseCommaDelimiter
+                var verseWasRecognized = verseRecognitionService.TryRecognizeVerse(verseEntry, docParseContext);
+                if (!verseWasRecognized && configurationManager.UseCommaDelimiter
                     && verseEntry.EntryType <= VerseEntryType.ChapterVerse)
                 {
-                    verseEntry = _stringParser.TryGetVerse(parseString.Value, index, index, false);
-                    verseWasRecognized = _verseRecognitionService.TryRecognizeVerse(verseEntry, _docParseContext);
+                    verseEntry = stringParser.TryGetVerse(parseString.Value, index, index, false);
+                    verseWasRecognized = verseRecognitionService.TryRecognizeVerse(verseEntry, docParseContext);
                 }
 
                 if (verseWasRecognized)
                 {                    
                     var verseNode = FindNodeAndMoveVerseTextInOneNodeIfNotReadonly(parseString, verseEntry, ref skipNodes);
 
-                    if (!_documentProvider.IsReadonly && !parseString.IsReadonly)
+                    if (!this.docParseContext.DocumentId.IsReadonly && !parseString.IsReadonly)
                     {
                         if (!NodeIsLink(verseNode.NodeEntry.Node.GetParentNode()))
                             InsertVerseLink(verseNode, verseEntry);
@@ -91,13 +92,13 @@ namespace BibleNote.Analytics.Services.VerseParsing
                             UpdateLinkNode(verseNode.NodeEntry.Node.GetParentNode(), verseEntry);
                     }
 
-                    _paragraphContextEditor.ParseResult.VerseEntries.Add(verseEntry);
-                    _paragraphContextEditor.SetLatestVerseEntry(verseEntry);
+                    paragraphContextEditor.ParseResult.VerseEntries.Add(verseEntry);
+                    paragraphContextEditor.SetLatestVerseEntry(verseEntry);
                 }
 
                 if (verseEntry.VersePointer.SubVerses.NotFoundVerses.Count > 0)
                 {
-                    _paragraphContextEditor.ParseResult.NotFoundVerses.AddRange(verseEntry.VersePointer.SubVerses.NotFoundVerses);
+                    paragraphContextEditor.ParseResult.NotFoundVerses.AddRange(verseEntry.VersePointer.SubVerses.NotFoundVerses);
                 }
 
                 var prevIndex = index;
@@ -105,7 +106,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
                 if (index < parseString.Value.Length - 1)
                 {
                     var leftBoundary = !verseWasRecognized && verseEntry.EntryType > VerseEntryType.ChapterVerse ? prevIndex : index;
-                    verseEntry = _stringParser.TryGetVerse(parseString.Value, index, leftBoundary, _configurationManager.UseCommaDelimiter);
+                    verseEntry = stringParser.TryGetVerse(parseString.Value, index, leftBoundary, configurationManager.UseCommaDelimiter);
                 }
                 else
                     break;
@@ -114,8 +115,8 @@ namespace BibleNote.Analytics.Services.VerseParsing
 
         private void UpdateLinkNode(IXmlNode node, VerseEntry verseEntry)
         {
-            var hrefAttrName = "href";
-            var hrefAttrValue = $"bnVerse:{verseEntry.VersePointer}";           // todo: нужно вынести в сервис, который в том числе будут использовать все провайдеры
+            var hrefAttrName = "href";  // todo: а может быть такое, что в провайдере другой атрибут используется для ссылок?
+            var hrefAttrValue = this.verseLinkService.GetVerseLink(verseEntry.VersePointer);
 
             node.SetAttributeValue(hrefAttrName, hrefAttrValue);            
         }
@@ -127,7 +128,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
 
         private void InsertVerseLink(VerseInNodeEntry verseInNodeEntry, VerseEntry verseEntry)
         {
-            var verseLink = _documentProvider.GetVersePointerLink(verseEntry.VersePointer);
+            var verseLink = documentProvider.GetVersePointerLink(verseEntry.VersePointer);
 
             var verseInNodeStartIndex = verseInNodeEntry.StartIndex + verseInNodeEntry.NodeEntry.Shift;
             var verseInNodeEndIndex = verseInNodeEntry.EndIndex + verseInNodeEntry.NodeEntry.Shift + 1;
@@ -169,7 +170,7 @@ namespace BibleNote.Analytics.Services.VerseParsing
                             result.StartIndex = verseEntryInfo.StartIndex - nodeEntry.StartIndex;
                             result.EndIndex = (nodeEntry.EndIndex >= verseEntryInfo.EndIndex ? verseEntryInfo.EndIndex : nodeEntry.EndIndex) - nodeEntry.StartIndex;
 
-                            if (_documentProvider.IsReadonly || parseString.IsReadonly)
+                            if (this.docParseContext.DocumentId.IsReadonly || parseString.IsReadonly)
                                 break;
 
                             if (nodeEntry.EndIndex >= verseEntryInfo.EndIndex)

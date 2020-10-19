@@ -6,33 +6,36 @@ using BibleNote.Analytics.Services.VerseParsing.Models;
 using BibleNote.Analytics.Services.VerseParsing.Models.ParseResult;
 using System;
 using DocumentFormat.OpenXml;
+using BibleNote.Analytics.Domain.Enums;
 
 namespace BibleNote.Analytics.Providers.Html
 {
     public class WordProvider : IDocumentProvider
     {
-        public bool IsReadonly { get { return true; } }   // todo: надо дополнительно этот параметр вынести выше - на уровень NavigationProviderInstance        
+        public bool IsReadonly { get { return false; } }
 
-        private readonly IDocumentParserFactory _documentParserFactory;
-        private readonly IWordDocumentConnector _wordDocumentConnector;
+        public FileType[] SupportedFileTypes => new[] { FileType.Word };
+
+        private readonly IDocumentParserFactory documentParserFactory;
+        private readonly IWordDocumentConnector wordDocumentConnector;
 
         public WordProvider(IDocumentParserFactory documentParserFactory, IWordDocumentConnector wordDocumentConnector)
         {
-            _documentParserFactory = documentParserFactory;
-            _wordDocumentConnector = wordDocumentConnector;
+            this.documentParserFactory = documentParserFactory;
+            this.wordDocumentConnector = wordDocumentConnector;
         }        
 
         public string GetVersePointerLink(VersePointer versePointer)
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException(); // todo
         }
 
         public DocumentParseResult ParseDocument(IDocumentId documentId)
         {
             DocumentParseResult result;
-            using (var docHandler = _wordDocumentConnector.Connect(documentId))
+            using (var docHandler = wordDocumentConnector.Connect(documentId))
             {
-                using (var docParser = _documentParserFactory.Create(this))
+                using (var docParser = documentParserFactory.Create(this, documentId))
                 {
                     ParseNode(docParser, docHandler.WordDocument.MainDocumentPart.Document.Body);
                     result = docParser.DocumentParseResult;

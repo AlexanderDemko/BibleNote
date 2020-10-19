@@ -8,6 +8,8 @@
 
         bool IsReadonly { get; }
 
+        void SetReadonly();
+
         void SetChanged();
     }
 }

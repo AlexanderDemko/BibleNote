@@ -6,23 +6,20 @@ using System.Threading;
 using System.Threading.Tasks;
 using BibleNote.Analytics.Domain.Contracts;
 using BibleNote.Analytics.Domain.Entities;
+using BibleNote.Analytics.Domain.Enums;
 using BibleNote.Analytics.Providers.FileSystem.DocumentId;
 using BibleNote.Analytics.Providers.Html;
-using BibleNote.Analytics.Providers.Html.Contracts;
 using BibleNote.Analytics.Providers.Pdf;
 using BibleNote.Analytics.Services.DocumentProvider.Contracts;
-using BibleNote.Analytics.Services.VerseParsing.Contracts;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace BibleNote.Analytics.Providers.FileSystem.Navigation
 {
     /// <summary>
-    /// Folder with files .txt, .html, .docx, .doc.
+    /// Folder with files: .txt, .html, .docx, .pdf.
     /// </summary>
     public class FileNavigationProvider : INavigationProvider<FileDocumentId>
     {
-        public readonly string[] supportedFileExtensions = new[] { ".txt", ".html", ".doc", ".docx", ".pdf" };
-
         public string Name { get; set; }
         public string Description { get; set; }
         public bool IsReadonly { get; set; }
@@ -41,30 +38,28 @@ namespace BibleNote.Analytics.Providers.FileSystem.Navigation
 
         public IDocumentProvider GetProvider(FileDocumentId document)
         {
-            var ext = Path.GetExtension(document.FilePath);
+            var fileType = FileTypeHelper.GetFileType(document.FilePath);
 
-            switch (ext)
+            switch (fileType)
             {
-                case ".txt":
-                case ".html":
-                    return new HtmlProvider(
-                        this.serviceProvider.GetService<IDocumentParserFactory>(),
-                        this.serviceProvider.GetService<IHtmlDocumentConnector>());
-                case ".doc":
-                case ".docx":
-                    throw new NotImplementedException();
-                    //return new WordProvider(); // todo
-                case ".pdf":
-                    return new PdfProvider();
+                case FileType.Html:
+                case FileType.Text:
+                    return this.serviceProvider.GetService<HtmlProvider>();
+                case FileType.Word:
+                    return this.serviceProvider.GetService<WordProvider>();
+                case FileType.Pdf:
+                    return this.serviceProvider.GetService<PdfProvider>();
                 default:
-                    throw new NotImplementedException(ext);
+                    throw new NotSupportedException(fileType.ToString());
             }
         }
 
-        public async Task<IEnumerable<FileDocumentId>> GetDocuments(bool newOnly, CancellationToken cancellationToken = default)
+        public async Task<IEnumerable<FileDocumentId>> LoadDocuments(bool newOnly, bool updateDb = false, CancellationToken cancellationToken = default)
         {
             var documents = GetFolderDocuments(FolderPath, null, newOnly);
-            await this.dbContext.SaveChangesAsync(cancellationToken);
+            
+            if (updateDb)
+                await this.dbContext.SaveChangesAsync(cancellationToken);
 
             return documents.Select(d => new FileDocumentId(d.Id, d.Path, IsReadonly));
         }
@@ -78,7 +73,7 @@ namespace BibleNote.Analytics.Providers.FileSystem.Navigation
             {
                 var files = Directory
                     .GetFiles(folder.Path, "*", SearchOption.TopDirectoryOnly)
-                    .Where(f => this.supportedFileExtensions.Contains(Path.GetExtension(f)));
+                    .Where(f => FileTypeHelper.SupportedFileExtensions.Contains(Path.GetExtension(f)));
 
                 foreach (var file in files)
                 {

@@ -100,7 +100,7 @@ namespace BibleNote.Analytics.Services.ModulesManager.Models
             }
         }
 
-        public MultiVerse IsMultiVerse
+        public MultiVerse MultiVerseType
         {
             get
             {
@@ -193,7 +193,7 @@ namespace BibleNote.Analytics.Services.ModulesManager.Models
         /// <returns></returns>
         public virtual string GetFullVerseNumberString()
         {
-            switch (IsMultiVerse)
+            switch (MultiVerseType)
             {
                 case MultiVerse.None:
                     return VerseNumber.ToString();
@@ -202,7 +202,7 @@ namespace BibleNote.Analytics.Services.ModulesManager.Models
                 case MultiVerse.SeveralChapters:
                     return string.Format("{0}-{1}", VerseNumber, TopVerseNumber.Value);
                 default:
-                    throw new NotImplementedException();
+                    throw new NotSupportedException(MultiVerseType.ToString());
             }
         }
 
@@ -225,7 +225,7 @@ namespace BibleNote.Analytics.Services.ModulesManager.Models
                 bookIndex ?? BookIndex,
                 Chapter,
                 Verse,
-                !onlyFirstVerse && IsMultiVerse == MultiVerse.OneChapter ? (int?)TopVerseNumber.Value.Verse : null);
+                !onlyFirstVerse && MultiVerseType == MultiVerse.OneChapter ? (int?)TopVerseNumber.Value.Verse : null);
         }
 
         protected virtual void CopyPropertiesTo(SimpleVersePointer verse)

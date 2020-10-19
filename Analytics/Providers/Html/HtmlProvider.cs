@@ -8,6 +8,7 @@ using BibleNote.Analytics.Providers.Html.Contracts;
 using BibleNote.Analytics.Services.VerseParsing.Models;
 using BibleNote.Analytics.Services.VerseParsing.Models.ParseResult;
 using System;
+using BibleNote.Analytics.Domain.Enums;
 
 namespace BibleNote.Analytics.Providers.Html
 {
@@ -15,26 +16,34 @@ namespace BibleNote.Analytics.Providers.Html
     {
         public bool IsReadonly { get { return false; } }   // todo: надо дополнительно этот параметр вынести выше - на уровень NavigationProviderInstance        
 
-        private readonly IDocumentParserFactory _documentParserFactory;
-        private readonly IHtmlDocumentConnector _htmlDocumentConnector;
+        public FileType[] SupportedFileTypes => new[] { FileType.Html, FileType.Text };
 
-        public HtmlProvider(IDocumentParserFactory documentParserFactory, IHtmlDocumentConnector htmlDocumentConnector)
+        private readonly IDocumentParserFactory documentParserFactory;
+        private readonly IHtmlDocumentConnector htmlDocumentConnector;
+        private readonly IVerseLinkService verseLinkService;
+
+        public HtmlProvider(
+            IDocumentParserFactory documentParserFactory, 
+            IHtmlDocumentConnector htmlDocumentConnector,
+            IVerseLinkService verseLinkService)
         {
-            _documentParserFactory = documentParserFactory;
-            _htmlDocumentConnector = htmlDocumentConnector;
+            this.documentParserFactory = documentParserFactory;
+            this.htmlDocumentConnector = htmlDocumentConnector;
+            this.verseLinkService = verseLinkService;
         }        
 
         public string GetVersePointerLink(VersePointer versePointer)
         {
-            return string.Format($"<a href='bnVerse:{versePointer}'>{versePointer.GetOriginalVerseString()}</a>");
+            var verseLink = this.verseLinkService.GetVerseLink(versePointer);
+            return string.Format($"<a href='{verseLink}'>{versePointer.GetOriginalVerseString()}</a>");
         }
 
         public DocumentParseResult ParseDocument(IDocumentId documentId)
         {
             DocumentParseResult result;
-            using (var docHandler = _htmlDocumentConnector.Connect(documentId))
+            using (var docHandler = htmlDocumentConnector.Connect(documentId))
             {
-                using (var docParser = _documentParserFactory.Create(this))
+                using (var docParser = documentParserFactory.Create(this, documentId))
                 {
                     ParseNode(docParser, docHandler.HtmlDocument.DocumentNode);
                     result = docParser.DocumentParseResult;

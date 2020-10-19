@@ -1,4 +1,5 @@
-﻿using BibleNote.Analytics.Services.VerseParsing.Contracts.ParseContext;
+﻿using BibleNote.Analytics.Services.DocumentProvider.Contracts;
+using BibleNote.Analytics.Services.VerseParsing.Contracts.ParseContext;
 using BibleNote.Analytics.Services.VerseParsing.Models.ParseResult;
 using System;
 
@@ -6,9 +7,10 @@ namespace BibleNote.Analytics.Services.VerseParsing.Models.ParseContext
 {
     public class DocumentParseContext : IDocumentParseContextEditor
     {
-        private int _currentParagraphIndex = -1;
+        private int currentParagraphIndex = -1;
+        private IElementParseContext previousElement;
 
-        private IElementParseContext _previousElement;        
+        public IDocumentId DocumentId { get; private set; }
 
         public ChapterEntry TitleChapter { get; private set; }
 
@@ -20,8 +22,9 @@ namespace BibleNote.Analytics.Services.VerseParsing.Models.ParseContext
 
         public IParagraphParseContextEditor CurrentParagraphEditor { get { return (IParagraphParseContextEditor)CurrentParagraph; } }
 
-        public void Init()
+        public void Init(IDocumentId documentId)
         {
+            DocumentId = documentId;
             DocumentParseResult = new DocumentParseResult();
         }
 
@@ -32,21 +35,21 @@ namespace BibleNote.Analytics.Services.VerseParsing.Models.ParseContext
 
         public DisposeHandler ParseParagraph()
         {
-            CurrentParagraph = new ParagraphParseContext(_previousElement, ++_currentParagraphIndex);            
+            CurrentParagraph = new ParagraphParseContext(previousElement, ++currentParagraphIndex);            
 
             return new DisposeHandler(() =>
             {                
                 CurrentHierarchy.AddParagraphResult(CurrentParagraph.ParseResult);                   
 
-                _previousElement = CurrentParagraph;
+                previousElement = CurrentParagraph;
             });
         }
 
         public void EnterHierarchyElement(ElementType paragraphType)
         {            
-            CurrentHierarchy = new HierarchyParseContext(paragraphType, _previousElement, CurrentHierarchy);
+            CurrentHierarchy = new HierarchyParseContext(paragraphType, previousElement, CurrentHierarchy);
             CurrentHierarchy.ParentHierarchy?.ChildHierarchies.Add(CurrentHierarchy);
-            _previousElement = null;         // чтобы когда мы войдём в параграф, у него PreviousSibling был null
+            previousElement = null;         // чтобы когда мы войдём в параграф, у него PreviousSibling был null
 
             switch (paragraphType)
             {
@@ -112,7 +115,7 @@ namespace BibleNote.Analytics.Services.VerseParsing.Models.ParseContext
             }
 
             var valuableHierarchyResult = CurrentHierarchy.ParseResult.GetValuableHierarchyResult();
-            _previousElement = CurrentHierarchy;
+            previousElement = CurrentHierarchy;
             CurrentHierarchy = CurrentHierarchy.ParentHierarchy;
             
             if (valuableHierarchyResult != null)
@@ -136,7 +139,7 @@ namespace BibleNote.Analytics.Services.VerseParsing.Models.ParseContext
             TitleChapter = null;            
             CurrentParagraph = null;
             CurrentHierarchy = null;
-            _previousElement = null;
+            previousElement = null;
         }
     }
 }

@@ -23,5 +23,10 @@ namespace BibleNote.Analytics.Providers.Web.DocumentId
         {
             throw new NotSupportedException();
         }
+
+        public void SetReadonly()
+        {
+            throw new NotSupportedException();
+        }
     }
 }

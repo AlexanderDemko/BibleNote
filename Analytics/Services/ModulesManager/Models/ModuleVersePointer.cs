@@ -65,7 +65,7 @@ namespace BibleNote.Analytics.Services.ModulesManager.Models
 
         private void Validate()
         {
-            if (IsMultiVerse == MultiVerse.SeveralChapters)
+            if (MultiVerseType == MultiVerse.SeveralChapters)
                 throw new InvalidOperationException("Only one chapter verses is supported.");
         }
 

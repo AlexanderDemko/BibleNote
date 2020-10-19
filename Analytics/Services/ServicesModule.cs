@@ -38,6 +38,7 @@ namespace BibleNote.Analytics.Services
                 .AddTransient<IDocumentParser, DocumentParser>()
                 .AddTransient<IDocumentParseContextEditor, DocumentParseContext>()
                 .AddTransient<IAnalyzer, Analyzer>()
+                .AddTransient<IVerseLinkService, VerseLinkService>()
                 ;
         }
     }

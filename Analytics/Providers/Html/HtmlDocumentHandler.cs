@@ -7,6 +7,7 @@ using HtmlAgilityPack;
 using System;
 using System.IO;
 using System.Linq;
+using System.Web;
 
 namespace BibleNote.Analytics.Providers.Html
 {
@@ -24,26 +25,25 @@ namespace BibleNote.Analytics.Providers.Html
 
         private static HtmlDocument ReadDocument(IDocumentId documentId)
         {
-            string html = null;
+            string fileContent = null;
 
             if (documentId is FileDocumentId fileDocumentId)
             {
                 var filePath = fileDocumentId.FilePath;
-                var ext = Path.GetExtension(filePath);
-                html = File.ReadAllText(filePath);
+                fileContent = File.ReadAllText(filePath);
 
-                if (ext == ".txt")
+                if (!StringUtils.ContainsHtml(fileContent))
                 {
-                    html = string.Concat(
-                        html.Split(new string[] { Environment.NewLine, "\n" }, StringSplitOptions.RemoveEmptyEntries)
+                    fileContent = string.Concat(
+                        fileContent.Split(new string[] { Environment.NewLine, "\n" }, StringSplitOptions.RemoveEmptyEntries)
                             .Select(p => $"<p>{p}</p>"));
 
-                    //todo: надо по-другому проверять, что файл содержит только текст
+                    documentId.SetReadonly();
                 }
             }
             else if (documentId is WebDocumentId webDocumentId)
             {
-                throw new NotImplementedException();
+                throw new NotImplementedException();  // todo
             }
             else
             {
@@ -51,7 +51,7 @@ namespace BibleNote.Analytics.Providers.Html
             }
 
             var htmlDoc = new HtmlDocument();
-            htmlDoc.LoadHtml(html);
+            htmlDoc.LoadHtml(fileContent);
             return htmlDoc;
         }
 
@@ -65,13 +65,9 @@ namespace BibleNote.Analytics.Providers.Html
             if (!DocumentId.IsReadonly && DocumentId.Changed)
             {
                 var filePath = ((FileDocumentId)DocumentId).FilePath;
-                var ext = Path.GetExtension(filePath);
 
-                if (ext != ".txt")      // todo: не нравится мне так проверять. Надо как-то лучше продумать, как суммировать всю иерархию IsReadonly
-                {
-                    var encoding = FileUtils.GetEncoding(filePath);
-                    HtmlDocument.Save(filePath, encoding);
-                }
+                var encoding = FileUtils.GetEncoding(filePath);
+                HtmlDocument.Save(filePath, encoding);
             }
         }
     }
