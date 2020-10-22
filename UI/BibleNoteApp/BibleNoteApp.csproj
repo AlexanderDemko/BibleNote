@@ -49,4 +49,7 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
+  <ItemGroup>
+    <Folder Include="ClientApp\dist\" />
+  </ItemGroup>
 </Project>
