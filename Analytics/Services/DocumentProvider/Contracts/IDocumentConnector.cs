@@ -1,7 +1,9 @@
-﻿namespace BibleNote.Analytics.Services.DocumentProvider.Contracts
+﻿using System.Threading.Tasks;
+
+namespace BibleNote.Analytics.Services.DocumentProvider.Contracts
 {
     public interface IDocumentConnector<T> where T : IDocumentHandler
     {
-        T Connect(IDocumentId documentId);
+        Task<T> ConnectAsync(IDocumentId documentId);
     }
 }

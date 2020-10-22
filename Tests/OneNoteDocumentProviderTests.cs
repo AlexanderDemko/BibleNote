@@ -49,29 +49,29 @@ namespace BibleNote.Tests.Analytics
         }
 
         [TestMethod]        
-        public void TestCurrentPage()
+        public async Task TestCurrentPage()
         {   
             var log = ServiceProvider.GetService<ILogger<OneNoteDocumentProviderTests>>();
 
             using (var oneNoteApp = new OneNoteAppWrapper(log))
             {
-                var currentPageId = oneNoteApp.GetCurrentPageId();
+                var currentPageId = await oneNoteApp.GetCurrentPageIdAsync();
 
                 if (!string.IsNullOrEmpty(currentPageId))
                 {
                     var documentId = new OneNoteDocumentId(0, currentPageId);
-                    var parseResult = documentProvider.ParseDocument(documentId);
+                    var parseResult = await documentProvider.ParseDocumentAsync(documentId);
 
                     var sw = new Stopwatch();
                     sw.Start();
 
-                    this.documentParseResultProcessings.First().Process(this.document.Id, parseResult);
+                    await this.documentParseResultProcessings.First().ProcessAsync(this.document.Id, parseResult);
 
                     sw.Stop();
 
                     sw.Restart();
 
-                    this.documentParseResultProcessings.Skip(1).First().Process(this.document.Id, parseResult);
+                    await this.documentParseResultProcessings.Skip(1).First().ProcessAsync(this.document.Id, parseResult);
                     
                     sw.Stop();
                     //throw new Exception($"Total: {sw.Elapsed.TotalSeconds}");

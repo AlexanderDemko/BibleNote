@@ -1,35 +1,36 @@
 ﻿using BibleNote.Analytics.Providers.Html;
-using BibleNote.Analytics.Providers.Html.Contracts;
 using BibleNote.Analytics.Providers.Web.DocumentId;
 using BibleNote.Analytics.Services.DocumentProvider.Contracts;
-using BibleNote.Analytics.Services.VerseParsing.Contracts;
 using System;
 using System.Collections.Generic;
 using Microsoft.Extensions.DependencyInjection;
 using System.Threading;
 using System.Threading.Tasks;
+using BibleNote.Analytics.Services.NavigationProvider;
 
 namespace BibleNote.Analytics.Providers.Web.Navigation
 {
-    public class WebNavigationProvider : INavigationProvider<WebDocumentId>
+    public class WebNavigationProvider : NavigationProviderBase<WebDocumentId, WebNavigationProviderParameters>
     {
-        public string Name { get; set; }
-        public string Description { get; set; }
-        public bool IsReadonly { get; set; }
+        public override string Name { get; set; }
+        public override string Description { get; set; }
+        public override bool IsReadonly { get; set; }
+        public override WebNavigationProviderParameters Parameters { get; set; }
 
         private readonly IServiceProvider scopeProvider;
 
         public WebNavigationProvider(IServiceProvider scopeProvider)
         {
             this.scopeProvider = scopeProvider;
+            this.Parameters = new WebNavigationProviderParameters();
         }
 
-        public IDocumentProvider GetProvider(WebDocumentId document)
+        public override IDocumentProvider GetProvider(WebDocumentId document)
         {
             return this.scopeProvider.GetService<HtmlProvider>();
         }
 
-        public Task<IEnumerable<WebDocumentId>> LoadDocuments(bool newOnly, bool updateDb = false, CancellationToken cancellationToken = default)
+        public override Task<IEnumerable<WebDocumentId>> LoadDocuments(bool newOnly, bool updateDb = false, CancellationToken cancellationToken = default)
         {
             throw new NotImplementedException(); // todo
         }

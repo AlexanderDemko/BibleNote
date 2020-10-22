@@ -4,6 +4,7 @@ using BibleNote.Tests.Analytics.TestsBase;
 using BibleNote.Analytics.Services.DocumentProvider.Contracts;
 using BibleNote.Analytics.Providers.Html.Contracts;
 using Microsoft.Extensions.DependencyInjection;
+using System.Threading.Tasks;
 
 namespace BibleNote.Tests.Analytics
 {
@@ -27,16 +28,16 @@ namespace BibleNote.Tests.Analytics
         }
 
         [TestMethod]
-        public void CheckTitle()
+        public Task CheckTitle()
         {
-            TestFile(@"..\..\..\TestData\Html_CheckTitle.html", true, false,
+            return TestFileAsync(@"..\..\..\TestData\Html_CheckTitle.html", true, false,
                 new string[] { "Ин 1:1" });            
         }
 
         [TestMethod]
-        public void CheckPage()
+        public Task CheckPage()
         {
-            TestFile(@"..\..\..\TestData\Html_CheckPage.html",
+            return TestFileAsync(@"..\..\..\TestData\Html_CheckPage.html",
                 new string[] { "Ин 1:1" },
                 new string[] { "Исх 12:27" },
                 new string[] { "Ин 1:50-2:3" },
@@ -50,9 +51,9 @@ namespace BibleNote.Tests.Analytics
         }
 
         [TestMethod]
-        public void CheckFullPage()
+        public Task CheckFullPage()
         {
-            TestFile(@"..\..\..\TestData\Html_CheckFullPage.html",
+            return TestFileAsync(@"..\..\..\TestData\Html_CheckFullPage.html",
                 new string[] { "Ин 1:1" },
                 new string[] { "Исх 12:27" },
                 new string[] { "Ин 1:50-2:3" },
@@ -67,9 +68,9 @@ namespace BibleNote.Tests.Analytics
         }
 
         [TestMethod]
-        public void CheckTable()
+        public Task CheckTable()
         {
-            TestFile(@"..\..\..\TestData\Html_CheckTable.html", 
+            return TestFileAsync(@"..\..\..\TestData\Html_CheckTable.html", 
                 new string[] { "Ин 1" },
                 new string[] { "Ин 2" },
                 new string[] { "Ин 1:3" },

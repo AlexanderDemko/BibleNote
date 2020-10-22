@@ -18,11 +18,11 @@ namespace BibleNote.Analytics.Services.VerseProcessing
             this.analyticsContext = analyticsContext;            
         }
 
-        public async Task Process(int documentId, DocumentParseResult documentResult, CancellationToken cancellationToken = default)
+        public async Task ProcessAsync(int documentId, DocumentParseResult documentResult, CancellationToken cancellationToken = default)
         {
             this.documentId = documentId;            
             
-            RemovePreviousResult();
+            await RemovePreviousResultAsync();
             ProcessHierarchy(documentResult.RootHierarchyResult);
 
             await this.analyticsContext.SaveChangesAsync(cancellationToken);
@@ -32,16 +32,16 @@ namespace BibleNote.Analytics.Services.VerseProcessing
         private int documentId;
         private int insertedRows = 0;
 
-        private void RemovePreviousResult()
+        private async Task RemovePreviousResultAsync()
         {
-            this.analyticsContext.VerseRelationRepository
-                .Delete(v => v.DocumentParagraph.DocumentId == this.documentId);
+            await this.analyticsContext.VerseRelationRepository
+                .DeleteAsync(v => v.DocumentParagraph.DocumentId == this.documentId);
 
-            this.analyticsContext.VerseEntryRepository
-                .Delete(v => v.DocumentParagraph.DocumentId == this.documentId);
+            await this.analyticsContext.VerseEntryRepository
+                .DeleteAsync(v => v.DocumentParagraph.DocumentId == this.documentId);
 
-            this.analyticsContext.DocumentParagraphRepository
-                .Delete(p => p.DocumentId == documentId);            
+            await this.analyticsContext.DocumentParagraphRepository
+                .DeleteAsync(p => p.DocumentId == documentId);            
         }
 
         private void ProcessHierarchy(HierarchyParseResult hierarchyResult)

@@ -1,13 +1,16 @@
 ﻿using BibleNote.Analytics.Providers.Html.Contracts;
 using BibleNote.Analytics.Services.DocumentProvider.Contracts;
+using System.Threading.Tasks;
 
 namespace BibleNote.Analytics.Providers.Html
 {
     public class HtmlDocumentConnector : IHtmlDocumentConnector
     {
-        public IHtmlDocumentHandler Connect(IDocumentId documentId)
+        public async Task<IHtmlDocumentHandler> ConnectAsync(IDocumentId documentId)
         {
-            return new HtmlDocumentHandler(documentId);
+            var pageConnector = new HtmlDocumentHandler(documentId);
+            await pageConnector.LoadPageContentAsync();
+            return pageConnector;
         }
     }
 }

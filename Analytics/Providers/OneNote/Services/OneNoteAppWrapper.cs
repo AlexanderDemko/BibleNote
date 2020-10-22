@@ -5,11 +5,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
-using System.Threading;
 using System.Xml.Linq;
 using System.Xml;
 using System.Globalization;
 using Microsoft.Extensions.Logging;
+using System.Threading.Tasks;
 
 namespace BibleNote.Analytics.Providers.OneNote.Services
 {
@@ -25,20 +25,20 @@ namespace BibleNote.Analytics.Providers.OneNote.Services
             _log = log;
         }
 
-        public string GetPageContent(string pageId, PageInfo pageInfo = PageInfo.piBasic)
+        public async Task<string> GetPageContentAsync(string pageId, PageInfo pageInfo = PageInfo.piBasic)
         {
             string result = null;
 
-            UseOneNoteApp(() => _app.GetPageContent(pageId, out result, pageInfo, OneNoteConstants.CurrentOneNoteSchema));
+            await UseOneNoteAppAsync(() => _app.GetPageContent(pageId, out result, pageInfo, OneNoteConstants.CurrentOneNoteSchema));
 
             return result;
         }        
 
-        public string GetCurrentPageId()
+        public async Task<string> GetCurrentPageIdAsync()
         {
             string currentPageId = null;            
 
-            UseOneNoteApp(() =>
+            await UseOneNoteAppAsync(() =>
             {
                 //if (_app.Windows.CurrentWindow == null)
                 //    throw new ProgramException(BibleCommon.Resources.Constants.Error_OpenedNotebookNotFound);
@@ -56,13 +56,13 @@ namespace BibleNote.Analytics.Providers.OneNote.Services
             ReleaseOneNoteApp();        // todo: и не надо каждый раз удалять
         }
 
-        public void UpdatePageContent(XDocument pageDoc)
+        public async Task UpdatePageContentAsync(XDocument pageDoc)
         {
             var xnm = GetOneNoteXNM();
 
             CleanPageContent(pageDoc, xnm);
 
-            UseOneNoteApp(() => _app.UpdatePageContent(pageDoc.ToString(), DateTime.MinValue, OneNoteConstants.CurrentOneNoteSchema));
+            await UseOneNoteAppAsync(() => _app.UpdatePageContent(pageDoc.ToString(), DateTime.MinValue, OneNoteConstants.CurrentOneNoteSchema));
         }
 
         private void CleanPageContent(XDocument pageContent, XmlNamespaceManager xnm)
@@ -104,9 +104,9 @@ namespace BibleNote.Analytics.Providers.OneNote.Services
             }
         }
 
-        public void UpdatePageContent(string pageXml)
+        public async Task UpdatePageContentAsync(string pageXml)
         {
-            UseOneNoteApp(() => _app.UpdatePageContent(pageXml, DateTime.MinValue, OneNoteConstants.CurrentOneNoteSchema));
+            await UseOneNoteAppAsync(() => _app.UpdatePageContent(pageXml, DateTime.MinValue, OneNoteConstants.CurrentOneNoteSchema));
         }
 
         private static XmlNamespaceManager GetOneNoteXNM()
@@ -117,7 +117,7 @@ namespace BibleNote.Analytics.Providers.OneNote.Services
             return xnm;
         }
 
-        private void UseOneNoteApp(Action action, int attemptsCount = 0)
+        private async Task UseOneNoteAppAsync(Action action, int attemptsCount = 0)
         {
             try
             {
@@ -128,21 +128,19 @@ namespace BibleNote.Analytics.Providers.OneNote.Services
             }
             catch (COMException ex)
             {
-                if (ex.Message.Contains("0x80010100")                                           // "System.Runtime.InteropServices.COMException (0x80010100): System call failed. (Exception from HRESULT: 0x80010100 (RPC_E_SYS_CALL_FAILED))";
+                if (ex.Message.Contains("0x80010100")                                        // "System.Runtime.InteropServices.COMException (0x80010100): System call failed. (Exception from HRESULT: 0x80010100 (RPC_E_SYS_CALL_FAILED))";
                  || ex.Message.Contains("0x800706BA")
                  || ex.Message.Contains("0x800706BE")
                  || ex.Message.Contains("0x80010001")                                        // System.Runtime.InteropServices.COMException (0x80010001): Вызов был отклонен. (Исключение из HRESULT: 0x80010001 (RPC_E_CALL_REJECTED))
-                 || ex.Message.Contains("0x80010108"))                                        // RPC_E_DISCONNECTED                    
+                 || ex.Message.Contains("0x80010108"))                                       // RPC_E_DISCONNECTED                    
                 {
                     _log.LogWarning($"UseOneNoteAPI. Attempt {attemptsCount}: {ex.Message}");
                     if (attemptsCount <= 15)
                     {
                         attemptsCount++;
-                        Thread.Sleep(1000 * attemptsCount);
-                        //System.Windows.Forms.Application.DoEvents();
-
+                        await Task.Delay(1000 * attemptsCount);
                         ReleaseOneNoteApp();
-                        UseOneNoteApp(action, attemptsCount);
+                        await UseOneNoteAppAsync(action, attemptsCount);
                     }
                     else
                         throw;

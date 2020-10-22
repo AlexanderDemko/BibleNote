@@ -48,11 +48,11 @@ namespace BibleNote.Tests.Analytics
         }
 
         [TestMethod]
-        public void Test1()
+        public async Task Test1()
         {
-            var parseResult = this.documentProvider.ParseDocument(new FileDocumentId(0, @"..\..\..\TestData\Html_CheckFullPage.html", true));
-            this.documentParseResultProcessings.First().Process(this.document.Id, parseResult);
-            this.documentParseResultProcessings.Skip(1).First().Process(this.document.Id, parseResult);
+            var parseResult = await this.documentProvider.ParseDocumentAsync(new FileDocumentId(0, @"..\..\..\TestData\Html_CheckFullPage.html", true));
+            await this.documentParseResultProcessings.First().ProcessAsync(this.document.Id, parseResult);
+            await this.documentParseResultProcessings.Skip(1).First().ProcessAsync(this.document.Id, parseResult);
 
             this.AnalyticsContext.VerseEntryRepository
                 .Where(v => v.DocumentParagraph.DocumentId == this.document.Id)

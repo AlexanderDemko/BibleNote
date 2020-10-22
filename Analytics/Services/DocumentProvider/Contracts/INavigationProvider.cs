@@ -12,6 +12,8 @@ namespace BibleNote.Analytics.Services.DocumentProvider.Contracts
 
         bool IsReadonly { get; set; }
 
+        string ParametersRaw { get; set; }
+
         IDocumentProvider GetProvider(T document);
 
         Task<IEnumerable<T>> LoadDocuments(bool newOnly, bool updateDb = false, CancellationToken cancellationToken = default);        

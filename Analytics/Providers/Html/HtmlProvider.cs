@@ -9,6 +9,7 @@ using BibleNote.Analytics.Services.VerseParsing.Models;
 using BibleNote.Analytics.Services.VerseParsing.Models.ParseResult;
 using System;
 using BibleNote.Analytics.Domain.Enums;
+using System.Threading.Tasks;
 
 namespace BibleNote.Analytics.Providers.Html
 {
@@ -38,10 +39,10 @@ namespace BibleNote.Analytics.Providers.Html
             return string.Format($"<a href='{verseLink}'>{versePointer.GetOriginalVerseString()}</a>");
         }
 
-        public DocumentParseResult ParseDocument(IDocumentId documentId)
+        public async Task<DocumentParseResult> ParseDocumentAsync(IDocumentId documentId)
         {
             DocumentParseResult result;
-            using (var docHandler = htmlDocumentConnector.Connect(documentId))
+            using (var docHandler = await htmlDocumentConnector.ConnectAsync(documentId))
             {
                 using (var docParser = documentParserFactory.Create(this, documentId))
                 {

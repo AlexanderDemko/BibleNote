@@ -9,5 +9,6 @@ namespace BibleNote.Analytics.Domain.Contracts
         ITrackingRepository<DocumentParagraph> DocumentParagraphRepository { get; }
         ITrackingRepository<VerseEntry> VerseEntryRepository { get; }
         ITrackingRepository<VerseRelation> VerseRelationRepository { get; }
+        ITrackingRepository<NavigationProviderInfo> NavigationProvidersInfo { get; }
     }
 }

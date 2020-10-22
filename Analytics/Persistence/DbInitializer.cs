@@ -10,8 +10,7 @@
 
         public void Seed(AnalyticsDbContext context)
         {
-            context.Database.EnsureCreated();
-            
+            context.Database.EnsureCreated();            
         }
     }
 }

@@ -11,6 +11,7 @@ using BibleNote.Analytics.Providers.FileSystem.DocumentId;
 using BibleNote.Analytics.Providers.Html;
 using BibleNote.Analytics.Providers.Pdf;
 using BibleNote.Analytics.Services.DocumentProvider.Contracts;
+using BibleNote.Analytics.Services.NavigationProvider;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace BibleNote.Analytics.Providers.FileSystem.Navigation
@@ -18,12 +19,12 @@ namespace BibleNote.Analytics.Providers.FileSystem.Navigation
     /// <summary>
     /// Folder with files: .txt, .html, .docx, .pdf.
     /// </summary>
-    public class FileNavigationProvider : INavigationProvider<FileDocumentId>
+    public class FileNavigationProvider : NavigationProviderBase<FileDocumentId, FileNavigationProviderParameters>
     {
-        public string Name { get; set; }
-        public string Description { get; set; }
-        public bool IsReadonly { get; set; }
-        public string FolderPath { get; set; }
+        public override string Name { get; set; }
+        public override string Description { get; set; }
+        public override bool IsReadonly { get; set; }
+        public override FileNavigationProviderParameters Parameters { get; set; }
 
         private readonly IServiceProvider serviceProvider;
         private readonly ITrackingDbContext dbContext;
@@ -34,9 +35,10 @@ namespace BibleNote.Analytics.Providers.FileSystem.Navigation
         {
             this.serviceProvider = serviceProvider;
             this.dbContext = dbContext;
+            this.Parameters = new FileNavigationProviderParameters();
         }
 
-        public IDocumentProvider GetProvider(FileDocumentId document)
+        public override IDocumentProvider GetProvider(FileDocumentId document)
         {
             var fileType = FileTypeHelper.GetFileType(document.FilePath);
 
@@ -54,9 +56,15 @@ namespace BibleNote.Analytics.Providers.FileSystem.Navigation
             }
         }
 
-        public async Task<IEnumerable<FileDocumentId>> LoadDocuments(bool newOnly, bool updateDb = false, CancellationToken cancellationToken = default)
+        public override async Task<IEnumerable<FileDocumentId>> LoadDocuments(bool newOnly, bool updateDb = false, CancellationToken cancellationToken = default)
         {
-            var documents = GetFolderDocuments(FolderPath, null, newOnly);
+            var documents = new List<Document>();
+
+            foreach (var folder in Parameters.FolderPaths)
+            {
+                var folderDocuments = GetFolderDocuments(folder, null, newOnly);
+                documents.AddRange(folderDocuments);
+            }
             
             if (updateDb)
                 await this.dbContext.SaveChangesAsync(cancellationToken);
@@ -64,7 +72,7 @@ namespace BibleNote.Analytics.Providers.FileSystem.Navigation
             return documents.Select(d => new FileDocumentId(d.Id, d.Path, IsReadonly));
         }
 
-        public IEnumerable<Document> GetFolderDocuments(string folderPath, DocumentFolder parentFolder, bool newOnly)
+        private IEnumerable<Document> GetFolderDocuments(string folderPath, DocumentFolder parentFolder, bool newOnly)
         {
             var result = new List<Document>();
             var folders = GetSubFolders(folderPath, parentFolder);

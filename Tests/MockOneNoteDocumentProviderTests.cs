@@ -5,6 +5,7 @@ using BibleNote.Tests.Analytics.Mocks;
 using BibleNote.Tests.Analytics.TestsBase;
 using BibleNote.Analytics.Services.DocumentProvider.Contracts;
 using Microsoft.Extensions.DependencyInjection;
+using System.Threading.Tasks;
 
 namespace BibleNote.Tests.Analytics
 {
@@ -28,9 +29,9 @@ namespace BibleNote.Tests.Analytics
         }
 
         [TestMethod]
-        public void Test1()
+        public Task Test1()
         {
-            TestFile(@"..\..\..\TestData\OneNote_1.html",
+            return TestFileAsync(@"..\..\..\TestData\OneNote_1.html",
                 new string[] { "Ин 1:1" },
                 new string[] { "Исх 12:27" },
                 new string[] { "1Кор 5:7" },
@@ -44,9 +45,9 @@ namespace BibleNote.Tests.Analytics
         }
 
         [TestMethod]
-        public void Test2()
+        public Task Test2()
         {
-            TestFile(@"..\..\..\TestData\OneNote_2.html",
+            return TestFileAsync(@"..\..\..\TestData\OneNote_2.html",
                new string[] { "Ин 1" },
                new string[] { "Ин 1:5" },
                new string[] { "Мк 2:5" },
@@ -57,9 +58,9 @@ namespace BibleNote.Tests.Analytics
         }
 
         [TestMethod]
-        public void Test3()
+        public Task Test3()
         {
-            TestFile(@"..\..\..\TestData\OneNote_3.html", 
+            return TestFileAsync(@"..\..\..\TestData\OneNote_3.html", 
                new string[] { "1Пет 3:3" },
                new string[] { "1Пет 3:9" },
                new string[] { "Мф 1:1" },

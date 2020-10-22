@@ -6,7 +6,7 @@ namespace BibleNote.Analytics.Services.VerseProcessing.Contracts
 {
     public interface IDocumentParseResultProcessing
     {
-        Task Process(int documentId, DocumentParseResult documentResult, CancellationToken cancellationToken = default);
+        Task ProcessAsync(int documentId, DocumentParseResult documentResult, CancellationToken cancellationToken = default);
 
         int Order { get; }
     }

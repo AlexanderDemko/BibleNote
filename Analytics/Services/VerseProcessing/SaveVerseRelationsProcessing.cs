@@ -21,7 +21,7 @@ namespace BibleNote.Analytics.Services.VerseProcessing
 
         readonly ITrackingDbContext analyticsContext;
 
-        public async Task Process(int documentId, DocumentParseResult documentResult, CancellationToken cancellationToken = default)
+        public async Task ProcessAsync(int documentId, DocumentParseResult documentResult, CancellationToken cancellationToken = default)
         {
             var linearResult = LinearParseResult.FromHierarchyParseResult(documentResult.RootHierarchyResult);
             var verseRelations = ProcessLinearResult(linearResult);

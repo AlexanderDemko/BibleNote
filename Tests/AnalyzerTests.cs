@@ -1,9 +1,13 @@
 ﻿using BibleNote.Analytics.Providers.FileSystem.Navigation;
+using BibleNote.Analytics.Providers.OneNote.Enums;
+using BibleNote.Analytics.Providers.OneNote.Navigation;
 using BibleNote.Analytics.Services.DocumentProvider.Contracts;
 using BibleNote.Analytics.Services.DocumentProvider.Models;
 using BibleNote.Tests.Analytics.TestsBase;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace BibleNote.Tests.Analytics
 {
@@ -27,14 +31,25 @@ namespace BibleNote.Tests.Analytics
         }
 
         [TestMethod]
-        public void Test1()
+        public async Task Test1()
         {
             var navigationProvider = ActivatorUtilities.CreateInstance<FileNavigationProvider>(ServiceProvider);
-            navigationProvider.FolderPath = @"C:\prj\BibleNote\Tests\TestData";
-            this.analyzer.Analyze(navigationProvider, new AnalyzerOptions()
+            navigationProvider.Parameters.FolderPaths = new List<string>() { @"C:\prj\BibleNote\Tests\TestData" };
+            await this.analyzer.AnalyzeAsync(navigationProvider, new AnalyzerOptions()
             {
                 Depth = AnalyzeDepth.All
-            }).Wait();
+            });
+        }
+
+        [TestMethod]
+        public async Task Test2()
+        {
+            var navigationProvider = ActivatorUtilities.CreateInstance<OneNoteNavigationProvider>(ServiceProvider);
+            navigationProvider.Parameters.Levels = new List<OneNoteLevelInfo>() { new OneNoteLevelInfo() { Id = "", Type = OneNoteLevelType.Page, Name = "Test page" } };
+            await this.analyzer.AnalyzeAsync(navigationProvider, new AnalyzerOptions()
+            {
+                Depth = AnalyzeDepth.All
+            });
         }
     }
 }

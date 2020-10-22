@@ -3,6 +3,7 @@ using BibleNote.Analytics.Services.DocumentProvider.Contracts;
 using BibleNote.Analytics.Services.VerseParsing.Models;
 using BibleNote.Analytics.Services.VerseParsing.Models.ParseResult;
 using System;
+using System.Threading.Tasks;
 
 namespace BibleNote.Analytics.Providers.Pdf
 {
@@ -17,7 +18,7 @@ namespace BibleNote.Analytics.Providers.Pdf
             throw new NotImplementedException(); // todo
         }
 
-        public DocumentParseResult ParseDocument(IDocumentId documentId)
+        public Task<DocumentParseResult> ParseDocumentAsync(IDocumentId documentId)
         {
             throw new NotImplementedException(); // todo
         }

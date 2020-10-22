@@ -11,6 +11,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows;
 
 namespace VerseDifferencesFinder
@@ -30,7 +31,7 @@ namespace VerseDifferencesFinder
             cbModules.SelectedItem = "rst";
         }
 
-        private void Button_Click(object sender, RoutedEventArgs e)
+        private async void Button_Click(object sender, RoutedEventArgs e)
         {
             if (cbModules.SelectedItem == null)
             {
@@ -48,7 +49,7 @@ namespace VerseDifferencesFinder
             InitApp(moduleShortName);
 
             var sourceFilePath = GetTextFilePath(tbSourceFile.Text); 
-            var result = FindVersesDifferences(sourceFilePath);
+            var result = await FindVersesDifferencesAsync(sourceFilePath);
             SaveResults(result);
         }
 
@@ -86,11 +87,11 @@ namespace VerseDifferencesFinder
             System.Diagnostics.Process.Start("notepad.exe", filePath);
         }
 
-        private List<string> FindVersesDifferences(string sourceFilePath)
+        private async Task<List<string>> FindVersesDifferencesAsync(string sourceFilePath)
         {
             var documentProvider = GetDocumentProvider(sourceFilePath);
 
-            var parseResult = documentProvider.ParseDocument(new FileDocumentId(0, sourceFilePath, true));
+            var parseResult = await documentProvider.ParseDocumentAsync(new FileDocumentId(0, sourceFilePath, true));
             var parseResults = parseResult.GetAllParagraphParseResults().ToList();
             var versesFromOtherModules = parseResults
                 .SelectMany(pr => pr.VerseEntries

@@ -20,7 +20,7 @@ namespace BibleNote.Analytics.Services.DocumentProvider
                 .OrderBy(rp => rp.Order);
         }
 
-        public async Task Analyze<T>(
+        public async Task AnalyzeAsync<T>(
             INavigationProvider<T> navigationProvider,
             AnalyzerOptions options,
             CancellationToken cancellationToken = default)
@@ -35,11 +35,11 @@ namespace BibleNote.Analytics.Services.DocumentProvider
                 if (provider.IsReadonly)
                     document.SetReadonly();     // todo: вроде как это лишнее, потому что FileNavigationProvider.IsReadonly должен быть true в таком случае
 
-                var parseResult = provider.ParseDocument(document);
+                var parseResult = await provider.ParseDocumentAsync(document);
 
                 foreach (var processor in this.documentParseResultProcessing)
                 {
-                    await processor.Process(document.DocumentId, parseResult);
+                    await processor.ProcessAsync(document.DocumentId, parseResult);
                 }
             }
         }

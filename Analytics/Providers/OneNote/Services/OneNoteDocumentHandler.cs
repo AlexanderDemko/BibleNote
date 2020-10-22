@@ -3,11 +3,12 @@ using BibleNote.Analytics.Providers.OneNote.Navigation;
 using BibleNote.Analytics.Services.DocumentProvider.Contracts;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Threading.Tasks;
 using System.Xml.Linq;
 
 namespace BibleNote.Analytics.Providers.OneNote.Services
 {
-    public class OneNoteDocumentHandler : IXDocumentHandler
+    public class OneNoteDocumentHandler : IXDocumentHandler, IAsyncDisposable
     {
         private readonly ILogger _log;
 
@@ -19,18 +20,22 @@ namespace BibleNote.Analytics.Providers.OneNote.Services
         {
             _log = log;
             DocumentId = documentId;
-            Document = ReadDocument(DocumentId);
         }
 
-        private XDocument ReadDocument(IDocumentId documentId)
+        public async Task LoadPageContentAsync()
+        {
+            Document = await ReadDocumentAsync(DocumentId);
+        }
+
+        private async Task<XDocument> ReadDocumentAsync(IDocumentId documentId)
         {
             string xml = null;
 
             if (documentId is OneNoteDocumentId)
             {
-                using (var oneNoteApp = new OneNoteAppWrapper(_log))
+                using (var oneNoteApp = new OneNoteAppWrapper(_log))        // todo: не создавать
                 {
-                    xml = oneNoteApp.GetPageContent(((OneNoteDocumentId)documentId).PageId);
+                    xml = await oneNoteApp.GetPageContentAsync(((OneNoteDocumentId)documentId).PageId);
                     //html = Regex.Replace(html, "([^>])(\\n|&nbsp;)([^<])", "$1 $3");      // todo: разобраться, нужно ли это сейчас       
                 }
             }            
@@ -48,11 +53,15 @@ namespace BibleNote.Analytics.Providers.OneNote.Services
 
         public void Dispose()
         {
+        }
+
+        public async ValueTask DisposeAsync()
+        {
             if (!DocumentId.IsReadonly && DocumentId.Changed)
             {
                 using (var oneNoteApp = new OneNoteAppWrapper(_log))
                 {
-                    oneNoteApp.UpdatePageContent(Document);
+                    await oneNoteApp.UpdatePageContentAsync(Document);
                 }
             }
         }

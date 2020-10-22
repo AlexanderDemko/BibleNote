@@ -1,6 +1,7 @@
 ﻿using BibleNote.Analytics.Providers.OneNote.Contracts;
 using BibleNote.Analytics.Services.DocumentProvider.Contracts;
 using Microsoft.Extensions.Logging;
+using System.Threading.Tasks;
 
 namespace BibleNote.Analytics.Providers.OneNote.Services
 {
@@ -13,9 +14,11 @@ namespace BibleNote.Analytics.Providers.OneNote.Services
             _log = log;
         }
 
-        public IXDocumentHandler Connect(IDocumentId documentId)
+        public async Task<IXDocumentHandler> ConnectAsync(IDocumentId documentId)
         {
-            return new OneNoteDocumentHandler(documentId, _log);
+            var pageHandler = new OneNoteDocumentHandler(documentId, _log);
+            await pageHandler.LoadPageContentAsync();
+            return pageHandler;
         }
     }
 }

@@ -7,6 +7,7 @@ using BibleNote.Analytics.Services.VerseParsing.Models.ParseResult;
 using System;
 using DocumentFormat.OpenXml;
 using BibleNote.Analytics.Domain.Enums;
+using System.Threading.Tasks;
 
 namespace BibleNote.Analytics.Providers.Html
 {
@@ -30,10 +31,10 @@ namespace BibleNote.Analytics.Providers.Html
             throw new NotImplementedException(); // todo
         }
 
-        public DocumentParseResult ParseDocument(IDocumentId documentId)
+        public async Task<DocumentParseResult> ParseDocumentAsync(IDocumentId documentId)
         {
             DocumentParseResult result;
-            using (var docHandler = wordDocumentConnector.Connect(documentId))
+            using (var docHandler = await wordDocumentConnector.ConnectAsync(documentId))
             {
                 using (var docParser = documentParserFactory.Create(this, documentId))
                 {

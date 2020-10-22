@@ -7,6 +7,7 @@ using HtmlAgilityPack;
 using System;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Web;
 
 namespace BibleNote.Analytics.Providers.Html
@@ -19,11 +20,15 @@ namespace BibleNote.Analytics.Providers.Html
 
         public HtmlDocumentHandler(IDocumentId documentId)
         {
-            DocumentId = documentId;
-            HtmlDocument = ReadDocument(DocumentId);
+            DocumentId = documentId;           
         }
 
-        private static HtmlDocument ReadDocument(IDocumentId documentId)
+        public async Task LoadPageContentAsync()
+        {
+            HtmlDocument = await ReadDocumentAsync(DocumentId);
+        }
+
+        private static async Task<HtmlDocument> ReadDocumentAsync(IDocumentId documentId)
         {
             string fileContent = null;
 
@@ -43,7 +48,7 @@ namespace BibleNote.Analytics.Providers.Html
             }
             else if (documentId is WebDocumentId webDocumentId)
             {
-                throw new NotImplementedException();  // todo
+                throw new NotImplementedException();  // todo async?
             }
             else
             {

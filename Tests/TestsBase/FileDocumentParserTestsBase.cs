@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.IO;
 using BibleNote.Analytics.Providers.FileSystem.DocumentId;
+using System.Threading.Tasks;
 
 namespace BibleNote.Tests.Analytics.TestsBase
 {
@@ -34,12 +35,12 @@ namespace BibleNote.Tests.Analytics.TestsBase
             catch { }
         }
 
-        protected void TestFile(string filePath, params string[][] expectedResults)
+        protected Task TestFileAsync(string filePath, params string[][] expectedResults)
         {
-            TestFile(filePath, true, true, expectedResults);
+            return TestFileAsync(filePath, true, true, expectedResults);
         }
 
-        protected void TestFile(string filePath, bool copyFile, bool shouldChange, params string[][] expectedResults)
+        protected async Task TestFileAsync(string filePath, bool copyFile, bool shouldChange, params string[][] expectedResults)
         {
             var newFilePath = filePath;
             if (copyFile)
@@ -51,7 +52,7 @@ namespace BibleNote.Tests.Analytics.TestsBase
             var fileContent = File.ReadAllText(newFilePath);
             for (var i = 0; i <= 1; i++)
             {
-                var parseResult = this.documentProvider.ParseDocument(new FileDocumentId(0, newFilePath, false));
+                var parseResult = await this.documentProvider.ParseDocumentAsync(new FileDocumentId(0, newFilePath, false));
                 CheckParseResults(parseResult.GetAllParagraphParseResults().ToList(), expectedResults);
 
                 if (i == 0)

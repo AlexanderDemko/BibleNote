@@ -15,6 +15,10 @@ namespace BibleNote.Analytics.Providers.Html
         public WordDocumentHandler(IDocumentId documentId)
         {
             DocumentId = documentId;
+        }
+
+        public void LoadPageContent()
+        {
             WordDocument = ReadDocument(DocumentId);
         }
 

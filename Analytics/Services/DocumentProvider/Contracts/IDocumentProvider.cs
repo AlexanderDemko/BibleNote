@@ -1,6 +1,7 @@
 ﻿using BibleNote.Analytics.Domain.Enums;
 using BibleNote.Analytics.Services.VerseParsing.Models;
 using BibleNote.Analytics.Services.VerseParsing.Models.ParseResult;
+using System.Threading.Tasks;
 
 namespace BibleNote.Analytics.Services.DocumentProvider.Contracts
 {
@@ -15,6 +16,6 @@ namespace BibleNote.Analytics.Services.DocumentProvider.Contracts
 
     public interface IDocumentProvider : IDocumentProviderInfo
     {
-        DocumentParseResult ParseDocument(IDocumentId documentId);
+        Task<DocumentParseResult> ParseDocumentAsync(IDocumentId documentId);
     }
 }

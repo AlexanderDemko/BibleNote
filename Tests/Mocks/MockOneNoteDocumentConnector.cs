@@ -4,13 +4,14 @@ using BibleNote.Analytics.Providers.OneNote.Contracts;
 using BibleNote.Analytics.Services.DocumentProvider.Contracts;
 using System;
 using System.IO;
+using System.Threading.Tasks;
 using System.Xml.Linq;
 
 namespace BibleNote.Tests.Analytics.Mocks
 {
     public class MockOneNoteDocumentConnector : IOneNoteDocumentConnector
     {
-        public IXDocumentHandler Connect(IDocumentId documentId)
+        public async Task<IXDocumentHandler> ConnectAsync(IDocumentId documentId)
         {
             return new MockOneNoteDocumentHandler(documentId);
         }

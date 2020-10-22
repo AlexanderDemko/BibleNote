@@ -6,7 +6,7 @@ namespace BibleNote.Analytics.Services.DocumentProvider.Contracts
 {
     public interface IAnalyzer        
     {
-        Task Analyze<T>(
+        Task AnalyzeAsync<T>(
             INavigationProvider<T> navigationProvider,
             AnalyzerOptions options,
             CancellationToken cancellationToken = default)
