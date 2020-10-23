@@ -4,19 +4,22 @@ import { HttpClientModule } from '@angular/common/http';
 
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
-import { TestComponent } from './test/test.component';
+import { AppInitializer } from './app.initializer';
+import { NavigationProvidersListComponent } from './navigation-providers/list/navigation-providers.component';
 
 @NgModule({
   declarations: [
     AppComponent,
-    TestComponent
+    NavigationProvidersListComponent
   ],
   imports: [
     BrowserModule,
     AppRoutingModule,
     HttpClientModule
   ],
-  providers: [],
+  providers: [
+    AppInitializer
+  ],
   bootstrap: [AppComponent]
 })
 export class AppModule { }

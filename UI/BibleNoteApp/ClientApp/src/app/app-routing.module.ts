@@ -1,9 +1,9 @@
 import { NgModule } from '@angular/core';
 import { Routes, RouterModule } from '@angular/router';
-import { TestComponent } from './test/test.component';
+import { NavigationProvidersListComponent } from './navigation-providers/list/navigation-providers.component';
 
 const routes: Routes = [
-  { path: 'test', component: TestComponent }
+  { path: 'nav-providers', component: NavigationProvidersListComponent }
 ];
 
 @NgModule({

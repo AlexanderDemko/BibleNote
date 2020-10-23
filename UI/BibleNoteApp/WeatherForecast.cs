@@ -1,6 +1,6 @@
 using System;
 
-namespace BibleNoteApp
+namespace BibleNote.UI.App
 {
     public class WeatherForecast
     {

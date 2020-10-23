@@ -1,13 +1,16 @@
+using BibleNote.UI.Middleware;
 using ElectronNET.API;
 using ElectronNET.API.Entities;
+using MediatR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.SpaServices.AngularCli;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using System.Reflection;
 
-namespace BibleNoteApp
+namespace BibleNote.UI.App
 {
     public class Startup
     {
@@ -27,6 +30,10 @@ namespace BibleNoteApp
             {
                 configuration.RootPath = "ClientApp/dist";
             });
+
+            services.AddSwaggerDocument();
+
+            services.AddMediatR(typeof(MiddlewareModule).GetTypeInfo().Assembly);
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -47,6 +54,13 @@ namespace BibleNoteApp
                 app.UseSpaStaticFiles();
             }
 
+            app.UseOpenApi();
+            app.UseSwaggerUi3(settings =>
+            {
+                settings.Path = "/api";
+                settings.DocumentPath = "/api/specification.json";
+            });
+
             app.UseRouting();
 
             app.UseEndpoints(endpoints =>
@@ -65,7 +79,8 @@ namespace BibleNoteApp
 
                 if (env.IsDevelopment())
                 {
-                    spa.UseAngularCliServer(npmScript: "start");
+                   //spa.UseAngularCliServer(npmScript: "start");
+                   spa.UseProxyToSpaDevelopmentServer("http://localhost:4200");
                 }
             });
 

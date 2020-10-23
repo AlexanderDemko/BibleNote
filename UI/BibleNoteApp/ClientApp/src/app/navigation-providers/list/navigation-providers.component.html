@@ -1,0 +1,20 @@
+<h1 id="tableLabel">Navigation Providers</h1>
+
+<p>This component demonstrates fetching data from the server.</p>
+
+<p *ngIf="!providersState"><em>Loading...</em></p>
+
+<table class='table table-striped' aria-labelledby="tableLabel" *ngIf="providersState">
+  <thead>
+    <tr>
+      <th>Id</th>
+      <th>Name</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr *ngFor="let p of providersState.items">
+      <td>{{ p.id }}</td>
+      <td>{{ p.name}}</td>
+    </tr>
+  </tbody>
+</table>
