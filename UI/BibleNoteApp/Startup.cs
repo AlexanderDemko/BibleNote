@@ -1,10 +1,13 @@
+using AutoMapper;
+using BibleNote.Analytics.Common.DiContainer;
+using BibleNote.UI.Infrastructure.Monitoring;
+using BibleNote.UI.Infrastructure.RequestValidation;
 using BibleNote.UI.Middleware;
 using ElectronNET.API;
 using ElectronNET.API.Entities;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.SpaServices.AngularCli;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -31,9 +34,17 @@ namespace BibleNote.UI.App
                 configuration.RootPath = "ClientApp/dist";
             });
 
-            services.AddSwaggerDocument();
+            services.AddAutoMapper(new[] {
+                typeof(Middleware.AutoMapperProfile).GetTypeInfo().Assembly,
+                typeof(Infrastructure.AutoMapperProfile).GetTypeInfo().Assembly });
+
+            services.AddApplicatonServices<MiddlewareModule>();
 
             services.AddMediatR(typeof(MiddlewareModule).GetTypeInfo().Assembly);
+            services.AddTransient(typeof(IPipelineBehavior<,>), typeof(RequestPerformanceBehaviour<,>));
+            services.AddTransient(typeof(IPipelineBehavior<,>), typeof(RequestValidationBehavior<,>));
+            
+            services.AddSwaggerDocument();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -91,7 +102,8 @@ namespace BibleNote.UI.App
         {
             var options = new BrowserWindowOptions
             {
-                Show = false
+                //Show = false
+                
             };
 
             var mainWindow = await Electron.WindowManager.CreateWindowAsync();
@@ -125,7 +137,7 @@ namespace BibleNote.UI.App
                 }
             };
 
-            Electron.Menu.SetApplicationMenu(menu);
+            //Electron.Menu.SetApplicationMenu(menu);
         }
     }
 }
