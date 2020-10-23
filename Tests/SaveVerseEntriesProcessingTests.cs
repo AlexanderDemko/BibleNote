@@ -52,7 +52,7 @@ namespace BibleNote.Tests.Analytics
         public async Task Test1()
         {
             var parseResult = await this.documentProvider.ParseDocumentAsync(new FileDocumentId(0, @"..\..\..\TestData\Html_CheckFullPage.html", true));
-            this.documentParseResultProcessing.ProcessAsync(this.document.Id, parseResult);
+            await this.documentParseResultProcessing.ProcessAsync(this.document.Id, parseResult);
 
             this.AnalyticsContext.VerseEntryRepository
                 .Where(v => v.DocumentParagraph.DocumentId == this.document.Id)

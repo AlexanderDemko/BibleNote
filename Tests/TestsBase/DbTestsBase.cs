@@ -17,7 +17,7 @@ namespace BibleNote.Tests.Analytics.TestsBase
         public override void Init(Action<IServiceCollection> registerServicesAction = null)
         {
             this.connection = new SqliteConnection(
-                @"DataSource=..\..\..\..\Analytics\Persistence\BibleNote.Analytics.db"
+                @"DataSource=..\..\..\..\Persistence\BibleNote.Analytics.db"
                 //"DataSource=:memory:"
                 );
             connection.Open();
