@@ -24,11 +24,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Analytics\Data\Domain.csproj" />
-    <ProjectReference Include="..\Analytics\Persistence\Persistence.csproj" />
-    <ProjectReference Include="..\Analytics\Providers\FileSystem.Navigation\FileSystem.Navigation.csproj" />
-    <ProjectReference Include="..\Analytics\Providers\OneNote\OneNote.csproj" />
-    <ProjectReference Include="..\Analytics\Services\Services.csproj" />
+    <ProjectReference Include="..\Domain\Domain.csproj" />
+    <ProjectReference Include="..\Persistence\Persistence.csproj" />
+    <ProjectReference Include="..\Providers\FileSystem.Navigation\FileSystem.Navigation.csproj" />
+    <ProjectReference Include="..\Providers\OneNote\OneNote.csproj" />
   </ItemGroup>
 
 </Project>

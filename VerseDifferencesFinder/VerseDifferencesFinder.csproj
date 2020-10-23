@@ -12,9 +12,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Analytics\Providers\Html\Html.csproj" />
-    <ProjectReference Include="..\..\Analytics\Providers\Word\Word.csproj" />
-    <ProjectReference Include="..\..\Analytics\Services\Services.csproj" />
+    <ProjectReference Include="..\Providers\Html\Html.csproj" />
+    <ProjectReference Include="..\Providers\Word\Word.csproj" />
+    <ProjectReference Include="..\Services\Services.csproj" />
   </ItemGroup>
 
 </Project>
