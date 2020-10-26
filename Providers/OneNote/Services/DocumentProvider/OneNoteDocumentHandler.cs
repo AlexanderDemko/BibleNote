@@ -1,12 +1,12 @@
 ﻿using BibleNote.Analytics.Providers.OneNote.Contracts;
-using BibleNote.Analytics.Providers.OneNote.Navigation;
+using BibleNote.Analytics.Providers.OneNote.Services.NavigationProvider;
 using BibleNote.Analytics.Services.DocumentProvider.Contracts;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 
-namespace BibleNote.Analytics.Providers.OneNote.Services
+namespace BibleNote.Analytics.Providers.OneNote.Services.DocumentProvider
 {
     public class OneNoteDocumentHandler : IXDocumentHandler, IAsyncDisposable
     {
@@ -38,9 +38,9 @@ namespace BibleNote.Analytics.Providers.OneNote.Services
                     xml = await oneNoteApp.GetPageContentAsync(((OneNoteDocumentId)documentId).PageId);
                     //html = Regex.Replace(html, "([^>])(\\n|&nbsp;)([^<])", "$1 $3");      // todo: разобраться, нужно ли это сейчас       
                 }
-            }            
+            }
 
-            if (xml != null)            
+            if (xml != null)
                 return XDocument.Parse(xml);
 
             throw new NotSupportedException(documentId.GetType().Name);

@@ -16,6 +16,6 @@ namespace BibleNote.Analytics.Services.DocumentProvider.Contracts
 
         IDocumentProvider GetProvider(T document);
 
-        Task<IEnumerable<T>> LoadDocuments(bool newOnly, bool updateDb = false, CancellationToken cancellationToken = default);        
+        Task<IEnumerable<T>> LoadDocuments(bool newOnly, bool updateDb = true, CancellationToken cancellationToken = default);        
     }
 }

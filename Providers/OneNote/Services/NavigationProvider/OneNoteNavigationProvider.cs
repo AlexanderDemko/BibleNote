@@ -1,13 +1,13 @@
-﻿using BibleNote.Analytics.Providers.OneNote.Services;
-using BibleNote.Analytics.Services.DocumentProvider.Contracts;
+﻿using BibleNote.Analytics.Services.DocumentProvider.Contracts;
 using System;
 using Microsoft.Extensions.DependencyInjection;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Threading;
 using BibleNote.Analytics.Services.NavigationProvider;
+using BibleNote.Analytics.Providers.OneNote.Services.DocumentProvider;
 
-namespace BibleNote.Analytics.Providers.OneNote.Navigation
+namespace BibleNote.Analytics.Providers.OneNote.Services.NavigationProvider
 {
     public class OneNoteNavigationProvider : NavigationProviderBase<OneNoteDocumentId, OneNoteNavigationProviderParameters>, IDisposable
     {
@@ -21,18 +21,18 @@ namespace BibleNote.Analytics.Providers.OneNote.Navigation
         public OneNoteNavigationProvider(IServiceProvider scopeProvider)
         {
             this.scopeProvider = scopeProvider;
-            this.Parameters = new OneNoteNavigationProviderParameters();
+            Parameters = new OneNoteNavigationProviderParameters();
         }
 
         public override IDocumentProvider GetProvider(OneNoteDocumentId document)
         {
-            return this.scopeProvider.GetService<OneNoteProvider>();
+            return scopeProvider.GetService<OneNoteProvider>();
         }
 
-        public override Task<IEnumerable<OneNoteDocumentId>> LoadDocuments(bool newOnly, bool updateDb = false, CancellationToken cancellationToken = default)
+        public override Task<IEnumerable<OneNoteDocumentId>> LoadDocuments(bool newOnly, bool updateDb = true, CancellationToken cancellationToken = default)
         {
             throw new NotImplementedException(
-                
+
                 );   // todo
         }
 

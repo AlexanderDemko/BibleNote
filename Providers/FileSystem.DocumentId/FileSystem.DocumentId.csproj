@@ -2,8 +2,8 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
-    <AssemblyName>BibleNote.Analytics.Providers.FileSystem.DocumentId</AssemblyName>
-    <RootNamespace>BibleNote.Analytics.Providers.FileSystem.DocumentId</RootNamespace>
+    <AssemblyName>BibleNote.Providers.FileSystem.DocumentId</AssemblyName>
+    <RootNamespace>BibleNote.Providers.FileSystem.DocumentId</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>

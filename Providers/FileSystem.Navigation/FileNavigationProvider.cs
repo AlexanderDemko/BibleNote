@@ -56,7 +56,7 @@ namespace BibleNote.Analytics.Providers.FileSystem.Navigation
             }
         }
 
-        public override async Task<IEnumerable<FileDocumentId>> LoadDocuments(bool newOnly, bool updateDb = false, CancellationToken cancellationToken = default)
+        public override async Task<IEnumerable<FileDocumentId>> LoadDocuments(bool newOnly, bool updateDb = true, CancellationToken cancellationToken = default)
         {
             var documents = new List<Document>();
 

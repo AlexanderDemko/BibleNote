@@ -30,7 +30,7 @@ namespace BibleNote.Analytics.Providers.Web.Navigation
             return this.scopeProvider.GetService<HtmlProvider>();
         }
 
-        public override Task<IEnumerable<WebDocumentId>> LoadDocuments(bool newOnly, bool updateDb = false, CancellationToken cancellationToken = default)
+        public override Task<IEnumerable<WebDocumentId>> LoadDocuments(bool newOnly, bool updateDb = true, CancellationToken cancellationToken = default)
         {
             throw new NotImplementedException(); // todo
         }

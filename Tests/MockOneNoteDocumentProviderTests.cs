@@ -1,11 +1,11 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using BibleNote.Analytics.Providers.OneNote.Services;
 using BibleNote.Analytics.Providers.OneNote.Contracts;
 using BibleNote.Tests.Analytics.Mocks;
 using BibleNote.Tests.Analytics.TestsBase;
 using BibleNote.Analytics.Services.DocumentProvider.Contracts;
 using Microsoft.Extensions.DependencyInjection;
 using System.Threading.Tasks;
+using BibleNote.Analytics.Providers.OneNote.Services.DocumentProvider;
 
 namespace BibleNote.Tests.Analytics
 {

@@ -11,12 +11,12 @@ using System.Globalization;
 using Microsoft.Extensions.Logging;
 using System.Threading.Tasks;
 
-namespace BibleNote.Analytics.Providers.OneNote.Services
+namespace BibleNote.Analytics.Providers.OneNote.Services.DocumentProvider
 {
     public class OneNoteAppWrapper : IDisposable
     {
         // todo: не надо каждый раз создавать. Надо на уровне NavigationProvider-a один раз только создать.
-        private IApplication _app;      
+        private IApplication _app;
 
         private readonly ILogger _log;
 
@@ -32,11 +32,11 @@ namespace BibleNote.Analytics.Providers.OneNote.Services
             await UseOneNoteAppAsync(() => _app.GetPageContent(pageId, out result, pageInfo, OneNoteConstants.CurrentOneNoteSchema));
 
             return result;
-        }        
+        }
 
         public async Task<string> GetCurrentPageIdAsync()
         {
-            string currentPageId = null;            
+            string currentPageId = null;
 
             await UseOneNoteAppAsync(() =>
             {
@@ -96,7 +96,7 @@ namespace BibleNote.Analytics.Providers.OneNote.Services
                         var indentVal = double.Parse(indent.Replace("E", "E-"), CultureInfo.InvariantCulture);          // непонятно, что делать с E
                         indentNode.SetAttributeValue("indent", indentVal.ToString("F", CultureInfo.InvariantCulture));
                     }
-                }                
+                }
             }
             catch (Exception ex)
             {
@@ -148,7 +148,7 @@ namespace BibleNote.Analytics.Providers.OneNote.Services
                 else
                     throw;
             }
-        }        
+        }
 
         private void ReleaseOneNoteApp()
         {

@@ -1,6 +1,5 @@
 ﻿using BibleNote.Analytics.Providers.FileSystem.Navigation;
-using BibleNote.Analytics.Providers.OneNote.Enums;
-using BibleNote.Analytics.Providers.OneNote.Navigation;
+using BibleNote.Analytics.Providers.OneNote.Services.NavigationProvider;
 using BibleNote.Analytics.Services.DocumentProvider.Contracts;
 using BibleNote.Analytics.Services.DocumentProvider.Models;
 using BibleNote.Tests.Analytics.TestsBase;

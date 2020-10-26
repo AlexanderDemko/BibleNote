@@ -1,9 +1,7 @@
 ﻿using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using BibleNote.Analytics.Providers.OneNote.Services;
 using BibleNote.Analytics.Providers.OneNote.Contracts;
 using BibleNote.Tests.Analytics.TestsBase;
-using BibleNote.Analytics.Providers.OneNote.Navigation;
 using BibleNote.Analytics.Services.DocumentProvider.Contracts;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
@@ -11,6 +9,8 @@ using BibleNote.Analytics.Services.VerseProcessing.Contracts;
 using System.Diagnostics;
 using BibleNote.Analytics.Domain.Entities;
 using System.Threading.Tasks;
+using BibleNote.Analytics.Providers.OneNote.Services.NavigationProvider;
+using BibleNote.Analytics.Providers.OneNote.Services.DocumentProvider;
 
 namespace BibleNote.Tests.Analytics
 {

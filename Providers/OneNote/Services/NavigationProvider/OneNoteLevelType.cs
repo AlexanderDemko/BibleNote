@@ -1,4 +1,4 @@
-﻿namespace BibleNote.Analytics.Providers.OneNote.Enums
+﻿namespace BibleNote.Analytics.Providers.OneNote.Services.NavigationProvider
 {
     public enum OneNoteLevelType
     {

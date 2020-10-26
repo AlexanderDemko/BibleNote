@@ -1,7 +1,7 @@
 ﻿using BibleNote.Analytics.Services.DocumentProvider.Contracts;
 using System;
 
-namespace BibleNote.Analytics.Providers.OneNote.Navigation
+namespace BibleNote.Analytics.Providers.OneNote.Services.NavigationProvider
 {
     public class OneNoteDocumentId : IDocumentId
     {
@@ -11,12 +11,12 @@ namespace BibleNote.Analytics.Providers.OneNote.Navigation
 
         public bool IsReadonly => false;
 
-        public bool Changed { get; private set; }        
+        public bool Changed { get; private set; }
 
         public OneNoteDocumentId(int documentId, string pageId)
         {
             DocumentId = documentId;
-            PageId = pageId;            
+            PageId = pageId;
         }
 
         public void SetChanged()

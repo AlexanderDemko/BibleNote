@@ -2,8 +2,8 @@
 
   <PropertyGroup>
     <TargetFramework>netcoreapp3.1</TargetFramework>
-    <RootNamespace>BibleNote.Analytics.Providers.Web.Navigation</RootNamespace>
-    <AssemblyName>BibleNote.Analytics.Providers.Web.Navigation</AssemblyName>
+    <RootNamespace>BibleNote.Providers.Web.Navigation</RootNamespace>
+    <AssemblyName>BibleNote.Providers.Web.Navigation</AssemblyName>
     <LangVersion>7.3</LangVersion>
   </PropertyGroup>
 

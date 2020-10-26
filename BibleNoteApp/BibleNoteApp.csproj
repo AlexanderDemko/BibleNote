@@ -8,9 +8,9 @@
     <DefaultItemExcludes>$(DefaultItemExcludes);$(SpaRoot)node_modules\**</DefaultItemExcludes>
     <!-- Set this to true if you enable server-side prerendering -->
     <BuildServerSideRenderer>false</BuildServerSideRenderer>
-    <RootNamespace>BibleNote.UI.App</RootNamespace>
+    <RootNamespace>BibleNote.App</RootNamespace>
     <GenerateCode>True</GenerateCode>
-    <AssemblyName>BibleNote.UI.App</AssemblyName>
+    <AssemblyName>BibleNote.App</AssemblyName>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="8.1.0" />

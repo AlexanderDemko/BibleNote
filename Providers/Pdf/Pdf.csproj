@@ -2,8 +2,8 @@
 
   <PropertyGroup>
     <TargetFramework>netcoreapp3.1</TargetFramework>
-    <AssemblyName>BibleNote.Analytics.Providers.Pdf</AssemblyName>
-    <RootNamespace>BibleNote.Analytics.Providers.Pdf</RootNamespace>
+    <AssemblyName>BibleNote.Providers.Pdf</AssemblyName>
+    <RootNamespace>BibleNote.Providers.Pdf</RootNamespace>
     <LangVersion>7.3</LangVersion>
   </PropertyGroup>
 

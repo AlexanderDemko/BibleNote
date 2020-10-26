@@ -26,6 +26,6 @@ namespace BibleNote.Analytics.Services.NavigationProvider
 
         public abstract IDocumentProvider GetProvider(T document);
 
-        public abstract Task<IEnumerable<T>> LoadDocuments(bool newOnly, bool updateDb = false, CancellationToken cancellationToken = default);
+        public abstract Task<IEnumerable<T>> LoadDocuments(bool newOnly, bool updateDb = true, CancellationToken cancellationToken = default);
     }
 }

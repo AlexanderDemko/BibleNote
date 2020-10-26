@@ -26,7 +26,10 @@ namespace BibleNote.Analytics.Services.DocumentProvider
             CancellationToken cancellationToken = default)
             where T : IDocumentId
         {
-            var documents = await navigationProvider.LoadDocuments(newOnly: options.Depth == AnalyzeDepth.NewOnly, updateDb: true, cancellationToken);
+            var documents = await navigationProvider.LoadDocuments(
+                newOnly: options.Depth == AnalyzeDepth.NewOnly, 
+                updateDb: true, 
+                cancellationToken);
 
             foreach (var document in documents)
             {

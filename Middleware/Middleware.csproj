@@ -2,8 +2,8 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
-    <RootNamespace>BibleNote.UI.Middleware</RootNamespace>
-    <AssemblyName>BibleNote.UI.Middleware</AssemblyName>
+    <RootNamespace>BibleNote.Middleware</RootNamespace>
+    <AssemblyName>BibleNote.Middleware</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>

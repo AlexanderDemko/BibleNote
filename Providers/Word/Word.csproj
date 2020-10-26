@@ -2,8 +2,8 @@
 
   <PropertyGroup>
     <TargetFramework>netcoreapp3.1</TargetFramework>
-    <AssemblyName>BibleNote.Analytics.Providers.Word</AssemblyName>
-    <RootNamespace>BibleNote.Analytics.Providers.Word</RootNamespace>
+    <AssemblyName>BibleNote.Providers.Word</AssemblyName>
+    <RootNamespace>BibleNote.Providers.Word</RootNamespace>
     <LangVersion>7.3</LangVersion>
   </PropertyGroup>
 

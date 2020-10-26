@@ -11,7 +11,7 @@ using BibleNote.Analytics.Providers.Html;
 using BibleNote.Analytics.Domain.Enums;
 using System.Threading.Tasks;
 
-namespace BibleNote.Analytics.Providers.OneNote.Services
+namespace BibleNote.Analytics.Providers.OneNote.Services.DocumentProvider
 {
     public class OneNoteProvider : IDocumentProvider
     {
@@ -24,18 +24,18 @@ namespace BibleNote.Analytics.Providers.OneNote.Services
         public FileType[] SupportedFileTypes => new[] { FileType.OneNote };
 
         public OneNoteProvider(
-            IDocumentParserFactory documentParserFactory, 
+            IDocumentParserFactory documentParserFactory,
             IOneNoteDocumentConnector oneNoteDocumentConnector,
             IVerseLinkService verseLinkService)
         {
             this.documentParserFactory = documentParserFactory;
             this.oneNoteDocumentConnector = oneNoteDocumentConnector;
             this.verseLinkService = verseLinkService;
-        }        
+        }
 
         public string GetVersePointerLink(VersePointer versePointer)
         {
-            var verseLink = this.verseLinkService.GetVerseLink(versePointer);
+            var verseLink = verseLinkService.GetVerseLink(versePointer);
             return string.Format($"<a href='{verseLink}'>{versePointer.GetOriginalVerseString()}</a>");
         }
 
@@ -96,7 +96,7 @@ namespace BibleNote.Analytics.Providers.OneNote.Services
                         return ElementType.Title;
                     break;
                 case OneNoteTags.Page:
-                case OneNoteTags.Outline:                
+                case OneNoteTags.Outline:
                     return ElementType.Root;
                 case OneNoteTags.Oe:
                 case OneNoteTags.OeChildren:

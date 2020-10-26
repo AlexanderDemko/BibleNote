@@ -1,6 +1,4 @@
-﻿using BibleNote.Analytics.Providers.OneNote.Enums;
-
-namespace BibleNote.Analytics.Providers.OneNote.Navigation
+﻿namespace BibleNote.Analytics.Providers.OneNote.Services.NavigationProvider
 {
     public struct OneNoteLevelInfo
     {

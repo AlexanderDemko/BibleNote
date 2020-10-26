@@ -2,8 +2,8 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
-    <AssemblyName>BibleNote.Analytics.Services</AssemblyName>
-    <RootNamespace>BibleNote.Analytics.Services</RootNamespace>
+    <AssemblyName>BibleNote.Services</AssemblyName>
+    <RootNamespace>BibleNote.Services</RootNamespace>
     <LangVersion>7.3</LangVersion>
   </PropertyGroup>
 
