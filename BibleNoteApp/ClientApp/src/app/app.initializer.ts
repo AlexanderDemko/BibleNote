@@ -12,7 +12,11 @@ export const AppInitializer = {
 
 export function initializeFactory(injector: Injector) {
   return () => {
-    Store.config.set({ cloneMethodName: 'clone' });
+    Store.config.set({
+      cloneMethodName: 'clone', // optional, if Falsy then states are muttable
+      disposeMethodName: 'ngOnDestroy', // optional, but required for usage of Store.state.subscribe method
+      resolver: injector // optional, but required for ReduceStore service
+    });
 
     //Store.logging.setConfiguration([]);
     //Store.logging.turnOn();

@@ -1,13 +1,11 @@
 import { Injectable } from '@angular/core';
 
-import { Store, ReduceStore } from 'reduce-store';
+import { Store } from 'reduce-store';
 import { environment } from '../../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
 export class InitializeService {
-  constructor(
-    private store: ReduceStore,
-  ) {
+  constructor( ) {
     if (!environment.production) {
       (<any>window).store = Store;
     }

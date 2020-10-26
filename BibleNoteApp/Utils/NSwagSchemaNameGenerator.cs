@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using NJsonSchema.Generation;
 
-namespace BibleNote.UI.App.Utils
+namespace BibleNote.App.Utils
 {
     public class NSwagSchemaNameGenerator : DefaultSchemaNameGenerator, ISchemaNameGenerator
     {
