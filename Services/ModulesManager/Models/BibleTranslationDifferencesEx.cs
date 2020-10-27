@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using BibleNote.Common.Extensions;
 using BibleNote.Services.ModulesManager.Scheme.Module;
 
 namespace BibleNote.Services.ModulesManager.Models
