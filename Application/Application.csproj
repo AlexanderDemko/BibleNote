@@ -7,6 +7,8 @@
     <SpaRoot>ClientApp\</SpaRoot>
     <DefaultItemExcludes>$(DefaultItemExcludes);$(SpaRoot)node_modules\**</DefaultItemExcludes>
     <GenerateCode>True</GenerateCode>
+    <RootNamespace>BibleNote.Application</RootNamespace>
+    <AssemblyName>BibleNote.Application</AssemblyName>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="8.1.0" />

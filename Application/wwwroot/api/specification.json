@@ -6,29 +6,6 @@
     "version": "1.0.0"
   },
   "paths": {
-    "/api/Test/Get": {
-      "get": {
-        "tags": [
-          "Test"
-        ],
-        "operationId": "Test_Get",
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/ApplicationWeatherForecast"
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/NavigationProviders/GetTop": {
       "get": {
         "tags": [
@@ -51,11 +28,52 @@
           }
         }
       }
+    },
+    "/api/Test/Get": {
+      "get": {
+        "tags": [
+          "Test"
+        ],
+        "operationId": "Test_Get",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BibleNoteApplicationWeatherForecast"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
-      "ApplicationWeatherForecast": {
+      "NavigationProvidersQueriesListNavigationProviderVm": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "BibleNoteApplicationWeatherForecast": {
         "type": "object",
         "additionalProperties": false,
         "properties": {
@@ -72,24 +90,6 @@
             "format": "int32"
           },
           "summary": {
-            "type": "string",
-            "nullable": true
-          }
-        }
-      },
-      "NavigationProvidersQueriesListNavigationProviderVm": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "id": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "name": {
-            "type": "string",
-            "nullable": true
-          },
-          "description": {
             "type": "string",
             "nullable": true
           }

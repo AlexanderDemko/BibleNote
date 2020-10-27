@@ -1,15 +1,15 @@
 {
-  "executable": "Application",
+  "executable": "BibleNote.Application",
   "splashscreen": {
     "imageFile": ""
   },
-  "name": "Application",
+  "name": "BibleNote",
   "author": "",
   "singleInstance": false,
   "environment": "Production",
   "build": {
-    "appId": "com.Application.app",
-    "productName": "Application",
+    "appId": "com.BibleNote.app",
+    "productName": "BibleNote",
     "copyright": "Copyright © 2020",
     "buildVersion": "1.0.0",
     "compression": "maximum",

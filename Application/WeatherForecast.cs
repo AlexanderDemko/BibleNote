@@ -1,6 +1,6 @@
 using System;
 
-namespace Application
+namespace BibleNote.Application
 {
     public class WeatherForecast
     {

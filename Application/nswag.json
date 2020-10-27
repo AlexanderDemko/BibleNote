@@ -37,7 +37,7 @@
       "documentProcessorTypes": [],
       "operationProcessorTypes": [],
       "typeNameGeneratorType": null,
-      "schemaNameGeneratorType": "Application:Application.Utils.NSwagSchemaNameGenerator",
+      "schemaNameGeneratorType": "BibleNote.Application:BibleNote.Application.Utils.NSwagSchemaNameGenerator",
       "contractResolverType": null,
       "serializerSettingsType": null,
       "useDocumentProvider": false,

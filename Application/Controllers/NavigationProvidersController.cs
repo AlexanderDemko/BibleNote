@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using BibleNote.Middleware.NavigationProviders.Queries.List;
 using Microsoft.AspNetCore.Mvc;
 
-namespace BibleNote.App.Controllers
+namespace BibleNote.Application.Controllers
 {
     public class NavigationProvidersController : BaseController
     {
