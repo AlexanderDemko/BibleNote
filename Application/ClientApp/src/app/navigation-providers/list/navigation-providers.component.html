@@ -1,0 +1,35 @@
+<h1 id="tableLabel">Navigation Providers</h1>
+
+<p>This component demonstrates fetching data from the server.</p>
+
+<p *ngIf="!providersState"><em>Loading...</em></p>
+
+<table class='table table-striped' aria-labelledby="tableLabel" *ngIf="providersState">
+  <thead>
+    <tr>
+      <th>Id</th>
+      <th>Name</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr *ngFor="let p of providersState.items">
+      <td>{{ p.id }}</td>
+      <td>{{ p.name}}</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="btn-group" dropdown>
+  <button dropdownToggle type="button" class="btn btn-primary dropdown-toggle">
+    Button dropdown <span class="caret"></span>
+  </button>
+  <ul *dropdownMenu class="dropdown-menu" role="menu">
+    <li role="menuitem"><a class="dropdown-item" href="#">Action</a></li>
+    <li role="menuitem"><a class="dropdown-item" href="#">Another action</a></li>
+    <li role="menuitem"><a class="dropdown-item" href="#">Something else here</a></li>
+    <li class="divider dropdown-divider"></li>
+    <li role="menuitem">
+      <a class="dropdown-item" href="#">Separated link</a>
+    </li>
+  </ul>
+</div>

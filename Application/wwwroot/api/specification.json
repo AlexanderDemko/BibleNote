@@ -1,0 +1,100 @@
+{
+  "x-generator": "NSwag v13.8.2.0 (NJsonSchema v10.2.1.0 (Newtonsoft.Json v12.0.0.0))",
+  "openapi": "3.0.0",
+  "info": {
+    "title": "BibleNote API",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/Test/Get": {
+      "get": {
+        "tags": [
+          "Test"
+        ],
+        "operationId": "Test_Get",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ApplicationWeatherForecast"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/NavigationProviders/GetTop": {
+      "get": {
+        "tags": [
+          "NavigationProviders"
+        ],
+        "operationId": "NavigationProviders_GetTop",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/NavigationProvidersQueriesListNavigationProviderVm"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ApplicationWeatherForecast": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "temperatureC": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "temperatureF": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "summary": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "NavigationProvidersQueriesListNavigationProviderVm": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      }
+    }
+  }
+}

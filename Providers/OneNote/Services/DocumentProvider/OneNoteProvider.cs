@@ -35,7 +35,7 @@ namespace BibleNote.Providers.OneNote.Services.DocumentProvider
 
         public string GetVersePointerLink(VersePointer versePointer)
         {
-            var verseLink = verseLinkService.GetVerseLink(versePointer);
+            var verseLink = verseLinkService.GetVerseLink(versePointer);                                    //todo: https://github.com/AlexanderDemko/BibleNote/issues/3
             return string.Format($"<a href='{verseLink}'>{versePointer.GetOriginalVerseString()}</a>");
         }
 
