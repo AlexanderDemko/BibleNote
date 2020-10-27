@@ -33,8 +33,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Web.Navigation", "Providers
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Word", "Providers\Word\Word.csproj", "{AB955A5B-77DB-496E-8A2C-5D31507FB9DA}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BibleNoteApp", "BibleNoteApp\BibleNoteApp.csproj", "{FD0079F7-BD94-4878-B0A9-BB6040A39380}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Domain", "Domain\Domain.csproj", "{32264E09-DBBC-4EC1-A74D-15E007FEEAEE}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Infrastructure", "Infrastructure\Infrastructure.csproj", "{F1EC3472-E7BA-4B21-A7CC-729CE66F67D3}"
@@ -49,7 +47,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "VerseDifferencesFinder", "V
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Dev", "Dev", "{2DE75761-6F2A-49A5-A388-1EEF462884E6}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Application", "Application\Application.csproj", "{8BB3A3A9-1BE5-42E7-9A14-790DF4FDAFC7}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Application", "Application\Application.csproj", "{8BB3A3A9-1BE5-42E7-9A14-790DF4FDAFC7}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -101,10 +99,6 @@ Global
 		{AB955A5B-77DB-496E-8A2C-5D31507FB9DA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{AB955A5B-77DB-496E-8A2C-5D31507FB9DA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{AB955A5B-77DB-496E-8A2C-5D31507FB9DA}.Release|Any CPU.Build.0 = Release|Any CPU
-		{FD0079F7-BD94-4878-B0A9-BB6040A39380}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{FD0079F7-BD94-4878-B0A9-BB6040A39380}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{FD0079F7-BD94-4878-B0A9-BB6040A39380}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{FD0079F7-BD94-4878-B0A9-BB6040A39380}.Release|Any CPU.Build.0 = Release|Any CPU
 		{32264E09-DBBC-4EC1-A74D-15E007FEEAEE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{32264E09-DBBC-4EC1-A74D-15E007FEEAEE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{32264E09-DBBC-4EC1-A74D-15E007FEEAEE}.Release|Any CPU.ActiveCfg = Release|Any CPU
