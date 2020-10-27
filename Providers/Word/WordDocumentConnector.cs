@@ -1,8 +1,8 @@
-﻿using BibleNote.Analytics.Providers.Html.Contracts;
-using BibleNote.Analytics.Services.DocumentProvider.Contracts;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
+using BibleNote.Providers.Word.Contracts;
+using BibleNote.Services.DocumentProvider.Contracts;
 
-namespace BibleNote.Analytics.Providers.Html
+namespace BibleNote.Providers.Word
 {
     public class WordDocumentConnector : IWordDocumentConnector
     {

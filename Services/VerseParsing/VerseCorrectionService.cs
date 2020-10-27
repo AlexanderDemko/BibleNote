@@ -1,11 +1,11 @@
 ﻿using System.Linq;
-using BibleNote.Analytics.Services.ModulesManager.Contracts;
-using BibleNote.Analytics.Services.ModulesManager.Models;
-using BibleNote.Analytics.Services.ParallelVerses.Contracts;
-using BibleNote.Analytics.Services.VerseParsing.Contracts;
-using BibleNote.Analytics.Services.VerseParsing.Models;
+using BibleNote.Services.ModulesManager.Contracts;
+using BibleNote.Services.ModulesManager.Models;
+using BibleNote.Services.ParallelVerses.Contracts;
+using BibleNote.Services.VerseParsing.Contracts;
+using BibleNote.Services.VerseParsing.Models;
 
-namespace BibleNote.Analytics.Services.VerseParsing
+namespace BibleNote.Services.VerseParsing
 {
     class VerseCorrectionService : IVerseCorrectionService
     {

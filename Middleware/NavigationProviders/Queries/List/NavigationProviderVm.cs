@@ -1,7 +1,7 @@
-﻿using BibleNote.Analytics.Domain.Entities;
-using BibleNote.UI.Infrastructure.AutoMapper;
+﻿using BibleNote.Domain.Entities;
+using BibleNote.Infrastructure.AutoMapper;
 
-namespace BibleNote.UI.Middleware.NavigationProviders.Queries.List
+namespace BibleNote.Middleware.NavigationProviders.Queries.List
 {
     public class NavigationProviderVm: IMapFrom<NavigationProviderInfo>
     {

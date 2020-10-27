@@ -1,7 +1,7 @@
-﻿using BibleNote.Analytics.Common.DiContainer;
+﻿using BibleNote.Common.DiContainer;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace BibleNote.UI.Middleware
+namespace BibleNote.Middleware
 {
     public class MiddlewareModule : ModuleBase
     {

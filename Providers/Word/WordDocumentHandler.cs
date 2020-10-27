@@ -1,10 +1,10 @@
-﻿using BibleNote.Analytics.Providers.FileSystem.DocumentId;
-using BibleNote.Analytics.Providers.Html.Contracts;
-using BibleNote.Analytics.Services.DocumentProvider.Contracts;
+﻿using System;
+using BibleNote.Providers.FileSystem.DocumentId;
+using BibleNote.Providers.Word.Contracts;
+using BibleNote.Services.DocumentProvider.Contracts;
 using DocumentFormat.OpenXml.Packaging;
-using System;
 
-namespace BibleNote.Analytics.Providers.Html
+namespace BibleNote.Providers.Word
 {
     public class WordDocumentHandler : IWordDocumentHandler
     {

@@ -1,9 +1,8 @@
-﻿<Window x:Class="VerseDifferencesFinder.MainWindow"
+﻿<Window x:Class="BibleNote.VerseDifferencesFinder.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:VerseDifferencesFinder"
         mc:Ignorable="d"
         Title="Verse Differences Finder" Height="190" Width="424" WindowStyle="ToolWindow" ResizeMode="NoResize">
     <Grid Margin="0,0,0,-6">

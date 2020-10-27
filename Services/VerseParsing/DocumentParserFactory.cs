@@ -1,7 +1,7 @@
-﻿using BibleNote.Analytics.Services.VerseParsing.Contracts;
-using BibleNote.Analytics.Services.DocumentProvider.Contracts;
+﻿using BibleNote.Services.DocumentProvider.Contracts;
+using BibleNote.Services.VerseParsing.Contracts;
 
-namespace BibleNote.Analytics.Services.VerseParsing
+namespace BibleNote.Services.VerseParsing
 {
     class DocumentParserFactory : IDocumentParserFactory
     {

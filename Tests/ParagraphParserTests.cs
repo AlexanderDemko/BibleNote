@@ -1,22 +1,20 @@
-﻿using System.Linq;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using BibleNote.Tests.Analytics.Mocks;
-using System;
-using BibleNote.Analytics.Providers.Html;
-using BibleNote.Analytics.Services.VerseParsing.Contracts;
-using BibleNote.Analytics.Services.VerseParsing.Models.ParseResult;
-using BibleNote.Analytics.Services.VerseParsing.Contracts.ParseContext;
-using BibleNote.Analytics.Services.VerseParsing;
-using BibleNote.Analytics.Services.VerseParsing.Models;
+﻿using System;
+using System.Linq;
+using BibleNote.Providers.FileSystem.DocumentId;
+using BibleNote.Providers.Html;
+using BibleNote.Services.DocumentProvider.Contracts;
+using BibleNote.Services.VerseParsing;
+using BibleNote.Services.VerseParsing.Contracts;
+using BibleNote.Services.VerseParsing.Contracts.ParseContext;
+using BibleNote.Services.VerseParsing.Models;
+using BibleNote.Services.VerseParsing.Models.ParseContext;
+using BibleNote.Services.VerseParsing.Models.ParseResult;
+using BibleNote.Tests.Mocks;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
-using BibleNote.Analytics.Services.VerseParsing.Models.ParseContext;
-using BibleNote.Analytics.Services.DocumentProvider.Contracts;
-using DocumentFormat.OpenXml.Vml.Spreadsheet;
-using BibleNote.Analytics.Providers.FileSystem.DocumentId;
-using ICSharpCode.SharpZipLib.Zip.Compression.Streams;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace BibleNote.Tests.Analytics
+namespace BibleNote.Tests
 {
     [TestClass]
     public class ParagraphParserTests : TestsBase.TestsBase

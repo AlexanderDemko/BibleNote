@@ -1,11 +1,9 @@
-﻿using BibleNote.Analytics.Common.Extensions;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System;
-using BibleNote.Analytics.Services.VerseParsing.Contracts.ParseContext;
-using BibleNote.Analytics.Services.VerseParsing.Models.ParseResult;
+using BibleNote.Services.VerseParsing.Contracts.ParseContext;
+using BibleNote.Services.VerseParsing.Models.ParseResult;
 
-namespace BibleNote.Analytics.Services.VerseParsing.Models.ParseContext
+namespace BibleNote.Services.VerseParsing.Models.ParseContext
 {
     public class HierarchyParseContext : IHierarchyParseContext
     {

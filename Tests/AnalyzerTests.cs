@@ -1,14 +1,14 @@
-﻿using BibleNote.Analytics.Providers.FileSystem.Navigation;
-using BibleNote.Analytics.Providers.OneNote.Services.NavigationProvider;
-using BibleNote.Analytics.Services.DocumentProvider.Contracts;
-using BibleNote.Analytics.Services.DocumentProvider.Models;
-using BibleNote.Tests.Analytics.TestsBase;
+﻿using System.Collections.Generic;
+using System.Threading.Tasks;
+using BibleNote.Providers.FileSystem.Navigation;
+using BibleNote.Providers.OneNote.Services.NavigationProvider;
+using BibleNote.Services.DocumentProvider.Contracts;
+using BibleNote.Services.DocumentProvider.Models;
+using BibleNote.Tests.TestsBase;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 
-namespace BibleNote.Tests.Analytics
+namespace BibleNote.Tests
 {
     [TestClass]
     public class AnalyzerTests : DbTestsBase

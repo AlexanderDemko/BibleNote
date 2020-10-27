@@ -1,4 +1,4 @@
-﻿namespace BibleNote.Analytics.Domain.Entities
+﻿namespace BibleNote.Domain.Entities
 {
     public class VerseEntry
     {

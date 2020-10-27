@@ -1,10 +1,10 @@
-﻿using BibleNote.Analytics.Services.VerseParsing.Contracts;
-using HtmlAgilityPack;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using BibleNote.Services.VerseParsing.Contracts;
+using HtmlAgilityPack;
 
-namespace BibleNote.Analytics.Providers.Html
+namespace BibleNote.Providers.Html
 {
     public class HtmlNodeWrapper : IXmlNode
     {

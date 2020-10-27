@@ -1,13 +1,13 @@
-﻿using System.Linq;
-using BibleNote.Analytics.Services.VerseParsing.Contracts;
-using BibleNote.Analytics.Services.Configuration.Contracts;
-using BibleNote.Analytics.Services.VerseParsing.Contracts.ParseContext;
-using BibleNote.Analytics.Services.VerseParsing.Models.ParseResult;
-using System;
-using BibleNote.Analytics.Services.VerseParsing.Models;
-using BibleNote.Analytics.Services.DocumentProvider.Contracts;
+﻿using System;
+using System.Linq;
+using BibleNote.Services.Configuration.Contracts;
+using BibleNote.Services.DocumentProvider.Contracts;
+using BibleNote.Services.VerseParsing.Contracts;
+using BibleNote.Services.VerseParsing.Contracts.ParseContext;
+using BibleNote.Services.VerseParsing.Models;
+using BibleNote.Services.VerseParsing.Models.ParseResult;
 
-namespace BibleNote.Analytics.Services.VerseParsing
+namespace BibleNote.Services.VerseParsing
 {
     class ParagraphParser : IParagraphParser
     {

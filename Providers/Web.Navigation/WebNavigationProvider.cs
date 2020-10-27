@@ -1,14 +1,14 @@
-﻿using BibleNote.Analytics.Providers.Html;
-using BibleNote.Analytics.Providers.Web.DocumentId;
-using BibleNote.Analytics.Services.DocumentProvider.Contracts;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using Microsoft.Extensions.DependencyInjection;
 using System.Threading;
 using System.Threading.Tasks;
-using BibleNote.Analytics.Services.NavigationProvider;
+using BibleNote.Providers.Html;
+using BibleNote.Providers.Web.DocumentId;
+using BibleNote.Services.DocumentProvider.Contracts;
+using BibleNote.Services.NavigationProvider;
+using Microsoft.Extensions.DependencyInjection;
 
-namespace BibleNote.Analytics.Providers.Web.Navigation
+namespace BibleNote.Providers.Web.Navigation
 {
     public class WebNavigationProvider : NavigationProviderBase<WebDocumentId, WebNavigationProviderParameters>
     {

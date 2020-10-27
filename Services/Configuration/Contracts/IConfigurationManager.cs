@@ -1,4 +1,4 @@
-﻿namespace BibleNote.Analytics.Services.Configuration.Contracts
+﻿namespace BibleNote.Services.Configuration.Contracts
 {
     /// <summary>
     /// Загруженные данные должны быть закэшированы

@@ -1,7 +1,7 @@
-﻿using BibleNote.Analytics.Services.VerseParsing.Models.ParseResult;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using BibleNote.Services.VerseParsing.Models.ParseResult;
 
-namespace BibleNote.Analytics.Services.VerseProcessing.Models
+namespace BibleNote.Services.VerseProcessing.Models
 {
     public class ParagraphParseResultExt
     {

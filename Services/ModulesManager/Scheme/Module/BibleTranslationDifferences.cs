@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Xml.Serialization;
 
-namespace BibleNote.Analytics.Services.ModulesManager.Scheme.Module
+namespace BibleNote.Services.ModulesManager.Scheme.Module
 {
     [Serializable]
     public class BibleTranslationDifferences

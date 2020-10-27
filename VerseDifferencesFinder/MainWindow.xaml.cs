@@ -1,20 +1,21 @@
-﻿using BibleNote.Analytics.Common.DiContainer;
-using BibleNote.Analytics.Domain.Enums;
-using BibleNote.Analytics.Providers.FileSystem.DocumentId;
-using BibleNote.Analytics.Providers.Html;
-using BibleNote.Analytics.Services;
-using BibleNote.Analytics.Services.Configuration.Contracts;
-using BibleNote.Analytics.Services.DocumentProvider.Contracts;
-using BibleNote.Analytics.Services.ModulesManager.Contracts;
-using Microsoft.Extensions.DependencyInjection;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
+using BibleNote.Common.DiContainer;
+using BibleNote.Domain.Enums;
+using BibleNote.Providers.FileSystem.DocumentId;
+using BibleNote.Providers.Html;
+using BibleNote.Providers.Word;
+using BibleNote.Services;
+using BibleNote.Services.Configuration.Contracts;
+using BibleNote.Services.DocumentProvider.Contracts;
+using BibleNote.Services.ModulesManager.Contracts;
+using Microsoft.Extensions.DependencyInjection;
 
-namespace VerseDifferencesFinder
+namespace BibleNote.VerseDifferencesFinder
 {
     public partial class MainWindow : Window
     {

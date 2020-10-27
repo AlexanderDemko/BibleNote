@@ -1,12 +1,11 @@
-﻿using BibleNote.Analytics.Services.ModulesManager.Models.Exceptions;
-using BibleNote.Analytics.Services.ModulesManager.Scheme.Module;
-using BibleNote.Analytics.Services.ParallelVerses.Contracts;
-using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
+using BibleNote.Services.ModulesManager.Models.Exceptions;
+using BibleNote.Services.ModulesManager.Scheme.Module;
+using BibleNote.Services.ParallelVerses.Contracts;
+using Microsoft.Extensions.Logging;
 
-namespace BibleNote.Analytics.Services.ParallelVerses
+namespace BibleNote.Services.ParallelVerses
 {
     class BibleParallelTranslationManager : IBibleParallelTranslationManager
     {

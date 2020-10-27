@@ -1,4 +1,4 @@
-﻿namespace BibleNote.Analytics.Services.VerseParsing.Models
+﻿namespace BibleNote.Services.VerseParsing.Models
 {
     public class ChapterEntry
     {

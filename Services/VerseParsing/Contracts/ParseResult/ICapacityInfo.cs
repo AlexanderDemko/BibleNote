@@ -1,4 +1,4 @@
-﻿namespace BibleNote.Analytics.Services.VerseParsing.Contracts.ParseResult
+﻿namespace BibleNote.Services.VerseParsing.Contracts.ParseResult
 {
     public interface ICapacityInfo
     {

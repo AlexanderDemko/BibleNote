@@ -1,11 +1,11 @@
-﻿using BibleNote.Analytics.Domain.Contracts;
-using Microsoft.Extensions.DependencyInjection;
+﻿using System;
+using BibleNote.Domain.Contracts;
+using BibleNote.Persistence;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using BibleNote.Analytics.Persistence;
-using System;
+using Microsoft.Extensions.DependencyInjection;
 
-namespace BibleNote.Tests.Analytics.TestsBase
+namespace BibleNote.Tests.TestsBase
 {
     public class DbTestsBase : TestsBase
     {

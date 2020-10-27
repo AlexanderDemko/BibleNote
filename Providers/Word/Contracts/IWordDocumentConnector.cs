@@ -1,6 +1,6 @@
-﻿using BibleNote.Analytics.Services.DocumentProvider.Contracts;
+﻿using BibleNote.Services.DocumentProvider.Contracts;
 
-namespace BibleNote.Analytics.Providers.Html.Contracts
+namespace BibleNote.Providers.Word.Contracts
 {
     public interface IWordDocumentConnector : IDocumentConnector<IWordDocumentHandler>
     {        

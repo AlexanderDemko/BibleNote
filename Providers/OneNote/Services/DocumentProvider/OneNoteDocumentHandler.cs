@@ -1,12 +1,12 @@
-﻿using BibleNote.Analytics.Providers.OneNote.Contracts;
-using BibleNote.Analytics.Providers.OneNote.Services.NavigationProvider;
-using BibleNote.Analytics.Services.DocumentProvider.Contracts;
-using Microsoft.Extensions.Logging;
-using System;
+﻿using System;
 using System.Threading.Tasks;
 using System.Xml.Linq;
+using BibleNote.Providers.OneNote.Contracts;
+using BibleNote.Providers.OneNote.Services.NavigationProvider;
+using BibleNote.Services.DocumentProvider.Contracts;
+using Microsoft.Extensions.Logging;
 
-namespace BibleNote.Analytics.Providers.OneNote.Services.DocumentProvider
+namespace BibleNote.Providers.OneNote.Services.DocumentProvider
 {
     public class OneNoteDocumentHandler : IXDocumentHandler, IAsyncDisposable
     {

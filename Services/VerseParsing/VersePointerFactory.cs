@@ -1,8 +1,8 @@
-﻿using BibleNote.Analytics.Services.ModulesManager.Contracts;
-using BibleNote.Analytics.Services.VerseParsing.Contracts;
-using BibleNote.Analytics.Services.VerseParsing.Models;
+﻿using BibleNote.Services.ModulesManager.Contracts;
+using BibleNote.Services.VerseParsing.Contracts;
+using BibleNote.Services.VerseParsing.Models;
 
-namespace BibleNote.Analytics.Services.VerseParsing
+namespace BibleNote.Services.VerseParsing
 {
     class VersePointerFactory : IVersePointerFactory
     {

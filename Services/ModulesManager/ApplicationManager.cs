@@ -1,10 +1,10 @@
 ﻿using System.Collections.Generic;
-using BibleNote.Analytics.Services.Configuration.Contracts;
-using BibleNote.Analytics.Services.ModulesManager.Contracts;
-using BibleNote.Analytics.Services.ModulesManager.Scheme.Module;
-using BibleNote.Analytics.Services.ModulesManager.Scheme.ZefaniaXml;
+using BibleNote.Services.Configuration.Contracts;
+using BibleNote.Services.ModulesManager.Contracts;
+using BibleNote.Services.ModulesManager.Scheme.Module;
+using BibleNote.Services.ModulesManager.Scheme.ZefaniaXml;
 
-namespace BibleNote.Analytics.Services.ModulesManager
+namespace BibleNote.Services.ModulesManager
 {
     class ApplicationManager : IApplicationManager
     {

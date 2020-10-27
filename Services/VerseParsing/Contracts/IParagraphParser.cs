@@ -1,8 +1,8 @@
-﻿using BibleNote.Analytics.Services.DocumentProvider.Contracts;
-using BibleNote.Analytics.Services.VerseParsing.Contracts.ParseContext;
-using BibleNote.Analytics.Services.VerseParsing.Models.ParseResult;
+﻿using BibleNote.Services.DocumentProvider.Contracts;
+using BibleNote.Services.VerseParsing.Contracts.ParseContext;
+using BibleNote.Services.VerseParsing.Models.ParseResult;
 
-namespace BibleNote.Analytics.Services.VerseParsing.Contracts
+namespace BibleNote.Services.VerseParsing.Contracts
 {
     public interface IParagraphParser
     {

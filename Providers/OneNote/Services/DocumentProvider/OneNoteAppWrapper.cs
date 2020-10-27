@@ -1,17 +1,16 @@
-﻿using BibleNote.Analytics.Providers.OneNote.Constants;
-using System.Xml.XPath;
-using Microsoft.Office.Interop.OneNote;
-using System;
-using System.Collections.Generic;
+﻿using System;
+using System.Globalization;
 using System.Linq;
 using System.Runtime.InteropServices;
-using System.Xml.Linq;
-using System.Xml;
-using System.Globalization;
-using Microsoft.Extensions.Logging;
 using System.Threading.Tasks;
+using System.Xml;
+using System.Xml.Linq;
+using System.Xml.XPath;
+using BibleNote.Providers.OneNote.Constants;
+using Microsoft.Extensions.Logging;
+using Microsoft.Office.Interop.OneNote;
 
-namespace BibleNote.Analytics.Providers.OneNote.Services.DocumentProvider
+namespace BibleNote.Providers.OneNote.Services.DocumentProvider
 {
     public class OneNoteAppWrapper : IDisposable
     {

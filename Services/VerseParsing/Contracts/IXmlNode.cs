@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace BibleNote.Analytics.Services.VerseParsing.Contracts
+namespace BibleNote.Services.VerseParsing.Contracts
 {
     public enum IXmlNodeType
     {

@@ -5,7 +5,7 @@ using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace BibleNote.Analytics.Domain.Contracts
+namespace BibleNote.Domain.Contracts
 {
     public interface IReadOnlyRepository<T> : IQueryable<T> where T : class
     {

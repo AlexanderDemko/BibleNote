@@ -1,8 +1,8 @@
-﻿using BibleNote.Analytics.Services.VerseParsing.Models.ParseResult;
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
+using BibleNote.Services.VerseParsing.Models.ParseResult;
 
-namespace BibleNote.Analytics.Services.VerseProcessing.Contracts
+namespace BibleNote.Services.VerseProcessing.Contracts
 {
     public interface IDocumentParseResultProcessing
     {

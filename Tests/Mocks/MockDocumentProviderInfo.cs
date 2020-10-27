@@ -1,8 +1,8 @@
-﻿using BibleNote.Analytics.Domain.Enums;
-using BibleNote.Analytics.Services.DocumentProvider.Contracts;
-using BibleNote.Analytics.Services.VerseParsing.Models;
+﻿using BibleNote.Domain.Enums;
+using BibleNote.Services.DocumentProvider.Contracts;
+using BibleNote.Services.VerseParsing.Models;
 
-namespace BibleNote.Tests.Analytics.Mocks
+namespace BibleNote.Tests.Mocks
 {
     public class MockDocumentProviderInfo : IDocumentProviderInfo
     {

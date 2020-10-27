@@ -1,17 +1,16 @@
-﻿using HtmlAgilityPack;
-using System.Linq;
-using BibleNote.Analytics.Services.VerseParsing.Contracts;
-using BibleNote.Analytics.Services.VerseParsing.Contracts.ParseContext;
-using BibleNote.Analytics.Services.VerseParsing;
-using BibleNote.Analytics.Services.DocumentProvider.Contracts;
-using BibleNote.Analytics.Providers.Html.Contracts;
-using BibleNote.Analytics.Services.VerseParsing.Models;
-using BibleNote.Analytics.Services.VerseParsing.Models.ParseResult;
-using System;
-using BibleNote.Analytics.Domain.Enums;
+﻿using System.Linq;
 using System.Threading.Tasks;
+using BibleNote.Domain.Enums;
+using BibleNote.Providers.Html.Contracts;
+using BibleNote.Services.DocumentProvider.Contracts;
+using BibleNote.Services.VerseParsing;
+using BibleNote.Services.VerseParsing.Contracts;
+using BibleNote.Services.VerseParsing.Contracts.ParseContext;
+using BibleNote.Services.VerseParsing.Models;
+using BibleNote.Services.VerseParsing.Models.ParseResult;
+using HtmlAgilityPack;
 
-namespace BibleNote.Analytics.Providers.Html
+namespace BibleNote.Providers.Html
 {
     public class HtmlProvider : IDocumentProvider
     {

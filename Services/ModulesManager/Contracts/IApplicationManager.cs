@@ -1,7 +1,7 @@
-﻿using BibleNote.Analytics.Services.ModulesManager.Scheme.Module;
-using BibleNote.Analytics.Services.ModulesManager.Scheme.ZefaniaXml;
+﻿using BibleNote.Services.ModulesManager.Scheme.Module;
+using BibleNote.Services.ModulesManager.Scheme.ZefaniaXml;
 
-namespace BibleNote.Analytics.Services.ModulesManager.Contracts
+namespace BibleNote.Services.ModulesManager.Contracts
 {
     public interface IApplicationManager
     {

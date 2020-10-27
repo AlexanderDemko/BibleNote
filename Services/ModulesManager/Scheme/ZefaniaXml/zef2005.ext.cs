@@ -1,12 +1,12 @@
-using System.Linq;
-using System.Collections.Generic;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Xml.Serialization;
+using BibleNote.Services.ModulesManager.Models;
+using BibleNote.Services.ModulesManager.Models.Exceptions;
 using Newtonsoft.Json;
-using BibleNote.Analytics.Services.ModulesManager.Models;
-using BibleNote.Analytics.Services.ModulesManager.Models.Exceptions;
 
-namespace BibleNote.Analytics.Services.ModulesManager.Scheme.ZefaniaXml
+namespace BibleNote.Services.ModulesManager.Scheme.ZefaniaXml
 {
     public partial class XMLBIBLE
     {
@@ -96,7 +96,7 @@ namespace BibleNote.Analytics.Services.ModulesManager.Scheme.ZefaniaXml
         /// <param name="isEmpty"></param>
         /// <param name="isFullVerse"></param>
         /// <param name="isPartOfBigVerse"></param>
-        /// <param name="hasValueEvenIfEmpty">У нас есть стих в ibs (Лев 12:7). Ему по смыслу соответствуют два стиха из rst (Лев 12:7-8). Но поделить стих в ibs не поулчается, потому палочка стоит в конце стиха. Но это не значит, что воьсмой стих пустой!</param>
+        /// <param name="hasValueEvenIfEmpty">РЈ РЅР°СЃ РµСЃС‚СЊ СЃС‚РёС… РІ ibs (Р›РµРІ 12:7). Р•РјСѓ РїРѕ СЃРјС‹СЃР»Сѓ СЃРѕРѕС‚РІРµС‚СЃС‚РІСѓСЋС‚ РґРІР° СЃС‚РёС…Р° РёР· rst (Р›РµРІ 12:7-8). РќРѕ РїРѕРґРµР»РёС‚СЊ СЃС‚РёС… РІ ibs РЅРµ РїРѕСѓР»С‡Р°РµС‚СЃСЏ, РїРѕС‚РѕРјСѓ РїР°Р»РѕС‡РєР° СЃС‚РѕРёС‚ РІ РєРѕРЅС†Рµ СЃС‚РёС…Р°. РќРѕ СЌС‚Рѕ РЅРµ Р·РЅР°С‡РёС‚, С‡С‚Рѕ РІРѕСЊСЃРјРѕР№ СЃС‚РёС… РїСѓСЃС‚РѕР№!</param>
         /// <returns></returns>
         public string GetVerseContent(ModuleVersePointer versePointer, string moduleShortName, string strongPrefix, bool getVerseNumberForEmptyVerses, 
             out VerseIndex verseIndex, out bool isEmpty, out bool isFullVerse, out bool isPartOfBigVerse, out bool hasValueEvenIfEmpty)
@@ -152,7 +152,7 @@ namespace BibleNote.Analytics.Services.ModulesManager.Scheme.ZefaniaXml
             }
             else
             {
-                if (verseContent == SystemConstants.NotEmptyVerseContentSymbol)   // пока эту строчку не тестировал. Не понятно, можно ли такое использовать и зачем.
+                if (verseContent == SystemConstants.NotEmptyVerseContentSymbol)   // РїРѕРєР° СЌС‚Сѓ СЃС‚СЂРѕС‡РєСѓ РЅРµ С‚РµСЃС‚РёСЂРѕРІР°Р». РќРµ РїРѕРЅСЏС‚РЅРѕ, РјРѕР¶РЅРѕ Р»Рё С‚Р°РєРѕРµ РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊ Рё Р·Р°С‡РµРј.
                     hasValueEvenIfEmpty = true;
 
                 result = shelledVerseContent;
@@ -168,9 +168,9 @@ namespace BibleNote.Analytics.Services.ModulesManager.Scheme.ZefaniaXml
         /// <param name="strongPrefix"></param>
         /// <param name="topVerse"></param>
         /// <param name="isEmpty"></param>
-        /// <param name="isFullVerses">Запрашиваемые стихи являются полными. А то стих может быть "Текст стиха|". То есть вроде как две части стиха, но первая часть равна всему стиху.</param>
-        /// <param name="isDiscontinuous">Прерывистые стихи. Например: 8,22. </param>
-        /// <param name="isPartOfBigVerse">Часть "бОльшего стиха". Например, если стих :3 а в ibs :2-4 - это один стих.</param>
+        /// <param name="isFullVerses">Р—Р°РїСЂР°С€РёРІР°РµРјС‹Рµ СЃС‚РёС…Рё СЏРІР»СЏСЋС‚СЃСЏ РїРѕР»РЅС‹РјРё. Рђ С‚Рѕ СЃС‚РёС… РјРѕР¶РµС‚ Р±С‹С‚СЊ "РўРµРєСЃС‚ СЃС‚РёС…Р°|". РўРѕ РµСЃС‚СЊ РІСЂРѕРґРµ РєР°Рє РґРІРµ С‡Р°СЃС‚Рё СЃС‚РёС…Р°, РЅРѕ РїРµСЂРІР°СЏ С‡Р°СЃС‚СЊ СЂР°РІРЅР° РІСЃРµРјСѓ СЃС‚РёС…Сѓ.</param>
+        /// <param name="isDiscontinuous">РџСЂРµСЂС‹РІРёСЃС‚С‹Рµ СЃС‚РёС…Рё. РќР°РїСЂРёРјРµСЂ: 8,22. </param>
+        /// <param name="isPartOfBigVerse">Р§Р°СЃС‚СЊ "Р±РћР»СЊС€РµРіРѕ СЃС‚РёС…Р°". РќР°РїСЂРёРјРµСЂ, РµСЃР»Рё СЃС‚РёС… :3 Р° РІ ibs :2-4 - СЌС‚Рѕ РѕРґРёРЅ СЃС‚РёС….</param>
         /// <param name="notFoundVerses"></param>
         /// <returns></returns>
         public string GetVersesContent(List<ModuleVersePointer> verses, string moduleShortName, string strongPrefix, 
@@ -291,7 +291,7 @@ namespace BibleNote.Analytics.Services.ModulesManager.Scheme.ZefaniaXml
                     if (getVerseNumberForEmptyVerses)
                         verseIndex = result.VerseIndex;
                     isPartOfBigVerse = true;
-                    result = VERS.Empty;  // так как стих является частью бОльшего стиха
+                    result = VERS.Empty;  // С‚Р°Рє РєР°Рє СЃС‚РёС… СЏРІР»СЏРµС‚СЃСЏ С‡Р°СЃС‚СЊСЋ Р±РћР»СЊС€РµРіРѕ СЃС‚РёС…Р°
                 }
             }
 

@@ -2,7 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace BibleNote.UI.App.Controllers
+namespace BibleNote.App.Controllers
 {
     [ApiController]
     [Route("api/[controller]/[action]")]

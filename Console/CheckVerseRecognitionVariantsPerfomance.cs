@@ -1,11 +1,10 @@
-﻿using BibleNote.Analytics.Services.ModulesManager.Contracts;
-using BibleNote.Analytics.Services.ModulesManager.Scheme.Module;
-using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using BibleNote.Services.ModulesManager.Contracts;
+using BibleNote.Services.ModulesManager.Scheme.Module;
 
-namespace BibleNoteConsole
+namespace BibleNote.Console
 {
     public class CheckVerseRecognitionVariantsPerfomance
     {
@@ -77,7 +76,7 @@ namespace BibleNoteConsole
             for (var i = 0; i < TimesCount; i++)
                 _variant1Result = Variant1(_inputText);
             sw.Stop();
-            Console.WriteLine("Variant1. ResultBookName = {0}, Elapsed time: {1}", _variant1Result, sw.Elapsed);
+            System.Console.WriteLine("Variant1. ResultBookName = {0}, Elapsed time: {1}", _variant1Result, sw.Elapsed);
 
 
             //sw.Restart();
@@ -91,7 +90,7 @@ namespace BibleNoteConsole
             for (var i = 0; i < TimesCount; i++)
                 _variant3Result = Variant3(_inputText);
             sw.Stop();
-            Console.WriteLine("Variant3. ResultBookName = {0}, Elapsed time: {1}", _variant3Result, sw.Elapsed);
+            System.Console.WriteLine("Variant3. ResultBookName = {0}, Elapsed time: {1}", _variant3Result, sw.Elapsed);
         }
 
         private string Variant1(string text) // the winner!

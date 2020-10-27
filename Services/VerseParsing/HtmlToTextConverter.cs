@@ -1,9 +1,9 @@
-﻿using BibleNote.Analytics.Services.VerseParsing.Contracts;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Text;
 using System.Text.RegularExpressions;
+using BibleNote.Services.VerseParsing.Contracts;
 
-namespace BibleNote.Analytics.Services.VerseParsing
+namespace BibleNote.Services.VerseParsing
 {
     public class TextNodeEntry
     {

@@ -1,7 +1,7 @@
-﻿using BibleNote.Analytics.Common.Contracts;
-using System;
+﻿using System;
+using BibleNote.Common.Contracts;
 
-namespace BibleNote.Analytics.Domain.Entities
+namespace BibleNote.Domain.Entities
 {
     public class VerseRelation : ICloneable<VerseRelation>
     {

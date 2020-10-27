@@ -1,4 +1,4 @@
-﻿namespace BibleNote.Analytics.Services.ModulesManager
+﻿namespace BibleNote.Services.ModulesManager
 {
     public static class SystemConstants
     {

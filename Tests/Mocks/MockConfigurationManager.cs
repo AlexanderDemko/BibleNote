@@ -1,6 +1,6 @@
-﻿using BibleNote.Analytics.Services.Configuration.Contracts;
+﻿using BibleNote.Services.Configuration.Contracts;
 
-namespace BibleNote.Tests.Analytics.Mocks
+namespace BibleNote.Tests.Mocks
 {
     public class MockConfigurationManager : IConfigurationManager
     {

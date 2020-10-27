@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace BibleNote.Analytics.Services.ModulesManager.Models
+namespace BibleNote.Services.ModulesManager.Models
 {
     public enum MultiVerse
     {

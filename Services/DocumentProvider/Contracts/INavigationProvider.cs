@@ -2,7 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace BibleNote.Analytics.Services.DocumentProvider.Contracts
+namespace BibleNote.Services.DocumentProvider.Contracts
 {
     public interface INavigationProvider<T> where T: IDocumentId
     {

@@ -1,9 +1,9 @@
-﻿using MediatR;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using MediatR;
 
-namespace BibleNote.UI.Middleware.NavigationProviders.Queries.List
+namespace BibleNote.Middleware.NavigationProviders.Queries.List
 {
     public class Handler : IRequestHandler<Request, List<NavigationProviderVm>>
     {

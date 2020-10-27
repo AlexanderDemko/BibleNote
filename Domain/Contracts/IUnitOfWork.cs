@@ -2,7 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace BibleNote.Analytics.Domain.Contracts
+namespace BibleNote.Domain.Contracts
 {
     public interface IUnitOfWork
     {

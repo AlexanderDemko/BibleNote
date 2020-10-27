@@ -1,9 +1,10 @@
-﻿using BibleNote.Analytics.Common.Helpers;
-using BibleNote.Analytics.Services.ModulesManager.Scheme.Module;
-using System;
+﻿using System;
 using System.Collections.Generic;
+using BibleNote.Common.Helpers;
+using BibleNote.Services.ModulesManager.Models;
+using BibleNote.Services.ModulesManager.Scheme.Module;
 
-namespace BibleNote.Analytics.Services.ModulesManager.Models
+namespace BibleNote.Services.ModulesManager
 {
     public class BibleTranslationDifferencesFormulaBase
     {

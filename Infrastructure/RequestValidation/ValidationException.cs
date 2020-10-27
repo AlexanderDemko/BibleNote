@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using FluentValidation.Results;
 
-namespace BibleNote.UI.Infrastructure.RequestValidation
+namespace BibleNote.Infrastructure.RequestValidation
 {
     public class ValidationException : Exception
     {

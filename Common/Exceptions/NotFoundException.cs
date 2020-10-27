@@ -1,6 +1,4 @@
-﻿using BibleNote.Analytics.Common.Exceptions;
-
-namespace BibleNote.Common.Exceptions
+﻿namespace BibleNote.Common.Exceptions
 {
     public class NotFoundException: BusinessException
     {

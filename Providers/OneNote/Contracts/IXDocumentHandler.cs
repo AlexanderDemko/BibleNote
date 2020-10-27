@@ -1,7 +1,7 @@
-﻿using BibleNote.Analytics.Services.DocumentProvider.Contracts;
-using System.Xml.Linq;
+﻿using System.Xml.Linq;
+using BibleNote.Services.DocumentProvider.Contracts;
 
-namespace BibleNote.Analytics.Providers.OneNote.Contracts
+namespace BibleNote.Providers.OneNote.Contracts
 {
     public interface IXDocumentHandler : IDocumentHandler
     {

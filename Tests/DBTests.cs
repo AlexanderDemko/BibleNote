@@ -1,10 +1,10 @@
-﻿using BibleNote.Analytics.Domain.Entities;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System.Linq;
+﻿using System.Linq;
+using BibleNote.Domain.Entities;
+using BibleNote.Tests.TestsBase;
 using Microsoft.EntityFrameworkCore;
-using BibleNote.Tests.Analytics.TestsBase;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace BibleNote.Tests.Analytics
+namespace BibleNote.Tests
 {
     [TestClass]
     public class DbTests : DbTestsBase

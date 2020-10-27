@@ -1,13 +1,4 @@
-﻿using BibleNote.Analytics.Common.DiContainer;
-using BibleNote.Analytics.Services;
-using BibleNote.Analytics.Services.Configuration.Contracts;
-using BibleNote.Analytics.Services.ModulesManager;
-using BibleNote.Analytics.Services.ModulesManager.Contracts;
-using BibleNote.Analytics.Services.ModulesManager.Scheme.ZefaniaXml;
-using BibleNote.Analytics.Services.VerseParsing.Contracts;
-using BibleNote.Analytics.Services.VerseParsing.Models;
-using Microsoft.Extensions.DependencyInjection;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -15,8 +6,17 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
+using BibleNote.Common.DiContainer;
+using BibleNote.Services;
+using BibleNote.Services.Configuration.Contracts;
+using BibleNote.Services.ModulesManager;
+using BibleNote.Services.ModulesManager.Contracts;
+using BibleNote.Services.ModulesManager.Scheme.ZefaniaXml;
+using BibleNote.Services.VerseParsing.Contracts;
+using BibleNote.Services.VerseParsing.Models;
+using Microsoft.Extensions.DependencyInjection;
 
-namespace BibleNoteConsole
+namespace BibleNote.Console
 {
     class Program
     {
@@ -131,7 +131,7 @@ namespace BibleNoteConsole
                 }
 
                 sw.Stop();
-                Console.WriteLine($"StringBuilder Replace: {sw.Elapsed.TotalSeconds}");
+                System.Console.WriteLine($"StringBuilder Replace: {sw.Elapsed.TotalSeconds}");
 
                 sw.Start();
                 for (var i = 0; i <= 100000; i++)
@@ -141,7 +141,7 @@ namespace BibleNoteConsole
                 }
 
                 sw.Stop();
-                Console.WriteLine($"String Replace: {sw.Elapsed.TotalSeconds}");
+                System.Console.WriteLine($"String Replace: {sw.Elapsed.TotalSeconds}");
 
 
                 //new CheckVerseRecognitionVariantsPerfomance().RunTests();
@@ -154,13 +154,13 @@ namespace BibleNoteConsole
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.ToString());
+                System.Console.WriteLine(ex.ToString());
             }
 
             sw.Stop();
 
-            Console.WriteLine("Finish. Elapsed time: {0}", sw.Elapsed);
-            Console.ReadKey();
+            System.Console.WriteLine("Finish. Elapsed time: {0}", sw.Elapsed);
+            System.Console.ReadKey();
         }
 
         private static void SaveTextModule(string filePath)

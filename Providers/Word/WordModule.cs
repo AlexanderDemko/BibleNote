@@ -1,8 +1,8 @@
-﻿using BibleNote.Analytics.Common.DiContainer;
-using BibleNote.Analytics.Providers.Html.Contracts;
+﻿using BibleNote.Common.DiContainer;
+using BibleNote.Providers.Word.Contracts;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace BibleNote.Analytics.Providers.Html
+namespace BibleNote.Providers.Word
 {
     public class WordModule : ModuleBase
     {

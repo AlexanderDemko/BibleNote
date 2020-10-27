@@ -1,10 +1,10 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using BibleNote.Analytics.Services.VerseParsing.Contracts;
-using BibleNote.Analytics.Services.ModulesManager.Models;
-using BibleNote.Analytics.Services.VerseParsing.Models;
+﻿using BibleNote.Services.ModulesManager.Models;
+using BibleNote.Services.VerseParsing.Contracts;
+using BibleNote.Services.VerseParsing.Models;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace BibleNote.Tests.Analytics
+namespace BibleNote.Tests
 {
     [TestClass]
     public class VersePointerTests : TestsBase.TestsBase

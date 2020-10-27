@@ -1,4 +1,4 @@
-﻿namespace BibleNote.UI.Infrastructure.AutoMapper
+﻿namespace BibleNote.Infrastructure.AutoMapper
 {
     public interface IMapFrom<TEntity>
     {

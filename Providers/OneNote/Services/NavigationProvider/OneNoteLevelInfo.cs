@@ -1,4 +1,4 @@
-﻿namespace BibleNote.Analytics.Providers.OneNote.Services.NavigationProvider
+﻿namespace BibleNote.Providers.OneNote.Services.NavigationProvider
 {
     public struct OneNoteLevelInfo
     {

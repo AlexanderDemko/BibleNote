@@ -1,11 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
+﻿using System.IO;
 using System.Text;
-using System.Threading.Tasks;
 
-namespace BibleNote.Analytics.Common.Helpers
+namespace BibleNote.Common.Helpers
 {
     public static class FileUtils
     {

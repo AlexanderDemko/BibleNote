@@ -1,5 +1,5 @@
 ﻿
-namespace BibleNote.Analytics.Services.VerseParsing
+namespace BibleNote.Services.VerseParsing
 {
     public static class HtmlTags
     {

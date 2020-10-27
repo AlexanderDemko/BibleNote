@@ -1,9 +1,9 @@
-﻿using Newtonsoft.Json;
-using System;
+﻿using System;
 using System.ComponentModel;
 using System.Xml.Serialization;
+using Newtonsoft.Json;
 
-namespace BibleNote.Analytics.Services.ModulesManager.Scheme.Module
+namespace BibleNote.Services.ModulesManager.Scheme.Module
 {
     [Serializable]
     public class Abbreviation

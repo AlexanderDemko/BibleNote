@@ -1,12 +1,12 @@
-﻿using System.Linq;
+﻿using System;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
+using BibleNote.Providers.FileSystem.DocumentId;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
-using System;
-using System.IO;
-using BibleNote.Analytics.Providers.FileSystem.DocumentId;
-using System.Threading.Tasks;
 
-namespace BibleNote.Tests.Analytics.TestsBase
+namespace BibleNote.Tests.TestsBase
 {
     public abstract class FileDocumentParserTestsBase : DocumentParserTestsBase
     {

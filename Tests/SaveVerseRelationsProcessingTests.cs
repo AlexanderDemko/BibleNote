@@ -1,17 +1,17 @@
-﻿using BibleNote.Analytics.Domain.Entities;
-using BibleNote.Analytics.Providers.FileSystem.DocumentId;
-using BibleNote.Analytics.Providers.Html;
-using BibleNote.Analytics.Providers.Html.Contracts;
-using BibleNote.Analytics.Services.DocumentProvider.Contracts;
-using BibleNote.Analytics.Services.VerseProcessing.Contracts;
-using BibleNote.Tests.Analytics.TestsBase;
+﻿using System.Linq;
+using System.Threading.Tasks;
+using BibleNote.Domain.Entities;
+using BibleNote.Providers.FileSystem.DocumentId;
+using BibleNote.Providers.Html;
+using BibleNote.Providers.Html.Contracts;
+using BibleNote.Services.DocumentProvider.Contracts;
+using BibleNote.Services.VerseProcessing.Contracts;
+using BibleNote.Tests.TestsBase;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System.Linq;
-using System.Threading.Tasks;
 
-namespace BibleNote.Tests.Analytics
+namespace BibleNote.Tests
 {
     [TestClass]
     public class SaveVerseRelationsProcessingTests : DbTestsBase

@@ -1,18 +1,18 @@
-﻿using System.Linq;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using BibleNote.Analytics.Providers.OneNote.Contracts;
-using BibleNote.Tests.Analytics.TestsBase;
-using BibleNote.Analytics.Services.DocumentProvider.Contracts;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.DependencyInjection;
-using BibleNote.Analytics.Services.VerseProcessing.Contracts;
-using System.Diagnostics;
-using BibleNote.Analytics.Domain.Entities;
+﻿using System.Diagnostics;
+using System.Linq;
 using System.Threading.Tasks;
-using BibleNote.Analytics.Providers.OneNote.Services.NavigationProvider;
-using BibleNote.Analytics.Providers.OneNote.Services.DocumentProvider;
+using BibleNote.Domain.Entities;
+using BibleNote.Providers.OneNote.Contracts;
+using BibleNote.Providers.OneNote.Services.DocumentProvider;
+using BibleNote.Providers.OneNote.Services.NavigationProvider;
+using BibleNote.Services.DocumentProvider.Contracts;
+using BibleNote.Services.VerseProcessing.Contracts;
+using BibleNote.Tests.TestsBase;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace BibleNote.Tests.Analytics
+namespace BibleNote.Tests
 {
     [TestClass]
     public class OneNoteDocumentProviderTests : DbTestsBase

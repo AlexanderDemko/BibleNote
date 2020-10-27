@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace BibleNote.Analytics.Common.Exceptions
+namespace BibleNote.Common.Exceptions
 {
     public class BusinessException : Exception
     {

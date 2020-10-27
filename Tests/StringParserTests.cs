@@ -1,9 +1,9 @@
-﻿using BibleNote.Analytics.Services.VerseParsing.Contracts;
-using BibleNote.Analytics.Services.VerseParsing.Models;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using BibleNote.Services.VerseParsing.Contracts;
+using BibleNote.Services.VerseParsing.Models;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace BibleNote.Tests.Analytics
+namespace BibleNote.Tests
 {
     [TestClass]
     public class StringParserTests : TestsBase.TestsBase

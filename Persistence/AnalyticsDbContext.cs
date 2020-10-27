@@ -1,12 +1,12 @@
-﻿using BibleNote.Analytics.Domain.Contracts;
-using BibleNote.Analytics.Domain.Entities;
-using BibleNote.Analytics.Persistence.Repositories;
-using Microsoft.EntityFrameworkCore;
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
+using BibleNote.Domain.Contracts;
+using BibleNote.Domain.Entities;
+using BibleNote.Persistence.Repositories;
+using Microsoft.EntityFrameworkCore;
 
-namespace BibleNote.Analytics.Persistence
+namespace BibleNote.Persistence
 {    
     public partial class AnalyticsDbContext : DbContext, ITrackingDbContext, IReadOnlyDbContext
     {

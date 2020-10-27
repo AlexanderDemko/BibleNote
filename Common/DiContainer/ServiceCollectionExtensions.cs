@@ -1,7 +1,7 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using System;
+﻿using System;
+using Microsoft.Extensions.DependencyInjection;
 
-namespace BibleNote.Analytics.Common.DiContainer
+namespace BibleNote.Common.DiContainer
 {
     public static class ServiceCollectionExtensions
     {

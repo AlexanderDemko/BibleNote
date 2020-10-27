@@ -1,8 +1,8 @@
-﻿using BibleNote.Analytics.Domain.Entities;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
+using BibleNote.Domain.Entities;
 
-namespace BibleNote.Analytics.Services.NavigationProvider.Contracts
+namespace BibleNote.Services.NavigationProvider.Contracts
 {
     public interface INavigationProviderService
     {

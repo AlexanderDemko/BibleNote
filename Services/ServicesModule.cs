@@ -1,23 +1,23 @@
-﻿using BibleNote.Analytics.Common.DiContainer;
-using BibleNote.Analytics.Services.Configuration;
-using BibleNote.Analytics.Services.Configuration.Contracts;
-using BibleNote.Analytics.Services.DocumentProvider;
-using BibleNote.Analytics.Services.DocumentProvider.Contracts;
-using BibleNote.Analytics.Services.ModulesManager;
-using BibleNote.Analytics.Services.ModulesManager.Contracts;
-using BibleNote.Analytics.Services.NavigationProvider;
-using BibleNote.Analytics.Services.NavigationProvider.Contracts;
-using BibleNote.Analytics.Services.ParallelVerses;
-using BibleNote.Analytics.Services.ParallelVerses.Contracts;
-using BibleNote.Analytics.Services.VerseParsing;
-using BibleNote.Analytics.Services.VerseParsing.Contracts;
-using BibleNote.Analytics.Services.VerseParsing.Contracts.ParseContext;
-using BibleNote.Analytics.Services.VerseParsing.Models.ParseContext;
-using BibleNote.Analytics.Services.VerseProcessing;
-using BibleNote.Analytics.Services.VerseProcessing.Contracts;
+﻿using BibleNote.Common.DiContainer;
+using BibleNote.Services.Configuration;
+using BibleNote.Services.Configuration.Contracts;
+using BibleNote.Services.DocumentProvider;
+using BibleNote.Services.DocumentProvider.Contracts;
+using BibleNote.Services.ModulesManager;
+using BibleNote.Services.ModulesManager.Contracts;
+using BibleNote.Services.NavigationProvider;
+using BibleNote.Services.NavigationProvider.Contracts;
+using BibleNote.Services.ParallelVerses;
+using BibleNote.Services.ParallelVerses.Contracts;
+using BibleNote.Services.VerseParsing;
+using BibleNote.Services.VerseParsing.Contracts;
+using BibleNote.Services.VerseParsing.Contracts.ParseContext;
+using BibleNote.Services.VerseParsing.Models.ParseContext;
+using BibleNote.Services.VerseProcessing;
+using BibleNote.Services.VerseProcessing.Contracts;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace BibleNote.Analytics.Services
+namespace BibleNote.Services
 {
     public class ServicesModule : ModuleBase
     {

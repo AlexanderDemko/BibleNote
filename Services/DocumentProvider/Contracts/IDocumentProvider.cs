@@ -1,9 +1,9 @@
-﻿using BibleNote.Analytics.Domain.Enums;
-using BibleNote.Analytics.Services.VerseParsing.Models;
-using BibleNote.Analytics.Services.VerseParsing.Models.ParseResult;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
+using BibleNote.Domain.Enums;
+using BibleNote.Services.VerseParsing.Models;
+using BibleNote.Services.VerseParsing.Models.ParseResult;
 
-namespace BibleNote.Analytics.Services.DocumentProvider.Contracts
+namespace BibleNote.Services.DocumentProvider.Contracts
 {
     public interface IDocumentProviderInfo
     {

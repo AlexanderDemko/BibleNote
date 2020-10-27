@@ -1,11 +1,11 @@
-﻿using BibleNote.Analytics.Domain.Enums;
-using BibleNote.Analytics.Services.DocumentProvider.Contracts;
-using BibleNote.Analytics.Services.VerseParsing.Models;
-using BibleNote.Analytics.Services.VerseParsing.Models.ParseResult;
-using System;
+﻿using System;
 using System.Threading.Tasks;
+using BibleNote.Domain.Enums;
+using BibleNote.Services.DocumentProvider.Contracts;
+using BibleNote.Services.VerseParsing.Models;
+using BibleNote.Services.VerseParsing.Models.ParseResult;
 
-namespace BibleNote.Analytics.Providers.Pdf
+namespace BibleNote.Providers.Pdf
 {
     public class PdfProvider : IDocumentProvider
     {

@@ -1,12 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Xml;
+﻿using System.Xml;
 using System.Xml.Linq;
 
-namespace BibleNote.Analytics.Providers.OneNote.Extensions
+namespace BibleNote.Providers.OneNote.Extensions
 {
     public static class XElementExtensions
     {

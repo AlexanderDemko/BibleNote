@@ -1,12 +1,12 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using BibleNote.Analytics.Providers.Html;
-using BibleNote.Tests.Analytics.TestsBase;
-using BibleNote.Analytics.Services.DocumentProvider.Contracts;
-using BibleNote.Analytics.Providers.Html.Contracts;
+﻿using System.Threading.Tasks;
+using BibleNote.Providers.Html;
+using BibleNote.Providers.Html.Contracts;
+using BibleNote.Services.DocumentProvider.Contracts;
+using BibleNote.Tests.TestsBase;
 using Microsoft.Extensions.DependencyInjection;
-using System.Threading.Tasks;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace BibleNote.Tests.Analytics
+namespace BibleNote.Tests
 {
     [TestClass]
     public class HtmlDocumentProviderTests : FileDocumentParserTestsBase

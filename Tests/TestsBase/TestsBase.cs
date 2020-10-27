@@ -1,16 +1,15 @@
-﻿using BibleNote.Analytics.Common.DiContainer;
-using BibleNote.Analytics.Providers.Html;
-using BibleNote.Analytics.Providers.OneNote;
-using BibleNote.Analytics.Services;
-using BibleNote.Analytics.Services.Configuration.Contracts;
-using BibleNote.Analytics.Services.ModulesManager.Contracts;
-using BibleNote.Analytics.Services.ModulesManager.Models.Exceptions;
-using BibleNote.Tests.Analytics.Mocks;
+﻿using System;
+using BibleNote.Common.DiContainer;
+using BibleNote.Providers.Html;
+using BibleNote.Providers.OneNote;
+using BibleNote.Services;
+using BibleNote.Services.Configuration.Contracts;
+using BibleNote.Services.ModulesManager.Contracts;
+using BibleNote.Services.ModulesManager.Models.Exceptions;
+using BibleNote.Tests.Mocks;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using System;
 
-namespace BibleNote.Tests.Analytics.TestsBase
+namespace BibleNote.Tests.TestsBase
 {
     public abstract class TestsBase
     {

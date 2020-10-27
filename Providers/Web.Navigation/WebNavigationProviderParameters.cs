@@ -1,6 +1,6 @@
-﻿using BibleNote.Analytics.Services.DocumentProvider.Contracts;
+﻿using BibleNote.Services.DocumentProvider.Contracts;
 
-namespace BibleNote.Analytics.Providers.Web.Navigation
+namespace BibleNote.Providers.Web.Navigation
 {
     public class WebNavigationProviderParameters : INavigationProviderParameters
     {

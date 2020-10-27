@@ -1,7 +1,7 @@
-﻿using BibleNote.Analytics.Services.DocumentProvider.Contracts;
-using System;
+﻿using System;
+using BibleNote.Services.DocumentProvider.Contracts;
 
-namespace BibleNote.Analytics.Providers.OneNote.Services.NavigationProvider
+namespace BibleNote.Providers.OneNote.Services.NavigationProvider
 {
     public class OneNoteDocumentId : IDocumentId
     {

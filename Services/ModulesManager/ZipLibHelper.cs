@@ -1,9 +1,9 @@
 ﻿using System;
-using System.Linq;
 using System.IO;
+using System.Linq;
 using ICSharpCode.SharpZipLib.Zip;
 
-namespace BibleNote.Analytics.Services.ModulesManager
+namespace BibleNote.Services.ModulesManager
 {
     static class ZipLibHelper
     {

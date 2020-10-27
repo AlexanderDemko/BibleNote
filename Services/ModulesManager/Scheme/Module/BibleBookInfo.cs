@@ -1,14 +1,11 @@
-﻿using BibleNote.Analytics.Common.Helpers;
-using Newtonsoft.Json;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Xml.Serialization;
+using BibleNote.Common.Helpers;
+using Newtonsoft.Json;
 
-namespace BibleNote.Analytics.Services.ModulesManager.Scheme.Module
+namespace BibleNote.Services.ModulesManager.Scheme.Module
 {
     [Serializable]
     public class BibleBookInfo

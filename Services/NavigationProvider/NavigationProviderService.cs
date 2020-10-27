@@ -1,10 +1,10 @@
-﻿using BibleNote.Analytics.Domain.Contracts;
-using BibleNote.Analytics.Domain.Entities;
-using BibleNote.Analytics.Services.NavigationProvider.Contracts;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
+using BibleNote.Domain.Contracts;
+using BibleNote.Domain.Entities;
+using BibleNote.Services.NavigationProvider.Contracts;
 
-namespace BibleNote.Analytics.Services.NavigationProvider
+namespace BibleNote.Services.NavigationProvider
 {
     class NavigationProviderService : INavigationProviderService
     {

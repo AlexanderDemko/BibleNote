@@ -1,6 +1,6 @@
-﻿using BibleNote.Analytics.Services.Configuration.Contracts;
+﻿using BibleNote.Services.Configuration.Contracts;
 
-namespace VerseDifferencesFinder
+namespace BibleNote.VerseDifferencesFinder
 {
     public class ConfigurationManager : IConfigurationManager
     {

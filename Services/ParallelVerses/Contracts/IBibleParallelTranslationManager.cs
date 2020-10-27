@@ -1,7 +1,7 @@
-﻿using BibleNote.Analytics.Services.ModulesManager.Scheme.Module;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using BibleNote.Services.ModulesManager.Scheme.Module;
 
-namespace BibleNote.Analytics.Services.ParallelVerses.Contracts
+namespace BibleNote.Services.ParallelVerses.Contracts
 {
     public interface IBibleParallelTranslationManager
     {

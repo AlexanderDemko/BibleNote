@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Linq;
 
-namespace BibleNote.Analytics.Services.ModulesManager.Models
+namespace BibleNote.Services.ModulesManager.Models
 {
     /// <summary>
     /// Валиден в рамках одной главы

@@ -1,4 +1,4 @@
-﻿namespace BibleNote.Analytics.Services.DocumentProvider.Models
+﻿namespace BibleNote.Services.DocumentProvider.Models
 {
     public enum  AnalyzeDepth
     {

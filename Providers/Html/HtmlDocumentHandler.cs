@@ -1,16 +1,15 @@
-﻿using BibleNote.Analytics.Common.Helpers;
-using BibleNote.Analytics.Providers.FileSystem.DocumentId;
-using BibleNote.Analytics.Providers.Html.Contracts;
-using BibleNote.Analytics.Providers.Web.DocumentId;
-using BibleNote.Analytics.Services.DocumentProvider.Contracts;
-using HtmlAgilityPack;
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Web;
+using BibleNote.Common.Helpers;
+using BibleNote.Providers.FileSystem.DocumentId;
+using BibleNote.Providers.Html.Contracts;
+using BibleNote.Providers.Web.DocumentId;
+using BibleNote.Services.DocumentProvider.Contracts;
+using HtmlAgilityPack;
 
-namespace BibleNote.Analytics.Providers.Html
+namespace BibleNote.Providers.Html
 {
     public class HtmlDocumentHandler : IHtmlDocumentHandler
     {

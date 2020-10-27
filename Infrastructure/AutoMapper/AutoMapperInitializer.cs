@@ -1,6 +1,6 @@
 ﻿using AutoMapper;
 
-namespace BibleNote.UI.Infrastructure.AutoMapper
+namespace BibleNote.Infrastructure.AutoMapper
 {
     public abstract class AutoMapperProfileBase : Profile
     {

@@ -1,7 +1,7 @@
-﻿using BibleNote.Analytics.Services.Configuration.Contracts;
-using System;
+﻿using System;
+using BibleNote.Services.Configuration.Contracts;
 
-namespace BibleNote.Analytics.Services.Configuration
+namespace BibleNote.Services.Configuration
 {
     class ConfigurationManager : IConfigurationManager
     {   

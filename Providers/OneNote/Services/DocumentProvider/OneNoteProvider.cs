@@ -1,17 +1,16 @@
-﻿using BibleNote.Analytics.Providers.OneNote.Contracts;
-using BibleNote.Analytics.Providers.OneNote.Extensions;
-using BibleNote.Analytics.Providers.OneNote.Constants;
+﻿using System.Threading.Tasks;
 using System.Xml.Linq;
-using BibleNote.Analytics.Services.DocumentProvider.Contracts;
-using BibleNote.Analytics.Services.VerseParsing.Contracts;
-using BibleNote.Analytics.Services.VerseParsing.Models;
-using BibleNote.Analytics.Services.VerseParsing.Models.ParseResult;
-using BibleNote.Analytics.Services.VerseParsing.Contracts.ParseContext;
-using BibleNote.Analytics.Providers.Html;
-using BibleNote.Analytics.Domain.Enums;
-using System.Threading.Tasks;
+using BibleNote.Domain.Enums;
+using BibleNote.Providers.Html;
+using BibleNote.Providers.OneNote.Constants;
+using BibleNote.Providers.OneNote.Contracts;
+using BibleNote.Services.DocumentProvider.Contracts;
+using BibleNote.Services.VerseParsing.Contracts;
+using BibleNote.Services.VerseParsing.Contracts.ParseContext;
+using BibleNote.Services.VerseParsing.Models;
+using BibleNote.Services.VerseParsing.Models.ParseResult;
 
-namespace BibleNote.Analytics.Providers.OneNote.Services.DocumentProvider
+namespace BibleNote.Providers.OneNote.Services.DocumentProvider
 {
     public class OneNoteProvider : IDocumentProvider
     {

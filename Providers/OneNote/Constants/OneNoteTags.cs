@@ -1,5 +1,5 @@
 ﻿
-namespace BibleNote.Analytics.Providers.OneNote.Constants
+namespace BibleNote.Providers.OneNote.Constants
 {
     public static class OneNoteTags
     {

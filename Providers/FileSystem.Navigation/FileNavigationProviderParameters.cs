@@ -1,7 +1,7 @@
-﻿using BibleNote.Analytics.Services.DocumentProvider.Contracts;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using BibleNote.Services.DocumentProvider.Contracts;
 
-namespace BibleNote.Analytics.Providers.FileSystem.Navigation
+namespace BibleNote.Providers.FileSystem.Navigation
 {
     public class FileNavigationProviderParameters : INavigationProviderParameters
     {

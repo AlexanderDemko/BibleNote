@@ -1,6 +1,6 @@
-﻿using BibleNote.Analytics.Domain.Entities;
+﻿using BibleNote.Domain.Entities;
 
-namespace BibleNote.Analytics.Domain.Contracts
+namespace BibleNote.Domain.Contracts
 {
     public interface IReadOnlyDbContext : IUnitOfWork
     {

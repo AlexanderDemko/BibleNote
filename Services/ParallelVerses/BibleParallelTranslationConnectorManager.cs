@@ -1,14 +1,15 @@
-﻿using BibleNote.Analytics.Services.Configuration.Contracts;
-using BibleNote.Analytics.Services.ModulesManager.Contracts;
-using BibleNote.Analytics.Services.ModulesManager.Models;
-using BibleNote.Analytics.Services.ModulesManager.Scheme.Module;
-using BibleNote.Analytics.Services.ParallelVerses.Contracts;
-using BibleNote.Analytics.Services.VerseParsing.Contracts;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using BibleNote.Services.Configuration.Contracts;
+using BibleNote.Services.ModulesManager;
+using BibleNote.Services.ModulesManager.Contracts;
+using BibleNote.Services.ModulesManager.Models;
+using BibleNote.Services.ModulesManager.Scheme.Module;
+using BibleNote.Services.ParallelVerses.Contracts;
+using BibleNote.Services.VerseParsing.Contracts;
 
-namespace BibleNote.Analytics.Services.ParallelVerses
+namespace BibleNote.Services.ParallelVerses
 {
     class BibleParallelTranslationConnectorManager : IBibleParallelTranslationConnectorManager
     {

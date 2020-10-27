@@ -1,11 +1,11 @@
-﻿using BibleNote.Analytics.Services.ModulesManager.Models;
-using BibleNote.Analytics.Services.ModulesManager.Scheme.Module;
-using Newtonsoft.Json;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using BibleNote.Services.ModulesManager.Models;
+using BibleNote.Services.ModulesManager.Scheme.Module;
+using Newtonsoft.Json;
 
-namespace BibleNote.Analytics.Services.VerseParsing.Models
+namespace BibleNote.Services.VerseParsing.Models
 {
     [Serializable]
     public class VersePointer : SimpleVersePointer

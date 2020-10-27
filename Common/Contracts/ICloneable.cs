@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace BibleNote.Analytics.Common.Contracts
+﻿namespace BibleNote.Common.Contracts
 {
     public interface ICloneable<T>
     {

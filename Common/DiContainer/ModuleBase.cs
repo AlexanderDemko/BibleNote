@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 
-namespace BibleNote.Analytics.Common.DiContainer
+namespace BibleNote.Common.DiContainer
 {
     public abstract class ModuleBase
     {

@@ -1,13 +1,13 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using BibleNote.Analytics.Providers.OneNote.Contracts;
-using BibleNote.Tests.Analytics.Mocks;
-using BibleNote.Tests.Analytics.TestsBase;
-using BibleNote.Analytics.Services.DocumentProvider.Contracts;
+﻿using System.Threading.Tasks;
+using BibleNote.Providers.OneNote.Contracts;
+using BibleNote.Providers.OneNote.Services.DocumentProvider;
+using BibleNote.Services.DocumentProvider.Contracts;
+using BibleNote.Tests.Mocks;
+using BibleNote.Tests.TestsBase;
 using Microsoft.Extensions.DependencyInjection;
-using System.Threading.Tasks;
-using BibleNote.Analytics.Providers.OneNote.Services.DocumentProvider;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace BibleNote.Tests.Analytics
+namespace BibleNote.Tests
 {
     [TestClass]
     public class MockOneNoteDocumentProviderTests : FileDocumentParserTestsBase

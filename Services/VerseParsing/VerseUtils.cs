@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Linq;
 
-namespace BibleNote.Analytics.Services.VerseParsing
+namespace BibleNote.Services.VerseParsing
 {
     public static class VerseUtils
     {

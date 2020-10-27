@@ -1,14 +1,14 @@
-﻿using System.Linq;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
+﻿using System;
 using System.Collections.Generic;
-using BibleNote.Analytics.Services.VerseParsing.Contracts;
-using BibleNote.Analytics.Services.VerseParsing.Models.ParseResult;
+using System.Linq;
+using BibleNote.Services.DocumentProvider.Contracts;
+using BibleNote.Services.VerseParsing.Contracts;
+using BibleNote.Services.VerseParsing.Models.ParseResult;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
-using System;
-using BibleNote.Analytics.Services.DocumentProvider.Contracts;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace BibleNote.Tests.Analytics.TestsBase
+namespace BibleNote.Tests.TestsBase
 {
     public abstract class DocumentParserTestsBase : TestsBase
     {   

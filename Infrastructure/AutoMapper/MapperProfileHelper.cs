@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 
-namespace BibleNote.UI.Infrastructure.AutoMapper
+namespace BibleNote.Infrastructure.AutoMapper
 {
     public sealed class Map
     {

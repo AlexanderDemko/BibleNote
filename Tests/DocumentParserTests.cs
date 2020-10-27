@@ -1,17 +1,17 @@
-﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
-using BibleNote.Tests.Analytics.Mocks;
-using BibleNote.Tests.Analytics.TestsBase;
-using BibleNote.Analytics.Providers.Html;
-using System.Linq;
-using BibleNote.Analytics.Services.DocumentProvider.Contracts;
-using BibleNote.Analytics.Services.VerseParsing.Contracts;
-using BibleNote.Analytics.Services.VerseParsing.Contracts.ParseContext;
-using BibleNote.Analytics.Services.VerseParsing.Models.ParseContext;
-using BibleNote.Analytics.Services.VerseParsing.Models.ParseResult;
+﻿using System.Linq;
+using BibleNote.Providers.FileSystem.DocumentId;
+using BibleNote.Providers.Html;
+using BibleNote.Services.DocumentProvider.Contracts;
+using BibleNote.Services.VerseParsing.Contracts;
+using BibleNote.Services.VerseParsing.Contracts.ParseContext;
+using BibleNote.Services.VerseParsing.Models.ParseContext;
+using BibleNote.Services.VerseParsing.Models.ParseResult;
+using BibleNote.Tests.Mocks;
+using BibleNote.Tests.TestsBase;
 using Microsoft.Extensions.DependencyInjection;
-using BibleNote.Analytics.Providers.FileSystem.DocumentId;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace BibleNote.Tests.Analytics
+namespace BibleNote.Tests
 {
     [TestClass]
     public class DocumentParserTests : DocumentParserTestsBase

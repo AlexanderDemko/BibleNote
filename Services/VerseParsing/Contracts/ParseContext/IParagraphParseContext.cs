@@ -1,7 +1,7 @@
-﻿using BibleNote.Analytics.Services.VerseParsing.Models;
-using BibleNote.Analytics.Services.VerseParsing.Models.ParseResult;
+﻿using BibleNote.Services.VerseParsing.Models;
+using BibleNote.Services.VerseParsing.Models.ParseResult;
 
-namespace BibleNote.Analytics.Services.VerseParsing.Contracts.ParseContext
+namespace BibleNote.Services.VerseParsing.Contracts.ParseContext
 {
     public interface IParagraphParseContext : IElementParseContext
     {

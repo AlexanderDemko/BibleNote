@@ -1,8 +1,8 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using BibleNote.Domain.Entities;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using BibleNote.Analytics.Domain.Entities;
 
-namespace BibleNote.Analytics.Persistence.Configurations
+namespace BibleNote.Persistence.Configurations
 {
     class NavigationProviderInfoConfiguration : IEntityTypeConfiguration<NavigationProviderInfo>
     {

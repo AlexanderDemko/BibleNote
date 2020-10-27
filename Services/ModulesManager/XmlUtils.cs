@@ -1,7 +1,7 @@
-﻿using BibleNote.Analytics.Common.Cache;
-using System.IO;
+﻿using System.IO;
+using BibleNote.Common.Cache;
 
-namespace BibleNote.Analytics.Services.ModulesManager
+namespace BibleNote.Services.ModulesManager
 {
     public static class XmlUtils
     {

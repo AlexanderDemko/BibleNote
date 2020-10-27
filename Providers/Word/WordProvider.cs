@@ -1,15 +1,16 @@
-﻿using BibleNote.Analytics.Services.VerseParsing.Contracts;
-using BibleNote.Analytics.Services.VerseParsing.Contracts.ParseContext;
-using BibleNote.Analytics.Services.DocumentProvider.Contracts;
-using BibleNote.Analytics.Providers.Html.Contracts;
-using BibleNote.Analytics.Services.VerseParsing.Models;
-using BibleNote.Analytics.Services.VerseParsing.Models.ParseResult;
-using System;
-using DocumentFormat.OpenXml;
-using BibleNote.Analytics.Domain.Enums;
+﻿using System;
 using System.Threading.Tasks;
+using BibleNote.Domain.Enums;
+using BibleNote.Providers.Html;
+using BibleNote.Providers.Word.Contracts;
+using BibleNote.Services.DocumentProvider.Contracts;
+using BibleNote.Services.VerseParsing.Contracts;
+using BibleNote.Services.VerseParsing.Contracts.ParseContext;
+using BibleNote.Services.VerseParsing.Models;
+using BibleNote.Services.VerseParsing.Models.ParseResult;
+using DocumentFormat.OpenXml;
 
-namespace BibleNote.Analytics.Providers.Html
+namespace BibleNote.Providers.Word
 {
     public class WordProvider : IDocumentProvider
     {

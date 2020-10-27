@@ -1,4 +1,4 @@
-﻿namespace BibleNote.Analytics.Services.VerseParsing.Contracts.ParseContext
+﻿namespace BibleNote.Services.VerseParsing.Contracts.ParseContext
 {
     public enum ElementType
     {        

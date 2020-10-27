@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using MediatR.Pipeline;
 using Microsoft.Extensions.Logging;
 
-namespace BibleNote.UI.Infrastructure.Logging
+namespace BibleNote.Infrastructure.Logging
 {
     public class RequestLogger<TRequest> : IRequestPreProcessor<TRequest>
     {

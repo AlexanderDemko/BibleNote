@@ -1,7 +1,7 @@
-﻿using BibleNote.Analytics.Services.VerseParsing.Contracts.ParseResult;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using BibleNote.Services.VerseParsing.Contracts.ParseResult;
 
-namespace BibleNote.Analytics.Services.VerseParsing.Models.ParseResult
+namespace BibleNote.Services.VerseParsing.Models.ParseResult
 {
     public class DocumentParseResult : ICapacityInfo
     {

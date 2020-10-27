@@ -1,6 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore.Migrations;
 
-namespace BibleNote.Analytics.Persistence.Migrations
+namespace BibleNote.Persistence.Migrations
 {
     public partial class Init : Migration
     {

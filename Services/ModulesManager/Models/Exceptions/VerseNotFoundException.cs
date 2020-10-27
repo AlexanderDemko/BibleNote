@@ -1,4 +1,4 @@
-﻿namespace BibleNote.Analytics.Services.ModulesManager.Models.Exceptions
+﻿namespace BibleNote.Services.ModulesManager.Models.Exceptions
 {
     public class VerseNotFoundException : BaseVersePointerException
     {

@@ -1,6 +1,6 @@
-﻿using BibleNote.Analytics.Common.Exceptions;
+﻿using BibleNote.Common.Exceptions;
 
-namespace BibleNote.Analytics.Services.ModulesManager.Models.Exceptions
+namespace BibleNote.Services.ModulesManager.Models.Exceptions
 {
     public class InvalidModuleException : BusinessException
     {

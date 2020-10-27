@@ -4,17 +4,18 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using BibleNote.Analytics.Domain.Contracts;
-using BibleNote.Analytics.Domain.Entities;
-using BibleNote.Analytics.Domain.Enums;
-using BibleNote.Analytics.Providers.FileSystem.DocumentId;
-using BibleNote.Analytics.Providers.Html;
-using BibleNote.Analytics.Providers.Pdf;
-using BibleNote.Analytics.Services.DocumentProvider.Contracts;
-using BibleNote.Analytics.Services.NavigationProvider;
+using BibleNote.Domain.Contracts;
+using BibleNote.Domain.Entities;
+using BibleNote.Domain.Enums;
+using BibleNote.Providers.FileSystem.DocumentId;
+using BibleNote.Providers.Html;
+using BibleNote.Providers.Pdf;
+using BibleNote.Providers.Word;
+using BibleNote.Services.DocumentProvider.Contracts;
+using BibleNote.Services.NavigationProvider;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace BibleNote.Analytics.Providers.FileSystem.Navigation
+namespace BibleNote.Providers.FileSystem.Navigation
 {
     /// <summary>
     /// Folder with files: .txt, .html, .docx, .pdf.

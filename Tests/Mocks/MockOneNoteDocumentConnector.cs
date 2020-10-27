@@ -1,13 +1,13 @@
-﻿using BibleNote.Analytics.Common.Helpers;
-using BibleNote.Analytics.Providers.FileSystem.DocumentId;
-using BibleNote.Analytics.Providers.OneNote.Contracts;
-using BibleNote.Analytics.Services.DocumentProvider.Contracts;
-using System;
+﻿using System;
 using System.IO;
 using System.Threading.Tasks;
 using System.Xml.Linq;
+using BibleNote.Common.Helpers;
+using BibleNote.Providers.FileSystem.DocumentId;
+using BibleNote.Providers.OneNote.Contracts;
+using BibleNote.Services.DocumentProvider.Contracts;
 
-namespace BibleNote.Tests.Analytics.Mocks
+namespace BibleNote.Tests.Mocks
 {
     public class MockOneNoteDocumentConnector : IOneNoteDocumentConnector
     {

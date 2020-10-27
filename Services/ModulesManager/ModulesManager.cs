@@ -2,17 +2,17 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Threading;
-using BibleNote.Analytics.Services.ModulesManager.Contracts;
-using BibleNote.Analytics.Services.ParallelVerses.Contracts;
-using Microsoft.Extensions.Logging;
-using BibleNote.Analytics.Services.ModulesManager.Scheme.Module;
-using BibleNote.Analytics.Services.ModulesManager.Scheme.ZefaniaXml;
-using BibleNote.Analytics.Services.ModulesManager.Models.Exceptions;
-using BibleNote.Analytics.Services.Configuration.Contracts;
 using System.Reflection;
+using System.Threading;
+using BibleNote.Services.Configuration.Contracts;
+using BibleNote.Services.ModulesManager.Contracts;
+using BibleNote.Services.ModulesManager.Models.Exceptions;
+using BibleNote.Services.ModulesManager.Scheme.Module;
+using BibleNote.Services.ModulesManager.Scheme.ZefaniaXml;
+using BibleNote.Services.ParallelVerses.Contracts;
+using Microsoft.Extensions.Logging;
 
-namespace BibleNote.Analytics.Services.ModulesManager
+namespace BibleNote.Services.ModulesManager
 {
     class ModulesManager : IModulesManager
     {

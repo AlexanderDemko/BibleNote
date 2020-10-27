@@ -1,9 +1,9 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
-using BibleNote.UI.Middleware.NavigationProviders.Queries.List;
+using BibleNote.Middleware.NavigationProviders.Queries.List;
 using Microsoft.AspNetCore.Mvc;
 
-namespace BibleNote.UI.App.Controllers
+namespace BibleNote.App.Controllers
 {
     public class NavigationProviderController : BaseController
     {

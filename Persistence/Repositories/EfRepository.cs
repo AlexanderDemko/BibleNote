@@ -1,15 +1,15 @@
-﻿using BibleNote.Analytics.Domain.Contracts;
-using Microsoft.EntityFrameworkCore;
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
+using BibleNote.Domain.Contracts;
+using Microsoft.EntityFrameworkCore;
 using Z.EntityFramework.Plus;
 
-namespace BibleNote.Analytics.Persistence.Repositories
+namespace BibleNote.Persistence.Repositories
 {
     public class EfRepository<T> : ITrackingRepository<T> where T : class
     {

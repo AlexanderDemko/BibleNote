@@ -1,8 +1,8 @@
-﻿using BibleNote.Analytics.Domain.Entities;
+﻿using BibleNote.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace BibleNote.Analytics.Persistence.Configurations
+namespace BibleNote.Persistence.Configurations
 {
     class DocumentConfiguDocumentFolderConfigurationration : IEntityTypeConfiguration<DocumentFolder>
     {

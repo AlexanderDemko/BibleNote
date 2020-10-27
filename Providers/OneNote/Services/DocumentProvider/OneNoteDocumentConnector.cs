@@ -1,9 +1,9 @@
-﻿using BibleNote.Analytics.Providers.OneNote.Contracts;
-using BibleNote.Analytics.Services.DocumentProvider.Contracts;
+﻿using System.Threading.Tasks;
+using BibleNote.Providers.OneNote.Contracts;
+using BibleNote.Services.DocumentProvider.Contracts;
 using Microsoft.Extensions.Logging;
-using System.Threading.Tasks;
 
-namespace BibleNote.Analytics.Providers.OneNote.Services.DocumentProvider
+namespace BibleNote.Providers.OneNote.Services.DocumentProvider
 {
     public class OneNoteDocumentConnector : IOneNoteDocumentConnector
     {

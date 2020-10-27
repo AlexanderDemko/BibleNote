@@ -1,10 +1,10 @@
-﻿using BibleNote.Analytics.Services.DocumentProvider.Contracts;
-using Newtonsoft.Json;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using BibleNote.Services.DocumentProvider.Contracts;
+using Newtonsoft.Json;
 
-namespace BibleNote.Analytics.Services.NavigationProvider
+namespace BibleNote.Services.NavigationProvider
 {
     public abstract class NavigationProviderBase<T, P> : INavigationProvider<T>
         where T : IDocumentId

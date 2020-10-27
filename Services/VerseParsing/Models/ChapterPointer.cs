@@ -1,7 +1,7 @@
-﻿using BibleNote.Analytics.Services.ModulesManager.Models;
-using BibleNote.Analytics.Services.ModulesManager.Scheme.Module;
+﻿using BibleNote.Services.ModulesManager.Models;
+using BibleNote.Services.ModulesManager.Scheme.Module;
 
-namespace BibleNote.Analytics.Services.VerseParsing.Models
+namespace BibleNote.Services.VerseParsing.Models
 {
     public class ChapterPointer : VersePointer
     {

@@ -1,7 +1,7 @@
-﻿using BibleNote.Analytics.Services.VerseParsing.Contracts.ParseContext;
-using BibleNote.Analytics.Services.VerseParsing.Models;
+﻿using BibleNote.Services.VerseParsing.Contracts.ParseContext;
+using BibleNote.Services.VerseParsing.Models;
 
-namespace BibleNote.Analytics.Services.VerseParsing.Contracts
+namespace BibleNote.Services.VerseParsing.Contracts
 {
     public interface IVerseRecognitionService
     {

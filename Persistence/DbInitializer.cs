@@ -1,4 +1,4 @@
-﻿namespace BibleNote.Analytics.Persistence
+﻿namespace BibleNote.Persistence
 {
     public class DbInitializer
     {

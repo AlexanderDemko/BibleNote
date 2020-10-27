@@ -1,8 +1,9 @@
+using System.Reflection;
 using AutoMapper;
-using BibleNote.Analytics.Common.DiContainer;
-using BibleNote.UI.Infrastructure.Monitoring;
-using BibleNote.UI.Infrastructure.RequestValidation;
-using BibleNote.UI.Middleware;
+using BibleNote.Common.DiContainer;
+using BibleNote.Infrastructure.Monitoring;
+using BibleNote.Infrastructure.RequestValidation;
+using BibleNote.Middleware;
 using ElectronNET.API;
 using ElectronNET.API.Entities;
 using MediatR;
@@ -11,9 +12,8 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using System.Reflection;
 
-namespace BibleNote.UI.App
+namespace BibleNote.App
 {
     public class Startup
     {

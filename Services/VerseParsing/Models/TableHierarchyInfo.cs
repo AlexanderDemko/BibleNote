@@ -1,7 +1,7 @@
-﻿using BibleNote.Analytics.Services.VerseParsing.Contracts.ParseContext;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using BibleNote.Services.VerseParsing.Contracts.ParseContext;
 
-namespace BibleNote.Analytics.Services.VerseParsing.Models
+namespace BibleNote.Services.VerseParsing.Models
 {
     public class TableHierarchyInfo : IHierarchyInfo
     {

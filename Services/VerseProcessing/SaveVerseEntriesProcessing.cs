@@ -1,13 +1,13 @@
-﻿using BibleNote.Analytics.Domain.Contracts;
-using BibleNote.Analytics.Domain.Entities;
-using BibleNote.Analytics.Services.ModulesManager.Models;
-using BibleNote.Analytics.Services.VerseParsing.Models.ParseResult;
-using BibleNote.Analytics.Services.VerseProcessing.Contracts;
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
+using BibleNote.Domain.Contracts;
+using BibleNote.Domain.Entities;
+using BibleNote.Services.ModulesManager.Models;
+using BibleNote.Services.VerseParsing.Models.ParseResult;
+using BibleNote.Services.VerseProcessing.Contracts;
 
-namespace BibleNote.Analytics.Services.VerseProcessing
+namespace BibleNote.Services.VerseProcessing
 {
     class SaveVerseEntriesProcessing : IDocumentParseResultProcessing
     {

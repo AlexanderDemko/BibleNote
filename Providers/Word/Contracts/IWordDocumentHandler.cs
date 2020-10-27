@@ -1,7 +1,7 @@
-﻿using BibleNote.Analytics.Services.DocumentProvider.Contracts;
+﻿using BibleNote.Services.DocumentProvider.Contracts;
 using DocumentFormat.OpenXml.Packaging;
 
-namespace BibleNote.Analytics.Providers.Html.Contracts
+namespace BibleNote.Providers.Word.Contracts
 {
     public interface IWordDocumentHandler : IDocumentHandler
     {

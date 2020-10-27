@@ -1,13 +1,13 @@
-﻿using BibleNote.Analytics.Services.DocumentProvider.Contracts;
-using System;
-using Microsoft.Extensions.DependencyInjection;
+﻿using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using System.Threading;
-using BibleNote.Analytics.Services.NavigationProvider;
-using BibleNote.Analytics.Providers.OneNote.Services.DocumentProvider;
+using System.Threading.Tasks;
+using BibleNote.Providers.OneNote.Services.DocumentProvider;
+using BibleNote.Services.DocumentProvider.Contracts;
+using BibleNote.Services.NavigationProvider;
+using Microsoft.Extensions.DependencyInjection;
 
-namespace BibleNote.Analytics.Providers.OneNote.Services.NavigationProvider
+namespace BibleNote.Providers.OneNote.Services.NavigationProvider
 {
     public class OneNoteNavigationProvider : NavigationProviderBase<OneNoteDocumentId, OneNoteNavigationProviderParameters>, IDisposable
     {

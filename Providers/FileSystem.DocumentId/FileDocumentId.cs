@@ -1,7 +1,7 @@
-﻿using BibleNote.Analytics.Services.DocumentProvider.Contracts;
-using System;
+﻿using System;
+using BibleNote.Services.DocumentProvider.Contracts;
 
-namespace BibleNote.Analytics.Providers.FileSystem.DocumentId
+namespace BibleNote.Providers.FileSystem.DocumentId
 {
     public class FileDocumentId : IDocumentId
     {

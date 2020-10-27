@@ -1,7 +1,7 @@
 ﻿using System;
 using System.IO;
 
-namespace BibleNote.Analytics.Domain.Enums
+namespace BibleNote.Domain.Enums
 {
     public enum FileType
     {

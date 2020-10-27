@@ -1,8 +1,8 @@
-﻿using BibleNote.Analytics.Services.ModulesManager.Scheme.Module;
-using BibleNote.Analytics.Services.ModulesManager.Scheme.ZefaniaXml;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using BibleNote.Services.ModulesManager.Scheme.Module;
+using BibleNote.Services.ModulesManager.Scheme.ZefaniaXml;
 
-namespace BibleNote.Analytics.Services.ModulesManager.Contracts
+namespace BibleNote.Services.ModulesManager.Contracts
 {
     public interface IModulesManager
     {
