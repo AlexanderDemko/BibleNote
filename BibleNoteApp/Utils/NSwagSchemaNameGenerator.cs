@@ -8,8 +8,8 @@ namespace BibleNote.App.Utils
     public class NSwagSchemaNameGenerator : DefaultSchemaNameGenerator, ISchemaNameGenerator
     {
         readonly IList<string> excludeNames = new List<string>() {
-            "BibleNote.Analytics.Domain.Entities",
-            "BibleNote.UI.Infrastructure",
+            "BibleNote.Domain.Entities",
+            "BibleNote.Infrastructure",
         };
         public override string Generate(Type type)
         {
@@ -19,7 +19,7 @@ namespace BibleNote.App.Utils
             if (!excludeNames.Any(n => fullName.StartsWith(n)))
             {
                 var newFullName = type.FullName
-                    .Replace("BibleNote.UI.Middleware", "")
+                    .Replace("BibleNote.Middleware", "")
                     .Replace(".", "")
                     ;
                 typeName = typeName.Replace(type.Name, newFullName);
