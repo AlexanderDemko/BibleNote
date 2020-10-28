@@ -9,7 +9,7 @@
 
     <RootNamespace>BibleNote.Tests</RootNamespace>
 
-    <LangVersion>7.3</LangVersion>
+    <LangVersion>8.0</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>

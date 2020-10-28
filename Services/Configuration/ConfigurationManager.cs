@@ -6,7 +6,8 @@ namespace BibleNote.Services.Configuration
     class ConfigurationManager : IConfigurationManager
     {   
         public string ModuleShortName { get; set; }
-        public bool UseCommaDelimiter { get; set; }        
+        public bool UseCommaDelimiter { get; set; }
+        public int Language { get; set; }
 
         public ConfigurationManager()
         {            

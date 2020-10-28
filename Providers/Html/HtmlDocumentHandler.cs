@@ -63,8 +63,8 @@ namespace BibleNote.Providers.Html
         {
             DocumentId.SetChanged();
         }
-
-        public void Dispose()
+  
+        public async ValueTask DisposeAsync()
         {
             if (!DocumentId.IsReadonly && DocumentId.Changed)
             {

@@ -49,15 +49,13 @@ namespace BibleNote.Tests.Mocks
         public void SetDocumentChanged()
         {
             DocumentId.SetChanged();
-        }
+        }    
 
-        public void Dispose()
+        public async ValueTask DisposeAsync()
         {
             if (!DocumentId.IsReadonly && DocumentId.Changed)
             {
                 var filePath = ((FileDocumentId)DocumentId).FilePath;
-                var ext = Path.GetExtension(filePath);
-                var encoding = FileUtils.GetEncoding(filePath);
                 Document.Save(filePath);
             }
         }

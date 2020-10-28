@@ -18,17 +18,17 @@ namespace BibleNote.Tests
     public class OneNoteDocumentProviderTests : DbTestsBase
     {
         private IDocumentProvider documentProvider;
+        private IOneNoteAppWrapper oneNoteApp;
         private IOrderedEnumerable<IDocumentParseResultProcessing> documentParseResultProcessings;
         private Document document;
 
         [TestInitialize]
         public async Task Init()
         {
-            base.Init(services => services
-                .AddScoped<IOneNoteDocumentConnector, OneNoteDocumentConnector>()
-                .AddScoped<IDocumentProvider, OneNoteProvider>());
+            base.Init();
 
-            this.documentProvider = ServiceProvider.GetService<IDocumentProvider>();
+            this.documentProvider = ServiceProvider.GetService<OneNoteProvider>();
+            this.oneNoteApp = ServiceProvider.GetService<IOneNoteAppWrapper>();
             this.documentParseResultProcessings = ServiceProvider.GetServices<IDocumentParseResultProcessing>()
                 .OrderBy(rp => rp.Order);
 
@@ -48,34 +48,31 @@ namespace BibleNote.Tests
 
         }
 
-        [TestMethod]        
+        [TestMethod]
         public async Task TestCurrentPage()
-        {   
+        {
             var log = ServiceProvider.GetService<ILogger<OneNoteDocumentProviderTests>>();
 
-            using (var oneNoteApp = new OneNoteAppWrapper(log))
+            var currentPageId = await oneNoteApp.GetCurrentPageIdAsync();
+
+            if (!string.IsNullOrEmpty(currentPageId))
             {
-                var currentPageId = await oneNoteApp.GetCurrentPageIdAsync();
+                var documentId = new OneNoteDocumentId(0, currentPageId);
+                var parseResult = await documentProvider.ParseDocumentAsync(documentId);
 
-                if (!string.IsNullOrEmpty(currentPageId))
-                {
-                    var documentId = new OneNoteDocumentId(0, currentPageId);
-                    var parseResult = await documentProvider.ParseDocumentAsync(documentId);
+                var sw = new Stopwatch();
+                sw.Start();
 
-                    var sw = new Stopwatch();
-                    sw.Start();
+                await this.documentParseResultProcessings.First().ProcessAsync(this.document.Id, parseResult);
 
-                    await this.documentParseResultProcessings.First().ProcessAsync(this.document.Id, parseResult);
+                sw.Stop();
 
-                    sw.Stop();
+                sw.Restart();
 
-                    sw.Restart();
+                await this.documentParseResultProcessings.Skip(1).First().ProcessAsync(this.document.Id, parseResult);
 
-                    await this.documentParseResultProcessings.Skip(1).First().ProcessAsync(this.document.Id, parseResult);
-                    
-                    sw.Stop();
-                    //throw new Exception($"Total: {sw.Elapsed.TotalSeconds}");
-                }
+                sw.Stop();
+                //throw new Exception($"Total: {sw.Elapsed.TotalSeconds}");
             }
         }
     }

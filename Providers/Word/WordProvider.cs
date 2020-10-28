@@ -35,7 +35,7 @@ namespace BibleNote.Providers.Word
         public async Task<DocumentParseResult> ParseDocumentAsync(IDocumentId documentId)
         {
             DocumentParseResult result;
-            using (var docHandler = await wordDocumentConnector.ConnectAsync(documentId))
+            await using (var docHandler = await wordDocumentConnector.ConnectAsync(documentId))
             {
                 using (var docParser = documentParserFactory.Create(this, documentId))
                 {

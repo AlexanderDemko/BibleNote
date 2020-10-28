@@ -8,6 +8,8 @@ namespace BibleNote.VerseDifferencesFinder
 
         public bool UseCommaDelimiter { get; set; }
 
+        public int Language { get; set; }
+
         public ConfigurationManager(string moduleShortName)
         {
             ModuleShortName = moduleShortName;

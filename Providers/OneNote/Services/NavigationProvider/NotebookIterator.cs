@@ -1,167 +1,125 @@
-﻿//using System;
-//using System.Collections.Generic;
-//using System.Linq;
-//using System.Text;
-//using Microsoft.Office.Interop.OneNote;
-//using System.Xml;
-//using System.Xml.Linq;
-//using System.Xml.XPath;
-//using BibleNote.Common.Exceptions;
+﻿using System;
+using System.Linq;
+using Microsoft.Office.Interop.OneNote;
+using System.Xml;
+using System.Xml.Linq;
+using System.Xml.XPath;
+using BibleNote.Providers.OneNote.Contracts;
+using System.Threading.Tasks;
+using BibleNote.Providers.OneNote.Services.NavigationProvider.Models;
+using System.Collections.Generic;
+using BibleNote.Providers.OneNote.Utils;
 
-//namespace BibleNote.Analytics.Providers.OneNote.Services.NavigationProvider
-//{
-//    public class NotebookIterator
-//    {
-//        public class HierarchyElementInfo
-//        {
-//            public string Id { get; set; }
-//            public string Title { get; set; }
-//        }
+namespace BibleNote.Providers.OneNote.Services.NavigationProvider
+{
+    class NotebookIterator: INotebookIterator
+    {
+        #region Helper classes
 
-//        public class SectionGroupInfo : HierarchyElementInfo
-//        {
-//            public List<SectionGroupInfo> SectionGroups { get; set; }
-//            public List<SectionInfo> Sections { get; set; }
+        public abstract class HierarchyElementInfo
+        {
+            public string Id { get; set; }
 
-//            public SectionGroupInfo()
-//            {
-//                this.SectionGroups = new List<SectionGroupInfo>();
-//                this.Sections = new List<SectionInfo>();
-//            }
-//        }
+            public string Name { get; set; }                       
+        }
 
+        public class ContainerInfo : HierarchyElementInfo
+        {
+            public List<ContainerInfo> ChildrenContainers { get; set; }
 
-//        public class NotebookInfo : HierarchyElementInfo
-//        {
-//            public int PagesCount { get; set; }
-//            public SectionGroupInfo RootSectionGroup { get; set; }
-//        }
+            public List<PageInfo> Pages { get; set; }
+        }
 
-//        public class SectionInfo : HierarchyElementInfo
-//        {
-//            public List<PageInfo> Pages { get; set; }
+        public class PageInfo : HierarchyElementInfo
+        {
+            public DateTime LastModifiedTime { get; set; }
+        }
 
-//            public SectionInfo()
-//            {
-//                this.Pages = new List<PageInfo>();
-//            }
-//        }
+        #endregion
 
-//        public class PageInfo : HierarchyElementInfo
-//        {
-//            public string NotebookId { get; set; }
-//            public string SectionGroupId { get; set; }
-//            public string SectionId { get; set; }
-//            public XElement PageElement { get; set; }
-//            public XmlNamespaceManager Xnm { get; set; }
-//        }
+        private readonly IOneNoteAppWrapper oneNoteApp;
+        private readonly XmlNamespaceManager xnm;
 
-//        public NotebookIterator()
-//        {
+        public NotebookIterator(IOneNoteAppWrapper oneNoteApp)
+        {
+            this.oneNoteApp = oneNoteApp;
+            this.xnm = OneNoteUtils.GetOneNoteXNM();
+        }
 
-//        }
+        public async Task<ContainerInfo> GetHierarchyPages(string hierarchyId, OneNoteHierarchyType hierarchyType)
+        {
+            var hierarchyContent = await this.oneNoteApp.GetHierarchyContentAsync(hierarchyId, HierarchyScope.hsPages);
+            var hierarchyDoc = XDocument.Parse(hierarchyContent);            
 
-//        public NotebookInfo GetSectionGroupOrNotebookPages(ref Application oneNoteApp, string notebookId, string sectionGroupId, Func<PageInfo, bool> filter)
-//        {
-//            var notebookElement = ApplicationCache.Instance.GetHierarchy(ref oneNoteApp, notebookId, HierarchyScope.hsPages);
+            return ProcessHierarchyElement(hierarchyDoc.Root, hierarchyType);
+        }
 
-//            var sectionGroup = string.IsNullOrEmpty(sectionGroupId)
-//                                        ? notebookElement.Content.Root
-//                                        : notebookElement.Content.Root.XPathSelectElement(
-//                                                string.Format("//one:SectionGroup[@ID=\"{0}\"]", sectionGroupId), notebookElement.Xnm);
+        private ContainerInfo ProcessHierarchyElement(XElement hierarchyEl, OneNoteHierarchyType hierarchyType)
+        {
+            switch (hierarchyType)
+            {
+                case OneNoteHierarchyType.Notebook:
+                case OneNoteHierarchyType.SectionGroup:
+                    return ProcessSectionGroup(hierarchyEl);
+                case OneNoteHierarchyType.Section:
+                    return ProcessSection(hierarchyEl);
+                default:
+                    throw new NotSupportedException(hierarchyType.ToString());
+            }
+        } 
 
-//            if (sectionGroup == null)
-//                throw new NotFoundException($"notebookId = '{notebookId}', sectionGroupId = '{sectionGroupId}'");
+        private ContainerInfo ProcessSectionGroup(XElement sectionGroupEl)
+        {
+            var sectionGroup = new ContainerInfo();
+            ProcessHierarchyElement(sectionGroup, sectionGroupEl);
 
-//            int pagesCount = 0;
-//            var rootSectionGroup = ProcessSectionGroup(sectionGroup, notebookId, notebookElement.Xnm, filter, ref pagesCount);
+            foreach (var subSectionGroupEl in sectionGroupEl.XPathSelectElements("one:SectionGroup", xnm)
+                .Where(sg => !OneNoteUtils.IsRecycleBin(sg)))
+            {
+                var subSectionGroup = ProcessSectionGroup(subSectionGroupEl);
+                sectionGroup.ChildrenContainers.Add(subSectionGroup);
+            }
 
-//            var result = new NotebookInfo()
-//            {
-//                RootSectionGroup = rootSectionGroup,
-//                PagesCount = pagesCount
-//            };
+            foreach (var subSection in sectionGroupEl.XPathSelectElements("one:Section", xnm))
+            {
+                var section = ProcessSection(subSection);
+                sectionGroup.ChildrenContainers.Add(section);
+            }
 
-//            ProcessHierarchyElement(result, notebookElement.Content.Root);
+            return sectionGroup;
+        }
 
-//            return result;
-//        }
+        private ContainerInfo ProcessSection(XElement sectionEl)
+        {
+            var section = new ContainerInfo();
+            ProcessHierarchyElement(section, sectionEl);
 
-//        public SectionInfo GetSectionPages(ref Application oneNoteApp, string notebookId, string sectionGroupId, string sectionId, Func<PageInfo, bool> filter)
-//        {
-//            var sectionElement = ApplicationCache.Instance.GetHierarchy(ref oneNoteApp, sectionId, HierarchyScope.hsPages);
+            foreach (var pageEl in sectionEl.XPathSelectElements("one:Page", xnm))
+            {
+                if (!OneNoteUtils.IsRecycleBin(pageEl))
+                {
+                    var page = new PageInfo()
+                    {
+                        LastModifiedTime = StringUtils.ParseDateTime((string)pageEl.Attribute("lastModifiedTime"))
+                    };
 
-//            if (sectionElement == null)
-//                throw new Exception(string.Format("{0}: '{1}'", BibleCommon.Resources.Constants.SectionNotFound, sectionId));
+                    ProcessHierarchyElement(page, pageEl);
+                    section.Pages.Add(page);
+                }
+            }
 
-//            int pagesCount = 0;
-//            return ProcessSection(sectionElement.Content.Root, sectionGroupId, notebookId, sectionElement.Xnm, filter, ref pagesCount);
-//        }
+            return section;
+        }
 
-//        private SectionGroupInfo ProcessSectionGroup(XElement sectionGroupElement, string notebookId, XmlNamespaceManager xnm, Func<PageInfo, bool> filter, ref int pagesCount)
-//        {
-//            SectionGroupInfo sectionGroup = new SectionGroupInfo();
-//            ProcessHierarchyElement(sectionGroup, sectionGroupElement);
+        public void ProcessHierarchyElement(HierarchyElementInfo hierarchyInfo, XElement xElement)
+        {
+            var nickNameAttr = xElement.Attribute("nickname");
+            if (nickNameAttr != null)
+                hierarchyInfo.Name = nickNameAttr.Value;
+            else
+                hierarchyInfo.Name = (string)xElement.Attribute("name");
 
-//            foreach (var subSectionGroupElement in sectionGroupElement.XPathSelectElements("one:SectionGroup", xnm)
-//                .Where(sg => !OneNoteUtils.IsRecycleBin(sg)))
-//            {
-//                int oldPagesCount = pagesCount;
-//                var subSectionGroup = ProcessSectionGroup(subSectionGroupElement, notebookId, xnm, filter, ref pagesCount);
-//                if (pagesCount > oldPagesCount)
-//                    sectionGroup.SectionGroups.Add(subSectionGroup);
-//            }
-
-//            foreach (var subSection in sectionGroupElement.XPathSelectElements("one:Section", xnm))
-//            {
-//                var section = ProcessSection(subSection, sectionGroup.Id, notebookId, xnm, filter, ref pagesCount);
-//                if (section.Pages.Count > 0)
-//                    sectionGroup.Sections.Add(section);
-//            }
-
-//            return sectionGroup;
-//        }
-
-//        private SectionInfo ProcessSection(XElement sectionElement, string sectionGroupId,
-//           string notebookId, XmlNamespaceManager xnm, Func<PageInfo, bool> filter, ref int pagesCount)
-//        {
-//            SectionInfo section = new SectionInfo();
-//            ProcessHierarchyElement(section, sectionElement);
-
-//            foreach (var pageElement in sectionElement.XPathSelectElements("one:Page", xnm))
-//            {
-//                if (!OneNoteUtils.IsRecycleBin(pageElement))
-//                {
-//                    var page = new PageInfo()
-//                    {
-//                        NotebookId = notebookId,
-//                        SectionGroupId = sectionGroupId,
-//                        SectionId = section.Id,
-//                        PageElement = pageElement,
-//                        Xnm = xnm
-//                    };
-//                    ProcessHierarchyElement(page, pageElement);
-
-//                    if (filter == null || filter(page))
-//                    {
-//                        section.Pages.Add(page);
-//                        pagesCount++;
-//                    }
-//                }
-//            }
-
-//            return section;
-//        }
-
-//        public void ProcessHierarchyElement(HierarchyElementInfo hierarchyElement, XElement xElement)
-//        {
-//            var nickNameAttr = xElement.Attribute("nickname");
-//            if (nickNameAttr != null)
-//                hierarchyElement.Title = nickNameAttr.Value;
-//            else
-//                hierarchyElement.Title = (string)xElement.Attribute("name");
-
-//            hierarchyElement.Id = (string)xElement.Attribute("ID");
-//        }
-//    }
-//}
+            hierarchyInfo.Id = (string)xElement.Attribute("ID");
+        }
+    }
+}

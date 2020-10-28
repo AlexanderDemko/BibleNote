@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using BibleNote.Providers.FileSystem.DocumentId;
 using BibleNote.Providers.Word.Contracts;
 using BibleNote.Services.DocumentProvider.Contracts;
@@ -34,9 +35,9 @@ namespace BibleNote.Providers.Word
         public void SetDocumentChanged()
         {
             DocumentId.SetChanged();
-        }
+        }  
 
-        public void Dispose()
+        public async ValueTask DisposeAsync()
         {
             WordDocument.Dispose();
 

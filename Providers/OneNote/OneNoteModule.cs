@@ -1,6 +1,8 @@
 ﻿using BibleNote.Common.DiContainer;
 using BibleNote.Providers.OneNote.Contracts;
+using BibleNote.Providers.OneNote.Services;
 using BibleNote.Providers.OneNote.Services.DocumentProvider;
+using BibleNote.Providers.OneNote.Services.NavigationProvider;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace BibleNote.Providers.OneNote
@@ -13,6 +15,8 @@ namespace BibleNote.Providers.OneNote
                 .AddScoped<IOneNoteDocumentConnector, OneNoteDocumentConnector>()
                 .AddScoped<IXDocumentHandler, OneNoteDocumentHandler>()
                 .AddScoped<OneNoteProvider>()
+                .AddScoped<IOneNoteAppWrapper, OneNoteAppWrapper>()
+                .AddTransient<INotebookIterator, NotebookIterator>()
                 ;
         }
     }

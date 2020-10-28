@@ -7,16 +7,20 @@ namespace BibleNote.Providers.OneNote.Services.DocumentProvider
 {
     public class OneNoteDocumentConnector : IOneNoteDocumentConnector
     {
-        private readonly ILogger _log;
+        private readonly ILogger logger;
+        private readonly IOneNoteAppWrapper oneNoteApp;
 
-        public OneNoteDocumentConnector(ILogger<OneNoteDocumentConnector> log)
+        public OneNoteDocumentConnector(
+            ILogger<OneNoteDocumentConnector> logger,
+            IOneNoteAppWrapper oneNoteApp)
         {
-            _log = log;
+            this.logger = logger;
+            this.oneNoteApp = oneNoteApp;
         }
 
         public async Task<IXDocumentHandler> ConnectAsync(IDocumentId documentId)
         {
-            var pageHandler = new OneNoteDocumentHandler(documentId, _log);
+            var pageHandler = new OneNoteDocumentHandler(documentId, this.oneNoteApp, this.logger);
             await pageHandler.LoadPageContentAsync();
             return pageHandler;
         }

@@ -41,7 +41,7 @@ namespace BibleNote.Providers.Html
         public async Task<DocumentParseResult> ParseDocumentAsync(IDocumentId documentId)
         {
             DocumentParseResult result;
-            using (var docHandler = await htmlDocumentConnector.ConnectAsync(documentId))
+            await using (var docHandler = await htmlDocumentConnector.ConnectAsync(documentId))
             {
                 using (var docParser = documentParserFactory.Create(this, documentId))
                 {

@@ -8,17 +8,23 @@ using Microsoft.Extensions.Logging;
 
 namespace BibleNote.Providers.OneNote.Services.DocumentProvider
 {
-    public class OneNoteDocumentHandler : IXDocumentHandler, IAsyncDisposable
+    public class OneNoteDocumentHandler : IXDocumentHandler
     {
-        private readonly ILogger _log;
+        private readonly IOneNoteAppWrapper oneNoteApp;
+        private readonly ILogger logger;
 
         public XDocument Document { get; private set; }
 
         public IDocumentId DocumentId { get; private set; }
 
-        public OneNoteDocumentHandler(IDocumentId documentId, ILogger log)
+        public OneNoteDocumentHandler(
+            IDocumentId documentId,
+            IOneNoteAppWrapper oneNoteApp,
+            ILogger logger)
         {
-            _log = log;
+            this.logger = logger;
+            this.oneNoteApp = oneNoteApp;
+
             DocumentId = documentId;
         }
 
@@ -33,11 +39,8 @@ namespace BibleNote.Providers.OneNote.Services.DocumentProvider
 
             if (documentId is OneNoteDocumentId)
             {
-                using (var oneNoteApp = new OneNoteAppWrapper(_log))        // todo: не создавать
-                {
-                    xml = await oneNoteApp.GetPageContentAsync(((OneNoteDocumentId)documentId).PageId);
-                    //html = Regex.Replace(html, "([^>])(\\n|&nbsp;)([^<])", "$1 $3");      // todo: разобраться, нужно ли это сейчас       
-                }
+                xml = await this.oneNoteApp.GetPageContentAsync(((OneNoteDocumentId)documentId).PageId);
+                //html = Regex.Replace(html, "([^>])(\\n|&nbsp;)([^<])", "$1 $3");      // todo: разобраться, нужно ли это сейчас       
             }
 
             if (xml != null)
@@ -51,18 +54,11 @@ namespace BibleNote.Providers.OneNote.Services.DocumentProvider
             DocumentId.SetChanged();
         }
 
-        public void Dispose()
-        {
-        }
-
         public async ValueTask DisposeAsync()
         {
             if (!DocumentId.IsReadonly && DocumentId.Changed)
             {
-                using (var oneNoteApp = new OneNoteAppWrapper(_log))
-                {
-                    await oneNoteApp.UpdatePageContentAsync(Document);
-                }
+                await this.oneNoteApp.UpdatePageContentAsync(Document);
             }
         }
     }

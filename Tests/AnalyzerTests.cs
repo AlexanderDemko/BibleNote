@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using BibleNote.Providers.FileSystem.Navigation;
 using BibleNote.Providers.OneNote.Services.NavigationProvider;
+using BibleNote.Providers.OneNote.Services.NavigationProvider.Models;
 using BibleNote.Services.DocumentProvider.Contracts;
 using BibleNote.Services.DocumentProvider.Models;
 using BibleNote.Tests.TestsBase;
@@ -44,7 +45,7 @@ namespace BibleNote.Tests
         public async Task Test2()
         {
             var navigationProvider = ActivatorUtilities.CreateInstance<OneNoteNavigationProvider>(ServiceProvider);
-            navigationProvider.Parameters.Levels = new List<OneNoteLevelInfo>() { new OneNoteLevelInfo() { Id = "", Type = OneNoteLevelType.Page, Name = "Test page" } };
+            navigationProvider.Parameters.HierarchyItems = new List<OneNoteHierarchyInfo>() { new OneNoteHierarchyInfo() { Id = "", Type = OneNoteHierarchyType.Section, Name = "Test page" } };
             await this.analyzer.AnalyzeAsync(navigationProvider, new AnalyzerOptions()
             {
                 Depth = AnalyzeDepth.All

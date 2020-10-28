@@ -16,7 +16,7 @@ namespace BibleNote.Persistence.Migrations
             modelBuilder
                 .HasAnnotation("ProductVersion", "2.2.6-servicing-10079");
 
-            modelBuilder.Entity("BibleNote.Analytics.Domain.Entities.Document", b =>
+            modelBuilder.Entity("BibleNote.Domain.Entities.Document", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd();
@@ -38,7 +38,7 @@ namespace BibleNote.Persistence.Migrations
                     b.ToTable("Documents");
                 });
 
-            modelBuilder.Entity("BibleNote.Analytics.Domain.Entities.DocumentFolder", b =>
+            modelBuilder.Entity("BibleNote.Domain.Entities.DocumentFolder", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd();
@@ -61,7 +61,7 @@ namespace BibleNote.Persistence.Migrations
                     b.ToTable("DocumentFolders");
                 });
 
-            modelBuilder.Entity("BibleNote.Analytics.Domain.Entities.DocumentParagraph", b =>
+            modelBuilder.Entity("BibleNote.Domain.Entities.DocumentParagraph", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd();
@@ -79,7 +79,7 @@ namespace BibleNote.Persistence.Migrations
                     b.ToTable("DocumentParagraphs");
                 });
 
-            modelBuilder.Entity("BibleNote.Analytics.Domain.Entities.VerseEntry", b =>
+            modelBuilder.Entity("BibleNote.Domain.Entities.VerseEntry", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd();
@@ -99,7 +99,7 @@ namespace BibleNote.Persistence.Migrations
                     b.ToTable("VerseEntries");
                 });
 
-            modelBuilder.Entity("BibleNote.Analytics.Domain.Entities.VerseRelation", b =>
+            modelBuilder.Entity("BibleNote.Domain.Entities.VerseRelation", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd();
@@ -127,45 +127,45 @@ namespace BibleNote.Persistence.Migrations
                     b.ToTable("VerseRelations");
                 });
 
-            modelBuilder.Entity("BibleNote.Analytics.Domain.Entities.Document", b =>
+            modelBuilder.Entity("BibleNote.Domain.Entities.Document", b =>
                 {
-                    b.HasOne("BibleNote.Analytics.Domain.Entities.DocumentFolder", "Folder")
+                    b.HasOne("BibleNote.Domain.Entities.DocumentFolder", "Folder")
                         .WithMany()
                         .HasForeignKey("DocumentFolderId")
                         .OnDelete(DeleteBehavior.Cascade);
                 });
 
-            modelBuilder.Entity("BibleNote.Analytics.Domain.Entities.DocumentFolder", b =>
+            modelBuilder.Entity("BibleNote.Domain.Entities.DocumentFolder", b =>
                 {
-                    b.HasOne("BibleNote.Analytics.Domain.Entities.DocumentFolder", "ParentFolder")
+                    b.HasOne("BibleNote.Domain.Entities.DocumentFolder", "ParentFolder")
                         .WithMany()
                         .HasForeignKey("ParentFolderId");
                 });
 
-            modelBuilder.Entity("BibleNote.Analytics.Domain.Entities.DocumentParagraph", b =>
+            modelBuilder.Entity("BibleNote.Domain.Entities.DocumentParagraph", b =>
                 {
-                    b.HasOne("BibleNote.Analytics.Domain.Entities.Document", "Document")
+                    b.HasOne("BibleNote.Domain.Entities.Document", "Document")
                         .WithMany("Paragraphs")
                         .HasForeignKey("DocumentId")
                         .OnDelete(DeleteBehavior.Cascade);
                 });
 
-            modelBuilder.Entity("BibleNote.Analytics.Domain.Entities.VerseEntry", b =>
+            modelBuilder.Entity("BibleNote.Domain.Entities.VerseEntry", b =>
                 {
-                    b.HasOne("BibleNote.Analytics.Domain.Entities.DocumentParagraph", "DocumentParagraph")
+                    b.HasOne("BibleNote.Domain.Entities.DocumentParagraph", "DocumentParagraph")
                         .WithMany()
                         .HasForeignKey("DocumentParagraphId")
                         .OnDelete(DeleteBehavior.Cascade);
                 });
 
-            modelBuilder.Entity("BibleNote.Analytics.Domain.Entities.VerseRelation", b =>
+            modelBuilder.Entity("BibleNote.Domain.Entities.VerseRelation", b =>
                 {
-                    b.HasOne("BibleNote.Analytics.Domain.Entities.DocumentParagraph", "DocumentParagraph")
+                    b.HasOne("BibleNote.Domain.Entities.DocumentParagraph", "DocumentParagraph")
                         .WithMany()
                         .HasForeignKey("DocumentParagraphId")
                         .OnDelete(DeleteBehavior.Cascade);
 
-                    b.HasOne("BibleNote.Analytics.Domain.Entities.DocumentParagraph", "RelativeDocumentParagraph")
+                    b.HasOne("BibleNote.Domain.Entities.DocumentParagraph", "RelativeDocumentParagraph")
                         .WithMany()
                         .HasForeignKey("RelativeDocumentParagraphId");
                 });

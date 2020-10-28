@@ -24,6 +24,11 @@ namespace BibleNote.Application
                     webBuilder
                         .UseElectron(args)
                         .UseStartup<Startup>();
+                })
+                .ConfigureLogging((hostingContext, logging) =>
+                {
+                    logging.ClearProviders();
+                    logging.SetMinimumLevel(LogLevel.Information);
                 });
     }
 }

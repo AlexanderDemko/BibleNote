@@ -9,6 +9,8 @@
 
         bool UseCommaDelimiter { get; set; }
 
+        int Language { get; set; }
+
         void SaveChanges();
     }
 }

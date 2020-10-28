@@ -8,6 +8,8 @@ namespace BibleNote.Tests.Mocks
 
         public bool UseCommaDelimiter { get; set; }
 
+        public int Language { get; set; }
+
         public MockConfigurationManager()
         {           
             ModuleShortName = "rst";

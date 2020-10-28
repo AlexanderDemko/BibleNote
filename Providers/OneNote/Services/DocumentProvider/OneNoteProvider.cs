@@ -42,7 +42,7 @@ namespace BibleNote.Providers.OneNote.Services.DocumentProvider
         public async Task<DocumentParseResult> ParseDocumentAsync(IDocumentId documentId)
         {
             DocumentParseResult result;
-            using (var docHandler = await oneNoteDocumentConnector.ConnectAsync(documentId))
+            await using (var docHandler = await oneNoteDocumentConnector.ConnectAsync(documentId))
             {
                 using (var docParser = documentParserFactory.Create(this, documentId))
                 {

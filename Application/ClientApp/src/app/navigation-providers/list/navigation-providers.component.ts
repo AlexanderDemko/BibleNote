@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 
 import * as navProviders from '@app/navigation-providers/state';
-import { Store } from 'reduce-store';
+import { NgStoreService } from '../../shared/services/store.service';
 
 @Component({
   selector: 'nav-providers',
@@ -11,14 +11,15 @@ export class NavigationProvidersListComponent implements OnInit, OnDestroy {
   public providersState: navProviders.State;
 
   constructor(
-    private loadNavigationProvidersReducer: navProviders.LoadReducer
+    private loadNavigationProvidersReducer: navProviders.LoadReducer,
+    private store: NgStoreService
   ) {
-    Store.state.subscribe(navProviders.State, this, s => this.providersState = s)
+    this.store.state.subscribe(navProviders.State, this, s => this.providersState = s)
   }
 
   ngOnDestroy(): void { }
 
   async ngOnInit(): Promise<void> {
-    await Store.reduce.byDelegate(navProviders.State, s => this.loadNavigationProvidersReducer.reduceAsync(s));
+    await this.store.reduce.byDelegate(navProviders.State, s => this.loadNavigationProvidersReducer.reduceAsync(s));
   }
 }

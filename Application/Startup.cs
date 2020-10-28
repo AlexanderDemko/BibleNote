@@ -91,7 +91,8 @@ namespace BibleNote.Application
 
                 if (env.IsDevelopment())
                 {
-                    spa.UseAngularCliServer(npmScript: "start");
+                    //spa.UseAngularCliServer(npmScript: "start");
+                    spa.UseProxyToSpaDevelopmentServer("http://localhost:4200");
                 }
             });
 
@@ -109,30 +110,30 @@ namespace BibleNote.Application
             {
                 mainWindow.Show();
             };
-            mainWindow.SetTitle("App Name here");
+            mainWindow.SetTitle("BibleNote");
 
             MenuItem[] menu = new MenuItem[]
             {
-         new MenuItem
-         {
-             Label = "File",
-             Submenu=new MenuItem[]
-             {
-                 new MenuItem
-                 {
-                     Label ="Exit",
-                     Click =()=>{Electron.App.Exit();}
-                 }
-             }
-         },
-         new MenuItem
-         {
-             Label = "Info",
-             Click = async ()=>
-             {
-                 await Electron.Dialog.ShowMessageBoxAsync("Welcome to App");
-             }
-         }
+                new MenuItem
+                {
+                    Label = "File",
+                    Submenu=new MenuItem[]
+                    {
+                        new MenuItem
+                        {
+                            Label ="Exit",
+                            Click =()=>{Electron.App.Exit();}
+                        }
+                    }
+                },
+                new MenuItem
+                {
+                    Label = "Info",
+                    Click = async ()=>
+                    {
+                        await Electron.Dialog.ShowMessageBoxAsync("Welcome to App");
+                    }
+                }
             };
 
             //Electron.Menu.SetApplicationMenu(menu);
