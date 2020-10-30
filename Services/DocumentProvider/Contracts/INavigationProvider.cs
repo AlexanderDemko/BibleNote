@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using BibleNote.Domain.Entities;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -6,6 +7,8 @@ namespace BibleNote.Services.DocumentProvider.Contracts
 {
     public interface INavigationProvider<T> where T: IDocumentId
     {
+        int Id { get; set; }
+
         string Name { get; set; }
 
         string Description { get; set; }
@@ -16,6 +19,10 @@ namespace BibleNote.Services.DocumentProvider.Contracts
 
         IDocumentProvider GetProvider(T document);
 
-        Task<IEnumerable<T>> LoadDocuments(bool newOnly, bool updateDb = true, CancellationToken cancellationToken = default);        
+        Task<IEnumerable<T>> LoadDocuments(
+            AnalysisSession analysisSession,
+            bool newOnly, 
+            bool updateDb = true, 
+            CancellationToken cancellationToken = default);        
     }
 }

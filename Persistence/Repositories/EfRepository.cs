@@ -211,11 +211,6 @@ namespace BibleNote.Persistence.Repositories
             entry.State = EntityState.Modified;
         }
 
-        public void Update(Expression<Func<T, T>> updateFactory)
-        {
-            Query.Update(updateFactory);
-        }
-
         public Task UpdateAsync(Expression<Func<T, T>> updateFactory, CancellationToken cancellationToken = default)
         {
             return Query.UpdateAsync(updateFactory, cancellationToken);
@@ -224,12 +219,6 @@ namespace BibleNote.Persistence.Repositories
         public void Delete(T entity)
         {
             dbSet.Remove(entity);
-        }
-
-        public void Delete(Expression<Func<T, bool>> predicate = default)
-        {
-            var query = predicate == null ? this : dbSet.Where(predicate);
-            query.Delete();
         }
 
         public Task DeleteAsync(Expression<Func<T, bool>> predicate = default, CancellationToken cancellationToken = default)

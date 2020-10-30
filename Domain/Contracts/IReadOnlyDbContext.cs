@@ -10,5 +10,6 @@ namespace BibleNote.Domain.Contracts
         IReadOnlyRepository<VerseEntry> VerseEntryRepository { get; }
         IReadOnlyRepository<VerseRelation> VerseRelationRepository { get; }
         IReadOnlyRepository<NavigationProviderInfo> NavigationProvidersInfo { get; }
+        IReadOnlyRepository<AnalysisSession> AnalysisSessions { get; }
     }
 }

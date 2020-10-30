@@ -9,7 +9,6 @@ namespace BibleNote.Services.ModulesManager
     class ApplicationManager : IApplicationManager
     {
         private readonly IModulesManager _modulesManager;
-        private readonly IConfigurationManager _configurationManager;
         private Dictionary<string, XMLBIBLE> _biblesContent;
         private XMLBIBLE _currentBibleContent;
 
@@ -34,10 +33,9 @@ namespace BibleNote.Services.ModulesManager
             }
         }
 
-        public ApplicationManager(IModulesManager modulesManager, IConfigurationManager configurationManager)
+        public ApplicationManager(IModulesManager modulesManager)
         {
             _modulesManager = modulesManager;
-            _configurationManager = configurationManager;
             ReloadInfo();
         }
 

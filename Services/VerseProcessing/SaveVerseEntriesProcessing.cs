@@ -13,6 +13,9 @@ namespace BibleNote.Services.VerseProcessing
     {
         public int Order => 0;
 
+        private readonly ITrackingDbContext analyticsContext;
+        private int documentId;
+
         public SaveVerseEntriesProcessing(ITrackingDbContext analyticsContext)
         {
             this.analyticsContext = analyticsContext;            
@@ -27,10 +30,6 @@ namespace BibleNote.Services.VerseProcessing
 
             await this.analyticsContext.SaveChangesAsync(cancellationToken);
         }
-
-        private readonly ITrackingDbContext analyticsContext;        
-        private int documentId;
-        private int insertedRows = 0;
 
         private async Task RemovePreviousResultAsync()
         {
@@ -72,8 +71,6 @@ namespace BibleNote.Services.VerseProcessing
                                 VerseId = verse.GetVerseId(),
                                 Weight = Math.Round(1M / verseEntry.VersePointer.SubVerses.VersesCount, 2)
                             });
-
-                        this.insertedRows++;                        
                     }
                 }                
             }

@@ -12,7 +12,7 @@ using BibleNote.Providers.OneNote.Utils;
 
 namespace BibleNote.Providers.OneNote.Services.NavigationProvider
 {
-    class NotebookIterator: INotebookIterator
+    public class NotebookIterator: INotebookIterator
     {
         #region Helper classes
 
@@ -46,7 +46,7 @@ namespace BibleNote.Providers.OneNote.Services.NavigationProvider
             this.xnm = OneNoteUtils.GetOneNoteXNM();
         }
 
-        public async Task<ContainerInfo> GetHierarchyPages(string hierarchyId, OneNoteHierarchyType hierarchyType)
+        public async Task<ContainerInfo> GetHierarchyPagesAsync(string hierarchyId, OneNoteHierarchyType hierarchyType)
         {
             var hierarchyContent = await this.oneNoteApp.GetHierarchyContentAsync(hierarchyId, HierarchyScope.hsPages);
             var hierarchyDoc = XDocument.Parse(hierarchyContent);            

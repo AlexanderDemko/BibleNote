@@ -17,8 +17,8 @@ namespace BibleNote.Tests
         public void Init()
         {
             base.Init(TempFolderName, services => services
-                .AddScoped<IHtmlDocumentConnector, HtmlDocumentConnector>()
-                .AddScoped<IDocumentProvider, HtmlProvider>());            
+                .AddTransient<IHtmlDocumentConnector, HtmlDocumentConnector>()
+                .AddTransient<IDocumentProvider, HtmlProvider>());            
         }
 
         [TestCleanup]

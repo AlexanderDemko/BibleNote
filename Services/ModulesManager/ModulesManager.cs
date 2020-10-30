@@ -184,8 +184,6 @@ namespace BibleNote.Services.ModulesManager
 
         public void CheckModule(ModuleInfo module, Scheme.Module.ModuleType? moduleType = null)
         {
-            string moduleDirectory = GetModuleDirectory(module.ShortName);
-
             if (moduleType.HasValue)
                 if (module.Type != moduleType.Value)
                     throw new InvalidModuleException(string.Format("Invalid module type: expected '{0}', actual '{1}'", moduleType, module.Type));

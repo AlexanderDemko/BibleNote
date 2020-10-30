@@ -9,9 +9,8 @@ namespace BibleNote.Providers.Html
         protected override void InitServices(IServiceCollection services)
         {
             services
-                .AddScoped<IHtmlDocumentConnector, HtmlDocumentConnector>()     // todo: А почему Scoped?
-                .AddScoped<IHtmlDocumentHandler, HtmlDocumentHandler>()
-                .AddScoped<HtmlProvider>();
+                .AddTransient<IHtmlDocumentConnector, HtmlDocumentConnector>()
+                .AddTransient<HtmlProvider>();
                 ;
         }
     }

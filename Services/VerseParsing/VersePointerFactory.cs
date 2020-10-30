@@ -1,5 +1,4 @@
-﻿using BibleNote.Services.ModulesManager.Contracts;
-using BibleNote.Services.VerseParsing.Contracts;
+﻿using BibleNote.Services.VerseParsing.Contracts;
 using BibleNote.Services.VerseParsing.Models;
 
 namespace BibleNote.Services.VerseParsing
@@ -7,12 +6,10 @@ namespace BibleNote.Services.VerseParsing
     class VersePointerFactory : IVersePointerFactory
     {
         private readonly IStringParser _stringParser;
-        private readonly IApplicationManager _applicationManager;
 
-        public VersePointerFactory(IStringParser stringParser, IApplicationManager applicationManager)
+        public VersePointerFactory(IStringParser stringParser)
         {
             _stringParser = stringParser;
-            _applicationManager = applicationManager;
         }
 
         public VersePointer CreateVersePointer(string text)

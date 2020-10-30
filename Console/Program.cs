@@ -52,7 +52,7 @@ namespace BibleNote.Console
 
             var serviceProvider = new ServiceCollection()
                 .AddApplicatonServices<ServicesModule>()
-                .AddScoped<IConfigurationManager>((sp) => new MockConfigurationManager())
+                .AddSingleton<IConfigurationManager>((sp) => new MockConfigurationManager())
                 .AddLogging()
                 .BuildServiceProvider();           
 

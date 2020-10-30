@@ -2,6 +2,8 @@
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using BibleNote.Domain.Contracts;
+using BibleNote.Domain.Entities;
 using BibleNote.Services.DocumentProvider.Contracts;
 using BibleNote.Services.DocumentProvider.Models;
 using BibleNote.Services.VerseProcessing.Contracts;
@@ -12,21 +14,33 @@ namespace BibleNote.Services.DocumentProvider
     class Analyzer : IAnalyzer
     {
         readonly IOrderedEnumerable<IDocumentParseResultProcessing> documentParseResultProcessing;
+        private readonly ITrackingDbContext dbContext;
 
-        public Analyzer(IServiceProvider ServiceProvider)
+        public Analyzer(IServiceProvider serviceProvider, ITrackingDbContext dbContext)
         {
-            this.documentParseResultProcessing = ServiceProvider
+            this.dbContext = dbContext;
+            this.documentParseResultProcessing = serviceProvider
                 .GetServices<IDocumentParseResultProcessing>()
                 .OrderBy(rp => rp.Order);
         }
 
-        public async Task AnalyzeAsync<T>(
+        public async Task<AnalysisSession> AnalyzeAsync<T>(
             INavigationProvider<T> navigationProvider,
             AnalyzerOptions options,
             CancellationToken cancellationToken = default)
             where T : IDocumentId
         {
+            var analysisSession = new AnalysisSession()
+            {
+                StartTime = DateTime.Now,
+                NavigationProviderId = navigationProvider.Id 
+            };
+
+            this.dbContext.AnalysisSessions.Add(analysisSession);
+            await this.dbContext.SaveChangesAsync();
+
             var documents = await navigationProvider.LoadDocuments(
+                analysisSession,
                 newOnly: options.Depth == AnalyzeDepth.NewOnly, 
                 updateDb: true, 
                 cancellationToken);
@@ -45,6 +59,8 @@ namespace BibleNote.Services.DocumentProvider
                     await processor.ProcessAsync(document.DocumentId, parseResult);
                 }
             }
+
+            return analysisSession;
         }
     }
 }

@@ -22,6 +22,8 @@ namespace BibleNote.Persistence
 
         public DbSet<NavigationProviderInfo> NavigationProvidersInfo { get; set; }
 
+        public DbSet<AnalysisSession> AnalysisSessions { get; set; }
+
         #region IReadOnlyDbContext
 
         IReadOnlyRepository<Document> IReadOnlyDbContext.DocumentRepository => new EfRepository<Document>(this, asNoTracking: true);
@@ -30,6 +32,7 @@ namespace BibleNote.Persistence
         IReadOnlyRepository<VerseEntry> IReadOnlyDbContext.VerseEntryRepository => new EfRepository<VerseEntry>(this, asNoTracking: true);
         IReadOnlyRepository<VerseRelation> IReadOnlyDbContext.VerseRelationRepository => new EfRepository<VerseRelation>(this, asNoTracking: true);
         IReadOnlyRepository<NavigationProviderInfo> IReadOnlyDbContext.NavigationProvidersInfo => new EfRepository<NavigationProviderInfo>(this, asNoTracking: true);
+        IReadOnlyRepository<AnalysisSession> IReadOnlyDbContext.AnalysisSessions => new EfRepository<AnalysisSession>(this, asNoTracking: true);
 
         #endregion
 
@@ -41,6 +44,7 @@ namespace BibleNote.Persistence
         ITrackingRepository<VerseEntry> ITrackingDbContext.VerseEntryRepository => new EfRepository<VerseEntry>(this, asNoTracking: false);
         ITrackingRepository<VerseRelation> ITrackingDbContext.VerseRelationRepository => new EfRepository<VerseRelation>(this, asNoTracking: false);
         ITrackingRepository<NavigationProviderInfo> ITrackingDbContext.NavigationProvidersInfo => new EfRepository<NavigationProviderInfo>(this, asNoTracking: false);
+        ITrackingRepository<AnalysisSession> ITrackingDbContext.AnalysisSessions => new EfRepository<AnalysisSession>(this, asNoTracking: false);
 
         #endregion
 

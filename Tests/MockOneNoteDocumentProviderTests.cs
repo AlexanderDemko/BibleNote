@@ -18,8 +18,8 @@ namespace BibleNote.Tests
         public void Init()
         {
             base.Init(TempFolderName, services => services
-                .AddScoped<IOneNoteDocumentConnector, MockOneNoteDocumentConnector>()
-                .AddScoped<IDocumentProvider, OneNoteProvider>());            
+                .AddTransient<IOneNoteDocumentConnector, MockOneNoteDocumentConnector>()
+                .AddTransient<IDocumentProvider, OneNoteProvider>());            
         }
 
         [TestCleanup]

@@ -12,9 +12,9 @@ namespace BibleNote.Persistence.Configurations
 
             builder.Property(f => f.Name).IsRequired(true);
             builder.Property(f => f.Path).IsRequired(true);
-            builder.Property(f => f.NavigationProviderName).IsRequired(true);
+            builder.Property(f => f.NavigationProviderId).IsRequired(true);
 
-            builder.HasIndex(f => new { f.NavigationProviderName, f.Path }).IsUnique(true);
+            builder.HasIndex(f => new { f.NavigationProviderId, f.Path }).IsUnique(true);
         }
     }
 }

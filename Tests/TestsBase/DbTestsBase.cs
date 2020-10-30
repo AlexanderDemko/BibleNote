@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Threading.Tasks;
 using BibleNote.Domain.Contracts;
+using BibleNote.Domain.Entities;
 using BibleNote.Persistence;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -37,6 +39,28 @@ namespace BibleNote.Tests.TestsBase
         public virtual void Cleanup()
         {
             this.connection?.Close();
+        }
+
+        protected async Task<Document> GetOrCreateDocument()
+        {
+            var navProvider = await this.AnalyticsContext.NavigationProvidersInfo.FirstOrDefaultAsync();
+            if (navProvider == null)
+            {
+                navProvider = new NavigationProviderInfo() { Name = "Test", FullTypeName = "test", ParametersRaw = "test" };
+                this.AnalyticsContext.NavigationProvidersInfo.Add(navProvider);
+                await this.AnalyticsContext.SaveChangesAsync();
+            }
+
+            var document = await this.AnalyticsContext.DocumentRepository.FirstOrDefaultAsync();
+            if (document == null)
+            {
+                var folder = new DocumentFolder() { Name = "Temp", Path = "Test", NavigationProviderId = navProvider.Id };
+                document = new Document() { Name = "Temp", Path = "Test", Folder = folder };
+                this.AnalyticsContext.DocumentRepository.Add(document);
+                await this.AnalyticsContext.SaveChangesAsync();
+            }
+
+            return document;
         }
     }
 }

@@ -24,22 +24,15 @@ namespace BibleNote.Tests
         public async Task Init()
         {
             base.Init(services => services
-                .AddScoped<IHtmlDocumentConnector, HtmlDocumentConnector>()
-                .AddScoped<IDocumentProvider, HtmlProvider>());
+                .AddTransient<IHtmlDocumentConnector, HtmlDocumentConnector>()
+                .AddTransient<IDocumentProvider, HtmlProvider>());
 
             this.documentProvider = ServiceProvider.GetService<IDocumentProvider>();
             this.documentParseResultProcessing = ServiceProvider.GetServices<IDocumentParseResultProcessing>()
                 .OrderBy(rp => rp.Order)
                 .First();
 
-            this.document = this.AnalyticsContext.DocumentRepository.FirstOrDefault();
-            if (this.document == null)
-            {
-                var folder = new DocumentFolder() { Name = "Temp", Path = "Test", NavigationProviderName = "Html" };
-                this.document = new Document() { Name = "Temp", Path = "Test", Folder = folder };
-                this.AnalyticsContext.DocumentRepository.Add(document);
-                await this.AnalyticsContext.SaveChangesAsync();
-            }
+            this.document = await GetOrCreateDocument();
         }
 
         [TestCleanup]

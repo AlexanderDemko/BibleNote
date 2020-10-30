@@ -40,17 +40,6 @@ namespace BibleNote.Tests
                 Depth = AnalyzeDepth.All
             });
         }
-
-        [TestMethod]
-        public async Task Test2()
-        {
-            var navigationProvider = ActivatorUtilities.CreateInstance<OneNoteNavigationProvider>(ServiceProvider);
-            navigationProvider.Parameters.HierarchyItems = new List<OneNoteHierarchyInfo>() { new OneNoteHierarchyInfo() { Id = "", Type = OneNoteHierarchyType.Section, Name = "Test page" } };
-            await this.analyzer.AnalyzeAsync(navigationProvider, new AnalyzerOptions()
-            {
-                Depth = AnalyzeDepth.All
-            });
-        }
     }
 }
 

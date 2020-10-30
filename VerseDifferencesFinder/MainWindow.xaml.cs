@@ -129,9 +129,9 @@ namespace BibleNote.VerseDifferencesFinder
                 .AddApplicatonServices<ServicesModule>()
                 .AddApplicatonServices<HtmlModule>()
                 .AddApplicatonServices<WordModule>()
-                .AddScoped<IConfigurationManager>(sp => new ConfigurationManager(moduleShortName))
-                .AddScoped<HtmlProvider>()
-                .AddScoped<WordProvider>()
+                .AddSingleton<IConfigurationManager>(sp => new ConfigurationManager(moduleShortName))
+                .AddTransient<HtmlProvider>()
+                .AddTransient<WordProvider>()
                 .AddLogging();
 
             ServiceProvider = services

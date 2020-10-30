@@ -9,8 +9,7 @@ namespace BibleNote.Providers.Word
         protected override void InitServices(IServiceCollection services)
         {
             services
-                .AddScoped<IWordDocumentConnector, WordDocumentConnector>()
-                .AddScoped<IWordDocumentHandler, WordDocumentHandler>()                
+                .AddTransient<IWordDocumentConnector, WordDocumentConnector>()
                 ;
         }
     }

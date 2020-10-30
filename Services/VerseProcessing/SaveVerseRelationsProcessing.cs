@@ -14,12 +14,12 @@ namespace BibleNote.Services.VerseProcessing
     {
         public int Order => 1;
 
+        readonly ITrackingDbContext analyticsContext;
+
         public SaveVerseRelationsProcessing(ITrackingDbContext analyticsContext)
         {
             this.analyticsContext = analyticsContext;
         }
-
-        readonly ITrackingDbContext analyticsContext;
 
         public async Task ProcessAsync(int documentId, DocumentParseResult documentResult, CancellationToken cancellationToken = default)
         {

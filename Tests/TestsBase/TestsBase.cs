@@ -26,7 +26,7 @@ namespace BibleNote.Tests.TestsBase
                .AddApplicatonServices<HtmlModule>()
                .AddApplicatonServices<OneNoteModule>()
                //.AddLogging(configure => configure.AddConsole())
-               .AddScoped(sp => MockConfigurationManager);
+               .AddSingleton(sp => MockConfigurationManager);
 
             registerServicesAction?.Invoke(services);
 

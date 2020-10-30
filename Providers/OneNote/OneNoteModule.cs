@@ -12,9 +12,8 @@ namespace BibleNote.Providers.OneNote
         protected override void InitServices(IServiceCollection services)
         {
             services
-                .AddScoped<IOneNoteDocumentConnector, OneNoteDocumentConnector>()
-                .AddScoped<IXDocumentHandler, OneNoteDocumentHandler>()
-                .AddScoped<OneNoteProvider>()
+                .AddTransient<IOneNoteDocumentConnector, OneNoteDocumentConnector>()
+                .AddTransient<OneNoteProvider>()
                 .AddScoped<IOneNoteAppWrapper, OneNoteAppWrapper>()
                 .AddTransient<INotebookIterator, NotebookIterator>()
                 ;
