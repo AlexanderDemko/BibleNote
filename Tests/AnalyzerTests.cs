@@ -5,7 +5,6 @@ using BibleNote.Services.DocumentProvider.Contracts;
 using BibleNote.Services.DocumentProvider.Models;
 using BibleNote.Tests.TestsBase;
 using FluentAssertions;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
@@ -65,9 +64,9 @@ namespace BibleNote.Tests
 
                 var initialVersesCount = await DbContext.VerseEntryRepository.CountAsync();
 
-                File.WriteAllText(Path.Combine(testFolder, "1.txt"), "Test file 1. Ин 1:1");
-                File.WriteAllText(Path.Combine(testFolder, "2.txt"), "Test file 2. Ин 1:2");
-                File.WriteAllText(Path.Combine(testSubFolder, "3.txt"), "Test file 3. Ин 2:2");
+                await File.WriteAllTextAsync(Path.Combine(testFolder, "1.txt"), "Test file 1. Ин 1:1");
+                await File.WriteAllTextAsync(Path.Combine(testFolder, "2.txt"), "Test file 2. Ин 1:2");
+                await File.WriteAllTextAsync(Path.Combine(testSubFolder, "3.txt"), "Test file 3. Ин 2:2");
 
                 var session = await this.analyzer.AnalyzeAsync(navigationProvider, new AnalyzerOptions()
                 {
@@ -80,8 +79,8 @@ namespace BibleNote.Tests
 
                 Assert.AreEqual(initialVersesCount + 3, await DbContext.VerseEntryRepository.CountAsync());
 
-                File.WriteAllText(Path.Combine(testFolder, "1.txt"), "Test file 1 new. Ин 3:3");
-                File.WriteAllText(Path.Combine(testFolder, "4.txt"), "Test file 4 new. Ин 4:4");
+                await File.WriteAllTextAsync(Path.Combine(testFolder, "1.txt"), "Test file 1 new. Ин 3:3");
+                await File.WriteAllTextAsync(Path.Combine(testFolder, "4.txt"), "Test file 4 new. Ин 4:4");
                 File.Delete(Path.Combine(testSubFolder, "3.txt"));
 
                 session = await this.analyzer.AnalyzeAsync(navigationProvider, new AnalyzerOptions()
