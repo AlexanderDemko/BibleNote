@@ -22,11 +22,11 @@ namespace BibleNote.Providers.FileSystem.Navigation
     /// </summary>
     public class FileNavigationProvider : NavigationProviderBase<FileDocumentId, FileNavigationProviderParameters>
     {
+        public override NavigationProviderType Type => NavigationProviderType.File;
         public override int Id { get; set; }
         public override string Name { get; set; }
         public override string Description { get; set; }
         public override bool IsReadonly { get; set; }
-        public override FileNavigationProviderParameters Parameters { get; set; }
 
         private readonly IServiceProvider serviceProvider;
 
@@ -66,7 +66,7 @@ namespace BibleNote.Providers.FileSystem.Navigation
 
             foreach (var folder in Parameters.FolderPaths)
             {
-                var folderDocuments = GetFolderDocuments(analysisSession, folder, null, newOnly);
+                var folderDocuments = GetFolderDocuments(analysisSession, new[] { folder }, null, newOnly);
                 documents.AddRange(folderDocuments);
             }
 
@@ -78,66 +78,69 @@ namespace BibleNote.Providers.FileSystem.Navigation
             return documents.Select(d => new FileDocumentId(d.Id, d.Path, IsReadonly));
         }        
 
-        private IEnumerable<Document> GetFolderDocuments(AnalysisSession analysisSession, string folderPath, DocumentFolder parentFolder, bool newOnly)
+        private IEnumerable<Document> GetFolderDocuments(AnalysisSession analysisSession, IEnumerable<string> folderPaths, DocumentFolder parentFolder, bool newOnly)
         {
-            var result = new List<Document>();
-            var folders = GetSubFolders(analysisSession, folderPath, parentFolder);
+            if (newOnly)
+                throw new NotSupportedException($"{nameof(newOnly)} is for WebNavigationProvider only");
 
-            foreach (var folder in folders)
+            var result = new List<Document>();
+            var documentFolders = GetDocumentFolders(analysisSession, folderPaths, parentFolder);
+
+            foreach (var dFolder in documentFolders)
             {
                 var files = Directory
-                    .GetFiles(folder.Path, "*", SearchOption.TopDirectoryOnly)
+                    .GetFiles(dFolder.Path, "*", SearchOption.TopDirectoryOnly)
                     .Where(f => FileTypeHelper.SupportedFileExtensions.Contains(Path.GetExtension(f)));
 
                 foreach (var filePath in files)
                 {
                     var lastModifiedTime = File.GetLastWriteTime(filePath);
-                    var dbFile = DbContext.DocumentRepository.SingleOrDefault(d => d.Path == filePath);
-                    if (dbFile == null)
+                    var document = DbContext.DocumentRepository.SingleOrDefault(d => d.Path == filePath);
+                    if (document == null)
                     {
-                        dbFile = new Document()
+                        document = new Document()
                         {
-                            Folder = folder,
+                            Folder = dFolder,
                             Name = Path.GetFileName(filePath),
                             Path = filePath,
                             LastModifiedTime = lastModifiedTime
                         };
 
-                        DbContext.DocumentRepository.Add(dbFile);
+                        DbContext.DocumentRepository.Add(document);
                         analysisSession.CreatedDocumentsCount++;
                     }
                     else
                     {
-                        if (dbFile.LastModifiedTime != lastModifiedTime)
+                        if (document.LastModifiedTime != lastModifiedTime)
                         {
-                            dbFile.LastModifiedTime = lastModifiedTime;
+                            document.LastModifiedTime = lastModifiedTime;
                             analysisSession.UpdatedDocumentsCount++;
                         }
                     }
 
-                    dbFile.LatestAnalysisSessionId = analysisSession.Id;
+                    document.LatestAnalysisSessionId = analysisSession.Id;
 
-                    if (!newOnly || dbFile.Id <= 0) // По непонятным причинам EF Core для нового файла выставляет Id = -2147482647
-                        result.Add(dbFile);
+                    if (!newOnly || document.Id <= 0) // По непонятным причинам EF Core для нового файла выставляет Id = -2147482647
+                        result.Add(document);
                 }
 
-                result.AddRange(GetFolderDocuments(analysisSession, folder.Path, folder, newOnly));
+                var subFolderPaths = Directory.GetDirectories(dFolder.Path, "*", SearchOption.TopDirectoryOnly);
+                result.AddRange(GetFolderDocuments(analysisSession, subFolderPaths, dFolder, newOnly));
             }
 
             return result;
         }
 
-        private List<DocumentFolder> GetSubFolders(AnalysisSession analysisSession, string folderPath, DocumentFolder parentFolder)
+        private List<DocumentFolder> GetDocumentFolders(AnalysisSession analysisSession, IEnumerable<string> folderPaths, DocumentFolder parentFolder)
         {
-            var result = new List<DocumentFolder>();
-            var folders = Directory.GetDirectories(folderPath, "*", SearchOption.TopDirectoryOnly);
+            var result = new List<DocumentFolder>();  
 
-            foreach (var folder in folders)
+            foreach (var folder in folderPaths)
             {
-                var dbFolder = DbContext.DocumentFolderRepository.SingleOrDefault(f => f.Path == folder);
-                if (dbFolder == null)
+                var documentFolder = DbContext.DocumentFolderRepository.SingleOrDefault(f => f.Path == folder);
+                if (documentFolder == null)
                 {
-                    dbFolder = new DocumentFolder()
+                    documentFolder = new DocumentFolder()
                     {
                         Name = Path.GetFileName(folder),
                         ParentFolder = parentFolder,
@@ -145,12 +148,12 @@ namespace BibleNote.Providers.FileSystem.Navigation
                         NavigationProviderId = Id
                     };
 
-                    DbContext.DocumentFolderRepository.Add(dbFolder);                    
+                    DbContext.DocumentFolderRepository.Add(documentFolder);                    
                 }
 
-                dbFolder.LatestAnalysisSessionId = analysisSession.Id;
+                documentFolder.LatestAnalysisSessionId = analysisSession.Id;
 
-                result.Add(dbFolder);
+                result.Add(documentFolder);
             }
 
             return result;

@@ -1,4 +1,6 @@
-﻿namespace BibleNote.Domain.Entities
+﻿using BibleNote.Domain.Enums;
+
+namespace BibleNote.Domain.Entities
 {
     public class NavigationProviderInfo
     {
@@ -10,7 +12,7 @@
 
         public bool IsReadonly { get; set; }
 
-        public string FullTypeName { get; set; }
+        public NavigationProviderType Type { get; set; }
 
         public string ParametersRaw { get; set; }
     }

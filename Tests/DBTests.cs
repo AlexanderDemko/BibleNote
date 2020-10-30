@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
 using BibleNote.Domain.Entities;
+using BibleNote.Domain.Enums;
 using BibleNote.Tests.TestsBase;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -28,22 +29,22 @@ namespace BibleNote.Tests
             var providersCount = 0;
             var testProviderName = "Test1";
 
-            providersCount = await this.AnalyticsContext.NavigationProvidersInfo.CountAsync();
+            providersCount = await this.DbContext.NavigationProvidersInfo.CountAsync();
 
-            var newProvider = new NavigationProviderInfo() { Name = testProviderName, FullTypeName = "test", ParametersRaw = "test" };
-            this.AnalyticsContext.NavigationProvidersInfo.Add(newProvider);
-            await this.AnalyticsContext.SaveChangesAsync();
+            var newProvider = new NavigationProviderInfo() { Name = testProviderName, Type = NavigationProviderType.File, ParametersRaw = "test" };
+            this.DbContext.NavigationProvidersInfo.Add(newProvider);
+            await this.DbContext.SaveChangesAsync();
 
             this.ConcreteContext.Entry(newProvider).State = EntityState.Detached;
 
-            Assert.AreEqual(providersCount + 1, await this.AnalyticsContext.NavigationProvidersInfo.CountAsync());
-            var provider = await this.AnalyticsContext.NavigationProvidersInfo.SingleOrDefaultAsync(f => f.Name == testProviderName);
+            Assert.AreEqual(providersCount + 1, await this.DbContext.NavigationProvidersInfo.CountAsync());
+            var provider = await this.DbContext.NavigationProvidersInfo.SingleOrDefaultAsync(f => f.Name == testProviderName);
             Assert.IsNotNull(provider);
-            this.AnalyticsContext.NavigationProvidersInfo.Delete(provider);
-            await this.AnalyticsContext.SaveChangesAsync();
+            this.DbContext.NavigationProvidersInfo.Delete(provider);
+            await this.DbContext.SaveChangesAsync();
 
-            Assert.AreEqual(providersCount, await this.AnalyticsContext.NavigationProvidersInfo.CountAsync());
-            Assert.IsNull(await this.AnalyticsContext.NavigationProvidersInfo.SingleOrDefaultAsync(f => f.Name == testProviderName));
+            Assert.AreEqual(providersCount, await this.DbContext.NavigationProvidersInfo.CountAsync());
+            Assert.IsNull(await this.DbContext.NavigationProvidersInfo.SingleOrDefaultAsync(f => f.Name == testProviderName));
         }
     }
 }

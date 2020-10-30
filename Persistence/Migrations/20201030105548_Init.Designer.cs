@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BibleNote.Persistence.Migrations
 {
     [DbContext(typeof(AnalyticsDbContext))]
-    [Migration("20201030085300_Init")]
+    [Migration("20201030105548_Init")]
     partial class Init
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -150,10 +150,6 @@ namespace BibleNote.Persistence.Migrations
                     b.Property<string>("Description")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("FullTypeName")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
                     b.Property<bool>("IsReadonly")
                         .HasColumnType("INTEGER");
 
@@ -164,6 +160,9 @@ namespace BibleNote.Persistence.Migrations
                     b.Property<string>("ParametersRaw")
                         .IsRequired()
                         .HasColumnType("TEXT");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 

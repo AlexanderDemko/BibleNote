@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using BibleNote.Domain.Contracts;
 using BibleNote.Domain.Entities;
+using BibleNote.Domain.Enums;
 using BibleNote.Providers.OneNote.Contracts;
 using BibleNote.Providers.OneNote.Services.DocumentProvider;
 using BibleNote.Services.DocumentProvider.Contracts;
@@ -18,12 +19,11 @@ namespace BibleNote.Providers.OneNote.Services.NavigationProvider
         private readonly OneNoteProvider oneNoteProvider;
         private readonly INotebookIterator notebookIterator;
 
+        public override NavigationProviderType Type => NavigationProviderType.OneNote;
         public override int Id { get; set; }
         public override string Name { get; set; }
         public override string Description { get; set; }
         public override bool IsReadonly { get; set; }
-        public override OneNoteNavigationProviderParameters Parameters { get; set; }
-
 
         public OneNoteNavigationProvider(
             OneNoteProvider oneNoteProvider, 
@@ -52,7 +52,7 @@ namespace BibleNote.Providers.OneNote.Services.NavigationProvider
             foreach (var item in Parameters.HierarchyItems)
             {
                 var hierarchyInfo = await this.notebookIterator.GetHierarchyPagesAsync(item.Id, item.Type);
-                var hierarchyDocuments = GetHierarchyDocuments(analysisSession, hierarchyInfo, null, newOnly);
+                var hierarchyDocuments = GetHierarchyDocuments(analysisSession, new[] { hierarchyInfo }, null, newOnly);
                 documents.AddRange(hierarchyDocuments);
             }
 
@@ -64,73 +64,83 @@ namespace BibleNote.Providers.OneNote.Services.NavigationProvider
             return documents.Select(d => new OneNoteDocumentId(d.Id, d.Path));
         }
 
-        private IEnumerable<Document> GetHierarchyDocuments(AnalysisSession analysisSession, ContainerInfo containerInfo, DocumentFolder parentFolder, bool newOnly)
+        private IEnumerable<Document> GetHierarchyDocuments(
+            AnalysisSession analysisSession, 
+            IEnumerable<ContainerInfo> containerInfos, 
+            DocumentFolder parentFolder, 
+            bool newOnly)
         {
-            var result = new List<Document>();
-            var childContainers = GetChildContainers(analysisSession, containerInfo, parentFolder);
+            if (newOnly)
+                throw new NotSupportedException($"{nameof(newOnly)} is for WebNavigationProvider only");
 
-            foreach (var childContainerInfo in childContainers)
+            var result = new List<Document>();
+            var documentFolders = GetDocumentFolders(analysisSession, containerInfos, parentFolder);
+
+            foreach (var dFolderKVP in documentFolders)
             {
-                foreach (var page in childContainerInfo.Value.Pages)
+                foreach (var pageInfo in dFolderKVP.Value.Pages)
                 {
-                    var dbFile = DbContext.DocumentRepository.SingleOrDefault(d => d.Path == page.Id);
-                    if (dbFile == null)
+                    var document = DbContext.DocumentRepository.SingleOrDefault(d => d.Path == pageInfo.Id);
+                    if (document == null)
                     {
-                        dbFile = new Document()
+                        document = new Document()
                         {
-                            Folder = childContainerInfo.Key,
-                            Name = page.Name,
-                            Path = page.Id,
-                            LastModifiedTime = page.LastModifiedTime,
+                            Folder = dFolderKVP.Key,
+                            Name = pageInfo.Name,
+                            Path = pageInfo.Id,
+                            LastModifiedTime = pageInfo.LastModifiedTime,
                         };
 
-                        DbContext.DocumentRepository.Add(dbFile);
+                        DbContext.DocumentRepository.Add(document);
                         analysisSession.CreatedDocumentsCount++;
                     }
                     else
                     {
-                        if (dbFile.LastModifiedTime != page.LastModifiedTime)
+                        if (document.LastModifiedTime != pageInfo.LastModifiedTime)
                         {
-                            dbFile.LastModifiedTime = page.LastModifiedTime;
+                            document.LastModifiedTime = pageInfo.LastModifiedTime;
                             analysisSession.UpdatedDocumentsCount++;
                         }
                     }
 
-                    dbFile.LatestAnalysisSessionId = analysisSession.Id;
+                    document.LatestAnalysisSessionId = analysisSession.Id;
 
-                    if (!newOnly || dbFile.Id <= 0) // По непонятным причинам EF Core для нового файла выставляет Id = -2147482647
-                        result.Add(dbFile);
+                    if (!newOnly || document.Id <= 0) // По непонятным причинам EF Core для нового файла выставляет Id = -2147482647
+                        result.Add(document);
                 }
 
-                result.AddRange(GetHierarchyDocuments(analysisSession, childContainerInfo.Value, childContainerInfo.Key, newOnly));
+                result.AddRange(GetHierarchyDocuments(analysisSession, dFolderKVP.Value.ChildrenContainers, dFolderKVP.Key, newOnly));
             }
 
             return result;
         }
 
-        private Dictionary<DocumentFolder, ContainerInfo> GetChildContainers(AnalysisSession analysisSession, ContainerInfo containerInfo, DocumentFolder parentFolder)
+        private Dictionary<DocumentFolder, ContainerInfo> GetDocumentFolders(
+            AnalysisSession analysisSession, 
+            IEnumerable<ContainerInfo> containerInfos, 
+            DocumentFolder parentFolder)
         {
             var result = new Dictionary<DocumentFolder, ContainerInfo>();
 
-            foreach (var childContainer in containerInfo.ChildrenContainers)
+            foreach (var container in containerInfos)
             {
-                var dbFolder = DbContext.DocumentFolderRepository.SingleOrDefault(f => f.Path == childContainer.Id);
-                if (dbFolder == null)
+                var documentFolder = DbContext.DocumentFolderRepository.SingleOrDefault(f => f.Path == container.Id);
+                if (documentFolder == null)
                 {
-                    dbFolder = new DocumentFolder()
+                    documentFolder = new DocumentFolder()
                     {
-                        Name = childContainer.Name,
+                        Name = container.Name,
                         ParentFolder = parentFolder,
-                        Path = childContainer.Id,
+                        Path = container.Id,
                         NavigationProviderId = Id
                     };
 
-                    DbContext.DocumentFolderRepository.Add(dbFolder);
+                    DbContext.DocumentFolderRepository.Add(documentFolder);
                 }
 
-                dbFolder.LatestAnalysisSessionId = analysisSession.Id;
+                documentFolder.LatestAnalysisSessionId = analysisSession.Id;
 
-                result.Add(dbFolder, containerInfo);
+                result.Add(documentFolder, container);
             }
 
             return result;

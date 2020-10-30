@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using BibleNote.Domain.Contracts;
 using BibleNote.Domain.Entities;
+using BibleNote.Domain.Enums;
 using BibleNote.Persistence;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -11,7 +12,7 @@ namespace BibleNote.Tests.TestsBase
 {
     public class DbTestsBase : TestsBase
     {
-        protected ITrackingDbContext AnalyticsContext { get; set; }
+        protected ITrackingDbContext DbContext { get; set; }
         protected AnalyticsDbContext ConcreteContext { get; set; }
 
         private SqliteConnection connection;
@@ -30,12 +31,12 @@ namespace BibleNote.Tests.TestsBase
                 registerServicesAction?.Invoke(options);
             });
 
-            this.AnalyticsContext = ServiceProvider.GetService<ITrackingDbContext>();
-            this.ConcreteContext = (AnalyticsDbContext)this.AnalyticsContext;
+            this.DbContext = ServiceProvider.GetService<ITrackingDbContext>();
+            this.ConcreteContext = (AnalyticsDbContext)this.DbContext;
             this.ConcreteContext.Database.Migrate();            
             DbInitializer.Initialize(this.ConcreteContext);            
         }        
-        
+                
         public virtual void Cleanup()
         {
             this.connection?.Close();
@@ -43,21 +44,21 @@ namespace BibleNote.Tests.TestsBase
 
         protected async Task<Document> GetOrCreateDocument()
         {
-            var navProvider = await this.AnalyticsContext.NavigationProvidersInfo.FirstOrDefaultAsync();
+            var navProvider = await this.DbContext.NavigationProvidersInfo.FirstOrDefaultAsync();
             if (navProvider == null)
             {
-                navProvider = new NavigationProviderInfo() { Name = "Test", FullTypeName = "test", ParametersRaw = "test" };
-                this.AnalyticsContext.NavigationProvidersInfo.Add(navProvider);
-                await this.AnalyticsContext.SaveChangesAsync();
+                navProvider = new NavigationProviderInfo() { Name = "Test", Type = NavigationProviderType.File, ParametersRaw = "test" };
+                this.DbContext.NavigationProvidersInfo.Add(navProvider);
+                await this.DbContext.SaveChangesAsync();
             }
 
-            var document = await this.AnalyticsContext.DocumentRepository.FirstOrDefaultAsync();
+            var document = await this.DbContext.DocumentRepository.FirstOrDefaultAsync();
             if (document == null)
             {
                 var folder = new DocumentFolder() { Name = "Temp", Path = "Test", NavigationProviderId = navProvider.Id };
                 document = new Document() { Name = "Temp", Path = "Test", Folder = folder };
-                this.AnalyticsContext.DocumentRepository.Add(document);
-                await this.AnalyticsContext.SaveChangesAsync();
+                this.DbContext.DocumentRepository.Add(document);
+                await this.DbContext.SaveChangesAsync();
             }
 
             return document;

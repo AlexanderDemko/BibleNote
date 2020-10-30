@@ -1,5 +1,6 @@
 ﻿using System;
 using BibleNote.Common.DiContainer;
+using BibleNote.Providers.FileSystem.Navigation;
 using BibleNote.Providers.Html;
 using BibleNote.Providers.OneNote;
 using BibleNote.Services;
@@ -25,6 +26,7 @@ namespace BibleNote.Tests.TestsBase
                .AddApplicatonServices<ServicesModule>()       
                .AddApplicatonServices<HtmlModule>()
                .AddApplicatonServices<OneNoteModule>()
+               .AddApplicatonServices<FileNavigationModule>()
                //.AddLogging(configure => configure.AddConsole())
                .AddSingleton(sp => MockConfigurationManager);
 

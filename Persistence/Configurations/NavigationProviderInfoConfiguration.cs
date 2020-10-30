@@ -11,9 +11,9 @@ namespace BibleNote.Persistence.Configurations
             builder.ToTable(nameof(AnalyticsDbContext.NavigationProvidersInfo));
 
             builder.Property(d => d.Name).IsRequired(true);
+            builder.Property(d => d.Type).IsRequired(true);
             builder.Property(d => d.IsReadonly).IsRequired(true);
             builder.Property(d => d.ParametersRaw).IsRequired(true);
-            builder.Property(d => d.FullTypeName).IsRequired(true);
         }
     }
 }

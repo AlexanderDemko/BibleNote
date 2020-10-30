@@ -13,12 +13,12 @@ namespace BibleNote.Services.VerseProcessing
     {
         public int Order => 0;
 
-        private readonly ITrackingDbContext analyticsContext;
+        private readonly ITrackingDbContext dbContext;
         private int documentId;
 
         public SaveVerseEntriesProcessing(ITrackingDbContext analyticsContext)
         {
-            this.analyticsContext = analyticsContext;            
+            this.dbContext = analyticsContext;            
         }
 
         public async Task ProcessAsync(int documentId, DocumentParseResult documentResult, CancellationToken cancellationToken = default)
@@ -28,18 +28,18 @@ namespace BibleNote.Services.VerseProcessing
             await RemovePreviousResultAsync();
             ProcessHierarchy(documentResult.RootHierarchyResult);
 
-            await this.analyticsContext.SaveChangesAsync(cancellationToken);
+            await this.dbContext.SaveChangesAsync(cancellationToken);
         }
 
         private async Task RemovePreviousResultAsync()
         {
-            await this.analyticsContext.VerseRelationRepository
+            await this.dbContext.VerseRelationRepository
                 .DeleteAsync(v => v.DocumentParagraph.DocumentId == this.documentId);
 
-            await this.analyticsContext.VerseEntryRepository
+            await this.dbContext.VerseEntryRepository
                 .DeleteAsync(v => v.DocumentParagraph.DocumentId == this.documentId);
 
-            await this.analyticsContext.DocumentParagraphRepository
+            await this.dbContext.DocumentParagraphRepository
                 .DeleteAsync(p => p.DocumentId == documentId);            
         }
 
@@ -53,7 +53,7 @@ namespace BibleNote.Services.VerseProcessing
                     Index = paragraphResult.ParagraphIndex,
                     Path = paragraphResult.ParagraphPath
                 };
-                this.analyticsContext.DocumentParagraphRepository.Add(paragraphResult.Paragraph);                 
+                this.dbContext.DocumentParagraphRepository.Add(paragraphResult.Paragraph);                 
 
                 foreach (var verseEntry in paragraphResult.VerseEntries)
                 {
@@ -63,7 +63,7 @@ namespace BibleNote.Services.VerseProcessing
 
                     foreach (var verse in verseEntry.VersePointer.SubVerses.Verses)
                     {
-                        this.analyticsContext.VerseEntryRepository
+                        this.dbContext.VerseEntryRepository
                             .Add(new VerseEntry()
                             {
                                 DocumentParagraph = paragraphResult.Paragraph,

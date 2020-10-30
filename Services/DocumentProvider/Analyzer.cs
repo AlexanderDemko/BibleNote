@@ -60,6 +60,9 @@ namespace BibleNote.Services.DocumentProvider
                 }
             }
 
+            analysisSession.FinishTime = DateTime.Now;
+            await this.dbContext.SaveChangesAsync();
+
             return analysisSession;
         }
     }

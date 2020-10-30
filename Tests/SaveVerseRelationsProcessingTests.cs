@@ -47,13 +47,13 @@ namespace BibleNote.Tests
             await this.documentParseResultProcessings.First().ProcessAsync(this.document.Id, parseResult);
             await this.documentParseResultProcessings.Skip(1).First().ProcessAsync(this.document.Id, parseResult);
 
-            this.AnalyticsContext.VerseEntryRepository
+            this.DbContext.VerseEntryRepository
                 .Where(v => v.DocumentParagraph.DocumentId == this.document.Id)
                 .Count()
                 .Should()
                 .Be(19);
 
-            this.AnalyticsContext.DocumentParagraphRepository
+            this.DbContext.DocumentParagraphRepository
                 .Where(p => p.DocumentId == this.document.Id)
                 .Count()
                 .Should()

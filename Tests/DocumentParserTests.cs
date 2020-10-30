@@ -16,7 +16,7 @@ namespace BibleNote.Tests
     [TestClass]
     public class DocumentParserTests : DocumentParserTestsBase
     {
-        private IDocumentProviderInfo documentProvider;
+        private new IDocumentProviderInfo documentProvider;
         private IDocumentParserFactory documentParserFactory;
         private IDocumentParseContextEditor documentParseContext;
         private IDocumentId mockDocumentId;

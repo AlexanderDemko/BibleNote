@@ -47,13 +47,13 @@ namespace BibleNote.Tests
             var parseResult = await this.documentProvider.ParseDocumentAsync(new FileDocumentId(0, @"..\..\..\TestData\Html_CheckFullPage.html", true));
             await this.documentParseResultProcessing.ProcessAsync(this.document.Id, parseResult);
 
-            this.AnalyticsContext.VerseEntryRepository
+            this.DbContext.VerseEntryRepository
                 .Where(v => v.DocumentParagraph.DocumentId == this.document.Id)
                 .Count()
                 .Should()
                 .Be(19);
 
-            this.AnalyticsContext.DocumentParagraphRepository
+            this.DbContext.DocumentParagraphRepository
                 .Where(p => p.DocumentId == this.document.Id)
                 .Count()
                 .Should()

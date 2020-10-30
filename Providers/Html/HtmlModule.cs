@@ -10,7 +10,7 @@ namespace BibleNote.Providers.Html
         {
             services
                 .AddTransient<IHtmlDocumentConnector, HtmlDocumentConnector>()
-                .AddTransient<HtmlProvider>();
+                .AddTransient<HtmlProvider>()
                 ;
         }
     }

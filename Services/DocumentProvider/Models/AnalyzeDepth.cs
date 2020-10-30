@@ -2,7 +2,7 @@
 {
     public enum  AnalyzeDepth
     {
-        NewOnly = 1,
+        NewOnly = 1, // for WebNavigationProvider only?
         All = 2
     }
 }

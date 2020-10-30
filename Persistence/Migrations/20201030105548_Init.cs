@@ -16,7 +16,7 @@ namespace BibleNote.Persistence.Migrations
                     Name = table.Column<string>(nullable: false),
                     Description = table.Column<string>(nullable: true),
                     IsReadonly = table.Column<bool>(nullable: false),
-                    FullTypeName = table.Column<string>(nullable: false),
+                    Type = table.Column<int>(nullable: false),
                     ParametersRaw = table.Column<string>(nullable: false)
                 },
                 constraints: table =>

@@ -37,13 +37,13 @@ namespace BibleNote.Tests
             this.documentParseResultProcessings = ServiceProvider.GetServices<IDocumentParseResultProcessing>()
                 .OrderBy(rp => rp.Order);
 
-            this.document = this.AnalyticsContext.DocumentRepository.FirstOrDefault();
+            this.document = this.DbContext.DocumentRepository.FirstOrDefault();
             if (this.document == null)
             {
                 var folder = new DocumentFolder() { Name = "Temp", Path = "Test", NavigationProviderId = 0 };
                 this.document = new Document() { Name = "Temp", Path = "Test", Folder = folder };
-                this.AnalyticsContext.DocumentRepository.Add(document);
-                await this.AnalyticsContext.SaveChangesAsync();
+                this.DbContext.DocumentRepository.Add(document);
+                await this.DbContext.SaveChangesAsync();
             }
         }
 
