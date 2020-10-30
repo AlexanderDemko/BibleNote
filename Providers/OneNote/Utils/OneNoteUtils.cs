@@ -6,10 +6,10 @@ namespace BibleNote.Providers.OneNote.Utils
 {
     static class OneNoteUtils
     {
-        public static XmlNamespaceManager GetOneNoteXNM()
+        public static XmlNamespaceManager GetOneNoteXnm()
         {
             var xnm = new XmlNamespaceManager(new NameTable());
-            xnm.AddNamespace(OneNoteConstants.OneNotePrefix, OneNoteConstants.OneNoteXmlNs);
+            xnm.AddNamespace(OneNoteConstants.OneNotePrefix, OneNoteConstants.OneNoteXmlNs.ToString());
 
             return xnm;
         }

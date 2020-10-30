@@ -103,7 +103,7 @@ namespace BibleNote.Providers.OneNote.Services.NavigationProvider
                         }
                     }
 
-                    document.LatestAnalysisSessionId = analysisSession.Id;
+                    document.LatestAnalysisSession = analysisSession;
 
                     if (!newOnly || document.Id <= 0) // По непонятным причинам EF Core для нового файла выставляет Id = -2147482647
                         result.Add(document);
@@ -138,7 +138,7 @@ namespace BibleNote.Providers.OneNote.Services.NavigationProvider
                     DbContext.DocumentFolderRepository.Add(documentFolder);
                 }
 
-                documentFolder.LatestAnalysisSessionId = analysisSession.Id;
+                documentFolder.LatestAnalysisSession = analysisSession;
 
                 result.Add(documentFolder, container);
             }

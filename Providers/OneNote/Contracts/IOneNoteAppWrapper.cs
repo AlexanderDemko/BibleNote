@@ -10,6 +10,8 @@ namespace BibleNote.Providers.OneNote.Contracts
         Task<string> GetPageContentAsync(string pageId, PageInfo pageInfo = PageInfo.piBasic);
         Task<string> GetHierarchyContentAsync(string hierarchyId, HierarchyScope scope);
         Task<string> GetCurrentPageIdAsync();
+        Task<string> GetCurrentSectionIdAsync();
         Task UpdatePageContentAsync(XDocument pageDoc);
+        Task<string> GetHierarchyNameAsync(string hierarchyId);
     }
 }

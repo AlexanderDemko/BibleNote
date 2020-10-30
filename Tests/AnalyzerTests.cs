@@ -3,6 +3,7 @@ using BibleNote.Domain.Enums;
 using BibleNote.Providers.FileSystem.Navigation;
 using BibleNote.Services.DocumentProvider.Contracts;
 using BibleNote.Services.DocumentProvider.Models;
+using BibleNote.Services.NavigationProvider.Contracts;
 using BibleNote.Tests.TestsBase;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
@@ -18,6 +19,7 @@ namespace BibleNote.Tests
     public class AnalyzerTests : DbTestsBase
     {
         private IAnalyzer analyzer;
+        private INavigationProviderService navigationProviderService;
 
         [TestInitialize]
         public void Init()
@@ -25,6 +27,7 @@ namespace BibleNote.Tests
             base.Init();
 
             this.analyzer = ServiceProvider.GetService<IAnalyzer>();
+            this.navigationProviderService = ServiceProvider.GetService<INavigationProviderService>();
         }
 
         [TestCleanup]
@@ -36,32 +39,8 @@ namespace BibleNote.Tests
         [TestMethod]
         public async Task Test1()
         {
-            var testFolder = Path.Combine("c:\\temp", Guid.NewGuid().ToString());
-            var testSubFolder = Path.Combine(testFolder, "testSubFolder", "testSubSubFolder");
-            Directory.CreateDirectory(testSubFolder);
-            var testNavProviderName = "Test provider";
-
-            var navigationProviderInfo = new NavigationProviderInfo()
+            await RunTestAsync(async (testFolder, testSubFolder, navigationProvider) =>
             {
-                Name = testNavProviderName,
-                Type = NavigationProviderType.File,
-                Description = "Test File navigation provider",
-                IsReadonly = true,
-                ParametersRaw = new FileNavigationProviderParameters()
-                {
-                    FolderPaths = new List<string>() { testFolder }
-                }
-                   .GetParametersRaw()
-            };
-
-            try
-            {
-                DbContext.NavigationProvidersInfo.Add(navigationProviderInfo);
-                await DbContext.SaveChangesAsync();
-
-                var navigationProvider = ServiceProvider.GetService<FileNavigationProvider>();
-                navigationProvider.SetParameters(navigationProviderInfo);
-
                 var initialVersesCount = await DbContext.VerseEntryRepository.CountAsync();
 
                 await File.WriteAllTextAsync(Path.Combine(testFolder, "1.txt"), "Test file 1. Ин 1:1");
@@ -93,29 +72,41 @@ namespace BibleNote.Tests
                 session.DeletedDocumentsCount.Should().Be(1);
 
                 Assert.AreEqual(initialVersesCount + 3, await DbContext.VerseEntryRepository.CountAsync());
+            });
+        }
+
+        private async Task RunTestAsync(Func<string, string, FileNavigationProvider, Task> testAction)
+        {
+            var testFolder = Path.Combine("c:\\temp", Guid.NewGuid().ToString());
+            var testSubFolder = Path.Combine(testFolder, "testSubFolder", "testSubSubFolder");
+            Directory.CreateDirectory(testSubFolder);
+
+            var navigationProviderInfo = new NavigationProviderInfo()
+            {
+                Name = "Test file provider",
+                Type = NavigationProviderType.File,
+                Description = "Test File navigation provider",
+                IsReadonly = true,
+                ParametersRaw = new FileNavigationProviderParameters()
+                {
+                    FolderPaths = new List<string>() { testFolder }
+                }
+                   .GetParametersRaw()
+            };
+
+            try
+            {
+                DbContext.NavigationProvidersInfo.Add(navigationProviderInfo);
+                await DbContext.SaveChangesAsync();
+
+                var navigationProvider = ServiceProvider.GetService<FileNavigationProvider>();
+                navigationProvider.SetParameters(navigationProviderInfo);
+
+                await testAction(testFolder, testSubFolder, navigationProvider);
             }
             finally
             {
-                await DbContext.VerseRelationRepository.DeleteAsync(
-                    v => v.DocumentParagraph.Document.Folder.NavigationProviderId == navigationProviderInfo.Id);
-
-                await DbContext.VerseEntryRepository.DeleteAsync(
-                    v => v.DocumentParagraph.Document.Folder.NavigationProviderId == navigationProviderInfo.Id);
-
-                await DbContext.DocumentParagraphRepository.DeleteAsync(
-                    p => p.Document.Folder.NavigationProviderId == navigationProviderInfo.Id);
-
-                await DbContext.DocumentRepository.DeleteAsync(
-                    d => d.Folder.NavigationProviderId == navigationProviderInfo.Id);
-
-                await DbContext.DocumentFolderRepository.DeleteAsync(
-                    f => f.NavigationProviderId == navigationProviderInfo.Id);
-
-                await DbContext.AnalysisSessions.DeleteAsync(
-                    s => s.NavigationProviderId == navigationProviderInfo.Id);
-
-                await DbContext.NavigationProvidersInfo.DeleteAsync(
-                    p => p.Id == navigationProviderInfo.Id);
+                await this.navigationProviderService.DeleteNavigationProvider(navigationProviderInfo.Id);
             }
         }
     }

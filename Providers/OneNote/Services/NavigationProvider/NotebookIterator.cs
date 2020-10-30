@@ -1,14 +1,13 @@
 ﻿using System;
 using System.Linq;
 using Microsoft.Office.Interop.OneNote;
-using System.Xml;
 using System.Xml.Linq;
-using System.Xml.XPath;
 using BibleNote.Providers.OneNote.Contracts;
 using System.Threading.Tasks;
 using BibleNote.Providers.OneNote.Services.NavigationProvider.Models;
 using System.Collections.Generic;
 using BibleNote.Providers.OneNote.Utils;
+using BibleNote.Providers.OneNote.Constants;
 
 namespace BibleNote.Providers.OneNote.Services.NavigationProvider
 {
@@ -28,6 +27,12 @@ namespace BibleNote.Providers.OneNote.Services.NavigationProvider
             public List<ContainerInfo> ChildrenContainers { get; set; }
 
             public List<PageInfo> Pages { get; set; }
+
+            public ContainerInfo()
+            {
+                ChildrenContainers = new List<ContainerInfo>();
+                Pages = new List<PageInfo>();
+            }
         }
 
         public class PageInfo : HierarchyElementInfo
@@ -38,12 +43,12 @@ namespace BibleNote.Providers.OneNote.Services.NavigationProvider
         #endregion
 
         private readonly IOneNoteAppWrapper oneNoteApp;
-        private readonly XmlNamespaceManager xnm;
+        private readonly XNamespace xNamespace;
 
         public NotebookIterator(IOneNoteAppWrapper oneNoteApp)
         {
             this.oneNoteApp = oneNoteApp;
-            this.xnm = OneNoteUtils.GetOneNoteXNM();
+            this.xNamespace = OneNoteConstants.OneNoteXmlNs;
         }
 
         public async Task<ContainerInfo> GetHierarchyPagesAsync(string hierarchyId, OneNoteHierarchyType hierarchyType)
@@ -73,14 +78,14 @@ namespace BibleNote.Providers.OneNote.Services.NavigationProvider
             var sectionGroup = new ContainerInfo();
             ProcessHierarchyElement(sectionGroup, sectionGroupEl);
 
-            foreach (var subSectionGroupEl in sectionGroupEl.XPathSelectElements("one:SectionGroup", xnm)
+            foreach (var subSectionGroupEl in sectionGroupEl.Elements(this.xNamespace + "SectionGroup")
                 .Where(sg => !OneNoteUtils.IsRecycleBin(sg)))
             {
                 var subSectionGroup = ProcessSectionGroup(subSectionGroupEl);
                 sectionGroup.ChildrenContainers.Add(subSectionGroup);
             }
 
-            foreach (var subSection in sectionGroupEl.XPathSelectElements("one:Section", xnm))
+            foreach (var subSection in sectionGroupEl.Elements(this.xNamespace + "Section"))
             {
                 var section = ProcessSection(subSection);
                 sectionGroup.ChildrenContainers.Add(section);
@@ -94,7 +99,7 @@ namespace BibleNote.Providers.OneNote.Services.NavigationProvider
             var section = new ContainerInfo();
             ProcessHierarchyElement(section, sectionEl);
 
-            foreach (var pageEl in sectionEl.XPathSelectElements("one:Page", xnm))
+            foreach (var pageEl in sectionEl.Elements(this.xNamespace + "Page"))
             {
                 if (!OneNoteUtils.IsRecycleBin(pageEl))
                 {

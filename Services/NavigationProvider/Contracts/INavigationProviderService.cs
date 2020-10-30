@@ -9,5 +9,7 @@ namespace BibleNote.Services.NavigationProvider.Contracts
         Task<IList<NavigationProviderInfo>> GetNavigationProvidersInfoAsync();
 
         Task SaveNavigationProvidersInfoAsync(List<NavigationProviderInfo> navigationProviderInfos);
+
+        Task DeleteNavigationProvider(int navigationProviderId);
     }
 }

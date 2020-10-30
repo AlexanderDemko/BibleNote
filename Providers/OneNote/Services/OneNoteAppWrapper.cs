@@ -58,9 +58,24 @@ namespace BibleNote.Providers.OneNote.Services
             return currentPageId;
         }
 
+        public async Task<string> GetCurrentSectionIdAsync()
+        {
+            string currentSectionId = null;
+
+            await UseOneNoteAppInSingleThreadAsync(app =>
+            {
+                if (app.Windows.CurrentWindow == null)
+                    throw new OneNoteIsClosedException();
+
+                currentSectionId = app.Windows.CurrentWindow.CurrentSectionId;
+            });
+
+            return currentSectionId;
+        }
+
         public async Task UpdatePageContentAsync(XDocument pageDoc)
         {
-            var xnm = OneNoteUtils.GetOneNoteXNM();
+            var xnm = OneNoteUtils.GetOneNoteXnm();
 
             CleanPageContent(pageDoc, xnm);
 
@@ -80,6 +95,13 @@ namespace BibleNote.Providers.OneNote.Services
             });
 
             return content;
+        }
+
+        public async Task<string> GetHierarchyNameAsync(string hierarchyId)
+        {
+            var hierarchyContent = await GetHierarchyContentAsync(hierarchyId, HierarchyScope.hsSelf);
+            var hierarchyEl = XElement.Parse(hierarchyContent);
+            return (string)hierarchyEl.Attribute("name");
         }
 
         public void Dispose()
