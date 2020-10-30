@@ -80,7 +80,7 @@ namespace BibleNote.Persistence.Migrations
                         column: x => x.ParentFolderId,
                         principalTable: "DocumentFolders",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(

@@ -261,8 +261,9 @@ namespace BibleNote.Persistence.Migrations
                         .IsRequired();
 
                     b.HasOne("BibleNote.Domain.Entities.DocumentFolder", "ParentFolder")
-                        .WithMany()
-                        .HasForeignKey("ParentFolderId");
+                        .WithMany("ChildrenFolders")
+                        .HasForeignKey("ParentFolderId")
+                        .OnDelete(DeleteBehavior.Cascade);
                 });
 
             modelBuilder.Entity("BibleNote.Domain.Entities.DocumentParagraph", b =>

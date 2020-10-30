@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BibleNote.Persistence.Migrations
 {
     [DbContext(typeof(AnalyticsDbContext))]
-    [Migration("20201030105548_Init")]
+    [Migration("20201030124910_Init")]
     partial class Init
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -263,8 +263,9 @@ namespace BibleNote.Persistence.Migrations
                         .IsRequired();
 
                     b.HasOne("BibleNote.Domain.Entities.DocumentFolder", "ParentFolder")
-                        .WithMany()
-                        .HasForeignKey("ParentFolderId");
+                        .WithMany("ChildrenFolders")
+                        .HasForeignKey("ParentFolderId")
+                        .OnDelete(DeleteBehavior.Cascade);
                 });
 
             modelBuilder.Entity("BibleNote.Domain.Entities.DocumentParagraph", b =>

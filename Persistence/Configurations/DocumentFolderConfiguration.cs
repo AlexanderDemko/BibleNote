@@ -15,6 +15,11 @@ namespace BibleNote.Persistence.Configurations
             builder.Property(f => f.NavigationProviderId).IsRequired(true);
 
             builder.HasIndex(f => new { f.NavigationProviderId, f.Path }).IsUnique(true);
+
+            builder
+                .HasOne(f => f.ParentFolder)
+                .WithMany(f => f.ChildrenFolders)
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

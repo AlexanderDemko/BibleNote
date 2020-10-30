@@ -1,4 +1,7 @@
-﻿namespace BibleNote.Domain.Entities
+﻿using System.Collections;
+using System.Collections.Generic;
+
+namespace BibleNote.Domain.Entities
 {
     public class DocumentFolder
     {
@@ -19,6 +22,8 @@
 
         public int? LatestAnalysisSessionId { get; set; }
         public AnalysisSession LatestAnalysisSession { get; set; }
+
+        public ICollection<DocumentFolder> ChildrenFolders { get; set; }
 
         public override int GetHashCode()
         {
