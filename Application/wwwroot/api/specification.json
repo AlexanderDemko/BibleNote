@@ -70,8 +70,28 @@
           "description": {
             "type": "string",
             "nullable": true
+          },
+          "isReadonly": {
+            "type": "boolean"
+          },
+          "type": {
+            "$ref": "#/components/schemas/BibleNoteDomainEnumsNavigationProviderType"
           }
         }
+      },
+      "BibleNoteDomainEnumsNavigationProviderType": {
+        "type": "integer",
+        "description": "",
+        "x-enumNames": [
+          "File",
+          "Web",
+          "OneNote"
+        ],
+        "enum": [
+          1,
+          2,
+          3
+        ]
       },
       "BibleNoteApplicationWeatherForecast": {
         "type": "object",

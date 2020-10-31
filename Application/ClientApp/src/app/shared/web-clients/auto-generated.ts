@@ -150,6 +150,8 @@ export class NavigationProvidersQueriesListNavigationProviderVm implements INavi
     id?: number;
     name?: string | undefined;
     description?: string | undefined;
+    isReadonly?: boolean;
+    type?: BibleNoteDomainEnumsNavigationProviderType;
 
     constructor(data?: INavigationProvidersQueriesListNavigationProviderVm) {
         if (data) {
@@ -165,6 +167,8 @@ export class NavigationProvidersQueriesListNavigationProviderVm implements INavi
             this.id = _data["id"];
             this.name = _data["name"];
             this.description = _data["description"];
+            this.isReadonly = _data["isReadonly"];
+            this.type = _data["type"];
         }
     }
 
@@ -180,6 +184,8 @@ export class NavigationProvidersQueriesListNavigationProviderVm implements INavi
         data["id"] = this.id;
         data["name"] = this.name;
         data["description"] = this.description;
+        data["isReadonly"] = this.isReadonly;
+        data["type"] = this.type;
         return data; 
     }
 
@@ -195,6 +201,14 @@ export interface INavigationProvidersQueriesListNavigationProviderVm {
     id?: number;
     name?: string | undefined;
     description?: string | undefined;
+    isReadonly?: boolean;
+    type?: BibleNoteDomainEnumsNavigationProviderType;
+}
+
+export enum BibleNoteDomainEnumsNavigationProviderType {
+    File = 1,
+    Web = 2,
+    OneNote = 3,
 }
 
 export class BibleNoteApplicationWeatherForecast implements IBibleNoteApplicationWeatherForecast {

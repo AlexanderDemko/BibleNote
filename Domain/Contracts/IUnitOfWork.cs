@@ -9,5 +9,7 @@ namespace BibleNote.Domain.Contracts
         Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 
         Task DoInTransactionAsync(Func<CancellationToken, Task> action, CancellationToken cancellationToken = default);
+
+        Task InitDatabaseAsync();
     }
 }

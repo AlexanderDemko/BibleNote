@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard2.1</TargetFramework>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
     <RootNamespace>BibleNote.Middleware</RootNamespace>
     <AssemblyName>BibleNote.Middleware</AssemblyName>
   </PropertyGroup>
@@ -15,8 +15,19 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Common\Common.csproj" />
     <ProjectReference Include="..\Domain\Domain.csproj" />
     <ProjectReference Include="..\Infrastructure\Infrastructure.csproj" />
+    <ProjectReference Include="..\Persistence\Persistence.csproj" />
+    <ProjectReference Include="..\Providers\FileSystem.DocumentId\FileSystem.DocumentId.csproj" />
+    <ProjectReference Include="..\Providers\FileSystem.Navigation\FileSystem.Navigation.csproj" />
+    <ProjectReference Include="..\Providers\Html\Html.csproj" />
+    <ProjectReference Include="..\Providers\OneNote\OneNote.csproj" />
+    <ProjectReference Include="..\Providers\Pdf\Pdf.csproj" />
+    <ProjectReference Include="..\Providers\Web.DocumentId\Web.DocumentId.csproj" />
+    <ProjectReference Include="..\Providers\Web.Navigation\Web.Navigation.csproj" />
+    <ProjectReference Include="..\Providers\Word\Word.csproj" />
+    <ProjectReference Include="..\Services\Services.csproj" />
   </ItemGroup>
 
 </Project>

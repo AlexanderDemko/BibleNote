@@ -71,7 +71,7 @@ namespace BibleNote.Persistence
         {
             if (!optionsBuilder.IsConfigured)
             {
-                optionsBuilder.UseSqlite("Data Source=BibleNote.Analytics.db");
+                optionsBuilder.UseSqlite(@"Data Source=c:\temp\BibleNote.Analytics.db");
             }
         }
 
@@ -82,6 +82,12 @@ namespace BibleNote.Persistence
 
         public AnalyticsDbContext()
         {
+        }
+
+        public async Task InitDatabaseAsync()
+        {
+            await this.Database.MigrateAsync();
+            await DbInitializer.InitializeAsync(this);
         }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)

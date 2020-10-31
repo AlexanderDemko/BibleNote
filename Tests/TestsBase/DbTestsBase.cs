@@ -25,16 +25,16 @@ namespace BibleNote.Tests.TestsBase
                 );
             connection.Open();
 
-            base.Init(options =>
+            base.Init(services =>
             {
-                options.AddDbContext<ITrackingDbContext, AnalyticsDbContext>(opt => opt.UseSqlite(connection));
-                registerServicesAction?.Invoke(options);
+                services.AddDbContext<ITrackingDbContext, AnalyticsDbContext>(opt => opt.UseSqlite(connection));
+                registerServicesAction?.Invoke(services);
             });
 
             this.DbContext = ServiceProvider.GetService<ITrackingDbContext>();
             this.ConcreteContext = (AnalyticsDbContext)this.DbContext;
-            this.ConcreteContext.Database.Migrate();            
-            DbInitializer.Initialize(this.ConcreteContext);            
+            this.ConcreteContext.Database.Migrate();
+            DbInitializer.InitializeAsync(this.ConcreteContext).GetAwaiter().GetResult();            
         }        
                 
         public virtual void Cleanup()

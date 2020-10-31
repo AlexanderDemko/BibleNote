@@ -1,9 +1,15 @@
 using System.Reflection;
 using AutoMapper;
 using BibleNote.Common.DiContainer;
+using BibleNote.Domain.Contracts;
 using BibleNote.Infrastructure.Monitoring;
 using BibleNote.Infrastructure.RequestValidation;
 using BibleNote.Middleware;
+using BibleNote.Persistence;
+using BibleNote.Providers.FileSystem.Navigation;
+using BibleNote.Providers.Html;
+using BibleNote.Providers.OneNote;
+using BibleNote.Services;
 using ElectronNET.API;
 using ElectronNET.API.Entities;
 using MediatR;
@@ -45,12 +51,23 @@ namespace BibleNote.Application
             services.AddTransient(typeof(IPipelineBehavior<,>), typeof(RequestPerformanceBehaviour<,>));
             services.AddTransient(typeof(IPipelineBehavior<,>), typeof(RequestValidationBehavior<,>));
 
+            services
+               .AddApplicatonServices<PersistenceModule>()
+               .AddApplicatonServices<ServicesModule>()
+               .AddApplicatonServices<HtmlModule>()
+               .AddApplicatonServices<OneNoteModule>()
+               .AddApplicatonServices<FileNavigationModule>();
+
+            services.AddLogging();
+
             services.AddSwaggerDocument();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, IMapper mapper, ITrackingDbContext dbContext)
         {
+            mapper.ConfigurationProvider.AssertConfigurationIsValid();
+
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
@@ -66,12 +83,7 @@ namespace BibleNote.Application
                 app.UseSpaStaticFiles();
             }
 
-            app.UseOpenApi();
-            app.UseSwaggerUi3(settings =>
-            {
-                settings.Path = "/api";
-                settings.DocumentPath = "/api/specification.json";
-            });
+            UseSwaggerSpecification(app);
 
             app.UseRouting();
 
@@ -97,6 +109,25 @@ namespace BibleNote.Application
             });
 
             ElectronBootstrap();
+
+            dbContext.InitDatabaseAsync();
+        }
+
+        private static void UseSwaggerSpecification(IApplicationBuilder app)
+        {
+            const string specificationPath = "/api/specification.json";
+            const string apiRoute = "/api";
+
+            app.UseOpenApi(settings =>
+            {
+                settings.Path = specificationPath;
+            });
+
+            app.UseSwaggerUi3(settings =>
+            {
+                settings.Path = apiRoute;
+                settings.DocumentPath = specificationPath;
+            });
         }
 
         public async void ElectronBootstrap()

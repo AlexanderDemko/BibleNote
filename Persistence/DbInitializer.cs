@@ -1,16 +1,18 @@
-﻿namespace BibleNote.Persistence
+﻿using System.Threading.Tasks;
+
+namespace BibleNote.Persistence
 {
     public class DbInitializer
     {
-        public static void Initialize(AnalyticsDbContext context)
+        public async static Task InitializeAsync(AnalyticsDbContext context)
         {
             var initializer = new DbInitializer();
-            initializer.Seed(context);
+            await initializer.SeedAsync(context);
         }
 
-        public void Seed(AnalyticsDbContext context)
+        public async Task SeedAsync(AnalyticsDbContext context)
         {
-            context.Database.EnsureCreated();            
+            await context.Database.EnsureCreatedAsync();            
         }
     }
 }
