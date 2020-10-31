@@ -143,29 +143,29 @@ namespace BibleNote.Application
             };
             mainWindow.SetTitle("BibleNote");
 
-            MenuItem[] menu = new MenuItem[]
-            {
-                new MenuItem
-                {
-                    Label = "File",
-                    Submenu=new MenuItem[]
-                    {
-                        new MenuItem
-                        {
-                            Label ="Exit",
-                            Click =()=>{Electron.App.Exit();}
-                        }
-                    }
-                },
-                new MenuItem
-                {
-                    Label = "Info",
-                    Click = async ()=>
-                    {
-                        await Electron.Dialog.ShowMessageBoxAsync("Welcome to App");
-                    }
-                }
-            };
+            //MenuItem[] menu = new MenuItem[]
+            //{
+            //    new MenuItem
+            //    {
+            //        Label = "File",
+            //        Submenu=new MenuItem[]
+            //        {
+            //            new MenuItem
+            //            {
+            //                Label ="Exit",
+            //                Click =()=>{Electron.App.Exit();}
+            //            }
+            //        }
+            //    },
+            //    new MenuItem
+            //    {
+            //        Label = "Info",
+            //        Click = async ()=>
+            //        {
+            //            await Electron.Dialog.ShowMessageBoxAsync("Welcome to App");
+            //        }
+            //    }
+            //};
 
             //Electron.Menu.SetApplicationMenu(menu);
         }
