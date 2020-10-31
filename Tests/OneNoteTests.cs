@@ -29,10 +29,9 @@ namespace BibleNote.Tests
         private IAnalyzer analyzer;
         private INavigationProviderService navigationProviderService;
         private IOrderedEnumerable<IDocumentParseResultProcessing> documentParseResultProcessings;
-        private Document document;
 
         [TestInitialize]
-        public async Task Init()
+        public void Init()
         {
             base.Init();
 

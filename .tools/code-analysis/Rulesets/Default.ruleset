@@ -1,0 +1,75 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<RuleSet Name="Default Rules" ToolsVersion="10.0">
+  <Rules AnalyzerId="Microsoft.CodeQuality.Analyzers" RuleNamespace="Microsoft.CodeQuality.Analyzers">
+    <!-- CA2007: Do not directly await a Task -->
+    <Rule Id="CA2007" Action="None" />   
+
+	<!-- CA1305: Specify IFormatProvider -->
+	<Rule Id="CA1305" Action="None" />  
+	
+	<!-- CA1062: Validate arguments of public methods -->
+	<Rule Id="CA1062" Action="Info" />
+	
+	<!-- CA1031: Do not catch general exception types -->
+	<Rule Id="CA1031" Action="Info" />
+	
+	<!-- CA1308: Normalize strings to uppercase -->
+	<Rule Id="CA1308" Action="Info" />
+	
+	<!-- CA1812: Avoid uninstantiated internal classes -->
+	<Rule Id="CA1812" Action="Info" />
+	
+	<!-- CA1303: Do not pass literals as localized parameters -->
+	<Rule Id="CA1303" Action="Info" />
+
+	<!-- CA1032: Implement standard exception constructors -->
+	<Rule Id="CA1032" Action="Info" />	
+	
+	<!-- CA1304: Specify CultureInfo -->
+	<Rule Id="CA1304" Action="Info" />	
+	
+	<!-- CA1307: Specify StringComparison -->
+	<Rule Id="CA1307" Action="Info" />	
+	
+	<!-- CA1707: Identifiers should not contain underscores -->
+	<Rule Id="CA1707" Action="Info" />	
+	
+	<!-- CA1716: Identifiers should not match keywords -->
+	<Rule Id="CA1716" Action="Info" />	
+	
+	<!-- CA2208: Instantiate argument exceptions correctly -->
+	<Rule Id="CA2208" Action="Info" />	
+	
+	<!-- CA2227: Collection properties should be read only -->
+	<Rule Id="CA2227" Action="Info" />	
+	
+	<!-- CA1819: Properties should not return arrays -->
+	<Rule Id="CA1819" Action="Info" />	
+	
+	<!-- CA1051: Do not declare visible instance fields -->
+	<Rule Id="CA1051" Action="Info" />		
+	
+	<!-- CA1001: Types that own disposable fields should be disposable -->
+	<Rule Id="CA1001" Action="Error" />	
+	
+	<!-- CA2000: Dispose objects before losing scope -->
+	<Rule Id="CA2000" Action="Error" />	
+  </Rules>  
+  <Rules AnalyzerId="Microsoft.VisualStudio.Threading.Analyzers" RuleNamespace="Microsoft.VisualStudio.Threading.Analyzers">
+	<!-- VSTHRD011: Use AsyncLazy<T> -->
+	<Rule Id="VSTHRD011" Action="Warning" />    
+	
+	<!-- VSTHRD101 Avoid unsupported async delegates -->
+	<Rule Id="VSTHRD101" Action="Error" />   
+	
+	<!-- VSTHRD200:Use \"Async\" suffix for async methods -->
+	<Rule Id="VSTHRD200" Action="Info" />   
+  </Rules>
+  <Rules AnalyzerId="xunit.analyzers" RuleNamespace="xunit.analyzers">
+    <Rule Id="xUnit1024" Action="Info" />
+  </Rules>
+   <Rules AnalyzerId="Microsoft.AspNetCore.Mvc.Api.Analyzers" RuleNamespace="Microsoft.AspNetCore.Mvc.Api.Analyzers">
+    <!-- API1000 Action method returns undeclared status code. -->
+    <Rule Id="API1000" Action="Error" />
+  </Rules>
+</RuleSet>
