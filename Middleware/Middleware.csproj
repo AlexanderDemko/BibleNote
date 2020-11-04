@@ -7,10 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="NavigationProviders\Commands\" />
-  </ItemGroup>
-
-  <ItemGroup>
+    <PackageReference Include="ElectronNET.API" Version="9.31.2" />
     <PackageReference Include="MediatR" Version="9.0.0" />
   </ItemGroup>
 

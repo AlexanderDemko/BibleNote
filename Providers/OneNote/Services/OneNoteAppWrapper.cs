@@ -109,7 +109,50 @@ namespace BibleNote.Providers.OneNote.Services
             ReleaseOneNoteApp();
         }
 
-        private async Task UseOneNoteAppInSingleThreadAsync(Action<IApplication> action)
+        public async Task SelectHierarchyItems(string title, string description, string checkboxText, IQuickFilingDialogCallback callback)
+        {
+            await UseOneNoteAppInSingleThreadAsync(app =>
+            {
+                // Instantiate Quick Filing UI
+                var qfDialog = app.QuickFiling();
+                #region//SET API PARAMETERS
+                // TITLE
+                qfDialog.Title = title;
+                // DESCRIPTION
+                qfDialog.Description = description;
+                // RECENT RESULTS
+                qfDialog.SetRecentResults(RecentResultType.rrtFiling,
+                    /*Current Section*/ true,
+                    /*Current Page*/ true,
+                    /*Unfiled Notes*/ true);
+                // TREE DEPTH
+                qfDialog.TreeDepth = HierarchyElement.heSections;
+                // CHECKBOX
+                qfDialog.CheckboxText = checkboxText;
+                qfDialog.CheckboxState = false;
+                // BUTTONS
+                HierarchyElement heAll = (HierarchyElement)
+                    ((uint)HierarchyElement.heNotebooks |
+                    (uint)HierarchyElement.heSectionGroups |
+                    (uint)HierarchyElement.heSections);
+
+                qfDialog.AddButton("All", heAll, heAll, true);
+                qfDialog.AddButton("Notebooks", HierarchyElement.heNotebooks,
+                    HierarchyElement.heNotebooks, false);
+                qfDialog.AddButton("Sections", HierarchyElement.heSections,
+                    HierarchyElement.heSections, false);
+                // PARENTWINDOW
+                #endregion
+                // Display Quick Filing UI
+                qfDialog.Run(callback);
+                // Clean up and Wait so console window does not close
+                qfDialog = null;
+            });
+        }
+
+      
+
+    private async Task UseOneNoteAppInSingleThreadAsync(Action<IApplication> action)
         {
             await this.locker.DoInSemaphore(async () =>
             {

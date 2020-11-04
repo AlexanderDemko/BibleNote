@@ -4,6 +4,9 @@
 
 <p *ngIf="!providersState"><em>Loading...</em></p>
 
+<a class="btn" (click)="callSelectHierarchyItems()">Call Select Hierarchy Items</a>
+<span>{{ selectedId }}</span>
+
 <table class='table table-striped' aria-labelledby="tableLabel" *ngIf="providersState">
   <thead>
     <tr>
@@ -14,7 +17,7 @@
   <tbody>
     <tr *ngFor="let p of providersState.items">
       <td>{{ p.id }}</td>
-      <td>{{ p.name}}</td>
+      <td>{{ p.name }}</td>
     </tr>
   </tbody>
 </table>

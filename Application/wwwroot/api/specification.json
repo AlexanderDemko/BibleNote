@@ -6,12 +6,12 @@
     "version": "1.0.0"
   },
   "paths": {
-    "/api/NavigationProviders/GetTop": {
+    "/api/NavigationProviders/GetAll": {
       "get": {
         "tags": [
           "NavigationProviders"
         ],
-        "operationId": "NavigationProviders_GetTop",
+        "operationId": "NavigationProviders_GetAll",
         "responses": {
           "200": {
             "description": "",
@@ -25,6 +25,19 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/api/NavigationProviders/CallHierarchyItemsSelectionDialog": {
+      "get": {
+        "tags": [
+          "NavigationProviders"
+        ],
+        "operationId": "NavigationProviders_CallHierarchyItemsSelectionDialog",
+        "responses": {
+          "200": {
+            "description": ""
           }
         }
       }
