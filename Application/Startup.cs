@@ -1,3 +1,5 @@
+using System;
+using System.IO;
 using System.Reflection;
 using AutoMapper;
 using BibleNote.Common.DiContainer;
@@ -10,6 +12,7 @@ using BibleNote.Providers.FileSystem.Navigation;
 using BibleNote.Providers.Html;
 using BibleNote.Providers.OneNote;
 using BibleNote.Services;
+using BibleNote.Services.VerseParsing.Contracts.ParseContext;
 using ElectronNET.API;
 using ElectronNET.API.Entities;
 using MediatR;
@@ -132,16 +135,30 @@ namespace BibleNote.Application
 
         public async void ElectronBootstrap()
         {
-            BrowserWindowOptions options = new BrowserWindowOptions
+            try
             {
-                Show = false
+                if (await Electron.App.CommandLine.HasSwitchAsync("dog"))
+                {
+                    string value = await Electron.App.CommandLine.GetSwitchValueAsync("dog");
+                    
+                    File.WriteAllText(@"c:\temp\args.txt", value);
+                }
+            }
+            catch (Exception ex)
+            {
+                File.WriteAllText(@"c:\temp\error.txt", ex.ToString());
+            }
+
+            var options = new BrowserWindowOptions
+            {
+                Show = false,
+                Title = "BibleNote"
             };
-            BrowserWindow mainWindow = await Electron.WindowManager.CreateWindowAsync(options);
+            var mainWindow = await Electron.WindowManager.CreateWindowAsync(options, "http://localhost:8079/nav-providers");
             mainWindow.OnReadyToShow += () =>
             {
                 mainWindow.Show();
-            };
-            mainWindow.SetTitle("BibleNote");
+            };            
 
             //MenuItem[] menu = new MenuItem[]
             //{

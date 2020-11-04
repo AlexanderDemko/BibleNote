@@ -1,17 +1,18 @@
 {
   "executable": "BibleNote.Application",
   "splashscreen": {
-    "imageFile": ""
+    "imageFile": "/wwwroot/assets/splashscreen.png"
   },
   "name": "BibleNote",
   "author": "",
-  "singleInstance": false,
+  "singleInstance": true,
+  "aspCoreBackendPort": 8079,
   "environment": "Production",
   "build": {
     "appId": "com.BibleNote.app",
     "productName": "BibleNote",
-    "copyright": "Copyright © 2020",
-    "buildVersion": "1.0.0",
+    "copyright": "Copyright © 2011-2020 Sasha and Natasha",
+    "buildVersion": "4.0.0",
     "compression": "maximum",
     "directories": {
       "output": "../../../bin/Desktop"

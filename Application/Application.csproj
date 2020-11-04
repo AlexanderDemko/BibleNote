@@ -63,6 +63,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="wwwroot\assets\splashscreen.png" />
+  </ItemGroup>
     <Target Name="NSwag" BeforeTargets="AfterBuild" Condition="'$(GenerateCode)'=='True' ">
     <Exec Command="$(NSwagExe_Core31) run nswag.json /variables:Configuration=$(Configuration)" />
   </Target>  
