@@ -5,7 +5,8 @@
 <p *ngIf="!providersState"><em>Loading...</em></p>
 
 <a class="btn" (click)="callSelectHierarchyItems()">Call Select Hierarchy Items</a>
-<span>{{ selectedId }}</span>
+<p>{{ selectedId }}</p>
+<p>{{ selectedName }}</p>
 
 <table class='table table-striped' aria-labelledby="tableLabel" *ngIf="providersState">
   <thead>

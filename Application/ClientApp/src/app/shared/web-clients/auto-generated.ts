@@ -79,8 +79,24 @@ export class NavigationProvidersClient {
         return _observableOf<NavigationProvidersQueriesListNavigationProviderVm[]>(<any>null);
     }
 
-    callHierarchyItemsSelectionDialog(): Observable<void> {
-        let url_ = this.baseUrl + "/api/NavigationProviders/CallHierarchyItemsSelectionDialog";
+    callHierarchyItemsSelectionDialog(title: string | null, description: string | null, buttonText: string | null, callbackFunction: string | null): Observable<void> {
+        let url_ = this.baseUrl + "/api/NavigationProviders/CallHierarchyItemsSelectionDialog?";
+        if (title === undefined)
+            throw new Error("The parameter 'title' must be defined.");
+        else if(title !== null)
+            url_ += "title=" + encodeURIComponent("" + title) + "&";
+        if (description === undefined)
+            throw new Error("The parameter 'description' must be defined.");
+        else if(description !== null)
+            url_ += "description=" + encodeURIComponent("" + description) + "&";
+        if (buttonText === undefined)
+            throw new Error("The parameter 'buttonText' must be defined.");
+        else if(buttonText !== null)
+            url_ += "buttonText=" + encodeURIComponent("" + buttonText) + "&";
+        if (callbackFunction === undefined)
+            throw new Error("The parameter 'callbackFunction' must be defined.");
+        else if(callbackFunction !== null)
+            url_ += "callbackFunction=" + encodeURIComponent("" + callbackFunction) + "&";
         url_ = url_.replace(/[?&]$/, "");
 
         let options_ : any = {
@@ -121,6 +137,58 @@ export class NavigationProvidersClient {
             }));
         }
         return _observableOf<void>(<any>null);
+    }
+
+    getHierarchyItemInfo(hierarchyId: string | null): Observable<NavigationProvidersQueriesOneNoteGetHierarchyInfoHierarchyItemVm> {
+        let url_ = this.baseUrl + "/api/NavigationProviders/GetHierarchyItemInfo?";
+        if (hierarchyId === undefined)
+            throw new Error("The parameter 'hierarchyId' must be defined.");
+        else if(hierarchyId !== null)
+            url_ += "hierarchyId=" + encodeURIComponent("" + hierarchyId) + "&";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_ : any = {
+            observe: "response",
+            responseType: "blob",
+            headers: new HttpHeaders({
+                "Accept": "application/json"
+            })
+        };
+
+        return this.http.request("get", url_, options_).pipe(_observableMergeMap((response_ : any) => {
+            return this.processGetHierarchyItemInfo(response_);
+        })).pipe(_observableCatch((response_: any) => {
+            if (response_ instanceof HttpResponseBase) {
+                try {
+                    return this.processGetHierarchyItemInfo(<any>response_);
+                } catch (e) {
+                    return <Observable<NavigationProvidersQueriesOneNoteGetHierarchyInfoHierarchyItemVm>><any>_observableThrow(e);
+                }
+            } else
+                return <Observable<NavigationProvidersQueriesOneNoteGetHierarchyInfoHierarchyItemVm>><any>_observableThrow(response_);
+        }));
+    }
+
+    protected processGetHierarchyItemInfo(response: HttpResponseBase): Observable<NavigationProvidersQueriesOneNoteGetHierarchyInfoHierarchyItemVm> {
+        const status = response.status;
+        const responseBlob =
+            response instanceof HttpResponse ? response.body :
+            (<any>response).error instanceof Blob ? (<any>response).error : undefined;
+
+        let _headers: any = {}; if (response.headers) { for (let key of response.headers.keys()) { _headers[key] = response.headers.get(key); }}
+        if (status === 200) {
+            return blobToText(responseBlob).pipe(_observableMergeMap(_responseText => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result200 = NavigationProvidersQueriesOneNoteGetHierarchyInfoHierarchyItemVm.fromJS(resultData200);
+            return _observableOf(result200);
+            }));
+        } else if (status !== 200 && status !== 204) {
+            return blobToText(responseBlob).pipe(_observableMergeMap(_responseText => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            }));
+        }
+        return _observableOf<NavigationProvidersQueriesOneNoteGetHierarchyInfoHierarchyItemVm>(<any>null);
     }
 }
 
@@ -253,6 +321,64 @@ export enum BibleNoteDomainEnumsNavigationProviderType {
     File = 1,
     Web = 2,
     OneNote = 3,
+}
+
+export class NavigationProvidersQueriesOneNoteGetHierarchyInfoHierarchyItemVm implements INavigationProvidersQueriesOneNoteGetHierarchyInfoHierarchyItemVm {
+    id?: string | undefined;
+    name?: string | undefined;
+    type?: BibleNoteProvidersOneNoteServicesNavigationProviderModelsOneNoteHierarchyType;
+
+    constructor(data?: INavigationProvidersQueriesOneNoteGetHierarchyInfoHierarchyItemVm) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.id = _data["id"];
+            this.name = _data["name"];
+            this.type = _data["type"];
+        }
+    }
+
+    static fromJS(data: any): NavigationProvidersQueriesOneNoteGetHierarchyInfoHierarchyItemVm {
+        data = typeof data === 'object' ? data : {};
+        let result = new NavigationProvidersQueriesOneNoteGetHierarchyInfoHierarchyItemVm();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["id"] = this.id;
+        data["name"] = this.name;
+        data["type"] = this.type;
+        return data; 
+    }
+
+    clone(): NavigationProvidersQueriesOneNoteGetHierarchyInfoHierarchyItemVm {
+        const json = this.toJSON();
+        let result = new NavigationProvidersQueriesOneNoteGetHierarchyInfoHierarchyItemVm();
+        result.init(json);
+        return result;
+    }
+}
+
+export interface INavigationProvidersQueriesOneNoteGetHierarchyInfoHierarchyItemVm {
+    id?: string | undefined;
+    name?: string | undefined;
+    type?: BibleNoteProvidersOneNoteServicesNavigationProviderModelsOneNoteHierarchyType;
+}
+
+export enum BibleNoteProvidersOneNoteServicesNavigationProviderModelsOneNoteHierarchyType {
+    Notebook = 1,
+    SectionGroup = 2,
+    Section = 3,
+    Page = 4,
 }
 
 export class BibleNoteApplicationWeatherForecast implements IBibleNoteApplicationWeatherForecast {

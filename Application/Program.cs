@@ -28,7 +28,7 @@ namespace BibleNote.Application
             var args = e?.Arguments != null ? string.Join(";", e.Arguments) : "No args";
             Console.WriteLine(args);
             File.WriteAllText(@"c:\temp\secondInstance.txt", args);
-            ProcessCommandAsync(args);
+            ProcessCommandAsync(args).GetAwaiter();
         }
 
         private static async Task ProcessCommandAsync(string args)

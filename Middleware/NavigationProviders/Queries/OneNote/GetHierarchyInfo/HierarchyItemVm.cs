@@ -1,9 +1,9 @@
 ﻿using BibleNote.Infrastructure.AutoMapper;
 using BibleNote.Providers.OneNote.Services.NavigationProvider.Models;
 
-namespace BibleNote.Middleware.NavigationProviders.Commands.OneNote.SelectHierarchy
+namespace BibleNote.Middleware.NavigationProviders.Queries.OneNote.GetHierarchyInfo
 {
-    public class HierarchyItemVm: IMapFrom<OneNoteHierarchyInfo>
+    public class HierarchyItemVm : IMapFrom<OneNoteHierarchyInfo>
     {
         public string Id { get; set; }
 

@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using BibleNote.Middleware.NavigationProviders.Queries.List;
-using BibleNote.Providers.OneNote.Services.NavigationProvider;
+using BibleNote.Middleware.NavigationProviders.Queries.OneNote.GetHierarchyInfo;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BibleNote.Application.Controllers
@@ -22,9 +22,16 @@ namespace BibleNote.Application.Controllers
         //}
 
         [HttpGet]
-        public async Task CallHierarchyItemsSelectionDialog()
+        public async Task CallHierarchyItemsSelectionDialog(string title, string description, string buttonText, string callbackFunction)
         {
-            await Mediator.Send(new Middleware.NavigationProviders.Commands.OneNote.SelectHierarchy.Request());
+            await Mediator.Send(new Middleware.NavigationProviders.Queries.OneNote.SelectHierarchy.Request(
+                title, description, buttonText, callbackFunction));
+        }
+
+        [HttpGet]
+        public async Task<HierarchyItemVm> GetHierarchyItemInfo(string hierarchyId)
+        {
+            return await Mediator.Send(new Middleware.NavigationProviders.Queries.OneNote.GetHierarchyInfo.Request(hierarchyId));
         }
     }
 }

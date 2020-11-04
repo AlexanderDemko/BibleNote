@@ -34,7 +34,7 @@ namespace BibleNote.Tests.TestsBase
             this.DbContext = ServiceProvider.GetService<ITrackingDbContext>();
             this.ConcreteContext = (AnalyticsDbContext)this.DbContext;
             this.ConcreteContext.Database.Migrate();
-            DbInitializer.InitializeAsync(this.ConcreteContext).GetAwaiter().GetResult();            
+            DbInitializer.InitializeAsync(this.ConcreteContext).GetAwaiter();            
         }        
                 
         public virtual void Cleanup()

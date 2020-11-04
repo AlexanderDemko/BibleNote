@@ -12,6 +12,7 @@ export class NavigationProvidersListComponent implements OnInit, OnDestroy {
   public providersState: navProviders.State;
 
   public selectedId: string;
+  public selectedName: string;
 
   constructor(
     private loadNavigationProvidersReducer: navProviders.LoadReducer,
@@ -34,10 +35,11 @@ export class NavigationProvidersListComponent implements OnInit, OnDestroy {
       component.zone.run(() => component.responseFromServer(value))
     };
 
-    await this.client.callHierarchyItemsSelectionDialog().toPromise();
+    await this.client.callHierarchyItemsSelectionDialog("Select hierarchy items", "Select Notebook, Section Group or Section", "Select", "window.onHierarchySelected").toPromise();
   }
 
-  responseFromServer(value: string) {
-    this.selectedId = value;
+  async responseFromServer(hierarchyId: string) {
+    this.selectedId = hierarchyId;
+    this.selectedName = (await this.client.getHierarchyItemInfo(hierarchyId).toPromise()).name;
   }
 }

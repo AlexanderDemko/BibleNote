@@ -35,9 +35,83 @@
           "NavigationProviders"
         ],
         "operationId": "NavigationProviders_CallHierarchyItemsSelectionDialog",
+        "parameters": [
+          {
+            "name": "title",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "nullable": true
+            },
+            "x-position": 1
+          },
+          {
+            "name": "description",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "nullable": true
+            },
+            "x-position": 2
+          },
+          {
+            "name": "buttonText",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "nullable": true
+            },
+            "x-position": 3
+          },
+          {
+            "name": "callbackFunction",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "nullable": true
+            },
+            "x-position": 4
+          }
+        ],
         "responses": {
           "200": {
             "description": ""
+          }
+        }
+      }
+    },
+    "/api/NavigationProviders/GetHierarchyItemInfo": {
+      "get": {
+        "tags": [
+          "NavigationProviders"
+        ],
+        "operationId": "NavigationProviders_GetHierarchyItemInfo",
+        "parameters": [
+          {
+            "name": "hierarchyId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "nullable": true
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NavigationProvidersQueriesOneNoteGetHierarchyInfoHierarchyItemVm"
+                }
+              }
+            }
           }
         }
       }
@@ -104,6 +178,39 @@
           1,
           2,
           3
+        ]
+      },
+      "NavigationProvidersQueriesOneNoteGetHierarchyInfoHierarchyItemVm": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "nullable": true
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "type": {
+            "$ref": "#/components/schemas/BibleNoteProvidersOneNoteServicesNavigationProviderModelsOneNoteHierarchyType"
+          }
+        }
+      },
+      "BibleNoteProvidersOneNoteServicesNavigationProviderModelsOneNoteHierarchyType": {
+        "type": "integer",
+        "description": "",
+        "x-enumNames": [
+          "Notebook",
+          "SectionGroup",
+          "Section",
+          "Page"
+        ],
+        "enum": [
+          1,
+          2,
+          3,
+          4
         ]
       },
       "BibleNoteApplicationWeatherForecast": {

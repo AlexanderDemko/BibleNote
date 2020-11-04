@@ -13,6 +13,6 @@ namespace BibleNote.Providers.OneNote.Contracts
         Task<string> GetCurrentSectionIdAsync();
         Task UpdatePageContentAsync(XDocument pageDoc);
         Task<string> GetHierarchyNameAsync(string hierarchyId);
-        Task SelectHierarchyItems(string title, string description, string checkboxText, IQuickFilingDialogCallback callback);
+        Task SelectHierarchyItems(string title, string description, string buttonText, IQuickFilingDialogCallback callback);
     }
 }

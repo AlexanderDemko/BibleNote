@@ -17,11 +17,11 @@ using BibleNote.Providers.OneNote.Utils;
 
 namespace BibleNote.Providers.OneNote.Services
 {
-    public class OneNoteAppWrapper : IOneNoteAppWrapper
+    public sealed class OneNoteAppWrapper : IOneNoteAppWrapper
     {
         private const int MaxOneNoteActionAttemptCount = 15;
         private const int OneNoteActionAttemptsDelay = 1000;
-        
+
         private IApplication oneNoteApp;
         private readonly ILogger logger;
         private readonly SemaphoreSlim locker = new SemaphoreSlim(1, 1);
@@ -35,10 +35,10 @@ namespace BibleNote.Providers.OneNote.Services
         {
             string result = null;
 
-            await UseOneNoteAppInSingleThreadAsync(app => 
+            await UseOneNoteAppInSingleThreadAsync(app =>
             {
                 app.GetPageContent(pageId, out result, pageInfo, OneNoteConstants.CurrentOneNoteSchema);
-            }); 
+            });
 
             return result;
         }
@@ -107,52 +107,40 @@ namespace BibleNote.Providers.OneNote.Services
         public void Dispose()
         {
             ReleaseOneNoteApp();
+            this.locker.Dispose();
         }
 
-        public async Task SelectHierarchyItems(string title, string description, string checkboxText, IQuickFilingDialogCallback callback)
+        public async Task SelectHierarchyItems(string title, string description, string buttonText, IQuickFilingDialogCallback callback)
         {
             await UseOneNoteAppInSingleThreadAsync(app =>
             {
-                // Instantiate Quick Filing UI
-                var qfDialog = app.QuickFiling();
-                #region//SET API PARAMETERS
-                // TITLE
-                qfDialog.Title = title;
-                // DESCRIPTION
-                qfDialog.Description = description;
-                // RECENT RESULTS
-                qfDialog.SetRecentResults(RecentResultType.rrtFiling,
-                    /*Current Section*/ true,
-                    /*Current Page*/ true,
-                    /*Unfiled Notes*/ true);
-                // TREE DEPTH
-                qfDialog.TreeDepth = HierarchyElement.heSections;
-                // CHECKBOX
-                qfDialog.CheckboxText = checkboxText;
-                qfDialog.CheckboxState = false;
-                // BUTTONS
-                HierarchyElement heAll = (HierarchyElement)
+                var dialog = app.QuickFiling();
+                
+                dialog.Title = title;
+                dialog.Description = description;
+                
+                dialog.SetRecentResults(
+                    RecentResultType.rrtFiling,
+                    fShowCurrentSection: true,
+                    fShowCurrentPage: false,
+                    fShowUnfiledNotes: false);
+              
+                dialog.TreeDepth = HierarchyElement.heSections;
+                dialog.CheckboxText = string.Empty;
+                dialog.CheckboxState = false;
+                
+                var heAll = (HierarchyElement)
                     ((uint)HierarchyElement.heNotebooks |
                     (uint)HierarchyElement.heSectionGroups |
                     (uint)HierarchyElement.heSections);
-
-                qfDialog.AddButton("All", heAll, heAll, true);
-                qfDialog.AddButton("Notebooks", HierarchyElement.heNotebooks,
-                    HierarchyElement.heNotebooks, false);
-                qfDialog.AddButton("Sections", HierarchyElement.heSections,
-                    HierarchyElement.heSections, false);
-                // PARENTWINDOW
-                #endregion
-                // Display Quick Filing UI
-                qfDialog.Run(callback);
-                // Clean up and Wait so console window does not close
-                qfDialog = null;
+                dialog.AddButton(buttonText, heAll, heAll, true);
+               
+                dialog.Run(callback);
+                dialog = null;
             });
         }
 
-      
-
-    private async Task UseOneNoteAppInSingleThreadAsync(Action<IApplication> action)
+        private async Task UseOneNoteAppInSingleThreadAsync(Action<IApplication> action)
         {
             await this.locker.DoInSemaphore(async () =>
             {
