@@ -1,4 +1,4 @@
-﻿namespace BibleNote.Providers.OneNote.Services.NavigationProvider.Models
+﻿namespace BibleNote.Providers.OneNote.Services.Models
 {
     public struct OneNoteHierarchyInfo
     {

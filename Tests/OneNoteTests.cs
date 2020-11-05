@@ -7,8 +7,8 @@ using BibleNote.Domain.Entities;
 using BibleNote.Domain.Enums;
 using BibleNote.Providers.OneNote.Contracts;
 using BibleNote.Providers.OneNote.Services.DocumentProvider;
+using BibleNote.Providers.OneNote.Services.Models;
 using BibleNote.Providers.OneNote.Services.NavigationProvider;
-using BibleNote.Providers.OneNote.Services.NavigationProvider.Models;
 using BibleNote.Services.DocumentProvider.Contracts;
 using BibleNote.Services.DocumentProvider.Models;
 using BibleNote.Services.NavigationProvider.Contracts;
@@ -53,8 +53,8 @@ namespace BibleNote.Tests
         public async Task TestAnalyzer()
         {
             var currentSectionId = await this.oneNoteApp.GetCurrentSectionIdAsync();
-            var sectionName = await this.oneNoteApp.GetHierarchyNameAsync(currentSectionId);
-            if (sectionName != "Test Section")
+            var sectionInfo = await this.oneNoteApp.GetHierarchyInfoAsync(currentSectionId);
+            if (sectionInfo.Name != "Test Section")
                 throw new InvalidOperationException("Should check 'Test Section' only");
 
             var navigationProviderInfo = new NavigationProviderInfo()

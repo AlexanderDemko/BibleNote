@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
-using BibleNote.Middleware.NavigationProviders.Queries.List;
-using BibleNote.Middleware.NavigationProviders.Queries.OneNote.GetHierarchyInfo;
+using BibleNote.Middleware.NavigationProviders.SharedViewModels;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BibleNote.Application.Controllers

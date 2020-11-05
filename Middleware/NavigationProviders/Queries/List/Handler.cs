@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AutoMapper;
 using BibleNote.Domain.Contracts;
+using BibleNote.Middleware.NavigationProviders.SharedViewModels;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -23,7 +24,7 @@ namespace BibleNote.Middleware.NavigationProviders.Queries.List
         {
             return await this.mapper
                 .ProjectTo<NavigationProviderVm>(this.dbContext.NavigationProvidersInfo)
-                .ToListAsync();
+                .ToListAsync(cancellationToken);
         }
     }
 }

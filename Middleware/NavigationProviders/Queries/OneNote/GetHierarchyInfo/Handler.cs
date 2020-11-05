@@ -1,4 +1,6 @@
-﻿using BibleNote.Providers.OneNote.Contracts;
+﻿using AutoMapper;
+using BibleNote.Middleware.NavigationProviders.SharedViewModels;
+using BibleNote.Providers.OneNote.Contracts;
 using MediatR;
 using System.Threading;
 using System.Threading.Tasks;
@@ -8,17 +10,19 @@ namespace BibleNote.Middleware.NavigationProviders.Queries.OneNote.GetHierarchyI
     public class Handler : IRequestHandler<Request, HierarchyItemVm>
     {
         private readonly IOneNoteAppWrapper oneNoteAppWrapper;
+        private readonly IMapper mapper;
 
-        public Handler(IOneNoteAppWrapper oneNoteAppWrapper)
+        public Handler(IOneNoteAppWrapper oneNoteAppWrapper, IMapper mapper)
         {
             this.oneNoteAppWrapper = oneNoteAppWrapper;
+            this.mapper = mapper;
         }
 
         public async Task<HierarchyItemVm> Handle(Request request, CancellationToken cancellationToken)
         {
-            var hierarchyName = await this.oneNoteAppWrapper.GetHierarchyNameAsync(request.HierarchyId);
+            var hierarchyInfo = await this.oneNoteAppWrapper.GetHierarchyInfoAsync(request.HierarchyId);
 
-            return new HierarchyItemVm() { Id = request.HierarchyId, Name = hierarchyName, Type = ? };
+            return this.mapper.Map<HierarchyItemVm>(hierarchyInfo);
         }
     }
 }

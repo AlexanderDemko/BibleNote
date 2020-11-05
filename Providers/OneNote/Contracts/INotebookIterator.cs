@@ -1,4 +1,4 @@
-﻿using BibleNote.Providers.OneNote.Services.NavigationProvider.Models;
+﻿using BibleNote.Providers.OneNote.Services.Models;
 using System.Threading.Tasks;
 using static BibleNote.Providers.OneNote.Services.NavigationProvider.NotebookIterator;
 

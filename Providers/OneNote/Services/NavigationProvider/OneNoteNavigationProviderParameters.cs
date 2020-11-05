@@ -1,5 +1,5 @@
 ﻿using System.Collections.Generic;
-using BibleNote.Providers.OneNote.Services.NavigationProvider.Models;
+using BibleNote.Providers.OneNote.Services.Models;
 using BibleNote.Services.NavigationProvider.Contracts;
 
 namespace BibleNote.Providers.OneNote.Services.NavigationProvider

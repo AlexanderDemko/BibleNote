@@ -14,6 +14,8 @@ using Microsoft.Office.Interop.OneNote;
 using BibleNote.Common.Extensions;
 using BibleNote.Providers.OneNote.Exceptions;
 using BibleNote.Providers.OneNote.Utils;
+using BibleNote.Providers.OneNote.Services.Models;
+using System.Net.Http.Headers;
 
 namespace BibleNote.Providers.OneNote.Services
 {
@@ -97,11 +99,24 @@ namespace BibleNote.Providers.OneNote.Services
             return content;
         }
 
-        public async Task<string> GetHierarchyNameAsync(string hierarchyId)
+        public async Task<OneNoteHierarchyInfo> GetHierarchyInfoAsync(string hierarchyId)
         {
             var hierarchyContent = await GetHierarchyContentAsync(hierarchyId, HierarchyScope.hsSelf);
             var hierarchyEl = XElement.Parse(hierarchyContent);
-            return (string)hierarchyEl.Attribute("name");
+            var name = (string)hierarchyEl.Attribute("name");
+            var type = GetHierarchyType(hierarchyEl);
+
+            return new OneNoteHierarchyInfo()
+            {
+                Id = hierarchyId,
+                Name = name,
+                Type = type
+            };
+        }
+
+        private static OneNoteHierarchyType GetHierarchyType(XElement hierarchyEl)
+        {
+            return Enum.Parse<OneNoteHierarchyType>(hierarchyEl.Name.LocalName);
         }
 
         public void Dispose()

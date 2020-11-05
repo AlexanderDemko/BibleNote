@@ -20,11 +20,6 @@ namespace BibleNote.Services.NavigationProvider
             return this.dbContext.NavigationProvidersInfo.ToListAsync();
         }
 
-        public Task SaveNavigationProvidersInfoAsync(List<NavigationProviderInfo> navigationProviderInfos)
-        {
-            return this.dbContext.SaveChangesAsync();
-        }
-
         public async Task DeleteNavigationProvider(int navigationProviderId)
         {
             await this.dbContext.VerseRelationRepository.DeleteAsync(

@@ -1,4 +1,5 @@
-﻿using Microsoft.Office.Interop.OneNote;
+﻿using BibleNote.Providers.OneNote.Services.Models;
+using Microsoft.Office.Interop.OneNote;
 using System;
 using System.Threading.Tasks;
 using System.Xml.Linq;
@@ -12,7 +13,7 @@ namespace BibleNote.Providers.OneNote.Contracts
         Task<string> GetCurrentPageIdAsync();
         Task<string> GetCurrentSectionIdAsync();
         Task UpdatePageContentAsync(XDocument pageDoc);
-        Task<string> GetHierarchyNameAsync(string hierarchyId);
+        Task<OneNoteHierarchyInfo> GetHierarchyInfoAsync(string hierarchyId);
         Task SelectHierarchyItems(string title, string description, string buttonText, IQuickFilingDialogCallback callback);
     }
 }

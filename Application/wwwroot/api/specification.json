@@ -20,7 +20,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/NavigationProvidersQueriesListNavigationProviderVm"
+                    "$ref": "#/components/schemas/NavigationProvidersSharedViewModelsNavigationProviderVm"
                   }
                 }
               }
@@ -108,7 +108,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/NavigationProvidersQueriesOneNoteGetHierarchyInfoHierarchyItemVm"
+                  "$ref": "#/components/schemas/NavigationProvidersSharedViewModelsHierarchyItemVm"
                 }
               }
             }
@@ -142,7 +142,7 @@
   },
   "components": {
     "schemas": {
-      "NavigationProvidersQueriesListNavigationProviderVm": {
+      "NavigationProvidersSharedViewModelsNavigationProviderVm": {
         "type": "object",
         "additionalProperties": false,
         "properties": {
@@ -180,7 +180,7 @@
           3
         ]
       },
-      "NavigationProvidersQueriesOneNoteGetHierarchyInfoHierarchyItemVm": {
+      "NavigationProvidersSharedViewModelsHierarchyItemVm": {
         "type": "object",
         "additionalProperties": false,
         "properties": {
@@ -193,11 +193,11 @@
             "nullable": true
           },
           "type": {
-            "$ref": "#/components/schemas/BibleNoteProvidersOneNoteServicesNavigationProviderModelsOneNoteHierarchyType"
+            "$ref": "#/components/schemas/BibleNoteProvidersOneNoteServicesModelsOneNoteHierarchyType"
           }
         }
       },
-      "BibleNoteProvidersOneNoteServicesNavigationProviderModelsOneNoteHierarchyType": {
+      "BibleNoteProvidersOneNoteServicesModelsOneNoteHierarchyType": {
         "type": "integer",
         "description": "",
         "x-enumNames": [

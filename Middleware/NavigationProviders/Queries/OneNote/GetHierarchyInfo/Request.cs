@@ -1,4 +1,5 @@
-﻿using MediatR;
+﻿using BibleNote.Middleware.NavigationProviders.SharedViewModels;
+using MediatR;
 
 namespace BibleNote.Middleware.NavigationProviders.Queries.OneNote.GetHierarchyInfo
 {

@@ -4,10 +4,10 @@ using Microsoft.Office.Interop.OneNote;
 using System.Xml.Linq;
 using BibleNote.Providers.OneNote.Contracts;
 using System.Threading.Tasks;
-using BibleNote.Providers.OneNote.Services.NavigationProvider.Models;
 using System.Collections.Generic;
 using BibleNote.Providers.OneNote.Utils;
 using BibleNote.Providers.OneNote.Constants;
+using BibleNote.Providers.OneNote.Services.Models;
 
 namespace BibleNote.Providers.OneNote.Services.NavigationProvider
 {
