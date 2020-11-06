@@ -1,9 +1,17 @@
 import { NgModule } from '@angular/core';
 import { Routes, RouterModule } from '@angular/router';
 import { NavigationProvidersListComponent } from './navigation-providers/list/navigation-providers.component';
+import { BibleComponent } from './bible/bible.component';
 
 const routes: Routes = [
-  { path: 'nav-providers', component: NavigationProvidersListComponent }
+  {
+    path: 'bible',
+    component: BibleComponent,
+    children: [
+      { path: 'nav-providers', component: NavigationProvidersListComponent }
+    ]
+  },
+  { path: '', redirectTo: '/bible', pathMatch: 'full' },
 ];
 
 @NgModule({

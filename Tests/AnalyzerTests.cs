@@ -3,9 +3,9 @@ using BibleNote.Domain.Enums;
 using BibleNote.Providers.FileSystem.Navigation;
 using BibleNote.Services.DocumentProvider.Contracts;
 using BibleNote.Services.DocumentProvider.Models;
-using BibleNote.Services.NavigationProvider.Contracts;
 using BibleNote.Tests.TestsBase;
 using FluentAssertions;
+using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
@@ -19,7 +19,7 @@ namespace BibleNote.Tests
     public class AnalyzerTests : DbTestsBase
     {
         private IAnalyzer analyzer;
-        private INavigationProviderService navigationProviderService;
+        private IMediator mediator;
 
         [TestInitialize]
         public void Init()
@@ -27,7 +27,7 @@ namespace BibleNote.Tests
             base.Init();
 
             this.analyzer = ServiceProvider.GetService<IAnalyzer>();
-            this.navigationProviderService = ServiceProvider.GetService<INavigationProviderService>();
+            this.mediator = ServiceProvider.GetService<IMediator>();
         }
 
         [TestCleanup]
@@ -106,7 +106,7 @@ namespace BibleNote.Tests
             }
             finally
             {
-                await this.navigationProviderService.DeleteNavigationProvider(navigationProviderInfo.Id);
+                await this.mediator.Send(new Middleware.NavigationProviders.Commands.Delete.Request(navigationProviderInfo.Id));
             }
         }
     }

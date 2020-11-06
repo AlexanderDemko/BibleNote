@@ -8,10 +8,12 @@ import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { AppInitializer } from './app.initializer';
 import { NavigationProvidersListComponent } from './navigation-providers/list/navigation-providers.component';
+import { BibleComponent } from './bible/bible.component';
 
 @NgModule({
   declarations: [
     AppComponent,
+    BibleComponent,
     NavigationProvidersListComponent
   ],
   imports: [

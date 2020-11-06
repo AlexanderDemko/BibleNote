@@ -1,5 +1,5 @@
 ﻿using System.Collections.Generic;
-using BibleNote.Services.NavigationProvider.Contracts;
+using BibleNote.Services.NavigationProvider;
 
 namespace BibleNote.Providers.FileSystem.Navigation
 {

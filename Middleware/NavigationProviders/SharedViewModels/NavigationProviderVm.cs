@@ -17,7 +17,7 @@ namespace BibleNote.Middleware.NavigationProviders.SharedViewModels
 
         public NavigationProviderType Type { get; set; }
 
-        public void CreateMappings(Profile configuration)
+        public virtual void CreateMappings(Profile configuration)
         {
             configuration.CreateMap<NavigationProviderVm, NavigationProviderInfo>()
                 .ForMember(d => d.ParametersRaw, s => s.Ignore());

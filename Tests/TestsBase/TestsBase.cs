@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Reflection;
 using BibleNote.Common.DiContainer;
+using BibleNote.Middleware;
 using BibleNote.Providers.FileSystem.Navigation;
 using BibleNote.Providers.Html;
 using BibleNote.Providers.OneNote;
@@ -8,6 +10,7 @@ using BibleNote.Services.Configuration.Contracts;
 using BibleNote.Services.ModulesManager.Contracts;
 using BibleNote.Services.ModulesManager.Models.Exceptions;
 using BibleNote.Tests.Mocks;
+using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace BibleNote.Tests.TestsBase
@@ -29,6 +32,8 @@ namespace BibleNote.Tests.TestsBase
                .AddApplicatonServices<FileNavigationModule>()
                //.AddLogging(configure => configure.AddConsole())
                .AddSingleton(sp => MockConfigurationManager);
+
+            services.AddMediatR(typeof(MiddlewareModule).Assembly);
 
             registerServicesAction?.Invoke(services);
 

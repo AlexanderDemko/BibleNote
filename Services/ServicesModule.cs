@@ -5,8 +5,6 @@ using BibleNote.Services.DocumentProvider;
 using BibleNote.Services.DocumentProvider.Contracts;
 using BibleNote.Services.ModulesManager;
 using BibleNote.Services.ModulesManager.Contracts;
-using BibleNote.Services.NavigationProvider;
-using BibleNote.Services.NavigationProvider.Contracts;
 using BibleNote.Services.ParallelVerses;
 using BibleNote.Services.ParallelVerses.Contracts;
 using BibleNote.Services.VerseParsing;
@@ -41,7 +39,6 @@ namespace BibleNote.Services
                 .AddTransient<IDocumentParseContextEditor, DocumentParseContext>()
                 .AddTransient<IAnalyzer, Analyzer>()
                 .AddTransient<IVerseLinkService, VerseLinkService>()
-                .AddTransient<INavigationProviderService, NavigationProviderService>()
                 ;
         }
     }

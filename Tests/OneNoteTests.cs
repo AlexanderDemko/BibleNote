@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using BibleNote.Domain.Entities;
@@ -11,12 +10,11 @@ using BibleNote.Providers.OneNote.Services.Models;
 using BibleNote.Providers.OneNote.Services.NavigationProvider;
 using BibleNote.Services.DocumentProvider.Contracts;
 using BibleNote.Services.DocumentProvider.Models;
-using BibleNote.Services.NavigationProvider.Contracts;
 using BibleNote.Services.VerseProcessing.Contracts;
 using BibleNote.Tests.TestsBase;
 using FluentAssertions;
+using MediatR;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace BibleNote.Tests
@@ -27,8 +25,8 @@ namespace BibleNote.Tests
         private IDocumentProvider documentProvider;
         private IOneNoteAppWrapper oneNoteApp;
         private IAnalyzer analyzer;
-        private INavigationProviderService navigationProviderService;
         private IOrderedEnumerable<IDocumentParseResultProcessing> documentParseResultProcessings;
+        private IMediator mediator;
 
         [TestInitialize]
         public void Init()
@@ -38,9 +36,9 @@ namespace BibleNote.Tests
             this.documentProvider = ServiceProvider.GetService<OneNoteProvider>();
             this.oneNoteApp = ServiceProvider.GetService<IOneNoteAppWrapper>();
             this.analyzer = ServiceProvider.GetService<IAnalyzer>();
-            this.navigationProviderService = ServiceProvider.GetService<INavigationProviderService>();
             this.documentParseResultProcessings = ServiceProvider.GetServices<IDocumentParseResultProcessing>()
                 .OrderBy(rp => rp.Order);
+            this.mediator = ServiceProvider.GetService<IMediator>();
         }
 
         [TestCleanup]
@@ -96,7 +94,7 @@ namespace BibleNote.Tests
             }
             finally
             {
-                await this.navigationProviderService.DeleteNavigationProvider(navigationProviderInfo.Id);
+                await this.mediator.Send(new Middleware.NavigationProviders.Commands.Delete.Request(navigationProviderInfo.Id));
             }
         }       
     }

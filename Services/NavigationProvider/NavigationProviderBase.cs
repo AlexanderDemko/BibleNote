@@ -6,7 +6,6 @@ using BibleNote.Domain.Contracts;
 using BibleNote.Domain.Entities;
 using BibleNote.Domain.Enums;
 using BibleNote.Services.DocumentProvider.Contracts;
-using BibleNote.Services.NavigationProvider.Contracts;
 
 namespace BibleNote.Services.NavigationProvider
 {

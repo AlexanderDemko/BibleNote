@@ -12,13 +12,11 @@ using BibleNote.Providers.FileSystem.Navigation;
 using BibleNote.Providers.Html;
 using BibleNote.Providers.OneNote;
 using BibleNote.Services;
-using BibleNote.Services.VerseParsing.Contracts.ParseContext;
 using ElectronNET.API;
 using ElectronNET.API.Entities;
 using MediatR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.SpaServices.AngularCli;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -50,7 +48,7 @@ namespace BibleNote.Application
 
             services.AddApplicatonServices<MiddlewareModule>();
 
-            services.AddMediatR(typeof(MiddlewareModule).GetTypeInfo().Assembly);
+            services.AddMediatR(typeof(MiddlewareModule).Assembly);
             services.AddTransient(typeof(IPipelineBehavior<,>), typeof(RequestPerformanceBehaviour<,>));
             services.AddTransient(typeof(IPipelineBehavior<,>), typeof(RequestValidationBehavior<,>));
 

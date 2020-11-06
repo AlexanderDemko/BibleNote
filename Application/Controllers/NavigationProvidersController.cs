@@ -8,29 +8,51 @@ namespace BibleNote.Application.Controllers
     public class NavigationProvidersController : BaseController
     {
         [HttpGet]
-        public async Task<List<NavigationProviderVm>> GetAllAsync()
+        public Task<List<NavigationProviderVm>> GetAllAsync()
         {
-            var data = await Mediator.Send(new Middleware.NavigationProviders.Queries.List.Request());
-            return data;
+            return Mediator.Send(new Middleware.NavigationProviders.Queries.List.Request());
         }
 
-        //[HttpPost]
-        //public async Task<NavigationProviderVm> CreateOneNoteProviderAsync(NavigationProviderVm info, OneNoteNavigationProviderParameters parameters)
-        //{
-        //    return null;
-        //}
 
-        [HttpGet]
-        public async Task CallHierarchyItemsSelectionDialog(string title, string description, string buttonText, string callbackFunction)
+        [HttpDelete]
+        public Task DeleteAsync(int id)
         {
-            await Mediator.Send(new Middleware.NavigationProviders.Queries.OneNote.SelectHierarchy.Request(
-                title, description, buttonText, callbackFunction));
+            return Mediator.Send(new Middleware.NavigationProviders.Commands.Delete.Request(id));
         }
+
+        #region OneNote
 
         [HttpGet]
-        public async Task<HierarchyItemVm> GetHierarchyItemInfo(string hierarchyId)
+        public Task<OneNoteNavigationProviderVm> GetOneNoteProviderInfoAsync(int id)
         {
-            return await Mediator.Send(new Middleware.NavigationProviders.Queries.OneNote.GetHierarchyInfo.Request(hierarchyId));
+            return Mediator.Send(new Middleware.NavigationProviders.Queries.OneNote.Read.Request(id));
         }
+
+        [HttpPost]
+        public Task<int> CreateOneNoteProviderAsync(OneNoteNavigationProviderVm provider)
+        {
+            return Mediator.Send(new Middleware.NavigationProviders.Commands.OneNote.Create.Request(provider));
+        }
+
+        [HttpPut]
+        public Task UpdateOneNoteProviderAsync(OneNoteNavigationProviderVm provider)
+        {
+            return Mediator.Send(new Middleware.NavigationProviders.Commands.OneNote.Update.Request(provider));
+        }
+
+        [HttpGet]
+        public Task CallOneNoteSelectHierarchyItemDialog(string title, string description, string buttonText, string callbackFunction)
+        {
+            return Mediator.Send(
+                new Middleware.NavigationProviders.Queries.OneNote.SelectHierarchy.Request(title, description, buttonText, callbackFunction));
+        }
+
+        [HttpGet]
+        public Task<HierarchyItemVm> GetOneNoteHierarchyItemInfo(string hierarchyId)
+        {
+            return Mediator.Send(new Middleware.NavigationProviders.Queries.OneNote.GetHierarchyInfo.Request(hierarchyId));
+        }
+
+        #endregion
     }
 }

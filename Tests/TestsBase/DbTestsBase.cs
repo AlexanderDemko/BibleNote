@@ -10,7 +10,9 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace BibleNote.Tests.TestsBase
 {
-    public class DbTestsBase : TestsBase
+#pragma warning disable CA1063 // Implement IDisposable Correctly
+    public class DbTestsBase : TestsBase, IDisposable
+#pragma warning restore CA1063 // Implement IDisposable Correctly
     {
         protected ITrackingDbContext DbContext { get; set; }
         protected AnalyticsDbContext ConcreteContext { get; set; }
@@ -62,6 +64,11 @@ namespace BibleNote.Tests.TestsBase
             }
 
             return document;
+        }
+
+        public void Dispose()
+        {
+            this.connection?.Dispose();
         }
     }
 }

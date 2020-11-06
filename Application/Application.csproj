@@ -66,6 +66,11 @@
   <ItemGroup>
     <None Include="wwwroot\assets\splashscreen.png" />
   </ItemGroup>
+  <ItemGroup>
+    <Folder Include="ClientApp\src\app\bible\navigation-pane\" />
+    <Folder Include="ClientApp\src\app\bible\content\" />
+    <Folder Include="ClientApp\src\app\configuration\" />
+  </ItemGroup>
     <Target Name="NSwag" BeforeTargets="AfterBuild" Condition="'$(GenerateCode)'=='True' ">
     <Exec Command="$(NSwagExe_Core31) run nswag.json /variables:Configuration=$(Configuration)" />
   </Target>  

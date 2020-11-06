@@ -29,12 +29,127 @@
         }
       }
     },
-    "/api/NavigationProviders/CallHierarchyItemsSelectionDialog": {
+    "/api/NavigationProviders/Delete": {
+      "delete": {
+        "tags": [
+          "NavigationProviders"
+        ],
+        "operationId": "NavigationProviders_Delete",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/api/NavigationProviders/GetOneNoteProviderInfo": {
       "get": {
         "tags": [
           "NavigationProviders"
         ],
-        "operationId": "NavigationProviders_CallHierarchyItemsSelectionDialog",
+        "operationId": "NavigationProviders_GetOneNoteProviderInfo",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NavigationProvidersSharedViewModelsOneNoteNavigationProviderVm"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/NavigationProviders/CreateOneNoteProvider": {
+      "post": {
+        "tags": [
+          "NavigationProviders"
+        ],
+        "operationId": "NavigationProviders_CreateOneNoteProvider",
+        "requestBody": {
+          "x-name": "provider",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NavigationProvidersSharedViewModelsOneNoteNavigationProviderVm"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "integer",
+                  "format": "int32"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/NavigationProviders/UpdateOneNoteProvider": {
+      "put": {
+        "tags": [
+          "NavigationProviders"
+        ],
+        "operationId": "NavigationProviders_UpdateOneNoteProvider",
+        "requestBody": {
+          "x-name": "provider",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NavigationProvidersSharedViewModelsOneNoteNavigationProviderVm"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 1
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/api/NavigationProviders/CallOneNoteSelectHierarchyItemDialog": {
+      "get": {
+        "tags": [
+          "NavigationProviders"
+        ],
+        "operationId": "NavigationProviders_CallOneNoteSelectHierarchyItemDialog",
         "parameters": [
           {
             "name": "title",
@@ -84,12 +199,12 @@
         }
       }
     },
-    "/api/NavigationProviders/GetHierarchyItemInfo": {
+    "/api/NavigationProviders/GetOneNoteHierarchyItemInfo": {
       "get": {
         "tags": [
           "NavigationProviders"
         ],
-        "operationId": "NavigationProviders_GetHierarchyItemInfo",
+        "operationId": "NavigationProviders_GetOneNoteHierarchyItemInfo",
         "parameters": [
           {
             "name": "hierarchyId",
@@ -180,7 +295,48 @@
           3
         ]
       },
-      "NavigationProvidersSharedViewModelsHierarchyItemVm": {
+      "NavigationProvidersSharedViewModelsOneNoteNavigationProviderVm": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/NavigationProvidersSharedViewModelsNavigationProviderVm"
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "parameters": {
+                "nullable": true,
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/BibleNoteProvidersOneNoteServicesNavigationProviderOneNoteNavigationProviderParameters"
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "BibleNoteProvidersOneNoteServicesNavigationProviderOneNoteNavigationProviderParameters": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/BibleNoteServicesNavigationProviderNavigationProviderParametersBase"
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "hierarchyItems": {
+                "type": "array",
+                "nullable": true,
+                "items": {
+                  "$ref": "#/components/schemas/BibleNoteProvidersOneNoteServicesModelsOneNoteHierarchyInfo"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "BibleNoteProvidersOneNoteServicesModelsOneNoteHierarchyInfo": {
         "type": "object",
         "additionalProperties": false,
         "properties": {
@@ -212,6 +368,28 @@
           3,
           4
         ]
+      },
+      "BibleNoteServicesNavigationProviderNavigationProviderParametersBase": {
+        "type": "object",
+        "x-abstract": true,
+        "additionalProperties": false
+      },
+      "NavigationProvidersSharedViewModelsHierarchyItemVm": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "nullable": true
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "type": {
+            "$ref": "#/components/schemas/BibleNoteProvidersOneNoteServicesModelsOneNoteHierarchyType"
+          }
+        }
       },
       "BibleNoteApplicationWeatherForecast": {
         "type": "object",
