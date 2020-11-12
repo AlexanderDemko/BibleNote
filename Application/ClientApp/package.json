@@ -19,6 +19,7 @@
     "@angular/platform-browser": "~10.1.6",
     "@angular/platform-browser-dynamic": "~10.1.6",
     "@angular/router": "~10.1.6",
+    "@fortawesome/fontawesome-free": "^5.15.1",
     "bootstrap": "^4.5.3",
     "ngx-bootstrap": "^6.1.0",
     "reduce-store": "2.0.1",

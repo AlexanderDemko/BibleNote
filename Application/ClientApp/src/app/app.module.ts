@@ -8,8 +8,8 @@ import { ModalModule } from 'ngx-bootstrap/modal';
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { AppInitializer } from './app.initializer';
-import { NavigationProvidersListComponent } from './navigation-providers/list/navigation-providers.component';
 import { BibleComponent } from './bible/bible.component';
+import { NavigationProvidersListComponent } from './navigation-providers/list/navigation-providers.component';
 
 @NgModule({
   declarations: [

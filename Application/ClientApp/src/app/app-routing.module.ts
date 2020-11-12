@@ -4,13 +4,8 @@ import { NavigationProvidersListComponent } from './navigation-providers/list/na
 import { BibleComponent } from './bible/bible.component';
 
 const routes: Routes = [
-  {
-    path: 'bible',
-    component: BibleComponent,
-    children: [
-      { path: 'nav-providers', component: NavigationProvidersListComponent }
-    ]
-  },
+  { path: 'bible', component: BibleComponent },
+  { path: 'data-sources', component: NavigationProvidersListComponent },
   { path: '', redirectTo: '/bible', pathMatch: 'full' },
 ];
 

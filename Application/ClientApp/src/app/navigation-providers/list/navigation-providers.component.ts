@@ -3,6 +3,7 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import * as navProviders from '@app/navigation-providers/state';
 import { NgStoreService } from '../../shared/services/store.service';
 import { Router, ActivatedRoute } from '@angular/router';
+import { BibleNoteDomainEnumsNavigationProviderType } from '../../shared/web-clients/auto-generated';
 
 @Component({
   templateUrl: './navigation-providers.component.html'
@@ -14,7 +15,6 @@ export class NavigationProvidersListComponent implements OnInit, OnDestroy {
     private loadNavigationProvidersReducer: navProviders.LoadReducer,
     private store: NgStoreService,
     private router: Router,
-    private route: ActivatedRoute
   ) {
     this.store.state.subscribe(navProviders.State, this, s => this.providersState = s)
   }
@@ -26,6 +26,10 @@ export class NavigationProvidersListComponent implements OnInit, OnDestroy {
   }
 
   hideModal(): void {
-    this.router.navigate(['/'], { relativeTo: this.route });
+    this.router.navigate(['/bible']);
+  }
+
+  getProviderType(type: BibleNoteDomainEnumsNavigationProviderType): string {
+    return BibleNoteDomainEnumsNavigationProviderType[type];
   }
 }
