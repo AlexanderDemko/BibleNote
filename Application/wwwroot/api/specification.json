@@ -20,7 +20,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/NavigationProvidersSharedViewModelsNavigationProviderVm"
+                    "$ref": "#/components/schemas/NavigationProvidersNavigationProviderVm"
                   }
                 }
               }
@@ -78,7 +78,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/NavigationProvidersSharedViewModelsOneNoteNavigationProviderVm"
+                  "$ref": "#/components/schemas/NavigationProvidersOneNoteNavigationProviderVm"
                 }
               }
             }
@@ -97,7 +97,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/NavigationProvidersSharedViewModelsOneNoteNavigationProviderVm"
+                "$ref": "#/components/schemas/NavigationProvidersOneNoteNavigationProviderVm"
               }
             }
           },
@@ -130,7 +130,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/NavigationProvidersSharedViewModelsOneNoteNavigationProviderVm"
+                "$ref": "#/components/schemas/NavigationProvidersOneNoteNavigationProviderVm"
               }
             }
           },
@@ -223,7 +223,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/NavigationProvidersSharedViewModelsHierarchyItemVm"
+                  "$ref": "#/components/schemas/NavigationProvidersHierarchyItemVm"
                 }
               }
             }
@@ -234,7 +234,7 @@
   },
   "components": {
     "schemas": {
-      "NavigationProvidersSharedViewModelsNavigationProviderVm": {
+      "NavigationProvidersNavigationProviderVm": {
         "type": "object",
         "additionalProperties": false,
         "properties": {
@@ -272,10 +272,10 @@
           3
         ]
       },
-      "NavigationProvidersSharedViewModelsOneNoteNavigationProviderVm": {
+      "NavigationProvidersOneNoteNavigationProviderVm": {
         "allOf": [
           {
-            "$ref": "#/components/schemas/NavigationProvidersSharedViewModelsNavigationProviderVm"
+            "$ref": "#/components/schemas/NavigationProvidersNavigationProviderVm"
           },
           {
             "type": "object",
@@ -351,7 +351,7 @@
         "x-abstract": true,
         "additionalProperties": false
       },
-      "NavigationProvidersSharedViewModelsHierarchyItemVm": {
+      "NavigationProvidersHierarchyItemVm": {
         "type": "object",
         "additionalProperties": false,
         "properties": {

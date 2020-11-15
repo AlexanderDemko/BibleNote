@@ -2,8 +2,8 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 
 import * as navProviders from '@app/navigation-providers/state';
 import { NgStoreService } from '../../shared/services/store.service';
-import { Router, ActivatedRoute } from '@angular/router';
-import { BibleNoteDomainEnumsNavigationProviderType } from '../../shared/web-clients/auto-generated';
+import { Router } from '@angular/router';
+import { BibleNoteDomainEnumsNavigationProviderType, NavigationProvidersNavigationProviderVm } from '../../shared/web-clients/auto-generated';
 
 @Component({
   templateUrl: './navigation-providers.component.html'
@@ -34,5 +34,14 @@ export class NavigationProvidersListComponent implements OnInit, OnDestroy {
       return '';
 
     return BibleNoteDomainEnumsNavigationProviderType[type];
+  }
+
+  getEditPageLink(provider: NavigationProvidersNavigationProviderVm): string {
+    switch (provider.type) {
+      case BibleNoteDomainEnumsNavigationProviderType.OneNote:
+        return `onenote/${provider.id}`;
+      default:
+        return ''; 
+    }
   }
 }

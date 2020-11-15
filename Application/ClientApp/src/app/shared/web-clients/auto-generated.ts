@@ -27,7 +27,7 @@ export class NavigationProvidersClient {
         this.baseUrl = baseUrl !== undefined && baseUrl !== null ? baseUrl : "";
     }
 
-    getAll(): Observable<NavigationProvidersSharedViewModelsNavigationProviderVm[]> {
+    getAll(): Observable<NavigationProvidersNavigationProviderVm[]> {
         let url_ = this.baseUrl + "/api/NavigationProviders/GetAll";
         url_ = url_.replace(/[?&]$/, "");
 
@@ -46,14 +46,14 @@ export class NavigationProvidersClient {
                 try {
                     return this.processGetAll(<any>response_);
                 } catch (e) {
-                    return <Observable<NavigationProvidersSharedViewModelsNavigationProviderVm[]>><any>_observableThrow(e);
+                    return <Observable<NavigationProvidersNavigationProviderVm[]>><any>_observableThrow(e);
                 }
             } else
-                return <Observable<NavigationProvidersSharedViewModelsNavigationProviderVm[]>><any>_observableThrow(response_);
+                return <Observable<NavigationProvidersNavigationProviderVm[]>><any>_observableThrow(response_);
         }));
     }
 
-    protected processGetAll(response: HttpResponseBase): Observable<NavigationProvidersSharedViewModelsNavigationProviderVm[]> {
+    protected processGetAll(response: HttpResponseBase): Observable<NavigationProvidersNavigationProviderVm[]> {
         const status = response.status;
         const responseBlob =
             response instanceof HttpResponse ? response.body :
@@ -67,7 +67,7 @@ export class NavigationProvidersClient {
             if (Array.isArray(resultData200)) {
                 result200 = [] as any;
                 for (let item of resultData200)
-                    result200!.push(NavigationProvidersSharedViewModelsNavigationProviderVm.fromJS(item));
+                    result200!.push(NavigationProvidersNavigationProviderVm.fromJS(item));
             }
             return _observableOf(result200);
             }));
@@ -76,7 +76,7 @@ export class NavigationProvidersClient {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             }));
         }
-        return _observableOf<NavigationProvidersSharedViewModelsNavigationProviderVm[]>(<any>null);
+        return _observableOf<NavigationProvidersNavigationProviderVm[]>(<any>null);
     }
 
     delete(id: number): Observable<void> {
@@ -127,7 +127,7 @@ export class NavigationProvidersClient {
         return _observableOf<void>(<any>null);
     }
 
-    getOneNoteProviderInfo(id: number): Observable<NavigationProvidersSharedViewModelsOneNoteNavigationProviderVm> {
+    getOneNoteProviderInfo(id: number): Observable<NavigationProvidersOneNoteNavigationProviderVm> {
         let url_ = this.baseUrl + "/api/NavigationProviders/GetOneNoteProviderInfo?";
         if (id === undefined || id === null)
             throw new Error("The parameter 'id' must be defined and cannot be null.");
@@ -150,14 +150,14 @@ export class NavigationProvidersClient {
                 try {
                     return this.processGetOneNoteProviderInfo(<any>response_);
                 } catch (e) {
-                    return <Observable<NavigationProvidersSharedViewModelsOneNoteNavigationProviderVm>><any>_observableThrow(e);
+                    return <Observable<NavigationProvidersOneNoteNavigationProviderVm>><any>_observableThrow(e);
                 }
             } else
-                return <Observable<NavigationProvidersSharedViewModelsOneNoteNavigationProviderVm>><any>_observableThrow(response_);
+                return <Observable<NavigationProvidersOneNoteNavigationProviderVm>><any>_observableThrow(response_);
         }));
     }
 
-    protected processGetOneNoteProviderInfo(response: HttpResponseBase): Observable<NavigationProvidersSharedViewModelsOneNoteNavigationProviderVm> {
+    protected processGetOneNoteProviderInfo(response: HttpResponseBase): Observable<NavigationProvidersOneNoteNavigationProviderVm> {
         const status = response.status;
         const responseBlob =
             response instanceof HttpResponse ? response.body :
@@ -168,7 +168,7 @@ export class NavigationProvidersClient {
             return blobToText(responseBlob).pipe(_observableMergeMap(_responseText => {
             let result200: any = null;
             let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result200 = NavigationProvidersSharedViewModelsOneNoteNavigationProviderVm.fromJS(resultData200);
+            result200 = NavigationProvidersOneNoteNavigationProviderVm.fromJS(resultData200);
             return _observableOf(result200);
             }));
         } else if (status !== 200 && status !== 204) {
@@ -176,10 +176,10 @@ export class NavigationProvidersClient {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             }));
         }
-        return _observableOf<NavigationProvidersSharedViewModelsOneNoteNavigationProviderVm>(<any>null);
+        return _observableOf<NavigationProvidersOneNoteNavigationProviderVm>(<any>null);
     }
 
-    createOneNoteProvider(provider: NavigationProvidersSharedViewModelsOneNoteNavigationProviderVm): Observable<number> {
+    createOneNoteProvider(provider: NavigationProvidersOneNoteNavigationProviderVm): Observable<number> {
         let url_ = this.baseUrl + "/api/NavigationProviders/CreateOneNoteProvider";
         url_ = url_.replace(/[?&]$/, "");
 
@@ -231,7 +231,7 @@ export class NavigationProvidersClient {
         return _observableOf<number>(<any>null);
     }
 
-    updateOneNoteProvider(provider: NavigationProvidersSharedViewModelsOneNoteNavigationProviderVm): Observable<void> {
+    updateOneNoteProvider(provider: NavigationProvidersOneNoteNavigationProviderVm): Observable<void> {
         let url_ = this.baseUrl + "/api/NavigationProviders/UpdateOneNoteProvider";
         url_ = url_.replace(/[?&]$/, "");
 
@@ -339,7 +339,7 @@ export class NavigationProvidersClient {
         return _observableOf<void>(<any>null);
     }
 
-    getOneNoteHierarchyItemInfo(hierarchyId: string | null): Observable<NavigationProvidersSharedViewModelsHierarchyItemVm> {
+    getOneNoteHierarchyItemInfo(hierarchyId: string | null): Observable<NavigationProvidersHierarchyItemVm> {
         let url_ = this.baseUrl + "/api/NavigationProviders/GetOneNoteHierarchyItemInfo?";
         if (hierarchyId === undefined)
             throw new Error("The parameter 'hierarchyId' must be defined.");
@@ -362,14 +362,14 @@ export class NavigationProvidersClient {
                 try {
                     return this.processGetOneNoteHierarchyItemInfo(<any>response_);
                 } catch (e) {
-                    return <Observable<NavigationProvidersSharedViewModelsHierarchyItemVm>><any>_observableThrow(e);
+                    return <Observable<NavigationProvidersHierarchyItemVm>><any>_observableThrow(e);
                 }
             } else
-                return <Observable<NavigationProvidersSharedViewModelsHierarchyItemVm>><any>_observableThrow(response_);
+                return <Observable<NavigationProvidersHierarchyItemVm>><any>_observableThrow(response_);
         }));
     }
 
-    protected processGetOneNoteHierarchyItemInfo(response: HttpResponseBase): Observable<NavigationProvidersSharedViewModelsHierarchyItemVm> {
+    protected processGetOneNoteHierarchyItemInfo(response: HttpResponseBase): Observable<NavigationProvidersHierarchyItemVm> {
         const status = response.status;
         const responseBlob =
             response instanceof HttpResponse ? response.body :
@@ -380,7 +380,7 @@ export class NavigationProvidersClient {
             return blobToText(responseBlob).pipe(_observableMergeMap(_responseText => {
             let result200: any = null;
             let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            result200 = NavigationProvidersSharedViewModelsHierarchyItemVm.fromJS(resultData200);
+            result200 = NavigationProvidersHierarchyItemVm.fromJS(resultData200);
             return _observableOf(result200);
             }));
         } else if (status !== 200 && status !== 204) {
@@ -388,18 +388,18 @@ export class NavigationProvidersClient {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             }));
         }
-        return _observableOf<NavigationProvidersSharedViewModelsHierarchyItemVm>(<any>null);
+        return _observableOf<NavigationProvidersHierarchyItemVm>(<any>null);
     }
 }
 
-export class NavigationProvidersSharedViewModelsNavigationProviderVm implements INavigationProvidersSharedViewModelsNavigationProviderVm {
+export class NavigationProvidersNavigationProviderVm implements INavigationProvidersNavigationProviderVm {
     id?: number;
     name?: string | undefined;
     description?: string | undefined;
     isReadonly?: boolean;
     type?: BibleNoteDomainEnumsNavigationProviderType;
 
-    constructor(data?: INavigationProvidersSharedViewModelsNavigationProviderVm) {
+    constructor(data?: INavigationProvidersNavigationProviderVm) {
         if (data) {
             for (var property in data) {
                 if (data.hasOwnProperty(property))
@@ -418,9 +418,9 @@ export class NavigationProvidersSharedViewModelsNavigationProviderVm implements 
         }
     }
 
-    static fromJS(data: any): NavigationProvidersSharedViewModelsNavigationProviderVm {
+    static fromJS(data: any): NavigationProvidersNavigationProviderVm {
         data = typeof data === 'object' ? data : {};
-        let result = new NavigationProvidersSharedViewModelsNavigationProviderVm();
+        let result = new NavigationProvidersNavigationProviderVm();
         result.init(data);
         return result;
     }
@@ -435,15 +435,15 @@ export class NavigationProvidersSharedViewModelsNavigationProviderVm implements 
         return data; 
     }
 
-    clone(): NavigationProvidersSharedViewModelsNavigationProviderVm {
+    clone(): NavigationProvidersNavigationProviderVm {
         const json = this.toJSON();
-        let result = new NavigationProvidersSharedViewModelsNavigationProviderVm();
+        let result = new NavigationProvidersNavigationProviderVm();
         result.init(json);
         return result;
     }
 }
 
-export interface INavigationProvidersSharedViewModelsNavigationProviderVm {
+export interface INavigationProvidersNavigationProviderVm {
     id?: number;
     name?: string | undefined;
     description?: string | undefined;
@@ -457,10 +457,10 @@ export enum BibleNoteDomainEnumsNavigationProviderType {
     OneNote = 3,
 }
 
-export class NavigationProvidersSharedViewModelsOneNoteNavigationProviderVm extends NavigationProvidersSharedViewModelsNavigationProviderVm implements INavigationProvidersSharedViewModelsOneNoteNavigationProviderVm {
+export class NavigationProvidersOneNoteNavigationProviderVm extends NavigationProvidersNavigationProviderVm implements INavigationProvidersOneNoteNavigationProviderVm {
     parameters?: BibleNoteProvidersOneNoteServicesNavigationProviderOneNoteNavigationProviderParameters | undefined;
 
-    constructor(data?: INavigationProvidersSharedViewModelsOneNoteNavigationProviderVm) {
+    constructor(data?: INavigationProvidersOneNoteNavigationProviderVm) {
         super(data);
     }
 
@@ -471,9 +471,9 @@ export class NavigationProvidersSharedViewModelsOneNoteNavigationProviderVm exte
         }
     }
 
-    static fromJS(data: any): NavigationProvidersSharedViewModelsOneNoteNavigationProviderVm {
+    static fromJS(data: any): NavigationProvidersOneNoteNavigationProviderVm {
         data = typeof data === 'object' ? data : {};
-        let result = new NavigationProvidersSharedViewModelsOneNoteNavigationProviderVm();
+        let result = new NavigationProvidersOneNoteNavigationProviderVm();
         result.init(data);
         return result;
     }
@@ -485,15 +485,15 @@ export class NavigationProvidersSharedViewModelsOneNoteNavigationProviderVm exte
         return data; 
     }
 
-    clone(): NavigationProvidersSharedViewModelsOneNoteNavigationProviderVm {
+    clone(): NavigationProvidersOneNoteNavigationProviderVm {
         const json = this.toJSON();
-        let result = new NavigationProvidersSharedViewModelsOneNoteNavigationProviderVm();
+        let result = new NavigationProvidersOneNoteNavigationProviderVm();
         result.init(json);
         return result;
     }
 }
 
-export interface INavigationProvidersSharedViewModelsOneNoteNavigationProviderVm extends INavigationProvidersSharedViewModelsNavigationProviderVm {
+export interface INavigationProvidersOneNoteNavigationProviderVm extends INavigationProvidersNavigationProviderVm {
     parameters?: BibleNoteProvidersOneNoteServicesNavigationProviderOneNoteNavigationProviderParameters | undefined;
 }
 
@@ -635,12 +635,12 @@ export enum BibleNoteProvidersOneNoteServicesModelsOneNoteHierarchyType {
     Page = 4,
 }
 
-export class NavigationProvidersSharedViewModelsHierarchyItemVm implements INavigationProvidersSharedViewModelsHierarchyItemVm {
+export class NavigationProvidersHierarchyItemVm implements INavigationProvidersHierarchyItemVm {
     id?: string | undefined;
     name?: string | undefined;
     type?: BibleNoteProvidersOneNoteServicesModelsOneNoteHierarchyType;
 
-    constructor(data?: INavigationProvidersSharedViewModelsHierarchyItemVm) {
+    constructor(data?: INavigationProvidersHierarchyItemVm) {
         if (data) {
             for (var property in data) {
                 if (data.hasOwnProperty(property))
@@ -657,9 +657,9 @@ export class NavigationProvidersSharedViewModelsHierarchyItemVm implements INavi
         }
     }
 
-    static fromJS(data: any): NavigationProvidersSharedViewModelsHierarchyItemVm {
+    static fromJS(data: any): NavigationProvidersHierarchyItemVm {
         data = typeof data === 'object' ? data : {};
-        let result = new NavigationProvidersSharedViewModelsHierarchyItemVm();
+        let result = new NavigationProvidersHierarchyItemVm();
         result.init(data);
         return result;
     }
@@ -672,15 +672,15 @@ export class NavigationProvidersSharedViewModelsHierarchyItemVm implements INavi
         return data; 
     }
 
-    clone(): NavigationProvidersSharedViewModelsHierarchyItemVm {
+    clone(): NavigationProvidersHierarchyItemVm {
         const json = this.toJSON();
-        let result = new NavigationProvidersSharedViewModelsHierarchyItemVm();
+        let result = new NavigationProvidersHierarchyItemVm();
         result.init(json);
         return result;
     }
 }
 
-export interface INavigationProvidersSharedViewModelsHierarchyItemVm {
+export interface INavigationProvidersHierarchyItemVm {
     id?: string | undefined;
     name?: string | undefined;
     type?: BibleNoteProvidersOneNoteServicesModelsOneNoteHierarchyType;

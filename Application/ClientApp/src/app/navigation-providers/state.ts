@@ -1,10 +1,10 @@
 import { Clone, IReducer } from 'reduce-store';
 import { Injectable } from '@angular/core';
 
-import { NavigationProvidersClient, NavigationProvidersSharedViewModelsNavigationProviderVm } from '../shared/web-clients/auto-generated';
+import { NavigationProvidersClient, NavigationProvidersNavigationProviderVm } from '../shared/web-clients/auto-generated';
 
 export class State extends Clone<State> {
-  items!: NavigationProvidersSharedViewModelsNavigationProviderVm[];
+  items!: NavigationProvidersNavigationProviderVm[];
 }
 
 @Injectable({ providedIn: 'root' })

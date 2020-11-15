@@ -20,6 +20,7 @@ namespace BibleNote.Application.Utils
             {
                 var newFullName = type.FullName
                     .Replace("BibleNote.Middleware", "")
+                    .Replace("SharedViewModels", "")
                     .Replace(".", "")
                     ;
                 typeName = typeName.Replace(type.Name, newFullName);
