@@ -9,7 +9,7 @@ import { BibleNoteDomainEnumsNavigationProviderType } from '../../shared/web-cli
   templateUrl: './navigation-providers.component.html'
 })
 export class NavigationProvidersListComponent implements OnInit, OnDestroy {
-  providersState: navProviders.State;
+  providersState!: navProviders.State;
 
   constructor(
     private loadNavigationProvidersReducer: navProviders.LoadReducer,
@@ -29,7 +29,10 @@ export class NavigationProvidersListComponent implements OnInit, OnDestroy {
     this.router.navigate(['/bible']);
   }
 
-  getProviderType(type: BibleNoteDomainEnumsNavigationProviderType): string {
+  getProviderType(type: BibleNoteDomainEnumsNavigationProviderType | undefined): string {
+    if (type == undefined)
+      return '';
+
     return BibleNoteDomainEnumsNavigationProviderType[type];
   }
 }

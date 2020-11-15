@@ -392,72 +392,6 @@ export class NavigationProvidersClient {
     }
 }
 
-@Injectable({
-    providedIn: 'root'
-})
-export class TestClient {
-    private http: HttpClient;
-    private baseUrl: string;
-    protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
-
-    constructor(@Inject(HttpClient) http: HttpClient, @Optional() @Inject(API_BASE_URL) baseUrl?: string) {
-        this.http = http;
-        this.baseUrl = baseUrl !== undefined && baseUrl !== null ? baseUrl : "";
-    }
-
-    get(): Observable<BibleNoteApplicationWeatherForecast[]> {
-        let url_ = this.baseUrl + "/api/Test/Get";
-        url_ = url_.replace(/[?&]$/, "");
-
-        let options_ : any = {
-            observe: "response",
-            responseType: "blob",
-            headers: new HttpHeaders({
-                "Accept": "application/json"
-            })
-        };
-
-        return this.http.request("get", url_, options_).pipe(_observableMergeMap((response_ : any) => {
-            return this.processGet(response_);
-        })).pipe(_observableCatch((response_: any) => {
-            if (response_ instanceof HttpResponseBase) {
-                try {
-                    return this.processGet(<any>response_);
-                } catch (e) {
-                    return <Observable<BibleNoteApplicationWeatherForecast[]>><any>_observableThrow(e);
-                }
-            } else
-                return <Observable<BibleNoteApplicationWeatherForecast[]>><any>_observableThrow(response_);
-        }));
-    }
-
-    protected processGet(response: HttpResponseBase): Observable<BibleNoteApplicationWeatherForecast[]> {
-        const status = response.status;
-        const responseBlob =
-            response instanceof HttpResponse ? response.body :
-            (<any>response).error instanceof Blob ? (<any>response).error : undefined;
-
-        let _headers: any = {}; if (response.headers) { for (let key of response.headers.keys()) { _headers[key] = response.headers.get(key); }}
-        if (status === 200) {
-            return blobToText(responseBlob).pipe(_observableMergeMap(_responseText => {
-            let result200: any = null;
-            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
-            if (Array.isArray(resultData200)) {
-                result200 = [] as any;
-                for (let item of resultData200)
-                    result200!.push(BibleNoteApplicationWeatherForecast.fromJS(item));
-            }
-            return _observableOf(result200);
-            }));
-        } else if (status !== 200 && status !== 204) {
-            return blobToText(responseBlob).pipe(_observableMergeMap(_responseText => {
-            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
-            }));
-        }
-        return _observableOf<BibleNoteApplicationWeatherForecast[]>(<any>null);
-    }
-}
-
 export class NavigationProvidersSharedViewModelsNavigationProviderVm implements INavigationProvidersSharedViewModelsNavigationProviderVm {
     id?: number;
     name?: string | undefined;
@@ -750,61 +684,6 @@ export interface INavigationProvidersSharedViewModelsHierarchyItemVm {
     id?: string | undefined;
     name?: string | undefined;
     type?: BibleNoteProvidersOneNoteServicesModelsOneNoteHierarchyType;
-}
-
-export class BibleNoteApplicationWeatherForecast implements IBibleNoteApplicationWeatherForecast {
-    date?: Date;
-    temperatureC?: number;
-    temperatureF?: number;
-    summary?: string | undefined;
-
-    constructor(data?: IBibleNoteApplicationWeatherForecast) {
-        if (data) {
-            for (var property in data) {
-                if (data.hasOwnProperty(property))
-                    (<any>this)[property] = (<any>data)[property];
-            }
-        }
-    }
-
-    init(_data?: any) {
-        if (_data) {
-            this.date = _data["date"] ? new Date(_data["date"].toString()) : <any>undefined;
-            this.temperatureC = _data["temperatureC"];
-            this.temperatureF = _data["temperatureF"];
-            this.summary = _data["summary"];
-        }
-    }
-
-    static fromJS(data: any): BibleNoteApplicationWeatherForecast {
-        data = typeof data === 'object' ? data : {};
-        let result = new BibleNoteApplicationWeatherForecast();
-        result.init(data);
-        return result;
-    }
-
-    toJSON(data?: any) {
-        data = typeof data === 'object' ? data : {};
-        data["date"] = this.date ? this.date.toISOString() : <any>undefined;
-        data["temperatureC"] = this.temperatureC;
-        data["temperatureF"] = this.temperatureF;
-        data["summary"] = this.summary;
-        return data; 
-    }
-
-    clone(): BibleNoteApplicationWeatherForecast {
-        const json = this.toJSON();
-        let result = new BibleNoteApplicationWeatherForecast();
-        result.init(json);
-        return result;
-    }
-}
-
-export interface IBibleNoteApplicationWeatherForecast {
-    date?: Date;
-    temperatureC?: number;
-    temperatureF?: number;
-    summary?: string | undefined;
 }
 
 export class SwaggerException extends Error {

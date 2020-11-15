@@ -152,7 +152,7 @@ namespace BibleNote.Application
                 Show = false,
                 Title = "BibleNote"
             };
-            var mainWindow = await Electron.WindowManager.CreateWindowAsync(options, "http://localhost:8079/nav-providers");
+            var mainWindow = await Electron.WindowManager.CreateWindowAsync(options, "http://localhost:8079/data-sources");
             mainWindow.OnReadyToShow += () =>
             {
                 mainWindow.Show();

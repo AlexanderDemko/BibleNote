@@ -36,7 +36,7 @@ namespace BibleNote.Application
             var window = Electron.WindowManager.BrowserWindows.FirstOrDefault();
             if (window != null)
             {
-                await window.WebContents.LoadURLAsync("http://localhost:8079/nav-providers");
+                await window.WebContents.LoadURLAsync("http://localhost:8079/data-sources");
                 if (await window.IsMinimizedAsync())
                     window.Restore();
             }
