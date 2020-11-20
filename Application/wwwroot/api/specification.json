@@ -254,11 +254,11 @@
             "type": "boolean"
           },
           "type": {
-            "$ref": "#/components/schemas/BibleNoteDomainEnumsNavigationProviderType"
+            "$ref": "#/components/schemas/NavigationProviderType"
           }
         }
       },
-      "BibleNoteDomainEnumsNavigationProviderType": {
+      "NavigationProviderType": {
         "type": "integer",
         "description": "",
         "x-enumNames": [
@@ -285,7 +285,7 @@
                 "nullable": true,
                 "oneOf": [
                   {
-                    "$ref": "#/components/schemas/BibleNoteProvidersOneNoteServicesNavigationProviderOneNoteNavigationProviderParameters"
+                    "$ref": "#/components/schemas/OneNoteNavigationProviderParameters"
                   }
                 ]
               }
@@ -293,10 +293,10 @@
           }
         ]
       },
-      "BibleNoteProvidersOneNoteServicesNavigationProviderOneNoteNavigationProviderParameters": {
+      "OneNoteNavigationProviderParameters": {
         "allOf": [
           {
-            "$ref": "#/components/schemas/BibleNoteServicesNavigationProviderNavigationProviderParametersBase"
+            "$ref": "#/components/schemas/NavigationProviderParametersBase"
           },
           {
             "type": "object",
@@ -306,14 +306,14 @@
                 "type": "array",
                 "nullable": true,
                 "items": {
-                  "$ref": "#/components/schemas/BibleNoteProvidersOneNoteServicesModelsOneNoteHierarchyInfo"
+                  "$ref": "#/components/schemas/OneNoteHierarchyInfo"
                 }
               }
             }
           }
         ]
       },
-      "BibleNoteProvidersOneNoteServicesModelsOneNoteHierarchyInfo": {
+      "OneNoteHierarchyInfo": {
         "type": "object",
         "additionalProperties": false,
         "properties": {
@@ -326,11 +326,11 @@
             "nullable": true
           },
           "type": {
-            "$ref": "#/components/schemas/BibleNoteProvidersOneNoteServicesModelsOneNoteHierarchyType"
+            "$ref": "#/components/schemas/OneNoteHierarchyType"
           }
         }
       },
-      "BibleNoteProvidersOneNoteServicesModelsOneNoteHierarchyType": {
+      "OneNoteHierarchyType": {
         "type": "integer",
         "description": "",
         "x-enumNames": [
@@ -346,7 +346,7 @@
           4
         ]
       },
-      "BibleNoteServicesNavigationProviderNavigationProviderParametersBase": {
+      "NavigationProviderParametersBase": {
         "type": "object",
         "x-abstract": true,
         "additionalProperties": false
@@ -364,7 +364,7 @@
             "nullable": true
           },
           "type": {
-            "$ref": "#/components/schemas/BibleNoteProvidersOneNoteServicesModelsOneNoteHierarchyType"
+            "$ref": "#/components/schemas/OneNoteHierarchyType"
           }
         }
       }

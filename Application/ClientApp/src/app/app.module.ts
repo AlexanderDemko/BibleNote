@@ -12,6 +12,7 @@ import { AppInitializer } from './app.initializer';
 import { BibleComponent } from './bible/bible.component';
 import { NavigationProvidersListComponent } from './navigation-providers/list/navigation-providers.component';
 import { OneNoteNavigationProviderComponent } from './navigation-providers/one-note/one-note.component';
+import { SharedModule } from './shared/shared.module';
 
 @NgModule({
   declarations: [
@@ -21,6 +22,7 @@ import { OneNoteNavigationProviderComponent } from './navigation-providers/one-n
     OneNoteNavigationProviderComponent
   ],
   imports: [
+    SharedModule,
     BrowserModule,
     FormsModule,
     AppRoutingModule,

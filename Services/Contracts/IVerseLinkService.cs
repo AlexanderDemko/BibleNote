@@ -1,6 +1,6 @@
 ﻿using BibleNote.Services.VerseParsing.Models;
 
-namespace BibleNote.Services.DocumentProvider.Contracts
+namespace BibleNote.Services.Contracts
 {
     public interface IVerseLinkService
     {

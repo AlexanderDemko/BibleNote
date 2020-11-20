@@ -397,7 +397,7 @@ export class NavigationProvidersNavigationProviderVm implements INavigationProvi
     name?: string | undefined;
     description?: string | undefined;
     isReadonly?: boolean;
-    type?: BibleNoteDomainEnumsNavigationProviderType;
+    type?: NavigationProviderType;
 
     constructor(data?: INavigationProvidersNavigationProviderVm) {
         if (data) {
@@ -448,17 +448,17 @@ export interface INavigationProvidersNavigationProviderVm {
     name?: string | undefined;
     description?: string | undefined;
     isReadonly?: boolean;
-    type?: BibleNoteDomainEnumsNavigationProviderType;
+    type?: NavigationProviderType;
 }
 
-export enum BibleNoteDomainEnumsNavigationProviderType {
+export enum NavigationProviderType {
     File = 1,
     Web = 2,
     OneNote = 3,
 }
 
 export class NavigationProvidersOneNoteNavigationProviderVm extends NavigationProvidersNavigationProviderVm implements INavigationProvidersOneNoteNavigationProviderVm {
-    parameters?: BibleNoteProvidersOneNoteServicesNavigationProviderOneNoteNavigationProviderParameters | undefined;
+    parameters?: OneNoteNavigationProviderParameters | undefined;
 
     constructor(data?: INavigationProvidersOneNoteNavigationProviderVm) {
         super(data);
@@ -467,7 +467,7 @@ export class NavigationProvidersOneNoteNavigationProviderVm extends NavigationPr
     init(_data?: any) {
         super.init(_data);
         if (_data) {
-            this.parameters = _data["parameters"] ? BibleNoteProvidersOneNoteServicesNavigationProviderOneNoteNavigationProviderParameters.fromJS(_data["parameters"]) : <any>undefined;
+            this.parameters = _data["parameters"] ? OneNoteNavigationProviderParameters.fromJS(_data["parameters"]) : <any>undefined;
         }
     }
 
@@ -494,12 +494,12 @@ export class NavigationProvidersOneNoteNavigationProviderVm extends NavigationPr
 }
 
 export interface INavigationProvidersOneNoteNavigationProviderVm extends INavigationProvidersNavigationProviderVm {
-    parameters?: BibleNoteProvidersOneNoteServicesNavigationProviderOneNoteNavigationProviderParameters | undefined;
+    parameters?: OneNoteNavigationProviderParameters | undefined;
 }
 
-export abstract class BibleNoteServicesNavigationProviderNavigationProviderParametersBase implements IBibleNoteServicesNavigationProviderNavigationProviderParametersBase {
+export abstract class NavigationProviderParametersBase implements INavigationProviderParametersBase {
 
-    constructor(data?: IBibleNoteServicesNavigationProviderNavigationProviderParametersBase) {
+    constructor(data?: INavigationProviderParametersBase) {
         if (data) {
             for (var property in data) {
                 if (data.hasOwnProperty(property))
@@ -511,9 +511,9 @@ export abstract class BibleNoteServicesNavigationProviderNavigationProviderParam
     init(_data?: any) {
     }
 
-    static fromJS(data: any): BibleNoteServicesNavigationProviderNavigationProviderParametersBase {
+    static fromJS(data: any): NavigationProviderParametersBase {
         data = typeof data === 'object' ? data : {};
-        throw new Error("The abstract class 'BibleNoteServicesNavigationProviderNavigationProviderParametersBase' cannot be instantiated.");
+        throw new Error("The abstract class 'NavigationProviderParametersBase' cannot be instantiated.");
     }
 
     toJSON(data?: any) {
@@ -521,18 +521,18 @@ export abstract class BibleNoteServicesNavigationProviderNavigationProviderParam
         return data; 
     }
 
-    clone(): BibleNoteServicesNavigationProviderNavigationProviderParametersBase {
-        throw new Error("The abstract class 'BibleNoteServicesNavigationProviderNavigationProviderParametersBase' cannot be instantiated.");
+    clone(): NavigationProviderParametersBase {
+        throw new Error("The abstract class 'NavigationProviderParametersBase' cannot be instantiated.");
     }
 }
 
-export interface IBibleNoteServicesNavigationProviderNavigationProviderParametersBase {
+export interface INavigationProviderParametersBase {
 }
 
-export class BibleNoteProvidersOneNoteServicesNavigationProviderOneNoteNavigationProviderParameters extends BibleNoteServicesNavigationProviderNavigationProviderParametersBase implements IBibleNoteProvidersOneNoteServicesNavigationProviderOneNoteNavigationProviderParameters {
-    hierarchyItems?: BibleNoteProvidersOneNoteServicesModelsOneNoteHierarchyInfo[] | undefined;
+export class OneNoteNavigationProviderParameters extends NavigationProviderParametersBase implements IOneNoteNavigationProviderParameters {
+    hierarchyItems?: OneNoteHierarchyInfo[] | undefined;
 
-    constructor(data?: IBibleNoteProvidersOneNoteServicesNavigationProviderOneNoteNavigationProviderParameters) {
+    constructor(data?: IOneNoteNavigationProviderParameters) {
         super(data);
     }
 
@@ -542,14 +542,14 @@ export class BibleNoteProvidersOneNoteServicesNavigationProviderOneNoteNavigatio
             if (Array.isArray(_data["hierarchyItems"])) {
                 this.hierarchyItems = [] as any;
                 for (let item of _data["hierarchyItems"])
-                    this.hierarchyItems!.push(BibleNoteProvidersOneNoteServicesModelsOneNoteHierarchyInfo.fromJS(item));
+                    this.hierarchyItems!.push(OneNoteHierarchyInfo.fromJS(item));
             }
         }
     }
 
-    static fromJS(data: any): BibleNoteProvidersOneNoteServicesNavigationProviderOneNoteNavigationProviderParameters {
+    static fromJS(data: any): OneNoteNavigationProviderParameters {
         data = typeof data === 'object' ? data : {};
-        let result = new BibleNoteProvidersOneNoteServicesNavigationProviderOneNoteNavigationProviderParameters();
+        let result = new OneNoteNavigationProviderParameters();
         result.init(data);
         return result;
     }
@@ -565,24 +565,24 @@ export class BibleNoteProvidersOneNoteServicesNavigationProviderOneNoteNavigatio
         return data; 
     }
 
-    clone(): BibleNoteProvidersOneNoteServicesNavigationProviderOneNoteNavigationProviderParameters {
+    clone(): OneNoteNavigationProviderParameters {
         const json = this.toJSON();
-        let result = new BibleNoteProvidersOneNoteServicesNavigationProviderOneNoteNavigationProviderParameters();
+        let result = new OneNoteNavigationProviderParameters();
         result.init(json);
         return result;
     }
 }
 
-export interface IBibleNoteProvidersOneNoteServicesNavigationProviderOneNoteNavigationProviderParameters extends IBibleNoteServicesNavigationProviderNavigationProviderParametersBase {
-    hierarchyItems?: BibleNoteProvidersOneNoteServicesModelsOneNoteHierarchyInfo[] | undefined;
+export interface IOneNoteNavigationProviderParameters extends INavigationProviderParametersBase {
+    hierarchyItems?: OneNoteHierarchyInfo[] | undefined;
 }
 
-export class BibleNoteProvidersOneNoteServicesModelsOneNoteHierarchyInfo implements IBibleNoteProvidersOneNoteServicesModelsOneNoteHierarchyInfo {
+export class OneNoteHierarchyInfo implements IOneNoteHierarchyInfo {
     id?: string | undefined;
     name?: string | undefined;
-    type?: BibleNoteProvidersOneNoteServicesModelsOneNoteHierarchyType;
+    type?: OneNoteHierarchyType;
 
-    constructor(data?: IBibleNoteProvidersOneNoteServicesModelsOneNoteHierarchyInfo) {
+    constructor(data?: IOneNoteHierarchyInfo) {
         if (data) {
             for (var property in data) {
                 if (data.hasOwnProperty(property))
@@ -599,9 +599,9 @@ export class BibleNoteProvidersOneNoteServicesModelsOneNoteHierarchyInfo impleme
         }
     }
 
-    static fromJS(data: any): BibleNoteProvidersOneNoteServicesModelsOneNoteHierarchyInfo {
+    static fromJS(data: any): OneNoteHierarchyInfo {
         data = typeof data === 'object' ? data : {};
-        let result = new BibleNoteProvidersOneNoteServicesModelsOneNoteHierarchyInfo();
+        let result = new OneNoteHierarchyInfo();
         result.init(data);
         return result;
     }
@@ -614,21 +614,21 @@ export class BibleNoteProvidersOneNoteServicesModelsOneNoteHierarchyInfo impleme
         return data; 
     }
 
-    clone(): BibleNoteProvidersOneNoteServicesModelsOneNoteHierarchyInfo {
+    clone(): OneNoteHierarchyInfo {
         const json = this.toJSON();
-        let result = new BibleNoteProvidersOneNoteServicesModelsOneNoteHierarchyInfo();
+        let result = new OneNoteHierarchyInfo();
         result.init(json);
         return result;
     }
 }
 
-export interface IBibleNoteProvidersOneNoteServicesModelsOneNoteHierarchyInfo {
+export interface IOneNoteHierarchyInfo {
     id?: string | undefined;
     name?: string | undefined;
-    type?: BibleNoteProvidersOneNoteServicesModelsOneNoteHierarchyType;
+    type?: OneNoteHierarchyType;
 }
 
-export enum BibleNoteProvidersOneNoteServicesModelsOneNoteHierarchyType {
+export enum OneNoteHierarchyType {
     Notebook = 1,
     SectionGroup = 2,
     Section = 3,
@@ -638,7 +638,7 @@ export enum BibleNoteProvidersOneNoteServicesModelsOneNoteHierarchyType {
 export class NavigationProvidersHierarchyItemVm implements INavigationProvidersHierarchyItemVm {
     id?: string | undefined;
     name?: string | undefined;
-    type?: BibleNoteProvidersOneNoteServicesModelsOneNoteHierarchyType;
+    type?: OneNoteHierarchyType;
 
     constructor(data?: INavigationProvidersHierarchyItemVm) {
         if (data) {
@@ -683,7 +683,7 @@ export class NavigationProvidersHierarchyItemVm implements INavigationProvidersH
 export interface INavigationProvidersHierarchyItemVm {
     id?: string | undefined;
     name?: string | undefined;
-    type?: BibleNoteProvidersOneNoteServicesModelsOneNoteHierarchyType;
+    type?: OneNoteHierarchyType;
 }
 
 export class SwaggerException extends Error {

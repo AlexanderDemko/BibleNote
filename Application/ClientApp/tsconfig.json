@@ -5,7 +5,7 @@
     "baseUrl": "./",
     "outDir": "./dist/out-tsc",
     "forceConsistentCasingInFileNames": true,
-    "strict": true,
+    "strict": false,
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
     "sourceMap": true,
@@ -22,7 +22,8 @@
     ],
     "paths": {
       "@app/*": [ "src/app/*" ],
-      "@root/*": [ "src/*" ]
+      "@root/*": [ "src/*" ],
+      "@shared/*": [ "src/app/shared/*" ]
     }
   },
   "angularCompilerOptions": {

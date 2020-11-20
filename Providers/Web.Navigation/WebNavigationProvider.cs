@@ -7,7 +7,7 @@ using BibleNote.Domain.Entities;
 using BibleNote.Domain.Enums;
 using BibleNote.Providers.Html;
 using BibleNote.Providers.Web.DocumentId;
-using BibleNote.Services.DocumentProvider.Contracts;
+using BibleNote.Services.Contracts;
 using BibleNote.Services.NavigationProvider;
 using Microsoft.Extensions.DependencyInjection;
 

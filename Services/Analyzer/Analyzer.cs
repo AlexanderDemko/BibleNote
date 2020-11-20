@@ -4,12 +4,13 @@ using System.Threading;
 using System.Threading.Tasks;
 using BibleNote.Domain.Contracts;
 using BibleNote.Domain.Entities;
-using BibleNote.Services.DocumentProvider.Contracts;
-using BibleNote.Services.DocumentProvider.Models;
+using BibleNote.Services.Analyzer.Models;
+using BibleNote.Services.Contracts;
+using BibleNote.Services.VerseParsing.Models.ParseResult;
 using BibleNote.Services.VerseProcessing.Contracts;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace BibleNote.Services.DocumentProvider
+namespace BibleNote.Services.Analyzer
 {
     class Analyzer : IAnalyzer
     {
@@ -19,7 +20,7 @@ namespace BibleNote.Services.DocumentProvider
         public Analyzer(IServiceProvider serviceProvider, ITrackingDbContext dbContext)
         {
             this.dbContext = dbContext;
-            this.documentParseResultProcessing = serviceProvider
+            documentParseResultProcessing = serviceProvider
                 .GetServices<IDocumentParseResultProcessing>()
                 .OrderBy(rp => rp.Order);
         }
@@ -27,22 +28,23 @@ namespace BibleNote.Services.DocumentProvider
         public async Task<AnalysisSession> AnalyzeAsync<T>(
             INavigationProvider<T> navigationProvider,
             AnalyzerOptions options,
+            Action<T, DocumentParseResult> documentProcessedHandler = null,
             CancellationToken cancellationToken = default)
             where T : IDocumentId
         {
             var analysisSession = new AnalysisSession()
             {
                 StartTime = DateTime.Now,
-                NavigationProviderId = navigationProvider.Id 
+                NavigationProviderId = navigationProvider.Id
             };
 
-            this.dbContext.AnalysisSessions.Add(analysisSession);
-            await this.dbContext.SaveChangesAsync();
+            dbContext.AnalysisSessions.Add(analysisSession);
+            await dbContext.SaveChangesAsync(cancellationToken);
 
             var documents = await navigationProvider.LoadDocuments(
                 analysisSession,
-                newOnly: options.Depth == AnalyzeDepth.NewOnly, 
-                updateDb: true, 
+                newOnly: options.Depth == AnalyzeDepth.NewOnly,
+                updateDb: true,
                 cancellationToken);
 
             foreach (var document in documents)
@@ -54,14 +56,16 @@ namespace BibleNote.Services.DocumentProvider
 
                 var parseResult = await provider.ParseDocumentAsync(document);
 
-                foreach (var processor in this.documentParseResultProcessing)
+                foreach (var processor in documentParseResultProcessing)
                 {
-                    await processor.ProcessAsync(document.DocumentId, parseResult);
+                    await processor.ProcessAsync(document.DocumentId, parseResult, cancellationToken);
                 }
+
+                documentProcessedHandler?.Invoke(document, parseResult);
             }
 
             analysisSession.FinishTime = DateTime.Now;
-            await this.dbContext.SaveChangesAsync();
+            await dbContext.SaveChangesAsync(cancellationToken);
 
             return analysisSession;
         }

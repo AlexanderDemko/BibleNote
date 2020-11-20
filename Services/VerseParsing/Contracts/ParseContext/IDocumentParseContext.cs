@@ -1,4 +1,4 @@
-﻿using BibleNote.Services.DocumentProvider.Contracts;
+﻿using BibleNote.Services.Contracts;
 using BibleNote.Services.VerseParsing.Models;
 using BibleNote.Services.VerseParsing.Models.ParseResult;
 

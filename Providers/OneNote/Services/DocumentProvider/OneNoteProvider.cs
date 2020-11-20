@@ -5,7 +5,7 @@ using BibleNote.Providers.Html;
 using BibleNote.Providers.OneNote.Constants;
 using BibleNote.Providers.OneNote.Contracts;
 using BibleNote.Providers.OneNote.Extensions;
-using BibleNote.Services.DocumentProvider.Contracts;
+using BibleNote.Services.Contracts;
 using BibleNote.Services.VerseParsing.Contracts;
 using BibleNote.Services.VerseParsing.Contracts.ParseContext;
 using BibleNote.Services.VerseParsing.Models;

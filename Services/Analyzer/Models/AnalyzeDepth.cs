@@ -1,6 +1,6 @@
-﻿namespace BibleNote.Services.DocumentProvider.Models
+﻿namespace BibleNote.Services.Analyzer.Models
 {
-    public enum  AnalyzeDepth
+    public enum AnalyzeDepth
     {
         NewOnly = 1, // for WebNavigationProvider only?
         All = 2

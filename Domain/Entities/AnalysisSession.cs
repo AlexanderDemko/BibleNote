@@ -1,4 +1,5 @@
-﻿using System;
+﻿using BibleNote.Domain.Enums;
+using System;
 
 namespace BibleNote.Domain.Entities
 {
@@ -6,7 +7,7 @@ namespace BibleNote.Domain.Entities
     {
         public int Id { get; set; }
 
-        public DateTime StartTime { get; set; }
+        public DateTime? StartTime { get; set; }
 
         public DateTime? FinishTime { get; set; }
 
@@ -19,5 +20,7 @@ namespace BibleNote.Domain.Entities
         public int DeletedDocumentsCount { get; set; }
 
         public NavigationProviderInfo NavigationProvider { get; set; }
+
+        public AnalysisSessionStatus Status { get; set; }
     }
 }

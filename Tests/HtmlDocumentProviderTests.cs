@@ -1,7 +1,7 @@
 ﻿using System.Threading.Tasks;
 using BibleNote.Providers.Html;
 using BibleNote.Providers.Html.Contracts;
-using BibleNote.Services.DocumentProvider.Contracts;
+using BibleNote.Services.Contracts;
 using BibleNote.Tests.TestsBase;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.VisualStudio.TestTools.UnitTesting;

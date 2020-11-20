@@ -4,7 +4,7 @@ using BibleNote.Domain.Entities;
 using BibleNote.Providers.FileSystem.DocumentId;
 using BibleNote.Providers.Html;
 using BibleNote.Providers.Html.Contracts;
-using BibleNote.Services.DocumentProvider.Contracts;
+using BibleNote.Services.Contracts;
 using BibleNote.Services.VerseProcessing.Contracts;
 using BibleNote.Tests.TestsBase;
 using FluentAssertions;

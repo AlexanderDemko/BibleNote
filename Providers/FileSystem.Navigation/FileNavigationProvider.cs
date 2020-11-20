@@ -11,7 +11,7 @@ using BibleNote.Providers.FileSystem.DocumentId;
 using BibleNote.Providers.Html;
 using BibleNote.Providers.Pdf;
 using BibleNote.Providers.Word;
-using BibleNote.Services.DocumentProvider.Contracts;
+using BibleNote.Services.Contracts;
 using BibleNote.Services.NavigationProvider;
 using Microsoft.Extensions.DependencyInjection;
 

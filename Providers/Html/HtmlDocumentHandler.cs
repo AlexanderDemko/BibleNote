@@ -6,7 +6,7 @@ using BibleNote.Common.Helpers;
 using BibleNote.Providers.FileSystem.DocumentId;
 using BibleNote.Providers.Html.Contracts;
 using BibleNote.Providers.Web.DocumentId;
-using BibleNote.Services.DocumentProvider.Contracts;
+using BibleNote.Services.Contracts;
 using HtmlAgilityPack;
 
 namespace BibleNote.Providers.Html

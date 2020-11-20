@@ -2,6 +2,7 @@
   <button type="button" class="btn btn-link" [routerLink]="['/bible']"><i class="fas fa-arrow-left"></i></button>
   Data Sources
 </h2>
+
 <div class="btn-group btn-group-toggle" data-toggle="buttons">
   <div class="btn-group" dropdown>
     <button id="button-basic" dropdownToggle type="button" class="btn btn-primary dropdown-toggle"
@@ -10,13 +11,14 @@
     </button>
     <ul id="dropdown-basic" *dropdownMenu class="dropdown-menu"
         role="menu" aria-labelledby="button-basic">
-      <li role="menuitem"><a class="dropdown-item" href="#">OneNote</a></li>
+      <li role="menuitem"><a class="dropdown-item" href="#" [routerLink]="['onenote/0']">OneNote</a></li>
       <li role="menuitem"><a class="dropdown-item" href="#">Folder</a></li>
       <li role="menuitem"><a class="dropdown-item" href="#">OneNote Cloud</a></li>
       <li role="menuitem"><a class="dropdown-item" href="#">OneDrive folder</a></li>
     </ul>
   </div>
 </div>
+
 <p *ngIf="!providersState"><em>Loading...</em></p>
 <table class='table table-striped' *ngIf="providersState">
   <thead>
@@ -34,7 +36,9 @@
       <td>{{ p.description }}</td>
       <td>{{ getProviderType(p.type) }}</td>
       <td></td>
-      <td></td>
+      <td>
+        <span role="button" (click)="delete(p)">X</span>
+      </td>
     </tr>
   </tbody>
 </table>

@@ -1,6 +1,6 @@
 ﻿using System.Threading.Tasks;
 
-namespace BibleNote.Services.DocumentProvider.Contracts
+namespace BibleNote.Services.Contracts
 {
     public interface IDocumentConnector<T> where T : IDocumentHandler
     {

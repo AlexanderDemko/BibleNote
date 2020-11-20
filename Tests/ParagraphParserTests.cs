@@ -2,7 +2,7 @@
 using System.Linq;
 using BibleNote.Providers.FileSystem.DocumentId;
 using BibleNote.Providers.Html;
-using BibleNote.Services.DocumentProvider.Contracts;
+using BibleNote.Services.Contracts;
 using BibleNote.Services.VerseParsing;
 using BibleNote.Services.VerseParsing.Contracts;
 using BibleNote.Services.VerseParsing.Contracts.ParseContext;

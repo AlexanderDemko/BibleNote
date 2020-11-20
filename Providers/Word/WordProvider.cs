@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using BibleNote.Domain.Enums;
 using BibleNote.Providers.Html;
 using BibleNote.Providers.Word.Contracts;
-using BibleNote.Services.DocumentProvider.Contracts;
+using BibleNote.Services.Contracts;
 using BibleNote.Services.VerseParsing.Contracts;
 using BibleNote.Services.VerseParsing.Contracts.ParseContext;
 using BibleNote.Services.VerseParsing.Models;

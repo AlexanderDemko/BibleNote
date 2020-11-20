@@ -1,5 +1,5 @@
 ﻿using System.Xml.Linq;
-using BibleNote.Services.DocumentProvider.Contracts;
+using BibleNote.Services.Contracts;
 
 namespace BibleNote.Providers.OneNote.Contracts
 {

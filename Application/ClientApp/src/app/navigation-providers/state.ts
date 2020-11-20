@@ -16,7 +16,23 @@ export class LoadReducer implements IReducer<State> {
   ) { }
 
   async reduceAsync(s: State = new State()): Promise<State> {
+    var items = await this.client.getAll().toPromise();
+    return new State({
+      items
+    });
+  }
+}
 
+@Injectable({ providedIn: 'root' })
+export class DeleteReducer implements IReducer<State, NavigationProvidersNavigationProviderVm> {
+  stateCtor = State;
+
+  constructor(
+    private client: NavigationProvidersClient,
+  ) { }
+
+  async reduceAsync(s: State = new State(), provider: NavigationProvidersNavigationProviderVm): Promise<State> {
+    await this.client.delete(provider.id).toPromise();
     var items = await this.client.getAll().toPromise();
     return new State({
       items

@@ -1,8 +1,8 @@
 ﻿using BibleNote.Domain.Entities;
 using BibleNote.Domain.Enums;
 using BibleNote.Providers.FileSystem.Navigation;
-using BibleNote.Services.DocumentProvider.Contracts;
-using BibleNote.Services.DocumentProvider.Models;
+using BibleNote.Services.Analyzer.Models;
+using BibleNote.Services.Contracts;
 using BibleNote.Tests.TestsBase;
 using FluentAssertions;
 using MediatR;
@@ -65,7 +65,7 @@ namespace BibleNote.Tests
                 session = await this.analyzer.AnalyzeAsync(navigationProvider, new AnalyzerOptions()
                 {
                     Depth = AnalyzeDepth.All
-                });
+                }, (d, r) => { Console.WriteLine($"{d}: {r}"); });
 
                 session.CreatedDocumentsCount.Should().Be(1);
                 session.UpdatedDocumentsCount.Should().Be(1);

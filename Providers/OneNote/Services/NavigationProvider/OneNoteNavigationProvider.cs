@@ -8,7 +8,7 @@ using BibleNote.Domain.Entities;
 using BibleNote.Domain.Enums;
 using BibleNote.Providers.OneNote.Contracts;
 using BibleNote.Providers.OneNote.Services.DocumentProvider;
-using BibleNote.Services.DocumentProvider.Contracts;
+using BibleNote.Services.Contracts;
 using BibleNote.Services.NavigationProvider;
 using static BibleNote.Providers.OneNote.Services.NavigationProvider.NotebookIterator;
 

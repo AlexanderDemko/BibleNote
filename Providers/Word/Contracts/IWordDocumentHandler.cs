@@ -1,4 +1,4 @@
-﻿using BibleNote.Services.DocumentProvider.Contracts;
+﻿using BibleNote.Services.Contracts;
 using DocumentFormat.OpenXml.Packaging;
 
 namespace BibleNote.Providers.Word.Contracts

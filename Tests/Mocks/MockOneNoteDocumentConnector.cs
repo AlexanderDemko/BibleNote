@@ -5,7 +5,7 @@ using System.Xml.Linq;
 using BibleNote.Common.Helpers;
 using BibleNote.Providers.FileSystem.DocumentId;
 using BibleNote.Providers.OneNote.Contracts;
-using BibleNote.Services.DocumentProvider.Contracts;
+using BibleNote.Services.Contracts;
 
 namespace BibleNote.Tests.Mocks
 {

@@ -1,7 +1,7 @@
 ﻿using System.Threading.Tasks;
 using BibleNote.Providers.OneNote.Contracts;
 using BibleNote.Providers.OneNote.Services.DocumentProvider;
-using BibleNote.Services.DocumentProvider.Contracts;
+using BibleNote.Services.Contracts;
 using BibleNote.Tests.Mocks;
 using BibleNote.Tests.TestsBase;
 using Microsoft.Extensions.DependencyInjection;

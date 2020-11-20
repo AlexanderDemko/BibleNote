@@ -1,4 +1,4 @@
-﻿using BibleNote.Services.DocumentProvider.Contracts;
+﻿using BibleNote.Services.Contracts;
 using Newtonsoft.Json;
 
 namespace BibleNote.Services.NavigationProvider

@@ -18,6 +18,9 @@ namespace BibleNote.Application.Utils
 
             if (!excludeNames.Any(n => fullName.StartsWith(n)))
             {
+                if (!type.FullName.StartsWith("BibleNote.Middleware"))
+                    return type.Name;
+
                 var newFullName = type.FullName
                     .Replace("BibleNote.Middleware", "")
                     .Replace("SharedViewModels", "")

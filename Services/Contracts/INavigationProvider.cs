@@ -4,10 +4,10 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace BibleNote.Services.DocumentProvider.Contracts
+namespace BibleNote.Services.Contracts
 {
-    public interface INavigationProvider<T> 
-        where T: IDocumentId
+    public interface INavigationProvider<T>
+        where T : IDocumentId
     {
         NavigationProviderType Type { get; }
 
@@ -24,7 +24,7 @@ namespace BibleNote.Services.DocumentProvider.Contracts
         Task<IEnumerable<T>> LoadDocuments(
             AnalysisSession analysisSession,
             bool newOnly,
-            bool updateDb = true, 
-            CancellationToken cancellationToken = default);        
+            bool updateDb = true,
+            CancellationToken cancellationToken = default);
     }
 }

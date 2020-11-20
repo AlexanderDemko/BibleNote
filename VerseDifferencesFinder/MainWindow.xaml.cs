@@ -11,7 +11,7 @@ using BibleNote.Providers.Html;
 using BibleNote.Providers.Word;
 using BibleNote.Services;
 using BibleNote.Services.Configuration.Contracts;
-using BibleNote.Services.DocumentProvider.Contracts;
+using BibleNote.Services.Contracts;
 using BibleNote.Services.ModulesManager.Contracts;
 using Microsoft.Extensions.DependencyInjection;
 

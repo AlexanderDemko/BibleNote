@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using System.Xml.Linq;
 using BibleNote.Providers.OneNote.Contracts;
 using BibleNote.Providers.OneNote.Services.NavigationProvider;
-using BibleNote.Services.DocumentProvider.Contracts;
+using BibleNote.Services.Contracts;
 using Microsoft.Extensions.Logging;
 
 namespace BibleNote.Providers.OneNote.Services.DocumentProvider

@@ -1,4 +1,4 @@
-﻿using BibleNote.Services.DocumentProvider.Contracts;
+﻿using BibleNote.Services.Contracts;
 
 namespace BibleNote.Providers.Html.Contracts
 {

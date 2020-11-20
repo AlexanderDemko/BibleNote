@@ -1,4 +1,4 @@
-﻿namespace BibleNote.Services.DocumentProvider.Models
+﻿namespace BibleNote.Services.Analyzer.Models
 {
     public class AnalyzerOptions
     {

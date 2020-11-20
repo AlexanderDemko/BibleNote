@@ -2,7 +2,7 @@
 using System.Threading.Tasks;
 using BibleNote.Providers.FileSystem.DocumentId;
 using BibleNote.Providers.Word.Contracts;
-using BibleNote.Services.DocumentProvider.Contracts;
+using BibleNote.Services.Contracts;
 using DocumentFormat.OpenXml.Packaging;
 
 namespace BibleNote.Providers.Word

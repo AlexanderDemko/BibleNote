@@ -1,7 +1,7 @@
-﻿using BibleNote.Services.DocumentProvider.Contracts;
+﻿using BibleNote.Services.Contracts;
 using BibleNote.Services.VerseParsing.Models;
 
-namespace BibleNote.Services.DocumentProvider
+namespace BibleNote.Services.VerseParsing
 {
     class VerseLinkService : IVerseLinkService
     {

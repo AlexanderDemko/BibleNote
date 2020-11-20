@@ -1,6 +1,6 @@
 ﻿using System.Threading.Tasks;
 using BibleNote.Providers.OneNote.Contracts;
-using BibleNote.Services.DocumentProvider.Contracts;
+using BibleNote.Services.Contracts;
 using Microsoft.Extensions.Logging;
 
 namespace BibleNote.Providers.OneNote.Services.DocumentProvider

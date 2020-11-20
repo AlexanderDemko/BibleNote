@@ -1,4 +1,4 @@
-﻿namespace BibleNote.Services.DocumentProvider.Contracts
+﻿namespace BibleNote.Services.Contracts
 {
     public interface INavigationProviderParameters
     {

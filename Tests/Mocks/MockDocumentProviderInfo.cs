@@ -1,5 +1,5 @@
 ﻿using BibleNote.Domain.Enums;
-using BibleNote.Services.DocumentProvider.Contracts;
+using BibleNote.Services.Contracts;
 using BibleNote.Services.VerseParsing.Models;
 
 namespace BibleNote.Tests.Mocks

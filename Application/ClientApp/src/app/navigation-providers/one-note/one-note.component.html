@@ -1,5 +1,5 @@
 <div *ngIf="provider">
-  <h2>Data Source: {{provider.name}}</h2>
+  <h2>{{ !provider.id ? "Add Data Source" : "Edit Data Source" }}</h2>
   <div class="form-group">
     <label for="name">Name</label>
     <input [(ngModel)]="provider.name" type="text" class="form-control" id="name" placeholder="Enter OneNote DataSource name">
@@ -9,10 +9,12 @@
     <textarea [(ngModel)]="provider.description" class="form-control" id="description" rows="3"></textarea>
   </div>
   <div>
-
+    <p *ngFor="let hi of provider.parameters.hierarchyItems">
+      {{getHierarchyTypeName(hi.type)}}: {{hi.name}}
+      <span role="button" (click)="removeHierarchyItem(hi)">X</span>
+    </p>
+    <a class="btn" (click)="callSelectHierarchyItemsDialog()">Add hierarchy item</a>
   </div>
-
-
-  <a class="btn" (click)="callSelectHierarchyItems()">Call Select Hierarchy Items</a>
-
+  <button class="btn btn-primary" (click)="save()">Save</button>
+  <button class="btn btn-secondary" (click)="cancel()">Cancel</button>
 </div>

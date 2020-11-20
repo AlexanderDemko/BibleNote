@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using BibleNote.Domain.Contracts;
 using BibleNote.Domain.Entities;
 using BibleNote.Domain.Enums;
-using BibleNote.Services.DocumentProvider.Contracts;
+using BibleNote.Services.Contracts;
 
 namespace BibleNote.Services.NavigationProvider
 {

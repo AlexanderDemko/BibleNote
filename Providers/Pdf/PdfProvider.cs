@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using BibleNote.Domain.Enums;
-using BibleNote.Services.DocumentProvider.Contracts;
+using BibleNote.Services.Contracts;
 using BibleNote.Services.VerseParsing.Models;
 using BibleNote.Services.VerseParsing.Models.ParseResult;
 

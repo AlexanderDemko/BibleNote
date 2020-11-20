@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Linq;
 using BibleNote.Services.Configuration.Contracts;
-using BibleNote.Services.DocumentProvider.Contracts;
+using BibleNote.Services.Contracts;
 using BibleNote.Services.VerseParsing.Contracts;
 using BibleNote.Services.VerseParsing.Contracts.ParseContext;
 using BibleNote.Services.VerseParsing.Models;

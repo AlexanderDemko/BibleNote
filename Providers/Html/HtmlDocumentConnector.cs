@@ -1,6 +1,6 @@
 ﻿using System.Threading.Tasks;
 using BibleNote.Providers.Html.Contracts;
-using BibleNote.Services.DocumentProvider.Contracts;
+using BibleNote.Services.Contracts;
 
 namespace BibleNote.Providers.Html
 {

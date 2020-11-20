@@ -20,9 +20,9 @@ namespace BibleNote.Middleware.NavigationProviders.Queries.List
             this.mapper = mapper;
         }
 
-        public async Task<List<NavigationProviderVm>> Handle(Request request, CancellationToken cancellationToken)
+        public Task<List<NavigationProviderVm>> Handle(Request request, CancellationToken cancellationToken)
         {
-            return await this.mapper
+            return this.mapper
                 .ProjectTo<NavigationProviderVm>(this.dbContext.NavigationProvidersInfo)
                 .ToListAsync(cancellationToken);
         }

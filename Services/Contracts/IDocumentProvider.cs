@@ -3,7 +3,7 @@ using BibleNote.Domain.Enums;
 using BibleNote.Services.VerseParsing.Models;
 using BibleNote.Services.VerseParsing.Models.ParseResult;
 
-namespace BibleNote.Services.DocumentProvider.Contracts
+namespace BibleNote.Services.Contracts
 {
     public interface IDocumentProviderInfo
     {
