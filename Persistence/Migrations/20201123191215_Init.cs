@@ -30,12 +30,14 @@ namespace BibleNote.Persistence.Migrations
                 {
                     Id = table.Column<int>(nullable: false)
                         .Annotation("Sqlite:Autoincrement", true),
-                    StartTime = table.Column<DateTime>(nullable: false),
+                    StartTime = table.Column<DateTime>(nullable: true),
                     FinishTime = table.Column<DateTime>(nullable: true),
+                    GetDocumentsInfoTime = table.Column<DateTime>(nullable: false),
                     NavigationProviderId = table.Column<int>(nullable: false),
                     CreatedDocumentsCount = table.Column<int>(nullable: false),
                     UpdatedDocumentsCount = table.Column<int>(nullable: false),
-                    DeletedDocumentsCount = table.Column<int>(nullable: false)
+                    DeletedDocumentsCount = table.Column<int>(nullable: false),
+                    Status = table.Column<int>(nullable: false)
                 },
                 constraints: table =>
                 {

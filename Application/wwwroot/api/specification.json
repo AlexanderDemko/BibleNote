@@ -6,6 +6,125 @@
     "version": "1.0.0"
   },
   "paths": {
+    "/api/AnalysisSessions/GetAll": {
+      "get": {
+        "tags": [
+          "AnalysisSessions"
+        ],
+        "operationId": "AnalysisSessions_GetAll",
+        "parameters": [
+          {
+            "name": "onlyLatest",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "boolean"
+            },
+            "x-position": 1
+          },
+          {
+            "name": "navigationProviderId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "nullable": true
+            },
+            "x-position": 2
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AnalysisSessionsAnalysisSessionVm"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/AnalysisSessions/LoadOneNoteAnalysisSessionStatus": {
+      "get": {
+        "tags": [
+          "AnalysisSessions"
+        ],
+        "operationId": "AnalysisSessions_LoadOneNoteAnalysisSessionStatus",
+        "parameters": [
+          {
+            "name": "navigationProviderId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalysisSessionsAnalysisSessionVm"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/AnalysisSessions/CreateOneNoteProvider": {
+      "post": {
+        "tags": [
+          "AnalysisSessions"
+        ],
+        "operationId": "AnalysisSessions_CreateOneNoteProvider",
+        "parameters": [
+          {
+            "name": "navigationProviderId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "x-position": 1
+          },
+          {
+            "name": "callbackFunction",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "nullable": true
+            },
+            "x-position": 2
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalysisSessionsAnalysisSessionVm"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/NavigationProviders/GetAll": {
       "get": {
         "tags": [
@@ -234,6 +353,65 @@
   },
   "components": {
     "schemas": {
+      "AnalysisSessionsAnalysisSessionVm": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "startTime": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "finishTime": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "getDocumentsInfoTime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "navigationProviderId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "createdDocumentsCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "updatedDocumentsCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "deletedDocumentsCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "status": {
+            "$ref": "#/components/schemas/AnalysisSessionStatus"
+          }
+        }
+      },
+      "AnalysisSessionStatus": {
+        "type": "integer",
+        "description": "",
+        "x-enumNames": [
+          "NotStarted",
+          "InProgress",
+          "CompletedWithErrors",
+          "Completed"
+        ],
+        "enum": [
+          0,
+          1,
+          2,
+          3
+        ]
+      },
       "NavigationProvidersNavigationProviderVm": {
         "type": "object",
         "additionalProperties": false,

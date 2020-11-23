@@ -29,6 +29,7 @@ namespace BibleNote.Services.VerseProcessing
             {
                 this.analyticsContext.VerseRelationRepository.AddRange(verseRelations);
                 await this.analyticsContext.SaveChangesAsync(token);
+                return true;
             }, cancellationToken);
         }
 
@@ -54,7 +55,7 @@ namespace BibleNote.Services.VerseProcessing
             return verseRelations;
         }
 
-        private IEnumerable<VerseRelation> ProcessVerseEntryInsideAllDocument(
+        private static IEnumerable<VerseRelation> ProcessVerseEntryInsideAllDocument(
             VerseParsing.Models.VerseEntry verseEntry,
             LinkedListNode<ParagraphParseResultExt> paragraphNode,
             IEnumerable<VerseRelation> paragraphVerseRelations)
@@ -162,7 +163,7 @@ namespace BibleNote.Services.VerseProcessing
             return result;
         }
 
-        private decimal GetWithinParagraphRelationWeight(VerseParsing.Models.VerseEntry verseEntry, VerseParsing.Models.VerseEntry relativeVerseEntry)
+        private static decimal GetWithinParagraphRelationWeight(VerseParsing.Models.VerseEntry verseEntry, VerseParsing.Models.VerseEntry relativeVerseEntry)
         {
             var distance = relativeVerseEntry.StartIndex - verseEntry.EndIndex;
             if (distance < 5)

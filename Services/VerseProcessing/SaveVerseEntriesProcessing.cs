@@ -18,29 +18,32 @@ namespace BibleNote.Services.VerseProcessing
 
         public SaveVerseEntriesProcessing(ITrackingDbContext analyticsContext)
         {
-            this.dbContext = analyticsContext;            
+            this.dbContext = analyticsContext;
         }
 
         public async Task ProcessAsync(int documentId, DocumentParseResult documentResult, CancellationToken cancellationToken = default)
         {
-            this.documentId = documentId;            
-            
-            await RemovePreviousResultAsync();
-            ProcessHierarchy(documentResult.RootHierarchyResult);
+            this.documentId = documentId;
 
-            await this.dbContext.SaveChangesAsync(cancellationToken);
+            await this.dbContext.DoInTransactionAsync(async (token) =>
+            {
+                await RemovePreviousResultAsync(token);
+                ProcessHierarchy(documentResult.RootHierarchyResult);
+                await this.dbContext.SaveChangesAsync(token);
+                return true;
+            }, cancellationToken);
         }
 
-        private async Task RemovePreviousResultAsync()
+        private async Task RemovePreviousResultAsync(CancellationToken cancellationToken)
         {
             await this.dbContext.VerseRelationRepository
-                .DeleteAsync(v => v.DocumentParagraph.DocumentId == this.documentId);
+                .DeleteAsync(v => v.DocumentParagraph.DocumentId == this.documentId, cancellationToken);
 
             await this.dbContext.VerseEntryRepository
-                .DeleteAsync(v => v.DocumentParagraph.DocumentId == this.documentId);
+                .DeleteAsync(v => v.DocumentParagraph.DocumentId == this.documentId, cancellationToken);
 
             await this.dbContext.DocumentParagraphRepository
-                .DeleteAsync(p => p.DocumentId == documentId);            
+                .DeleteAsync(p => p.DocumentId == documentId, cancellationToken);
         }
 
         private void ProcessHierarchy(HierarchyParseResult hierarchyResult)
@@ -53,7 +56,7 @@ namespace BibleNote.Services.VerseProcessing
                     Index = paragraphResult.ParagraphIndex,
                     Path = paragraphResult.ParagraphPath
                 };
-                this.dbContext.DocumentParagraphRepository.Add(paragraphResult.Paragraph);                 
+                this.dbContext.DocumentParagraphRepository.Add(paragraphResult.Paragraph);
 
                 foreach (var verseEntry in paragraphResult.VerseEntries)
                 {
@@ -72,11 +75,11 @@ namespace BibleNote.Services.VerseProcessing
                                 Weight = Math.Round(1M / verseEntry.VersePointer.SubVerses.VersesCount, 2)
                             });
                     }
-                }                
+                }
             }
 
             foreach (var childHierarchy in hierarchyResult.ChildHierarchyResults)
                 ProcessHierarchy(childHierarchy);
-        }       
+        }
     }
 }

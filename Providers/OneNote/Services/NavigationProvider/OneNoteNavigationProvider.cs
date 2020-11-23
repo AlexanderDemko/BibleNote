@@ -43,7 +43,7 @@ namespace BibleNote.Providers.OneNote.Services.NavigationProvider
 
         public override async Task<IEnumerable<OneNoteDocumentId>> LoadDocuments(
             AnalysisSession analysisSession, 
-            bool newOnly, 
+            bool newOnly = false, 
             bool updateDb = true, 
             CancellationToken cancellationToken = default)
         {
@@ -56,10 +56,11 @@ namespace BibleNote.Providers.OneNote.Services.NavigationProvider
                 documents.AddRange(hierarchyDocuments);
             }
 
-            if (updateDb)
+            await DbContext.DoInTransactionAsync(async (cancellationToken) =>
             {
                 await SaveChanges(analysisSession, cancellationToken);
-            }
+                return updateDb;
+            }, cancellationToken);
 
             return documents.Select(d => new OneNoteDocumentId(d.Id, d.Path));
         }

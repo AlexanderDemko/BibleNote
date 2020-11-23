@@ -17,6 +17,188 @@ export const API_BASE_URL = new InjectionToken<string>('API_BASE_URL');
 @Injectable({
     providedIn: 'root'
 })
+export class AnalysisSessionsClient {
+    private http: HttpClient;
+    private baseUrl: string;
+    protected jsonParseReviver: ((key: string, value: any) => any) | undefined = undefined;
+
+    constructor(@Inject(HttpClient) http: HttpClient, @Optional() @Inject(API_BASE_URL) baseUrl?: string) {
+        this.http = http;
+        this.baseUrl = baseUrl !== undefined && baseUrl !== null ? baseUrl : "";
+    }
+
+    getAll(onlyLatest: boolean, navigationProviderId: number | null): Observable<AnalysisSessionsAnalysisSessionVm[]> {
+        let url_ = this.baseUrl + "/api/AnalysisSessions/GetAll?";
+        if (onlyLatest === undefined || onlyLatest === null)
+            throw new Error("The parameter 'onlyLatest' must be defined and cannot be null.");
+        else
+            url_ += "onlyLatest=" + encodeURIComponent("" + onlyLatest) + "&";
+        if (navigationProviderId === undefined)
+            throw new Error("The parameter 'navigationProviderId' must be defined.");
+        else if(navigationProviderId !== null)
+            url_ += "navigationProviderId=" + encodeURIComponent("" + navigationProviderId) + "&";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_ : any = {
+            observe: "response",
+            responseType: "blob",
+            headers: new HttpHeaders({
+                "Accept": "application/json"
+            })
+        };
+
+        return this.http.request("get", url_, options_).pipe(_observableMergeMap((response_ : any) => {
+            return this.processGetAll(response_);
+        })).pipe(_observableCatch((response_: any) => {
+            if (response_ instanceof HttpResponseBase) {
+                try {
+                    return this.processGetAll(<any>response_);
+                } catch (e) {
+                    return <Observable<AnalysisSessionsAnalysisSessionVm[]>><any>_observableThrow(e);
+                }
+            } else
+                return <Observable<AnalysisSessionsAnalysisSessionVm[]>><any>_observableThrow(response_);
+        }));
+    }
+
+    protected processGetAll(response: HttpResponseBase): Observable<AnalysisSessionsAnalysisSessionVm[]> {
+        const status = response.status;
+        const responseBlob =
+            response instanceof HttpResponse ? response.body :
+            (<any>response).error instanceof Blob ? (<any>response).error : undefined;
+
+        let _headers: any = {}; if (response.headers) { for (let key of response.headers.keys()) { _headers[key] = response.headers.get(key); }}
+        if (status === 200) {
+            return blobToText(responseBlob).pipe(_observableMergeMap(_responseText => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            if (Array.isArray(resultData200)) {
+                result200 = [] as any;
+                for (let item of resultData200)
+                    result200!.push(AnalysisSessionsAnalysisSessionVm.fromJS(item));
+            }
+            return _observableOf(result200);
+            }));
+        } else if (status !== 200 && status !== 204) {
+            return blobToText(responseBlob).pipe(_observableMergeMap(_responseText => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            }));
+        }
+        return _observableOf<AnalysisSessionsAnalysisSessionVm[]>(<any>null);
+    }
+
+    loadOneNoteAnalysisSessionStatus(navigationProviderId: number): Observable<AnalysisSessionsAnalysisSessionVm> {
+        let url_ = this.baseUrl + "/api/AnalysisSessions/LoadOneNoteAnalysisSessionStatus?";
+        if (navigationProviderId === undefined || navigationProviderId === null)
+            throw new Error("The parameter 'navigationProviderId' must be defined and cannot be null.");
+        else
+            url_ += "navigationProviderId=" + encodeURIComponent("" + navigationProviderId) + "&";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_ : any = {
+            observe: "response",
+            responseType: "blob",
+            headers: new HttpHeaders({
+                "Accept": "application/json"
+            })
+        };
+
+        return this.http.request("get", url_, options_).pipe(_observableMergeMap((response_ : any) => {
+            return this.processLoadOneNoteAnalysisSessionStatus(response_);
+        })).pipe(_observableCatch((response_: any) => {
+            if (response_ instanceof HttpResponseBase) {
+                try {
+                    return this.processLoadOneNoteAnalysisSessionStatus(<any>response_);
+                } catch (e) {
+                    return <Observable<AnalysisSessionsAnalysisSessionVm>><any>_observableThrow(e);
+                }
+            } else
+                return <Observable<AnalysisSessionsAnalysisSessionVm>><any>_observableThrow(response_);
+        }));
+    }
+
+    protected processLoadOneNoteAnalysisSessionStatus(response: HttpResponseBase): Observable<AnalysisSessionsAnalysisSessionVm> {
+        const status = response.status;
+        const responseBlob =
+            response instanceof HttpResponse ? response.body :
+            (<any>response).error instanceof Blob ? (<any>response).error : undefined;
+
+        let _headers: any = {}; if (response.headers) { for (let key of response.headers.keys()) { _headers[key] = response.headers.get(key); }}
+        if (status === 200) {
+            return blobToText(responseBlob).pipe(_observableMergeMap(_responseText => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result200 = AnalysisSessionsAnalysisSessionVm.fromJS(resultData200);
+            return _observableOf(result200);
+            }));
+        } else if (status !== 200 && status !== 204) {
+            return blobToText(responseBlob).pipe(_observableMergeMap(_responseText => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            }));
+        }
+        return _observableOf<AnalysisSessionsAnalysisSessionVm>(<any>null);
+    }
+
+    createOneNoteProvider(navigationProviderId: number, callbackFunction: string | null): Observable<AnalysisSessionsAnalysisSessionVm> {
+        let url_ = this.baseUrl + "/api/AnalysisSessions/CreateOneNoteProvider?";
+        if (navigationProviderId === undefined || navigationProviderId === null)
+            throw new Error("The parameter 'navigationProviderId' must be defined and cannot be null.");
+        else
+            url_ += "navigationProviderId=" + encodeURIComponent("" + navigationProviderId) + "&";
+        if (callbackFunction === undefined)
+            throw new Error("The parameter 'callbackFunction' must be defined.");
+        else if(callbackFunction !== null)
+            url_ += "callbackFunction=" + encodeURIComponent("" + callbackFunction) + "&";
+        url_ = url_.replace(/[?&]$/, "");
+
+        let options_ : any = {
+            observe: "response",
+            responseType: "blob",
+            headers: new HttpHeaders({
+                "Accept": "application/json"
+            })
+        };
+
+        return this.http.request("post", url_, options_).pipe(_observableMergeMap((response_ : any) => {
+            return this.processCreateOneNoteProvider(response_);
+        })).pipe(_observableCatch((response_: any) => {
+            if (response_ instanceof HttpResponseBase) {
+                try {
+                    return this.processCreateOneNoteProvider(<any>response_);
+                } catch (e) {
+                    return <Observable<AnalysisSessionsAnalysisSessionVm>><any>_observableThrow(e);
+                }
+            } else
+                return <Observable<AnalysisSessionsAnalysisSessionVm>><any>_observableThrow(response_);
+        }));
+    }
+
+    protected processCreateOneNoteProvider(response: HttpResponseBase): Observable<AnalysisSessionsAnalysisSessionVm> {
+        const status = response.status;
+        const responseBlob =
+            response instanceof HttpResponse ? response.body :
+            (<any>response).error instanceof Blob ? (<any>response).error : undefined;
+
+        let _headers: any = {}; if (response.headers) { for (let key of response.headers.keys()) { _headers[key] = response.headers.get(key); }}
+        if (status === 200) {
+            return blobToText(responseBlob).pipe(_observableMergeMap(_responseText => {
+            let result200: any = null;
+            let resultData200 = _responseText === "" ? null : JSON.parse(_responseText, this.jsonParseReviver);
+            result200 = AnalysisSessionsAnalysisSessionVm.fromJS(resultData200);
+            return _observableOf(result200);
+            }));
+        } else if (status !== 200 && status !== 204) {
+            return blobToText(responseBlob).pipe(_observableMergeMap(_responseText => {
+            return throwException("An unexpected server error occurred.", status, _responseText, _headers);
+            }));
+        }
+        return _observableOf<AnalysisSessionsAnalysisSessionVm>(<any>null);
+    }
+}
+
+@Injectable({
+    providedIn: 'root'
+})
 export class NavigationProvidersClient {
     private http: HttpClient;
     private baseUrl: string;
@@ -390,6 +572,88 @@ export class NavigationProvidersClient {
         }
         return _observableOf<NavigationProvidersHierarchyItemVm>(<any>null);
     }
+}
+
+export class AnalysisSessionsAnalysisSessionVm implements IAnalysisSessionsAnalysisSessionVm {
+    id?: number;
+    startTime?: Date | undefined;
+    finishTime?: Date | undefined;
+    getDocumentsInfoTime?: Date;
+    navigationProviderId?: number;
+    createdDocumentsCount?: number;
+    updatedDocumentsCount?: number;
+    deletedDocumentsCount?: number;
+    status?: AnalysisSessionStatus;
+
+    constructor(data?: IAnalysisSessionsAnalysisSessionVm) {
+        if (data) {
+            for (var property in data) {
+                if (data.hasOwnProperty(property))
+                    (<any>this)[property] = (<any>data)[property];
+            }
+        }
+    }
+
+    init(_data?: any) {
+        if (_data) {
+            this.id = _data["id"];
+            this.startTime = _data["startTime"] ? new Date(_data["startTime"].toString()) : <any>undefined;
+            this.finishTime = _data["finishTime"] ? new Date(_data["finishTime"].toString()) : <any>undefined;
+            this.getDocumentsInfoTime = _data["getDocumentsInfoTime"] ? new Date(_data["getDocumentsInfoTime"].toString()) : <any>undefined;
+            this.navigationProviderId = _data["navigationProviderId"];
+            this.createdDocumentsCount = _data["createdDocumentsCount"];
+            this.updatedDocumentsCount = _data["updatedDocumentsCount"];
+            this.deletedDocumentsCount = _data["deletedDocumentsCount"];
+            this.status = _data["status"];
+        }
+    }
+
+    static fromJS(data: any): AnalysisSessionsAnalysisSessionVm {
+        data = typeof data === 'object' ? data : {};
+        let result = new AnalysisSessionsAnalysisSessionVm();
+        result.init(data);
+        return result;
+    }
+
+    toJSON(data?: any) {
+        data = typeof data === 'object' ? data : {};
+        data["id"] = this.id;
+        data["startTime"] = this.startTime ? this.startTime.toISOString() : <any>undefined;
+        data["finishTime"] = this.finishTime ? this.finishTime.toISOString() : <any>undefined;
+        data["getDocumentsInfoTime"] = this.getDocumentsInfoTime ? this.getDocumentsInfoTime.toISOString() : <any>undefined;
+        data["navigationProviderId"] = this.navigationProviderId;
+        data["createdDocumentsCount"] = this.createdDocumentsCount;
+        data["updatedDocumentsCount"] = this.updatedDocumentsCount;
+        data["deletedDocumentsCount"] = this.deletedDocumentsCount;
+        data["status"] = this.status;
+        return data; 
+    }
+
+    clone(): AnalysisSessionsAnalysisSessionVm {
+        const json = this.toJSON();
+        let result = new AnalysisSessionsAnalysisSessionVm();
+        result.init(json);
+        return result;
+    }
+}
+
+export interface IAnalysisSessionsAnalysisSessionVm {
+    id?: number;
+    startTime?: Date | undefined;
+    finishTime?: Date | undefined;
+    getDocumentsInfoTime?: Date;
+    navigationProviderId?: number;
+    createdDocumentsCount?: number;
+    updatedDocumentsCount?: number;
+    deletedDocumentsCount?: number;
+    status?: AnalysisSessionStatus;
+}
+
+export enum AnalysisSessionStatus {
+    NotStarted = 0,
+    InProgress = 1,
+    CompletedWithErrors = 2,
+    Completed = 3,
 }
 
 export class NavigationProvidersNavigationProviderVm implements INavigationProvidersNavigationProviderVm {

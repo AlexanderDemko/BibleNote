@@ -23,7 +23,7 @@ namespace BibleNote.Services.Contracts
 
         Task<IEnumerable<T>> LoadDocuments(
             AnalysisSession analysisSession,
-            bool newOnly,
+            bool newOnly = false,
             bool updateDb = true,
             CancellationToken cancellationToken = default);
     }

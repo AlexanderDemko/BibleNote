@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BibleNote.Persistence
 {    
-    public partial class AnalyticsDbContext : DbContext, ITrackingDbContext, IReadOnlyDbContext
+    public sealed partial class AnalyticsDbContext : DbContext, ITrackingDbContext, IReadOnlyDbContext
     {
         public DbSet<Document> Documents { get; set; }
 
@@ -48,18 +48,18 @@ namespace BibleNote.Persistence
 
         #endregion
 
-        public async Task DoInTransactionAsync(Func<CancellationToken, Task> action, CancellationToken cancellationToken = default)
+        public async Task DoInTransactionAsync(Func<CancellationToken, Task<bool>> action, CancellationToken cancellationToken = default)
         {
             using (var transaction = await Database.BeginTransactionAsync(cancellationToken))
             {
                 try
                 {
-                    await action(cancellationToken);
-                    transaction.Commit();
+                    var shouldCommit = await action(cancellationToken);
+                    if (shouldCommit)
+                        transaction.Commit();
                 }
                 catch
                 {
-                    transaction.Rollback();
                     throw;
                 }
             }

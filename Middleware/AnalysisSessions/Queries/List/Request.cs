@@ -9,5 +9,11 @@ namespace BibleNote.Middleware.AnalysisSessions.Queries.List
         public bool OnlyLatest { get; set; }
 
         public int? NavigationProviderId { get; set; }
+
+        public Request(bool onlyLatest, int? navigationProviderId)
+        {
+            OnlyLatest = onlyLatest;
+            NavigationProviderId = navigationProviderId;
+        }
     }
 }

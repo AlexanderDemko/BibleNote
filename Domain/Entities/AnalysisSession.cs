@@ -11,6 +11,8 @@ namespace BibleNote.Domain.Entities
 
         public DateTime? FinishTime { get; set; }
 
+        public DateTime GetDocumentsInfoTime { get; set; }
+
         public int NavigationProviderId { get; set; }
 
         public int CreatedDocumentsCount { get; set; }

@@ -35,8 +35,8 @@ namespace BibleNote.Services.NavigationProvider
         public abstract IDocumentProvider GetProvider(T document);
 
         public abstract Task<IEnumerable<T>> LoadDocuments(
-            AnalysisSession analysisSession, 
-            bool newOnly, 
+            AnalysisSession analysisSession,
+            bool newOnly = false,
             bool updateDb = true, 
             CancellationToken cancellationToken = default);
 
@@ -58,27 +58,32 @@ namespace BibleNote.Services.NavigationProvider
             analysisSession.DeletedDocumentsCount = await DbContext.DocumentRepository
                 .Where(d => d.Folder.NavigationProviderId == Id
                         && d.LatestAnalysisSessionId != analysisSession.Id)
-                .CountAsync();
+                .CountAsync(cancellationToken);
 
             await DbContext.VerseRelationRepository.DeleteAsync(
                 v => v.DocumentParagraph.Document.Folder.NavigationProviderId == Id 
-                && v.DocumentParagraph.Document.LatestAnalysisSessionId != analysisSession.Id);
+                && v.DocumentParagraph.Document.LatestAnalysisSessionId != analysisSession.Id,
+                cancellationToken);
             
             await DbContext.VerseEntryRepository.DeleteAsync(
                 v => v.DocumentParagraph.Document.Folder.NavigationProviderId == Id 
-                && v.DocumentParagraph.Document.LatestAnalysisSessionId != analysisSession.Id);
+                && v.DocumentParagraph.Document.LatestAnalysisSessionId != analysisSession.Id,
+                cancellationToken);
             
             await DbContext.DocumentParagraphRepository.DeleteAsync(
                 p => p.Document.Folder.NavigationProviderId == Id
-                && p.Document.LatestAnalysisSessionId != analysisSession.Id);
+                && p.Document.LatestAnalysisSessionId != analysisSession.Id,
+                cancellationToken);
 
             await DbContext.DocumentRepository.DeleteAsync(
                 d => d.Folder.NavigationProviderId == Id 
-                && d.LatestAnalysisSessionId != analysisSession.Id);
+                && d.LatestAnalysisSessionId != analysisSession.Id,
+                cancellationToken);
             
             await DbContext.DocumentFolderRepository.DeleteAsync(
                 f => f.NavigationProviderId == Id
-                && f.LatestAnalysisSessionId != analysisSession.Id);
+                && f.LatestAnalysisSessionId != analysisSession.Id,
+                cancellationToken);
         }
     }
 }

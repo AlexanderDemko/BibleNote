@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BibleNote.Persistence.Migrations
 {
     [DbContext(typeof(AnalyticsDbContext))]
-    [Migration("20201030124910_Init")]
+    [Migration("20201123191215_Init")]
     partial class Init
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -33,11 +33,17 @@ namespace BibleNote.Persistence.Migrations
                     b.Property<DateTime?>("FinishTime")
                         .HasColumnType("TEXT");
 
+                    b.Property<DateTime>("GetDocumentsInfoTime")
+                        .HasColumnType("TEXT");
+
                     b.Property<int>("NavigationProviderId")
                         .HasColumnType("INTEGER");
 
-                    b.Property<DateTime>("StartTime")
+                    b.Property<DateTime?>("StartTime")
                         .HasColumnType("TEXT");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("INTEGER");
 
                     b.Property<int>("UpdatedDocumentsCount")
                         .HasColumnType("INTEGER");

@@ -10,7 +10,9 @@ namespace BibleNote.Persistence.Configurations
         {
             builder.ToTable(nameof(AnalyticsDbContext.AnalysisSessions));
 
-            builder.Property(d => d.StartTime).IsRequired(true);
+            builder.Property(d => d.GetDocumentsInfoTime).IsRequired(true);
+            builder.Property(d => d.Status).IsRequired(true);
+            builder.Property(d => d.NavigationProviderId).IsRequired(true);
         }
     }
 }

@@ -27,8 +27,4 @@
     <ProjectReference Include="..\Services\Services.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="AnalysisSessions\Commands\" />
-  </ItemGroup>
-
 </Project>

@@ -1,4 +1,5 @@
 ﻿using BibleNote.Common.DiContainer;
+using BibleNote.Services.Analyzer;
 using BibleNote.Services.Configuration;
 using BibleNote.Services.Configuration.Contracts;
 using BibleNote.Services.Contracts;
@@ -38,6 +39,7 @@ namespace BibleNote.Services
                 .AddTransient<IDocumentParseContextEditor, DocumentParseContext>()
                 .AddTransient<IAnalyzer, Analyzer.Analyzer>()
                 .AddTransient<IVerseLinkService, VerseLinkService>()
+                .AddTransient<IAnalysisSessionsService, AnalysisSessionsService>()
                 ;
         }
     }
