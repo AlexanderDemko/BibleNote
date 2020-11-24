@@ -23,7 +23,7 @@ The next version of http://BibleNote.pro
       - [ ] Html document linking
       - [ ] Html viewer
     - [ ] OneNote support
-      - [ ] OneNote navigation provider
+      - [x] OneNote navigation provider
       - [x] OneNote read provider
       - [ ] OneNote page linking
       - [ ] OneNote addin
@@ -38,8 +38,8 @@ The next version of http://BibleNote.pro
 	- [ ] Divide reading and parsing documents into two different threads
   - [x] Move to .NET Core
 - UI
-  - [X] Platform for UI
-  - [X] Navigation Providers management form
+  - [x] Platform for UI
+  - [x] Navigation Providers management form
   - [ ] Common configuration form
   - [ ] Bible Verse reports form
   - [ ] Bible text form?
