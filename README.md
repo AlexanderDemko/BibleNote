@@ -38,8 +38,9 @@ The next version of http://BibleNote.pro
 	- [ ] Divide reading and parsing documents into two different threads
   - [x] Move to .NET Core
 - UI
+  - [X] Platform for UI
+  - [X] Navigation Providers management form
   - [ ] Common configuration form
-  - [ ] Navigation Providers management form
   - [ ] Bible Verse reports form
   - [ ] Bible text form?
 - Installer
