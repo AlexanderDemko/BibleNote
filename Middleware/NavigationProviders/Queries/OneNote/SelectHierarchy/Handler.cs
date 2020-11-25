@@ -1,4 +1,6 @@
-﻿using BibleNote.Providers.OneNote.Contracts;
+﻿using BibleNote.Common.Helpers;
+using BibleNote.Infrastructure.Electron;
+using BibleNote.Providers.OneNote.Contracts;
 using ElectronNET.API;
 using MediatR;
 using Microsoft.Office.Interop.OneNote;
@@ -43,9 +45,8 @@ namespace BibleNote.Middleware.NavigationProviders.Queries.OneNote.SelectHierarc
                     return;
 
                 var hierarchyId = qfDialog.SelectedItem;
-                var window = Electron.WindowManager.BrowserWindows.First();
-                var url = $"javascript:{callbackFunction}('{hierarchyId}')";
-                window.WebContents.LoadURLAsync(url).GetAwaiter();
+                var javascript = $"{callbackFunction}('{hierarchyId}')";
+                AsyncUtil.RunSync(() => ElectronUtils.ExecuteJavascript(javascript));
             }
         }
     }

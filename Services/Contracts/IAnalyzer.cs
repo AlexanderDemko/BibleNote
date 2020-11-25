@@ -12,7 +12,7 @@ namespace BibleNote.Services.Contracts
         Task<AnalysisSession> AnalyzeAsync<T>(
             INavigationProvider<T> navigationProvider,
             AnalyzerOptions options,
-            Action<T, DocumentParseResult> documentProcessedHandler = null,
+            Func<T, DocumentParseResult, Task> documentProcessedHandler = null,
             CancellationToken cancellationToken = default)
             where T : IDocumentId;
     }

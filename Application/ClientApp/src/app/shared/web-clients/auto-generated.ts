@@ -139,16 +139,20 @@ export class AnalysisSessionsClient {
         return _observableOf<AnalysisSessionsAnalysisSessionVm>(<any>null);
     }
 
-    createOneNoteProvider(navigationProviderId: number, callbackFunction: string | null): Observable<AnalysisSessionsAnalysisSessionVm> {
+    createOneNoteProvider(navigationProviderId: number, documentProcessedCallbackFunction: string | null, finishedCallbackFunction: string | null): Observable<AnalysisSessionsAnalysisSessionVm> {
         let url_ = this.baseUrl + "/api/AnalysisSessions/CreateOneNoteProvider?";
         if (navigationProviderId === undefined || navigationProviderId === null)
             throw new Error("The parameter 'navigationProviderId' must be defined and cannot be null.");
         else
             url_ += "navigationProviderId=" + encodeURIComponent("" + navigationProviderId) + "&";
-        if (callbackFunction === undefined)
-            throw new Error("The parameter 'callbackFunction' must be defined.");
-        else if(callbackFunction !== null)
-            url_ += "callbackFunction=" + encodeURIComponent("" + callbackFunction) + "&";
+        if (documentProcessedCallbackFunction === undefined)
+            throw new Error("The parameter 'documentProcessedCallbackFunction' must be defined.");
+        else if(documentProcessedCallbackFunction !== null)
+            url_ += "documentProcessedCallbackFunction=" + encodeURIComponent("" + documentProcessedCallbackFunction) + "&";
+        if (finishedCallbackFunction === undefined)
+            throw new Error("The parameter 'finishedCallbackFunction' must be defined.");
+        else if(finishedCallbackFunction !== null)
+            url_ += "finishedCallbackFunction=" + encodeURIComponent("" + finishedCallbackFunction) + "&";
         url_ = url_.replace(/[?&]$/, "");
 
         let options_ : any = {

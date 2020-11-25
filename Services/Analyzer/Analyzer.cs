@@ -33,7 +33,7 @@ namespace BibleNote.Services.Analyzer
         public async Task<AnalysisSession> AnalyzeAsync<T>(
             INavigationProvider<T> navigationProvider,
             AnalyzerOptions options,
-            Action<T, DocumentParseResult> documentProcessedHandler = null,
+            Func<T, DocumentParseResult, Task> documentProcessedHandler = null,
             CancellationToken cancellationToken = default)
             where T : IDocumentId
         {
@@ -66,7 +66,7 @@ namespace BibleNote.Services.Analyzer
                         await processor.ProcessAsync(document.DocumentId, parseResult, cancellationToken);
                     }
 
-                    documentProcessedHandler?.Invoke(document, parseResult);
+                    await documentProcessedHandler?.Invoke(document, parseResult);
                 }
                 catch (Exception ex)
                 {

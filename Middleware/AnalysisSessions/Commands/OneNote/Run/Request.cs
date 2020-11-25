@@ -7,12 +7,15 @@ namespace BibleNote.Middleware.AnalysisSessions.Commands.OneNote.Run
     {
         public int NavigationProviderId { get; set; }
 
-        public string CallbackFunction { get; set; }
+        public string DocumentProcessedCallbackFunction { get; set; }
 
-        public Request(int navigationProviderId, string callbackFunction)
+        public string FinishedCallbackFunction { get; set; }
+
+        public Request(int navigationProviderId, string documentProcessedCallbackFunction, string finishedCallbackFunction)
         {
             NavigationProviderId = navigationProviderId;
-            CallbackFunction = callbackFunction;
+            DocumentProcessedCallbackFunction = documentProcessedCallbackFunction;
+            FinishedCallbackFunction = finishedCallbackFunction;
         }
     }
 }

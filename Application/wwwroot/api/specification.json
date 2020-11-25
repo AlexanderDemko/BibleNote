@@ -101,7 +101,7 @@
             "x-position": 1
           },
           {
-            "name": "callbackFunction",
+            "name": "documentProcessedCallbackFunction",
             "in": "query",
             "required": true,
             "schema": {
@@ -109,6 +109,16 @@
               "nullable": true
             },
             "x-position": 2
+          },
+          {
+            "name": "finishedCallbackFunction",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "nullable": true
+            },
+            "x-position": 3
           }
         ],
         "responses": {

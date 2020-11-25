@@ -22,9 +22,14 @@ namespace BibleNote.Application.Controllers
         }
 
         [HttpPost]
-        public Task<AnalysisSessionVm> CreateOneNoteProviderAsync(int navigationProviderId, string callbackFunction)
+        public Task<AnalysisSessionVm> CreateOneNoteProviderAsync(
+            int navigationProviderId, 
+            string documentProcessedCallbackFunction, 
+            string finishedCallbackFunction)
         {
-            return Mediator.Send(new Middleware.AnalysisSessions.Commands.OneNote.Run.Request(navigationProviderId, callbackFunction));
+            return Mediator.Send(
+                new Middleware.AnalysisSessions.Commands.OneNote.Run.Request(
+                    navigationProviderId, documentProcessedCallbackFunction, finishedCallbackFunction));
         }        
 
         #endregion

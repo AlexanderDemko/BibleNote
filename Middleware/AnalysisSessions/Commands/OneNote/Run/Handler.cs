@@ -1,5 +1,7 @@
 ﻿using AutoMapper;
+using BibleNote.Common.Helpers;
 using BibleNote.Domain.Contracts;
+using BibleNote.Infrastructure.Electron;
 using BibleNote.Middleware.AnalysisSessions.SharedViewModels;
 using BibleNote.Providers.OneNote.Services.NavigationProvider;
 using BibleNote.Services.Analyzer.Models;
@@ -38,9 +40,11 @@ namespace BibleNote.Middleware.AnalysisSessions.Commands.OneNote.Run
 
             var options = new AnalyzerOptions() { Depth = AnalyzeDepth.All };
 
-            var analysisSession = await analyzer.AnalyzeAsync(oneNoteNavigationProvider, options, (documentId, parseResult) =>
+           
+            var analysisSession = await analyzer.AnalyzeAsync(oneNoteNavigationProvider, options, async (documentId, parseResult) =>
             {
-                //request.CallbackFunction
+                var javascript = $"{request.DocumentProcessedCallbackFunction}('{documentId.DocumentId}')";
+                await ElectronUtils.ExecuteJavascript(javascript);
             }, cancellationToken);
 
             return mapper.Map<AnalysisSessionVm>(analysisSession);
