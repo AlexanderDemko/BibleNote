@@ -3,7 +3,7 @@
 namespace BibleNote.Services.ModulesManager.Models
 {
     [Serializable]
-    public struct VerseNumber
+    public struct VerseNumber: IComparable<VerseNumber>
     {
         public int Chapter;
         public int Verse;
@@ -73,6 +73,12 @@ namespace BibleNote.Services.ModulesManager.Models
         public static bool operator !=(VerseNumber vn1, VerseNumber vn2)
         {
             return !(vn1 == vn2);
+        }
+
+        public int CompareTo(VerseNumber other)
+        {
+            var chapterComparison = Chapter.CompareTo(other.Chapter);
+            return chapterComparison != 0 ? chapterComparison : Verse.CompareTo(other.Verse);
         }
     }
 }

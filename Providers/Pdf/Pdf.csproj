@@ -11,4 +11,9 @@
     <ProjectReference Include="..\..\Services\Services.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="iTextSharp.LGPLv2.Core" Version="1.9.1" />
+    <PackageReference Include="PdfPig" Version="0.1.6" />
+  </ItemGroup>
+
 </Project>

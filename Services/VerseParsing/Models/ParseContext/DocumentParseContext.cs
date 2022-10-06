@@ -20,7 +20,7 @@ namespace BibleNote.Services.VerseParsing.Models.ParseContext
 
         public IParagraphParseContext CurrentParagraph { get; private set; }
 
-        public IParagraphParseContextEditor CurrentParagraphEditor { get { return (IParagraphParseContextEditor)CurrentParagraph; } }
+        public IParagraphParseContextEditor CurrentParagraphEditor => (IParagraphParseContextEditor)CurrentParagraph;
 
         public void Init(IDocumentId documentId)
         {

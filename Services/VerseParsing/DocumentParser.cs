@@ -11,7 +11,7 @@ namespace BibleNote.Services.VerseParsing
         private readonly IParagraphParser paragraphParser;
         private readonly IDocumentParseContextEditor docParseContext;        
 
-        public DocumentParseResult DocumentParseResult { get { return docParseContext.DocumentParseResult; } }     
+        public DocumentParseResult DocumentParseResult => docParseContext.DocumentParseResult;
 
         public DocumentParser(
             IParagraphParser paragraphParser, 

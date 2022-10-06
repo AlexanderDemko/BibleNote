@@ -10,9 +10,9 @@ namespace BibleNote.Services.ModulesManager.Models
     }
 
     [Serializable]
-    public class SimpleVersePointer : ICloneable
+    public class SimpleVersePointer : ICloneable, IComparable<SimpleVersePointer>, IComparable
     {
-        public readonly static char[] Dashes = new char[] { '-', '—', '‑', '–' };
+        public static readonly char[] Dashes = new char[] { '-', '—', '‑', '–' };
 
         public int BookIndex { get; set; }
 
@@ -24,81 +24,21 @@ namespace BibleNote.Services.ModulesManager.Models
 
         public VerseNumber? OriginalTopVerseNumber { get; set; }
 
-        public int Chapter
-        {
-            get
-            {
-                return VerseNumber.Chapter;
-            }
-        }
+        public int Chapter => VerseNumber.Chapter;
 
-        public int OriginalChapter
-        {
-            get
-            {
-                return OriginalVerseNumber.Chapter;
-            }
-        }
+        public int OriginalChapter => OriginalVerseNumber.Chapter;
 
-        public int Verse
-        {
-            get
-            {
-                return VerseNumber.Verse;
-            }
-        }
+        public int Verse => VerseNumber.Verse;
 
-        public int OriginalVerse
-        {
-            get
-            {
-                return OriginalVerseNumber.Verse;
-            }
-        }
+        public int OriginalVerse => OriginalVerseNumber.Verse;
 
-        public int MostTopChapter
-        {
-            get
-            {
-                if (TopVerseNumber.HasValue)
-                    return TopVerseNumber.Value.Chapter;
+        public int MostTopChapter => TopVerseNumber?.Chapter ?? Chapter;
 
-                return Chapter;
-            }
-        }
+        public int OriginalMostTopChapter => OriginalTopVerseNumber?.Chapter ?? OriginalChapter;
 
-        public int OriginalMostTopChapter
-        {
-            get
-            {
-                if (OriginalTopVerseNumber.HasValue)
-                    return OriginalTopVerseNumber.Value.Chapter;
+        public int MostTopVerse => TopVerseNumber?.Verse ?? Verse;
 
-                return OriginalChapter;
-            }
-        }
-
-        public int MostTopVerse
-        {
-            get
-            {
-                if (TopVerseNumber.HasValue)
-                    return TopVerseNumber.Value.Verse;
-
-                return Verse;
-            }
-        }
-
-        public int OriginalMostTopVerse
-        {
-            get
-            {
-                if (OriginalTopVerseNumber.HasValue)
-                    return OriginalTopVerseNumber.Value.Verse;
-
-                return OriginalVerse;
-            }
-        }
+        public int OriginalMostTopVerse => OriginalTopVerseNumber?.Verse ?? OriginalVerse;
 
         public MultiVerse MultiVerseType
         {
@@ -106,23 +46,14 @@ namespace BibleNote.Services.ModulesManager.Models
             {
                 if (TopVerseNumber.HasValue)
                 {
-                    if (VerseNumber.Chapter == TopVerseNumber.Value.Chapter)
-                        return MultiVerse.OneChapter;
-                    else
-                        return MultiVerse.SeveralChapters;
+                    return VerseNumber.Chapter == TopVerseNumber.Value.Chapter ? MultiVerse.OneChapter : MultiVerse.SeveralChapters;
                 }
                 else
                     return MultiVerse.None;
             }
         }
 
-        public bool IsChapter
-        {
-            get
-            {
-                return VerseNumber.IsChapter && (!TopVerseNumber.HasValue || TopVerseNumber.Value.IsChapter);
-            }
-        }
+        public bool IsChapter => VerseNumber.IsChapter && (!TopVerseNumber.HasValue || TopVerseNumber.Value.IsChapter);
 
         public SimpleVersePointer()
         { }
@@ -230,5 +161,18 @@ namespace BibleNote.Services.ModulesManager.Models
 
         protected virtual void CopyPropertiesTo(SimpleVersePointer verse)
         { }
+
+        public int CompareTo(object obj)
+        {
+            return CompareTo((SimpleVersePointer)obj);
+        }
+        
+        public int CompareTo(SimpleVersePointer other)
+        {
+            if (ReferenceEquals(this, other)) return 0;
+            if (ReferenceEquals(null, other)) return 1;
+            var bookIndexComparison = BookIndex.CompareTo(other.BookIndex);
+            return bookIndexComparison != 0 ? bookIndexComparison : VerseNumber.CompareTo(other.VerseNumber);
+        }
     }
 }

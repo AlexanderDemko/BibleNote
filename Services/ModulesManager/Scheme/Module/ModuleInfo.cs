@@ -72,14 +72,8 @@ namespace BibleNote.Services.ModulesManager.Scheme.Module
         [XmlAttribute]
         public string ShortName
         {
-            get
-            {
-                return !string.IsNullOrEmpty(_moduleShortName) ? _moduleShortName.ToLower() : _moduleShortName;
-            }
-            set
-            {
-                _moduleShortName = value;
-            }
+            get => !string.IsNullOrEmpty(_moduleShortName) ? _moduleShortName.ToLower() : _moduleShortName;
+            set => _moduleShortName = value;
         }
 
         [XmlAttribute("Name")]

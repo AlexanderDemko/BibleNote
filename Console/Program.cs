@@ -7,13 +7,20 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using BibleNote.Common.DiContainer;
+using BibleNote.Providers.FileSystem.DocumentId;
+using BibleNote.Providers.Html;
 using BibleNote.Services;
 using BibleNote.Services.Configuration.Contracts;
+using BibleNote.Services.Contracts;
 using BibleNote.Services.ModulesManager;
 using BibleNote.Services.ModulesManager.Contracts;
+using BibleNote.Services.ModulesManager.Models;
+using BibleNote.Services.ModulesManager.Scheme.Module;
 using BibleNote.Services.ModulesManager.Scheme.ZefaniaXml;
 using BibleNote.Services.VerseParsing.Contracts;
 using BibleNote.Services.VerseParsing.Models;
+using BibleNote.Services.VerseParsing.Models.ParseResult;
+using BibleNote.Tests.Mocks;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace BibleNote.Console
@@ -21,7 +28,7 @@ namespace BibleNote.Console
     class Program
     {
         public static IVersePointerFactory VersePointerFactory { get; set; }
-
+        
         public static IModulesManager ModulesManager { get; set; }
 
         private static readonly Regex sWhitespace = new Regex(@"\s+");
@@ -32,7 +39,14 @@ namespace BibleNote.Console
 
         static void Main(string[] args)
         {
-            var sw = new Stopwatch();
+            var sw = Stopwatch.StartNew();
+            
+            //ExtractPdfVersePages(@"c:\\temp\\Мф 1.pdf", "c:\\temp\\verses_.txt");
+                
+            System.Console.WriteLine($"Total: {sw.Elapsed.TotalSeconds}");
+            System.Console.ReadKey();
+            return;
+            
             //var testsP = new ParagraphParserTests();
             //testsP.Init();
 
@@ -48,16 +62,12 @@ namespace BibleNote.Console
             //}
 
             //sw.Stop();
-            //Console.WriteLine($"Total: {sw.Elapsed.TotalSeconds}");                        
+                              
 
-            var serviceProvider = new ServiceCollection()
-                .AddApplicatonServices<ServicesModule>()
-                .AddSingleton<IConfigurationManager>((sp) => new MockConfigurationManager())
-                .AddLogging()
-                .BuildServiceProvider();           
+                
 
             
-            ModulesManager = serviceProvider.GetService<IModulesManager>();
+            
 
 
             //ConvertTextModule(@"C:\temp\nrkv.txt");
