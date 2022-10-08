@@ -12,6 +12,5 @@
         <Label Content="Source file (.docx, .html, .txt, .pdf)" HorizontalAlignment="Left" Margin="10,58,0,0" VerticalAlignment="Top" Height="25" Width="186"/>
         <TextBox HorizontalAlignment="Left" Margin="201,62,0,0" Text="" TextWrapping="NoWrap" VerticalAlignment="Top" Width="164" Height="18" Name="tbSourceFile" IsReadOnly="True" />
         <Button Content="···" HorizontalAlignment="Left" Margin="376,62,0,0" VerticalAlignment="Top" Width="20" Name="btnSelectSourceFile" Click="btnSelectSourceFile_Click" Height="18"/>
-
     </Grid>
 </Window>

@@ -35,17 +35,26 @@ namespace BibleNote.VersePagesFinder
         public MainWindow()
         {
             InitializeComponent();
+            cbModules.ItemsSource = GetModules()?.Keys;
+            cbModules.SelectedItem = "rst";
         }
 
         private async void Button_Click(object sender, RoutedEventArgs e)
         {
+            if (cbModules.SelectedItem == null)
+            {
+                MessageBox.Show("Please select a target module");
+                return;
+            }
+            
             if (string.IsNullOrEmpty(tbSourceFile.Text))
             {
                 MessageBox.Show("Please select a source file");
                 return;
             }
 
-            InitApp("rst");
+            var moduleShortName = cbModules.SelectedItem.ToString();
+            InitApp(moduleShortName);
 
             var sourceFilePath = tbSourceFile.Text; 
             var resultFilePath = Path.Combine(Directory.GetCurrentDirectory(), ResultsFileName);
