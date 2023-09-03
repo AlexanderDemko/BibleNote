@@ -159,14 +159,12 @@ namespace BibleNote.Common.Helpers
                 {
                     if (maxSpaces-- == 0)
                         break;
-
-                    continue;
                 }
                 else
                     return symbol;
             }
 
-            return default(char);
+            return default;
         }
 
         public static bool ContainsHtml(string fileContent)
