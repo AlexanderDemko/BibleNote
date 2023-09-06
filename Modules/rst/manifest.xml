@@ -297,31 +297,32 @@
       <Abbreviation>быт</Abbreviation>
       <Abbreviation>бт</Abbreviation>      
       <Abbreviation IsFullBookName="true">бытии</Abbreviation>
+      <Abbreviation IsFullBookName="true">бытие</Abbreviation>
     </BibleBook>
     <BibleBook Index="2" Name="Исход" SectionName="02. Исход">
       <Abbreviation>исх</Abbreviation>
       <Abbreviation IsFullBookName="true">исходе</Abbreviation>
-      <Abbreviation>исход</Abbreviation>
+      <Abbreviation IsFullBookName="true">исход</Abbreviation>
     </BibleBook>
     <BibleBook Index="3" Name="Левит" SectionName="03. Левит">
       <Abbreviation>лев</Abbreviation>
       <Abbreviation>лв</Abbreviation>
       <Abbreviation IsFullBookName="true">левите</Abbreviation>
-      <Abbreviation>левит</Abbreviation>
+      <Abbreviation IsFullBookName="true">левит</Abbreviation>
     </BibleBook>
     <BibleBook Index="4" Name="Числа" SectionName="04. Числа">
       <Abbreviation>чис</Abbreviation>
       <Abbreviation>чс</Abbreviation>
       <Abbreviation>числ</Abbreviation>
       <Abbreviation IsFullBookName="true">числах</Abbreviation>
-      <Abbreviation>числа</Abbreviation>
+      <Abbreviation IsFullBookName="true">числа</Abbreviation>
     </BibleBook>
     <BibleBook Index="5" Name="Второзаконие" SectionName="05. Второзаконие">
       <Abbreviation>втор</Abbreviation>
       <Abbreviation>вт</Abbreviation>
       <Abbreviation>втрзк</Abbreviation>
       <Abbreviation IsFullBookName="true">второзаконии</Abbreviation>
-      <Abbreviation>второзаконие</Abbreviation>
+      <Abbreviation IsFullBookName="true">второзаконие</Abbreviation>
     </BibleBook>
     <BibleBook Index="6" Name="Иисус Навин" ShortName="навин" SectionName="06. Иисус Навин">
       <Abbreviation>иис.н</Abbreviation>
@@ -336,29 +337,30 @@
       <Abbreviation IsFullBookName="true">иисуса навина</Abbreviation>
       <Abbreviation IsFullBookName="true">навине</Abbreviation>
       <Abbreviation IsFullBookName="true">иисусе навине</Abbreviation>
+      <Abbreviation IsFullBookName="true">иисус навин</Abbreviation>
     </BibleBook>
     <BibleBook Index="7" Name="Судьи" SectionName="07. Судьи">
       <Abbreviation>суд</Abbreviation>
       <Abbreviation>сд</Abbreviation>
       <Abbreviation IsFullBookName="true">судьях</Abbreviation>
-      <Abbreviation>судьи</Abbreviation>
+      <Abbreviation IsFullBookName="true">судьи</Abbreviation>
       <Abbreviation IsFullBookName="true">судей</Abbreviation>
     </BibleBook>
     <BibleBook Index="8" Name="Руфь" SectionName="08. Руфь">
       <Abbreviation>руф</Abbreviation>
       <Abbreviation>рф</Abbreviation>
-      <Abbreviation>руфь</Abbreviation>
+      <Abbreviation IsFullBookName="true">руфь</Abbreviation>
     </BibleBook>
     <BibleBook Index="9" Name="1-я Царств" ShortName="1царств" SectionName="09. 1-я Царств">
       <Abbreviation>1цар</Abbreviation>
       <Abbreviation>1цр</Abbreviation>
       <Abbreviation>1ц</Abbreviation>
       <Abbreviation IsFullBookName="true">1царств</Abbreviation>
-      <Abbreviation>1-я царств</Abbreviation>
+      <Abbreviation IsFullBookName="true">1-я царств</Abbreviation>
       <Abbreviation IsFullBookName="true">1-е царств</Abbreviation>
       <Abbreviation>1-я цар</Abbreviation>
       <Abbreviation>1-е цар</Abbreviation>
-      <Abbreviation>1-ая царств</Abbreviation>
+      <Abbreviation IsFullBookName="true">1-ая царств</Abbreviation>
       <Abbreviation IsFullBookName="true">1-ое царств</Abbreviation>
       <Abbreviation>1-ая цар</Abbreviation>
       <Abbreviation>1-ое цар</Abbreviation>
@@ -370,11 +372,11 @@
       <Abbreviation>2цр</Abbreviation>
       <Abbreviation>2ц</Abbreviation>
       <Abbreviation IsFullBookName="true">2царств</Abbreviation>
-      <Abbreviation>2-я царств</Abbreviation>
+      <Abbreviation IsFullBookName="true">2-я царств</Abbreviation>
       <Abbreviation IsFullBookName="true">2-е царств</Abbreviation>
       <Abbreviation>2-я цар</Abbreviation>
       <Abbreviation>2-е цар</Abbreviation>
-      <Abbreviation>2-ая царств</Abbreviation>
+      <Abbreviation IsFullBookName="true">2-ая царств</Abbreviation>
       <Abbreviation IsFullBookName="true">2-ое царств</Abbreviation>
       <Abbreviation>2-ая цар</Abbreviation>
       <Abbreviation>2-ое цар</Abbreviation>
@@ -386,7 +388,7 @@
       <Abbreviation>3цр</Abbreviation>
       <Abbreviation>3ц</Abbreviation>
       <Abbreviation IsFullBookName="true">3царств</Abbreviation>
-      <Abbreviation>3-я царств</Abbreviation>
+      <Abbreviation IsFullBookName="true">3-я царств</Abbreviation>
       <Abbreviation IsFullBookName="true">3-е царств</Abbreviation>
       <Abbreviation>3-я цар</Abbreviation>
       <Abbreviation>3-е цар</Abbreviation>
@@ -398,11 +400,11 @@
       <Abbreviation>4цр</Abbreviation>
       <Abbreviation>4ц</Abbreviation>
       <Abbreviation IsFullBookName="true">4царств</Abbreviation>
-      <Abbreviation>4-я царств</Abbreviation>
+      <Abbreviation IsFullBookName="true">4-я царств</Abbreviation>
       <Abbreviation IsFullBookName="true">4-е царств</Abbreviation>
       <Abbreviation>4-я цар</Abbreviation>
       <Abbreviation>4-е цар</Abbreviation>
-      <Abbreviation>4-ая царств</Abbreviation>
+      <Abbreviation IsFullBookName="true">4-ая царств</Abbreviation>
       <Abbreviation IsFullBookName="true">4-ое царств</Abbreviation>
       <Abbreviation>4-ая цар</Abbreviation>
       <Abbreviation>4-ое цар</Abbreviation>
@@ -413,7 +415,7 @@
       <Abbreviation>1пар</Abbreviation>
       <Abbreviation>1пр</Abbreviation>
       <Abbreviation IsFullBookName="true">1паралипоменон</Abbreviation>
-      <Abbreviation>1-я паралипоменон</Abbreviation>
+      <Abbreviation IsFullBookName="true">1-я паралипоменон</Abbreviation>
       <Abbreviation IsFullBookName="true">1-е паралипоменон</Abbreviation>
       <Abbreviation>1-я пар</Abbreviation>
       <Abbreviation>1-е пар</Abbreviation>
@@ -428,7 +430,7 @@
       <Abbreviation>2пар</Abbreviation>
       <Abbreviation>2пр</Abbreviation>
       <Abbreviation IsFullBookName="true">2паралипоменон</Abbreviation>
-      <Abbreviation>2-я паралипоменон</Abbreviation>
+      <Abbreviation IsFullBookName="true">2-я паралипоменон</Abbreviation>
       <Abbreviation IsFullBookName="true">2-е паралипоменон</Abbreviation>
       <Abbreviation>2-я пар</Abbreviation>
       <Abbreviation>2-е пар</Abbreviation>
@@ -444,24 +446,24 @@
       <Abbreviation>езд</Abbreviation>
       <Abbreviation>ез</Abbreviation>
       <Abbreviation IsFullBookName="true">ездре</Abbreviation>
-      <Abbreviation>ездра</Abbreviation>
+      <Abbreviation IsFullBookName="true">ездра</Abbreviation>
       <Abbreviation IsFullBookName="true">ездры</Abbreviation>
     </BibleBook>
     <BibleBook Index="16" Name="Неемия" SectionName="16. Неемия">
       <Abbreviation>неем</Abbreviation>
       <Abbreviation>нм</Abbreviation>
       <Abbreviation IsFullBookName="true">неемии</Abbreviation>
-      <Abbreviation>неемия</Abbreviation>
+      <Abbreviation IsFullBookName="true">неемия</Abbreviation>
     </BibleBook>
     <BibleBook Index="17" Name="Есфирь" SectionName="17. Есфирь">
       <Abbreviation>есф</Abbreviation>
       <Abbreviation>ес</Abbreviation>
-      <Abbreviation>есфирь</Abbreviation>
+      <Abbreviation IsFullBookName="true">есфирь</Abbreviation>
     </BibleBook>
     <BibleBook Index="18" Name="Иов" SectionName="18. Иов">
       <Abbreviation IsFullBookName="true">иове</Abbreviation>
       <Abbreviation IsFullBookName="true">иова</Abbreviation>
-      <Abbreviation>иов</Abbreviation>
+      <Abbreviation IsFullBookName="false">иов</Abbreviation>
       <Abbreviation>ив</Abbreviation>
     </BibleBook>
     <BibleBook Index="19" Name="Псалтирь" SectionName="19. Псалтирь" ChapterPageNameTemplate="Псалом {0}">
@@ -474,13 +476,13 @@
       <Abbreviation IsFullBookName="true">псалмы</Abbreviation>
       <Abbreviation IsFullBookName="true">псалмах</Abbreviation>
       <Abbreviation IsFullBookName="true">псалтире</Abbreviation>
-      <Abbreviation>псалтирь</Abbreviation>
+      <Abbreviation IsFullBookName="true">псалтирь</Abbreviation>
       <Abbreviation IsFullBookName="true">псалме</Abbreviation>
     </BibleBook>
     <BibleBook Index="20" Name="Притчи" SectionName="20. Притчи">
       <Abbreviation>прит</Abbreviation>
       <Abbreviation>притч</Abbreviation>
-      <Abbreviation>притчи</Abbreviation>
+      <Abbreviation IsFullBookName="true">притчи</Abbreviation>
       <Abbreviation IsFullBookName="true">притчах</Abbreviation>
       <Abbreviation IsFullBookName="true">притча</Abbreviation>
       <Abbreviation>пр</Abbreviation>
@@ -491,7 +493,7 @@
       <Abbreviation>екк</Abbreviation>
       <Abbreviation IsFullBookName="true">екклесиасте</Abbreviation>
       <Abbreviation IsFullBookName="true">екклесиаста</Abbreviation>
-      <Abbreviation>екклесиаст</Abbreviation>
+      <Abbreviation IsFullBookName="false">екклесиаст</Abbreviation>
     </BibleBook>
     <BibleBook Index="22" Name="Песня Песней" ShortName="песни" SectionName="22. Песня Песней">
       <Abbreviation>песн</Abbreviation>
@@ -502,6 +504,7 @@
       <Abbreviation IsFullBookName="true">песни</Abbreviation>
       <Abbreviation IsFullBookName="true">песней</Abbreviation>
       <Abbreviation IsFullBookName="true">песни песней</Abbreviation>
+      <Abbreviation IsFullBookName="true">песня песней</Abbreviation>
       <Abbreviation IsFullBookName="true">песне песней</Abbreviation>
       <Abbreviation IsFullBookName="true">песнь песней</Abbreviation>
       <Abbreviation IsFullBookName="true">песнь</Abbreviation>
@@ -509,7 +512,7 @@
     <BibleBook Index="23" Name="Исаия" SectionName="23. Исаия">
       <Abbreviation>ис</Abbreviation>
       <Abbreviation>иса</Abbreviation>
-      <Abbreviation>исаия</Abbreviation>
+      <Abbreviation IsFullBookName="true">исаия</Abbreviation>
       <Abbreviation IsFullBookName="true">исайя</Abbreviation>
       <Abbreviation IsFullBookName="true">исайи</Abbreviation>
       <Abbreviation IsFullBookName="true">исаии</Abbreviation>
@@ -520,7 +523,7 @@
       <Abbreviation>иерем</Abbreviation>
       <Abbreviation>иерм</Abbreviation>
       <Abbreviation IsFullBookName="true">иеремии</Abbreviation>
-      <Abbreviation>иеремия</Abbreviation>
+      <Abbreviation IsFullBookName="true">иеремия</Abbreviation>
     </BibleBook>
     <BibleBook Index="25" Name="Плач Иеремии" ShortName="плач" SectionName="25. Плач Иеремии">
       <Abbreviation IsFullBookName="true">плач</Abbreviation>
@@ -529,13 +532,14 @@
       <Abbreviation>пл</Abbreviation>
       <Abbreviation IsFullBookName="true">плаче</Abbreviation>
       <Abbreviation IsFullBookName="true">плаче иеремии</Abbreviation>
+      <Abbreviation IsFullBookName="true">плач иеремии</Abbreviation>
     </BibleBook>
     <BibleBook Index="26" Name="Иезекииль" SectionName="26. Иезекииль">
       <Abbreviation>иез</Abbreviation>
       <Abbreviation>иезек</Abbreviation>
       <Abbreviation IsFullBookName="true">иезекииля</Abbreviation>
       <Abbreviation IsFullBookName="true">иезекииле</Abbreviation>
-      <Abbreviation>иезекииль</Abbreviation>
+      <Abbreviation IsFullBookName="true">иезекииль</Abbreviation>
     </BibleBook>
     <BibleBook Index="27" Name="Даниил" SectionName="27. Даниил">
       <Abbreviation>дан</Abbreviation>
@@ -543,47 +547,47 @@
       <Abbreviation>днл</Abbreviation>
       <Abbreviation IsFullBookName="true">данииле</Abbreviation>
       <Abbreviation IsFullBookName="true">даниила</Abbreviation>
-      <Abbreviation>даниил</Abbreviation>
+      <Abbreviation IsFullBookName="false">даниил</Abbreviation>
     </BibleBook>
     <BibleBook Index="28" Name="Осия" SectionName="28. Осия">
       <Abbreviation>ос</Abbreviation>
       <Abbreviation IsFullBookName="true">осии</Abbreviation>
-      <Abbreviation>осия</Abbreviation>
+      <Abbreviation IsFullBookName="true">осия</Abbreviation>
     </BibleBook>
     <BibleBook Index="29" Name="Иоиль" SectionName="29. Иоиль">
       <Abbreviation>иоил</Abbreviation>
       <Abbreviation>ил</Abbreviation>
       <Abbreviation IsFullBookName="true">иоиле</Abbreviation>
       <Abbreviation IsFullBookName="true">иоиля</Abbreviation>
-      <Abbreviation>иоиль</Abbreviation>
+      <Abbreviation IsFullBookName="true">иоиль</Abbreviation>
     </BibleBook>
     <BibleBook Index="30" Name="Амос" SectionName="30. Амос">
       <Abbreviation>ам</Abbreviation>
       <Abbreviation>амс</Abbreviation>
       <Abbreviation IsFullBookName="true">амосе</Abbreviation>
       <Abbreviation IsFullBookName="true">амоса</Abbreviation>
-      <Abbreviation>амос</Abbreviation>
+      <Abbreviation IsFullBookName="false">амос</Abbreviation>
     </BibleBook>
     <BibleBook Index="31" Name="Авдий" SectionName="31. Авдий">
       <Abbreviation>авд</Abbreviation>
       <Abbreviation IsFullBookName="true">авдия</Abbreviation>
       <Abbreviation IsFullBookName="true">авдии</Abbreviation>
-      <Abbreviation>авдий</Abbreviation>
+      <Abbreviation IsFullBookName="true">авдий</Abbreviation>
     </BibleBook>
     <BibleBook Index="32" Name="Иона" SectionName="32. Иона">
       <Abbreviation>ион</Abbreviation>
       <Abbreviation IsFullBookName="true">ионе</Abbreviation>
       <Abbreviation IsFullBookName="true">ионы</Abbreviation>
-      <Abbreviation>иона</Abbreviation>
+      <Abbreviation IsFullBookName="true">иона</Abbreviation>
     </BibleBook>
     <BibleBook Index="33" Name="Михей" SectionName="33. Михей">
       <Abbreviation>мих</Abbreviation>
       <Abbreviation>мх</Abbreviation>
-      <Abbreviation>михей</Abbreviation>
+      <Abbreviation IsFullBookName="true">михей</Abbreviation>
       <Abbreviation IsFullBookName="true">михея</Abbreviation>
     </BibleBook>
     <BibleBook Index="34" Name="Наум" SectionName="34. Наум">
-      <Abbreviation>наум</Abbreviation>
+      <Abbreviation IsFullBookName="false">наум</Abbreviation>
       <Abbreviation IsFullBookName="true">наума</Abbreviation>
     </BibleBook>
     <BibleBook Index="35" Name="Аввакум" SectionName="35. Аввакум">
@@ -591,21 +595,21 @@
       <Abbreviation>авв</Abbreviation>
       <Abbreviation>аввак</Abbreviation>
       <Abbreviation IsFullBookName="true">аввакума</Abbreviation>
-      <Abbreviation>аввакум</Abbreviation>
+      <Abbreviation IsFullBookName="false">аввакум</Abbreviation>
     </BibleBook>
     <BibleBook Index="36" Name="Софония" SectionName="36. Софония">
       <Abbreviation>соф</Abbreviation>
       <Abbreviation>софон</Abbreviation>
       <Abbreviation IsFullBookName="true">софонии</Abbreviation>
-      <Abbreviation>софония</Abbreviation>
+      <Abbreviation IsFullBookName="true">софония</Abbreviation>
     </BibleBook>
     <BibleBook Index="37" Name="Аггей" SectionName="37. Аггей">
       <Abbreviation>агг</Abbreviation>
-      <Abbreviation>аггей</Abbreviation>
+      <Abbreviation IsFullBookName="true">аггей</Abbreviation>
       <Abbreviation IsFullBookName="true">аггея</Abbreviation>
     </BibleBook>
     <BibleBook Index="38" Name="Захария" SectionName="38. Захария">
-      <Abbreviation>захария</Abbreviation>
+      <Abbreviation IsFullBookName="true">захария</Abbreviation>
       <Abbreviation>зах</Abbreviation>
       <Abbreviation>зхр</Abbreviation>
       <Abbreviation>захар</Abbreviation>
@@ -616,7 +620,7 @@
       <Abbreviation>мал</Abbreviation>
       <Abbreviation>малах</Abbreviation>
       <Abbreviation>млх</Abbreviation>
-      <Abbreviation>малахия</Abbreviation>
+      <Abbreviation IsFullBookName="true">малахия</Abbreviation>
       <Abbreviation IsFullBookName="true">малахии</Abbreviation>
     </BibleBook>
     <BibleBook Index="40" Name="От Матфея" ShortName="матфея" SectionName="01. От Матфея">
@@ -628,7 +632,7 @@
       <Abbreviation IsFullBookName="true">матфее</Abbreviation>
       <Abbreviation IsFullBookName="true">матфей</Abbreviation>
       <Abbreviation IsFullBookName="true">матфея</Abbreviation>
-      <Abbreviation>от матфея</Abbreviation>
+      <Abbreviation IsFullBookName="true">от матфея</Abbreviation>
     </BibleBook>
     <BibleBook Index="41" Name="От Марка" ShortName="марка" SectionName="02. От Марка">
       <Abbreviation>мар</Abbreviation>
@@ -638,14 +642,14 @@
       <Abbreviation IsFullBookName="true">марке</Abbreviation>
       <Abbreviation IsFullBookName="true">марка</Abbreviation>
       <Abbreviation>мк</Abbreviation>
-      <Abbreviation>от марка</Abbreviation>
+      <Abbreviation IsFullBookName="true">от марка</Abbreviation>
     </BibleBook>
     <BibleBook Index="42" Name="От Луки" ShortName="луки" SectionName="03. От Луки">
       <Abbreviation>лук</Abbreviation>
       <Abbreviation>лк</Abbreviation>
       <Abbreviation IsFullBookName="true">лука</Abbreviation>
       <Abbreviation IsFullBookName="true">луки</Abbreviation>
-      <Abbreviation>от луки</Abbreviation>
+      <Abbreviation IsFullBookName="true">от луки</Abbreviation>
     </BibleBook>
     <BibleBook Index="43" Name="От Иоанна" ShortName="иоанна" SectionName="04. От Иоанна">
       <Abbreviation>иоан</Abbreviation>
@@ -653,14 +657,14 @@
       <Abbreviation>иоанн</Abbreviation>
       <Abbreviation IsFullBookName="true">иоанне</Abbreviation>
       <Abbreviation IsFullBookName="true">иоанна</Abbreviation>
-      <Abbreviation>от иоанна</Abbreviation>
+      <Abbreviation IsFullBookName="true">от иоанна</Abbreviation>
     </BibleBook>
     <BibleBook Index="44" Name="Деяния" SectionName="05. Деяния">
       <Abbreviation>деян</Abbreviation>
       <Abbreviation>дея</Abbreviation>
       <Abbreviation>д.а</Abbreviation>
       <Abbreviation IsFullBookName="true">деяниях</Abbreviation>
-      <Abbreviation>деяния</Abbreviation>
+      <Abbreviation IsFullBookName="true">деяния</Abbreviation>
       <Abbreviation IsFullBookName="true">деяния апостолов</Abbreviation>
       <Abbreviation IsFullBookName="true">деяниях апостолов</Abbreviation>
       <Abbreviation IsFullBookName="true">деяний апостолов</Abbreviation>
@@ -670,7 +674,7 @@
       <Abbreviation>ик</Abbreviation>
       <Abbreviation IsFullBookName="true">иакове</Abbreviation>
       <Abbreviation IsFullBookName="true">иаков</Abbreviation>
-      <Abbreviation>иакова</Abbreviation>
+      <Abbreviation IsFullBookName="true">иакова</Abbreviation>
     </BibleBook>
     <BibleBook Index="60" Name="1-е Петра" ShortName="1петра" SectionName="07. 1-е Петра">
       <Abbreviation>1пет</Abbreviation>
@@ -678,10 +682,10 @@
       <Abbreviation>1птр</Abbreviation>
       <Abbreviation>1петр</Abbreviation>
       <Abbreviation IsFullBookName="true">1петра</Abbreviation>
-      <Abbreviation>1-е петра</Abbreviation>
+      <Abbreviation IsFullBookName="true">1-е петра</Abbreviation>
       <Abbreviation>1-е петр</Abbreviation>
       <Abbreviation>1-е пет</Abbreviation>
-      <Abbreviation>1-ое петра</Abbreviation>
+      <Abbreviation IsFullBookName="true">1-ое петра</Abbreviation>
       <Abbreviation>1-ое петр</Abbreviation>
       <Abbreviation>1-ое пет</Abbreviation>
       <Abbreviation IsFullBookName="true">1-петра</Abbreviation>
@@ -694,10 +698,10 @@
       <Abbreviation>2птр</Abbreviation>
       <Abbreviation>2петр</Abbreviation>
       <Abbreviation IsFullBookName="true">2петра</Abbreviation>
-      <Abbreviation>2-е петра</Abbreviation>
+      <Abbreviation IsFullBookName="true">2-е петра</Abbreviation>
       <Abbreviation>2-е петр</Abbreviation>
       <Abbreviation>2-е пет</Abbreviation>
-      <Abbreviation>2-ое петра</Abbreviation>
+      <Abbreviation IsFullBookName="true">2-ое петра</Abbreviation>
       <Abbreviation>2-ое петр</Abbreviation>
       <Abbreviation>2-ое пет</Abbreviation>
       <Abbreviation IsFullBookName="true">2-петра</Abbreviation>
@@ -709,12 +713,12 @@
       <Abbreviation>1ин</Abbreviation>
       <Abbreviation>1иоанн</Abbreviation>
       <Abbreviation IsFullBookName="true">1иоанна</Abbreviation>
-      <Abbreviation>1-е иоанна</Abbreviation>
+      <Abbreviation IsFullBookName="true">1-е иоанна</Abbreviation>
       <Abbreviation>1-е иоанн</Abbreviation>
       <Abbreviation>1-е иоан</Abbreviation>
       <Abbreviation>1-е ин</Abbreviation>
       <Abbreviation>1-м ин</Abbreviation>
-      <Abbreviation>1-ое иоанна</Abbreviation>
+      <Abbreviation IsFullBookName="true">1-ое иоанна</Abbreviation>
       <Abbreviation>1-ое иоанн</Abbreviation>
       <Abbreviation>1-ое иоан</Abbreviation>
       <Abbreviation>1-ое ин</Abbreviation>
@@ -728,11 +732,11 @@
       <Abbreviation>2ин</Abbreviation>
       <Abbreviation>2иоанн</Abbreviation>
       <Abbreviation IsFullBookName="true">2иоанна</Abbreviation>
-      <Abbreviation>2-е иоанна</Abbreviation>
+      <Abbreviation IsFullBookName="true">2-е иоанна</Abbreviation>
       <Abbreviation>2-е иоанн</Abbreviation>
       <Abbreviation>2-е иоан</Abbreviation>
       <Abbreviation>2-е ин</Abbreviation>
-      <Abbreviation>2-ое иоанна</Abbreviation>
+      <Abbreviation IsFullBookName="true">2-ое иоанна</Abbreviation>
       <Abbreviation>2-ое иоанн</Abbreviation>
       <Abbreviation>2-ое иоан</Abbreviation>
       <Abbreviation>2-ое ин</Abbreviation>
@@ -746,11 +750,11 @@
       <Abbreviation>3ин</Abbreviation>
       <Abbreviation>3иоанн</Abbreviation>
       <Abbreviation IsFullBookName="true">3иоанна</Abbreviation>
-      <Abbreviation>3-е иоанна</Abbreviation>
+      <Abbreviation IsFullBookName="true">3-е иоанна</Abbreviation>
       <Abbreviation>3-е иоанн</Abbreviation>
       <Abbreviation>3-е иоан</Abbreviation>
       <Abbreviation>3-е ин</Abbreviation>
-      <Abbreviation>3-ое иоанна</Abbreviation>
+      <Abbreviation IsFullBookName="true">3-ое иоанна</Abbreviation>
       <Abbreviation>3-ое иоанн</Abbreviation>
       <Abbreviation>3-ое иоан</Abbreviation>
       <Abbreviation>3-ое ин</Abbreviation>
@@ -764,24 +768,24 @@
       <Abbreviation>ид</Abbreviation>
       <Abbreviation IsFullBookName="true">иуда</Abbreviation>
       <Abbreviation IsFullBookName="true">иуде</Abbreviation>
-      <Abbreviation>иуды</Abbreviation>
+      <Abbreviation IsFullBookName="true">иуды</Abbreviation>
     </BibleBook>
     <BibleBook Index="45" Name="К Римлянам" ShortName="римлянам" SectionName="13. К Римлянам">
       <Abbreviation>рим</Abbreviation>
       <Abbreviation>римл</Abbreviation>
       <Abbreviation IsFullBookName="true">римлянам</Abbreviation>
       <Abbreviation IsFullBookName="true">римлянах</Abbreviation>
-      <Abbreviation>к римлянам</Abbreviation>
+      <Abbreviation IsFullBookName="true">к римлянам</Abbreviation>
     </BibleBook>
     <BibleBook Index="46" Name="1-е Коринфянам" ShortName="1коринфянам" SectionName="14. 1-е Коринфянам">
       <Abbreviation>1кор</Abbreviation>
       <Abbreviation>1коринф</Abbreviation>
       <Abbreviation IsFullBookName="true">1коринфянам</Abbreviation>
-      <Abbreviation>1-е коринфянам</Abbreviation>
+      <Abbreviation IsFullBookName="true">1-е коринфянам</Abbreviation>
       <Abbreviation>1-е коринф</Abbreviation>
       <Abbreviation>1-е кор</Abbreviation>
       <Abbreviation>1-екор</Abbreviation>
-      <Abbreviation>1-ое коринфянам</Abbreviation>
+      <Abbreviation IsFullBookName="true">1-ое коринфянам</Abbreviation>
       <Abbreviation>1-ое коринф</Abbreviation>
       <Abbreviation>1-ое кор</Abbreviation>
       <Abbreviation IsFullBookName="true">1-коринфянам</Abbreviation>
@@ -796,10 +800,10 @@
       <Abbreviation>2кор</Abbreviation>
       <Abbreviation>2коринф</Abbreviation>
       <Abbreviation IsFullBookName="true">2коринфянам</Abbreviation>
-      <Abbreviation>2-е коринфянам</Abbreviation>
+      <Abbreviation IsFullBookName="true">2-е коринфянам</Abbreviation>
       <Abbreviation>2-е коринф</Abbreviation>
       <Abbreviation>2-е кор</Abbreviation>
-      <Abbreviation>2-ое коринфянам</Abbreviation>
+      <Abbreviation IsFullBookName="true">2-ое коринфянам</Abbreviation>
       <Abbreviation>2-ое коринф</Abbreviation>
       <Abbreviation>2-ое кор</Abbreviation>
       <Abbreviation IsFullBookName="true">2-коринфянам</Abbreviation>
@@ -815,14 +819,14 @@
       <Abbreviation>галат</Abbreviation>
       <Abbreviation IsFullBookName="true">галатам</Abbreviation>
       <Abbreviation IsFullBookName="true">галатах</Abbreviation>
-      <Abbreviation>к галатам</Abbreviation>
+      <Abbreviation IsFullBookName="true">к галатам</Abbreviation>
     </BibleBook>
     <BibleBook Index="49" Name="К Ефесянам" ShortName="ефесянам" SectionName="17. К Ефесянам">
       <Abbreviation>еф</Abbreviation>
       <Abbreviation>ефес</Abbreviation>
       <Abbreviation IsFullBookName="true">ефесянам</Abbreviation>
       <Abbreviation IsFullBookName="true">ефесянах</Abbreviation>
-      <Abbreviation>к ефесянам</Abbreviation>
+      <Abbreviation IsFullBookName="true">к ефесянам</Abbreviation>
     </BibleBook>
     <BibleBook Index="50" Name="К Филиппийцам" ShortName="филиппийцам" SectionName="18. К Филиппийцам">
       <Abbreviation>фил</Abbreviation>
@@ -830,23 +834,23 @@
       <Abbreviation>филип</Abbreviation>
       <Abbreviation IsFullBookName="true">филиппийцам</Abbreviation>
       <Abbreviation IsFullBookName="true">филиппийцах</Abbreviation>
-      <Abbreviation>к филиппийцам</Abbreviation>
+      <Abbreviation IsFullBookName="true">к филиппийцам</Abbreviation>
     </BibleBook>
     <BibleBook Index="51" Name="К Колоссянам" ShortName="колоссянам" SectionName="19. К Колоссянам">
       <Abbreviation>кол</Abbreviation>
       <Abbreviation>колос</Abbreviation>
       <Abbreviation IsFullBookName="true">колоссянам</Abbreviation>
       <Abbreviation IsFullBookName="true">колоссянах</Abbreviation>
-      <Abbreviation>к колоссянам</Abbreviation>
+      <Abbreviation IsFullBookName="true">к колоссянам</Abbreviation>
     </BibleBook>
     <BibleBook Index="52" Name="1-е Фессалоникийцам" ShortName="1фессалоникийцам" SectionName="20. 1-е Фессалоникийцам">
       <Abbreviation>1фесс</Abbreviation>
       <Abbreviation>1фес</Abbreviation>
       <Abbreviation IsFullBookName="true">1фессалоникийцам</Abbreviation>
-      <Abbreviation>1-е фессалоникийцам</Abbreviation>
+      <Abbreviation IsFullBookName="true">1-е фессалоникийцам</Abbreviation>
       <Abbreviation>1-е фесс</Abbreviation>
       <Abbreviation>1-е фес</Abbreviation>
-      <Abbreviation>1-ое фессалоникийцам</Abbreviation>
+      <Abbreviation IsFullBookName="true">1-ое фессалоникийцам</Abbreviation>
       <Abbreviation>1-ое фесс</Abbreviation>
       <Abbreviation>1-ое фес</Abbreviation>
       <Abbreviation IsFullBookName="true">1-фессалоникийцам</Abbreviation>
@@ -857,10 +861,10 @@
       <Abbreviation>2фесс</Abbreviation>
       <Abbreviation>2фес</Abbreviation>
       <Abbreviation IsFullBookName="true">2фессалоникийцам</Abbreviation>
-      <Abbreviation>2-е фессалоникийцам</Abbreviation>
+      <Abbreviation IsFullBookName="true">2-е фессалоникийцам</Abbreviation>
       <Abbreviation>2-е фесс</Abbreviation>
       <Abbreviation>2-е фес</Abbreviation>
-      <Abbreviation>2-ое фессалоникийцам</Abbreviation>
+      <Abbreviation IsFullBookName="true">2-ое фессалоникийцам</Abbreviation>
       <Abbreviation>2-ое фесс</Abbreviation>
       <Abbreviation>2-ое фес</Abbreviation>
       <Abbreviation IsFullBookName="true">2-фессалоникийцам</Abbreviation>
@@ -873,11 +877,11 @@
       <Abbreviation IsFullBookName="true">1тимофею</Abbreviation>
       <Abbreviation IsFullBookName="true">1тимофея</Abbreviation>
       <Abbreviation IsFullBookName="true">1-е тимофея</Abbreviation>
-      <Abbreviation>1-е тимофею</Abbreviation>
+      <Abbreviation IsFullBookName="true">1-е тимофею</Abbreviation>
       <Abbreviation>1-е тимоф</Abbreviation>
       <Abbreviation>1-е тим</Abbreviation>
       <Abbreviation IsFullBookName="true">1-ое тимофея</Abbreviation>
-      <Abbreviation>1-ое тимофею</Abbreviation>
+      <Abbreviation IsFullBookName="true">1-ое тимофею</Abbreviation>
       <Abbreviation>1-ое тимоф</Abbreviation>
       <Abbreviation>1-ое тим</Abbreviation>
       <Abbreviation IsFullBookName="true">1-тимофея</Abbreviation>
@@ -891,11 +895,11 @@
       <Abbreviation IsFullBookName="true">2тимофею</Abbreviation>
       <Abbreviation IsFullBookName="true">2тимофея</Abbreviation>
       <Abbreviation IsFullBookName="true">2-е тимофея</Abbreviation>
-      <Abbreviation>2-е тимофею</Abbreviation>
+      <Abbreviation IsFullBookName="true">2-е тимофею</Abbreviation>
       <Abbreviation>2-е тимоф</Abbreviation>
       <Abbreviation>2-е тим</Abbreviation>
       <Abbreviation IsFullBookName="true">2-ое тимофея</Abbreviation>
-      <Abbreviation>2-ое тимофею</Abbreviation>
+      <Abbreviation IsFullBookName="true">2-ое тимофею</Abbreviation>
       <Abbreviation>2-ое тимоф</Abbreviation>
       <Abbreviation>2-ое тим</Abbreviation>
       <Abbreviation IsFullBookName="true">2-тимофея</Abbreviation>
@@ -907,20 +911,20 @@
     <BibleBook Index="56" Name="К Титу" ShortName="титу" SectionName="24. К Титу">
       <Abbreviation>тит</Abbreviation>
       <Abbreviation IsFullBookName="true">титу</Abbreviation>
-      <Abbreviation>к титу</Abbreviation>
+      <Abbreviation IsFullBookName="true">к титу</Abbreviation>
     </BibleBook>
     <BibleBook Index="57" Name="К Филимону" ShortName="филимону" SectionName="25. К Филимону">
       <Abbreviation>флм</Abbreviation>
       <Abbreviation>филимон</Abbreviation>
       <Abbreviation IsFullBookName="true">филимону</Abbreviation>
-      <Abbreviation>к филимону</Abbreviation>
+      <Abbreviation IsFullBookName="true">к филимону</Abbreviation>
       <Abbreviation>филим</Abbreviation>
     </BibleBook>
     <BibleBook Index="58" Name="К Евреям" ShortName="евреям" SectionName="26. К Евреям">
       <Abbreviation>евр</Abbreviation>
       <Abbreviation IsFullBookName="true">евреям</Abbreviation>
       <Abbreviation IsFullBookName="true">евреях</Abbreviation>
-      <Abbreviation>к евреям</Abbreviation>
+      <Abbreviation IsFullBookName="true">к евреям</Abbreviation>
     </BibleBook>
     <BibleBook Index="66" Name="Откровение" SectionName="27. Откровение">
       <Abbreviation>откр</Abbreviation>
@@ -928,7 +932,7 @@
       <Abbreviation>откровен</Abbreviation>
       <Abbreviation>апок</Abbreviation>
       <Abbreviation IsFullBookName="true">откровении</Abbreviation>
-      <Abbreviation>откровение</Abbreviation>
+      <Abbreviation IsFullBookName="true">откровение</Abbreviation>
       <Abbreviation IsFullBookName="true">апокалипсис</Abbreviation>
       <Abbreviation IsFullBookName="true">откровению</Abbreviation>
     </BibleBook>
