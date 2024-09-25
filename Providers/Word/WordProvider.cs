@@ -63,7 +63,7 @@ namespace BibleNote.Providers.Word
                     }
                 }
             }
-            else
+            else if (state != ElementType.System)
             {
                 if (!string.IsNullOrEmpty(node.InnerText.Trim()))
                 {
@@ -79,11 +79,13 @@ namespace BibleNote.Providers.Word
             switch (node.LocalName)
             {
                 case "body":
-                case "p":
-                case "r":
                     return ElementType.HierarchicalBlock;
+                case "r":
                 case "t":
+                case "p":
                     return ElementType.SimpleBlock;
+                case "pPr":
+                    return ElementType.System;
             }
 
 

@@ -1,7 +1,8 @@
 ﻿namespace BibleNote.Services.VerseParsing.Contracts.ParseContext
 {
     public enum ElementType
-    {        
+    {   
+        System,
         SimpleBlock,                
         HierarchicalBlock,
         ListElement,
