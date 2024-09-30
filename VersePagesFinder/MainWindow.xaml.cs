@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using BibleNote.Common.DiContainer;
@@ -21,6 +22,10 @@ using Microsoft.Extensions.DependencyInjection;
 using UglyToad.PdfPig;
 using UglyToad.PdfPig.Content;
 using UglyToad.PdfPig.DocumentLayoutAnalysis.TextExtractor;
+using Aspose.Pdf;
+using Aspose.Pdf.Annotations;
+using Aspose.Pdf.Text;
+using Page = UglyToad.PdfPig.Content.Page;
 
 namespace BibleNote.VersePagesFinder
 {
@@ -37,6 +42,15 @@ namespace BibleNote.VersePagesFinder
             InitializeComponent();
             cbModules.ItemsSource = GetModules()?.Keys;
             cbModules.SelectedItem = "rst";
+
+            InitAspose();
+        }
+
+        private void InitAspose()
+        {
+            string licenseFile = "Aspose.Total.lic";
+            var licenseWord = new Aspose.Pdf.License();
+            licenseWord.SetLicense(licenseFile);
         }
 
         private async void Button_Click(object sender, RoutedEventArgs e)
@@ -61,33 +75,81 @@ namespace BibleNote.VersePagesFinder
             ExtractPdfVersePages(sourceFilePath, resultFilePath);
             System.Diagnostics.Process.Start("notepad.exe", resultFilePath);
         }
+
+        private readonly int[] _excludedPages = { 510, 511, 512 };
+        private const int _maxPage = 611;
         
         private void ExtractPdfVersePages(string pdfFilePath, string resultFilePath)
         {
-            var documentParserFactory = ServiceProvider.GetService<IDocumentParserFactory>();
+            var versePointerFactory = ServiceProvider.GetService<IVersePointerFactory>();
             var modulesManager = ServiceProvider.GetService<IModulesManager>();
-            var documentProvider = new MockDocumentProviderInfo(
-                ServiceProvider.GetService<IVerseLinkService>()) { IsReadonly = true };
-            var mockDocumentId = new FileDocumentId(0, null, true);
 
-            var versesDictionary = new Dictionary<SimpleVersePointer, List<int>>();
+            var versesDictionary = new Dictionary<SimpleVersePointer, Dictionary<int, bool>>();
             var verseEntriesCount = 0;
-            using var pdf = PdfDocument.Open(pdfFilePath);
-            foreach (var page in pdf.GetPages())
+            const string verseProtocol = "isbtbibleverse:";
+            
+            using Document pdfDocument = new Document(pdfFilePath);
+            List<VersePointer> prevPageVerses = new List<VersePointer>();
+            foreach (var page in pdfDocument.Pages.Take(_maxPage))
             {
-                var text = ContentOrderTextExtractor.GetText(page);
+                if (_excludedPages.Contains(page.Number))
+                    continue;
+                var selector = new AnnotationSelector(new LinkAnnotation(page, Rectangle.Trivial));
+                page.Accept(selector);
+                var pageVerses = selector.Selected
+                    .Where(link => link.Actions.Any())
+                    .Select(link => ((GoToURIAction)link.Actions.Single()).URI)
+                    .Select(link =>
+                    {
+                        if (!link.StartsWith(verseProtocol))
+                            return null;
 
-                var verses = GetPdfPageVerses(text, documentParserFactory, documentProvider, mockDocumentId);
-                verseEntriesCount += verses.Count;
-                EnrichVersesDictionary(verses, versesDictionary, page);
+                        var parts = link.Replace(verseProtocol, string.Empty).Split(new char[] { ';', '&' });
+                        if (parts.Length < 2)
+                            throw new ArgumentException(string.Format($"Invalid versePointer args: {link}"));
+                        var verseString = Uri.UnescapeDataString(parts.First());
+
+                        return versePointerFactory.CreateVersePointerFromLink(verseString);
+                    })
+                    .Where(vp => vp != null)
+                    .ToList();
+
+                var dublVerses = pageVerses.Where(vp => prevPageVerses.Contains(vp)).ToList();
+                if (dublVerses.Any())
+                {
+                    foreach (var dublVerse in dublVerses)
+                    {
+                        dublVerse.SubVerses.Verses.All(subVerse => subVerse.SkipCheck = true);  // костыль. В данном контексте SkipCheck означает дубликат в pdf.
+                    }
+                }
+
+                verseEntriesCount += pageVerses.Count;
+                prevPageVerses = pageVerses;
+
+                EnrichVersesDictionary(pageVerses, versesDictionary, page.Number);
             }
+            
+            // var documentParserFactory = ServiceProvider.GetService<IDocumentParserFactory>();
+            // var documentProvider = new MockDocumentProviderInfo(
+            //     ServiceProvider.GetService<IVerseLinkService>()) { IsReadonly = true };
+            // var mockDocumentId = new FileDocumentId(0, null, true);
+            //
+            // using var pdf = PdfDocument.Open(pdfFilePath);
+            //
+            //     
+            //     var text = ContentOrderTextExtractor.GetText(page);  // некоторые варианты могут не поддерживаться, например, когда на следующей странице заканчивается ссылка или идёт ссылка без главы.  
+            //     var verses = GetPdfPageVerses(text, documentParserFactory, documentProvider, mockDocumentId);
+            //     verseEntriesCount += verses.Count;
+            //     EnrichVersesDictionary(verses, versesDictionary, page);
+            // }
+            //
 
             SaveResults(versesDictionary, verseEntriesCount, resultFilePath, modulesManager);
         }
 
         private static void SaveResults(
             Dictionary<SimpleVersePointer, 
-            List<int>> versesDictionary,
+            Dictionary<int, bool>> versesDictionary,
             int verseEntriesCount,
             string filePath,
             IModulesManager modulesManager)
@@ -119,7 +181,11 @@ namespace BibleNote.VersePagesFinder
                 VerseNumber? prevVerseNumber = null;
                 foreach (var verse in book)
                 {
-                    var versePages = string.Join(", ", verse.Value);
+                    var versePages = string.Join(
+                        ", ", 
+                        verse.Value.Select(v => v.Key + (v.Value ? " check" : string.Empty))
+                    );
+                    
                     if (!string.IsNullOrEmpty(prevVersePages) 
                         && (versePages != prevVersePages || !IsNextVerse(bibleContent, book.Key, prevVerseNumber.Value, verse.Key.VerseNumber)))
                     {
@@ -184,19 +250,24 @@ namespace BibleNote.VersePagesFinder
             streamWriter.WriteLine(verseString + "\t" + versePages);
         }
 
-        private static void EnrichVersesDictionary(List<VersePointer> verses, Dictionary<SimpleVersePointer, List<int>> versesDictionary, Page page)
+        private static void EnrichVersesDictionary(
+            List<VersePointer> verses, 
+            Dictionary<SimpleVersePointer, Dictionary<int, bool>> versesDictionary,
+            int pageNumber)
         {
             foreach (var verse in verses)
             {
                 foreach (var subVerse in verse.SubVerses.Verses)
                 {
                     if (!versesDictionary.ContainsKey((subVerse)))
-                        versesDictionary.Add(subVerse, new List<int>());
+                        versesDictionary.Add(subVerse, new Dictionary<int, bool>());
 
                     var versePages = versesDictionary[subVerse];
 
-                    if (!versePages.Contains(page.Number))
-                        versePages.Add(page.Number);
+                    if (!versePages.ContainsKey(pageNumber))
+                        versePages.Add(pageNumber, subVerse.SkipCheck);
+                    else if (subVerse.SkipCheck)
+                        versePages[pageNumber] = true;      // костыль. В данном контексте SkipCheck означает дубликат в pdf.
                 }
             }
         }
@@ -207,6 +278,7 @@ namespace BibleNote.VersePagesFinder
             IDocumentProviderInfo documentProvider,
             IDocumentId mockDocumentId)
         {
+            text = text.Replace("\r\n", " ");
             var node = new HtmlNodeWrapper(text);
             using var docParser = documentParserFactory.Create(documentProvider, mockDocumentId);
             var paragraphParseResult = docParser.ParseParagraph(node);
