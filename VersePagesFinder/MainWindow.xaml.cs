@@ -114,12 +114,17 @@ namespace BibleNote.VersePagesFinder
                     .Where(vp => vp != null)
                     .ToList();
 
-                var dublVerses = pageVerses.Where(vp => prevPageVerses.Contains(vp)).ToList();
-                if (dublVerses.Any())
+                if (prevPageVerses.Any() && pageVerses.Any())
                 {
-                    foreach (var dublVerse in dublVerses)
+                    var dublVerses = pageVerses.Where(vp => vp.Equals(prevPageVerses.Last())).ToList();
+                    if (dublVerses.Any())
                     {
-                        dublVerse.SubVerses.Verses.All(subVerse => subVerse.SkipCheck = true);  // костыль. В данном контексте SkipCheck означает дубликат в pdf.
+                        foreach (var dublVerse in dublVerses)
+                        {
+                            dublVerse.SubVerses.Verses.All(subVerse =>
+                                subVerse.SkipCheck = true  // костыль. В данном контексте SkipCheck означает дубликат в pdf.
+                            ); 
+                        }
                     }
                 }
 
