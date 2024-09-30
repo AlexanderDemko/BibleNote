@@ -30,6 +30,28 @@ namespace BibleNote.Services.ModulesManager.Models
             Verse = verse.GetValueOrDefault(0);
         }
 
+        public static VerseNumber Parse(string verseNumber)
+        {
+            var parts = verseNumber.Split(new char[] { ':' }, StringSplitOptions.RemoveEmptyEntries);
+            var chapter = int.Parse(parts[0]);
+            var verse = parts.Length > 1 ? (int?)int.Parse(parts[1]) : null;
+
+            return new VerseNumber(chapter, verse);
+        }
+        
+        public static VerseNumber ParseTopVerseNumber(string topVerseNumber, VerseNumber verseNumber)
+        {
+            var parts = topVerseNumber.Split(new char[] { ':' }, StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length > 1)
+                return new VerseNumber(int.Parse(parts[0]), int.Parse(parts[1]));
+            else
+            {
+                return verseNumber.IsChapter 
+                    ? new VerseNumber(int.Parse(parts[0])) 
+                    : new VerseNumber(verseNumber.Chapter, int.Parse(parts[0]));
+            }
+        }
+
         public override string ToString()
         {
             if (IsChapter)
