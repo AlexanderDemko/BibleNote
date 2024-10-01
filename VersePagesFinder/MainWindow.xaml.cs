@@ -156,6 +156,7 @@ namespace BibleNote.VersePagesFinder
         {
             var bibleStructure = modulesManager.GetCurrentModuleInfo().BibleStructure;
             var bibleContent = modulesManager.GetCurrentBibleContent();
+            var totalBibleVerses = bibleContent.BIBLEBOOK.Sum(b => b.Chapters.Sum(bc => bc.Verses.Count()));
             
             using var fileStream = new FileStream(filePath, FileMode.Create);
             using var streamWriter = new StreamWriter(fileStream);
@@ -166,20 +167,31 @@ namespace BibleNote.VersePagesFinder
                 .ThenBy(vp => vp.Key.VerseNumber)
                 .GroupBy(v => v.Key.BookIndex)
                 .ToDictionary(v => v.Key);
-           
+
+            var totalMentionedVersesCount = 0;
+
+            var notMentionedBibleBooks = bibleStructure.BibleBooks
+                .Where(b => !versesGroupedByBook.ContainsKey(b.Index));
+            if (notMentionedBibleBooks.Any())
+            {
+                streamWriter.WriteLine(
+                    $"Not mentioned BibleBooks: {string.Join(", ", notMentionedBibleBooks.Select(b => b.Name))}");
+            }
+
             foreach (var bookInfo in bibleStructure.BibleBooks)
             {
                 if (!versesGroupedByBook.ContainsKey(bookInfo.Index))
                     continue;
 
-                var book = versesGroupedByBook[bookInfo.Index];
+                var bookVerses = versesGroupedByBook[bookInfo.Index];
+                totalMentionedVersesCount += bookVerses.Count();
                 
-                streamWriter.WriteLine(bibleStructure.BibleBooks.Single(b => b.Index == book.Key).Name);
+                streamWriter.WriteLine(bibleStructure.BibleBooks.Single(b => b.Index == bookVerses.Key).Name);
 
                 var prevVersePages = string.Empty;
                 VerseNumber? firstVerseNumber = null;
                 VerseNumber? prevVerseNumber = null;
-                foreach (var verse in book)
+                foreach (var verse in bookVerses)
                 {
                     var versePages = string.Join(
                         ", ", 
@@ -187,7 +199,7 @@ namespace BibleNote.VersePagesFinder
                     );
                     
                     if (!string.IsNullOrEmpty(prevVersePages) 
-                        && (versePages != prevVersePages || !IsNextVerse(bibleContent, book.Key, prevVerseNumber.Value, verse.Key.VerseNumber)))
+                        && (versePages != prevVersePages || !IsNextVerse(bibleContent, bookVerses.Key, prevVerseNumber.Value, verse.Key.VerseNumber)))
                     {
                         WriteVerseLine(streamWriter, firstVerseNumber, prevVerseNumber, prevVersePages);
                         firstVerseNumber = verse.Key.VerseNumber;
@@ -207,6 +219,8 @@ namespace BibleNote.VersePagesFinder
 
                 WriteVerseLine(streamWriter, firstVerseNumber, prevVerseNumber, prevVersePages);
             }
+
+            streamWriter.WriteLine($"Total mentioned verses count: {totalMentionedVersesCount} / {totalBibleVerses}");
         }
 
         private static bool IsNextVerse(
