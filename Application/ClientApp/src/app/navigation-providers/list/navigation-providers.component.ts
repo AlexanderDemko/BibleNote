@@ -8,7 +8,8 @@ import { ConfirmDialogService } from '@shared/components/confirm-dialog/confirm-
 import { NgStoreService } from '@shared/services/store.service';
 
 @Component({
-  templateUrl: './navigation-providers.component.html'
+  templateUrl: './navigation-providers.component.html',
+  standalone: false
 })
 export class NavigationProvidersListComponent implements OnInit, OnDestroy {
   providersState!: navProviders.State;

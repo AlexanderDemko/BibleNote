@@ -25,10 +25,10 @@ namespace BibleNote.Tests.TestsBase
 
         protected void CheckParseResult(ParagraphParseResult parseResult, params string[] expectedVerses)
         {
-            Assert.AreEqual(expectedVerses.Length, parseResult.VerseEntries.Count, "Verses length is not the same. Expected: {0}. Found: {1}", expectedVerses.Length, parseResult.VerseEntries.Count);
+            Assert.AreEqual(expectedVerses.Length, parseResult.VerseEntries.Count, string.Format("Verses length is not the same. Expected: {0}. Found: {1}", expectedVerses.Length, parseResult.VerseEntries.Count));
             var verseEntries = parseResult.VerseEntries.Select(ve => ve.VersePointer);
             foreach (var verse in expectedVerses)
-                Assert.IsTrue(verseEntries.Contains(this.versePointerFactory.CreateVersePointer(verse)), "Can not find the verse: '{0}'", verse);
+                Assert.IsTrue(verseEntries.Contains(this.versePointerFactory.CreateVersePointer(verse)), string.Format("Can not find the verse: '{0}'", verse));
         }
 
         protected void CheckParseResults(IList<ParagraphParseResult> results, params string[][] expectedResults)

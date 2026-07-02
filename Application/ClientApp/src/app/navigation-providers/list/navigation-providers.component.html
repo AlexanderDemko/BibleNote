@@ -3,21 +3,7 @@
   Data Sources
 </h2>
 
-<div class="btn-group btn-group-toggle" data-toggle="buttons">
-  <div class="btn-group" dropdown>
-    <button id="button-basic" dropdownToggle type="button" class="btn btn-primary dropdown-toggle"
-            aria-controls="dropdown-basic">
-      Create<span class="caret"></span>
-    </button>
-    <ul id="dropdown-basic" *dropdownMenu class="dropdown-menu"
-        role="menu" aria-labelledby="button-basic">
-      <li role="menuitem"><a class="dropdown-item" href="#" [routerLink]="['onenote/0']">OneNote</a></li>
-      <li role="menuitem"><a class="dropdown-item" href="#">Folder</a></li>
-      <li role="menuitem"><a class="dropdown-item" href="#">OneNote Cloud</a></li>
-      <li role="menuitem"><a class="dropdown-item" href="#">OneDrive folder</a></li>
-    </ul>
-  </div>
-</div>
+<a class="btn btn-primary" [routerLink]="['onenote/0']">Create OneNote</a>
 
 <p *ngIf="!providersState"><em>Loading...</em></p>
 <table class='table table-striped' *ngIf="providersState">

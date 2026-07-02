@@ -42,9 +42,9 @@ namespace BibleNote.Application
                 configuration.RootPath = "ClientApp/dist";
             });
 
-            services.AddAutoMapper(new[] {
+            services.AddAutoMapper(_ => { },
                 typeof(BibleNote.Middleware.AutoMapperProfile).GetTypeInfo().Assembly,
-                typeof(BibleNote.Infrastructure.AutoMapperProfile).GetTypeInfo().Assembly });
+                typeof(BibleNote.Infrastructure.AutoMapperProfile).GetTypeInfo().Assembly);
 
             services.AddApplicatonServices<MiddlewareModule>();
 
@@ -109,7 +109,10 @@ namespace BibleNote.Application
                 }
             });
 
-            ElectronBootstrap();
+            if (HybridSupport.IsElectronActive)
+            {
+                ElectronBootstrap();
+            }
 
             dbContext.InitDatabaseAsync();
         }
@@ -124,7 +127,7 @@ namespace BibleNote.Application
                 settings.Path = specificationPath;
             });
 
-            app.UseSwaggerUi3(settings =>
+            app.UseSwaggerUi(settings =>
             {
                 settings.Path = apiRoute;
                 settings.DocumentPath = specificationPath;

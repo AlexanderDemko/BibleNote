@@ -14,6 +14,7 @@ using BibleNote.Services.Configuration.Contracts;
 using BibleNote.Services.Contracts;
 using BibleNote.Services.ModulesManager.Contracts;
 using Microsoft.Extensions.DependencyInjection;
+using UglyToad.PdfPig;
 
 namespace BibleNote.VerseDifferencesFinder
 {
@@ -68,14 +69,8 @@ namespace BibleNote.VerseDifferencesFinder
 
         private string GetPdfText(string userFilePath)
         {
-            using var reader = new iTextSharp.text.pdf.PdfReader(userFilePath);
-            var text = string.Empty;
-            for (int page = 1; page <= reader.NumberOfPages; page++)
-            {
-                text += iTextSharp.text.pdf.parser.PdfTextExtractor.GetTextFromPage(reader, page);
-            }
-            reader.Close();
-            return text;
+            using var document = PdfDocument.Open(userFilePath);
+            return string.Join(Environment.NewLine, document.GetPages().Select(page => page.Text));
         }
 
         private void SaveResults(List<string> result)

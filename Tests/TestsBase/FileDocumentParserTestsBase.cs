@@ -2,6 +2,7 @@
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using BibleNote.Tests;
 using BibleNote.Providers.FileSystem.DocumentId;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
@@ -65,14 +66,14 @@ namespace BibleNote.Tests.TestsBase
                     }                    
                     else
                     {
-                        newFileContent.Should().Be(fileContent);
+                        HtmlComparison.NormalizeAttributeQuotes(newFileContent).Should().Be(HtmlComparison.NormalizeAttributeQuotes(fileContent));
                         break;
                     }                    
                 }
                 else
                 {
                     var newFileContent = File.ReadAllText(newFilePath);
-                    newFileContent.Should().Be(fileContent);
+                    HtmlComparison.NormalizeAttributeQuotes(newFileContent).Should().Be(HtmlComparison.NormalizeAttributeQuotes(fileContent));
                 }
             }
         }
