@@ -1,0 +1,100 @@
+{
+  "name": "biblenote",
+  "version": "0.2.13",
+  "description": "BibleNote desktop and OneNote cache application.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "bin": {
+    "onenote-mcp": "./dist/server.js"
+  },
+  "main": "./dist/electron-main.js",
+  "scripts": {
+    "build": "tsc",
+    "biblenote:stage": "powershell -ExecutionPolicy Bypass -File scripts/stage-biblenote.ps1",
+    "node:stage": "powershell -ExecutionPolicy Bypass -File scripts/stage-node.ps1",
+    "node:rebuild": "npm rebuild better-sqlite3",
+    "electron:dev": "npm run node:rebuild && npm run build && electron dist/electron-main.js",
+    "electron:rebuild": "electron-builder install-app-deps",
+    "dist:portable": "npm run node:rebuild && npm run node:stage && npm run biblenote:stage && npm run build && electron-builder --win portable",
+    "dist:installer": "npm run node:rebuild && npm run node:stage && npm run biblenote:stage && npm run build && electron-builder --win nsis",
+    "dist:win": "npm run node:rebuild && npm run node:stage && npm run biblenote:stage && npm run build && electron-builder --win nsis portable",
+    "login": "tsx src/login.ts",
+    "dev": "tsx src/server.ts",
+    "start": "node dist/server.js",
+    "sync": "tsx src/sync.ts",
+    "cache:status": "tsx src/sync.ts --status",
+    "cache:ui": "tsx src/cache-ui.ts"
+  },
+  "dependencies": {
+    "@azure/msal-node": "^5.0.6",
+    "@modelcontextprotocol/sdk": "^1.17.3",
+    "better-sqlite3": "^12.11.1",
+    "cheerio": "^1.0.0",
+    "dotenv": "^16.4.7",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^22.0.0",
+    "electron": "^42.5.1",
+    "electron-builder": "^26.15.3",
+    "tsx": "^4.20.0",
+    "typescript": "^5.8.0"
+  },
+  "build": {
+    "appId": "local.biblenote",
+    "productName": "BibleNote",
+    "asar": false,
+    "npmRebuild": false,
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "assets/**/*",
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "vendor/BibleNote",
+        "to": "BibleNote",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "vendor/node",
+        "to": "node",
+        "filter": [
+          "node.exe"
+        ]
+      }
+    ],
+    "asarUnpack": [
+      "node_modules/better-sqlite3/**/*"
+    ],
+    "win": {
+      "icon": "assets/biblenote.ico",
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "BibleNote",
+      "differentialPackage": false
+    },
+    "portable": {
+      "artifactName": "${productName} ${version}.${ext}",
+      "requestExecutionLevel": "user"
+    }
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "name": "biblenote",
+  "version": "0.2.0",
+  "description": "BibleNote Codex plugin with cached OneNote search and local Bible reference parsing.",
+  "author": {
+    "name": "Local"
+  },
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "BibleNote",
+    "shortDescription": "BibleNote OneNote cache and Bible reference tools",
+    "longDescription": "Adds MCP tools for syncing OneNote notebooks to a local SQLite FTS cache, searching and reading notes, and using the local BibleNote API for Bible reference parsing.",
+    "developerName": "Local",
+    "category": "Productivity",
+    "capabilities": [
+      "Read"
+    ],
+    "defaultPrompt": [
+      "Search my cached OneNote pages about this topic and summarize the best matches.",
+      "Sync my OneNote cache and show the status."
+    ]
+  }
+}
