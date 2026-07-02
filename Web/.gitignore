@@ -1,0 +1,10 @@
+node_modules/
+dist/
+vendor/
+release/
+.env
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+msal-cache.json
+npm-debug.log*
