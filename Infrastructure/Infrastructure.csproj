@@ -1,17 +1,17 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <RootNamespace>BibleNote.Infrastructure</RootNamespace>
     <AssemblyName>BibleNote.Infrastructure</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="AutoMapper" Version="10.1.1" />
-    <PackageReference Include="ElectronNET.API" Version="9.31.2" />
+    <PackageReference Include="AutoMapper" Version="16.1.1" />
+    <PackageReference Include="ElectronNET.API" Version="23.6.2" />
     <PackageReference Include="FluentValidation" Version="9.2.2" />
     <PackageReference Include="MediatR" Version="9.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="3.1.9" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.8" />
   </ItemGroup>
 
 </Project>

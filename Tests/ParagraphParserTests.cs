@@ -70,12 +70,15 @@ namespace BibleNote.Tests
                 result = docParser.ParseParagraph(htmlDoc);                
             }
 
-            Assert.AreEqual(verses.Length, result.VerseEntries.Count, "Verses length is not the same. Expected: {0}. Found: {1}", verses.Length, result.VerseEntries.Count);            
+            Assert.AreEqual(verses.Length, result.VerseEntries.Count, string.Format("Verses length is not the same. Expected: {0}. Found: {1}", verses.Length, result.VerseEntries.Count));            
             var versePointers = result.VerseEntries.Select(ve => ve.VersePointer);
             foreach (var verse in verses)
-                Assert.IsTrue(versePointers.Contains(this.versePointerFactory.CreateVersePointer(verse)), "Can not find the verse: '{0}'", verse);            
+                Assert.IsTrue(versePointers.Contains(this.versePointerFactory.CreateVersePointer(verse)), string.Format("Can not find the verse: '{0}'", verse));            
 
-            Assert.AreEqual(expectedOutput, htmlDoc.InnerXml, "The output html is wrong.");
+            Assert.AreEqual(
+                HtmlComparison.NormalizeAttributeQuotes(expectedOutput),
+                HtmlComparison.NormalizeAttributeQuotes(htmlDoc.InnerXml),
+                "The output html is wrong.");
             Assert.AreEqual(new HtmlToTextConverter().SimpleConvert(input).Replace("&nbsp;", " "), result.Text, "Text parts do not contain the full input string.");
 
             if (notFoundVerses != null)

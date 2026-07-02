@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <AssemblyName>BibleNote.Providers.Pdf</AssemblyName>
     <RootNamespace>BibleNote.Providers.Pdf</RootNamespace>
     <LangVersion>8.0</LangVersion>
@@ -12,8 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="iTextSharp.LGPLv2.Core" Version="1.9.1" />
-    <PackageReference Include="PdfPig" Version="0.1.6" />
+    <PackageReference Include="PdfPig" Version="0.1.14" />
   </ItemGroup>
 
 </Project>

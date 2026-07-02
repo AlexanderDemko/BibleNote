@@ -13,6 +13,8 @@ namespace BibleNote.Providers.Html
         public HtmlNodeWrapper(string html)
         {
             var htmlDoc = new HtmlDocument();
+            htmlDoc.GlobalAttributeValueQuote = AttributeValueQuote.DoubleQuote;
+            htmlDoc.OptionOutputOptimizeAttributeValues = false;
             htmlDoc.LoadHtml(html);
             _node = htmlDoc.DocumentNode;
         }

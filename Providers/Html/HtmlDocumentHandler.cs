@@ -55,6 +55,8 @@ namespace BibleNote.Providers.Html
             }
 
             var htmlDoc = new HtmlDocument();
+            htmlDoc.GlobalAttributeValueQuote = AttributeValueQuote.DoubleQuote;
+            htmlDoc.OptionOutputOptimizeAttributeValues = false;
             htmlDoc.LoadHtml(fileContent);
             return htmlDoc;
         }

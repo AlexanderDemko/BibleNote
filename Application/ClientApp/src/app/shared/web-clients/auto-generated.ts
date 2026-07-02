@@ -84,7 +84,7 @@ export class AnalysisSessionsClient {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             }));
         }
-        return _observableOf<AnalysisSessionsAnalysisSessionVm[]>(<any>null);
+        return _observableOf(<AnalysisSessionsAnalysisSessionVm[]><any>null);
     }
 
     loadOneNoteAnalysisSessionStatus(navigationProviderId: number): Observable<AnalysisSessionsAnalysisSessionVm> {
@@ -262,7 +262,7 @@ export class NavigationProvidersClient {
             return throwException("An unexpected server error occurred.", status, _responseText, _headers);
             }));
         }
-        return _observableOf<NavigationProvidersNavigationProviderVm[]>(<any>null);
+        return _observableOf(<NavigationProvidersNavigationProviderVm[]><any>null);
     }
 
     delete(id: number): Observable<void> {

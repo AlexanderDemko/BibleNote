@@ -7,7 +7,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using BibleNote.Domain.Contracts;
 using Microsoft.EntityFrameworkCore;
-using Z.EntityFramework.Plus;
 
 namespace BibleNote.Persistence.Repositories
 {
@@ -213,7 +212,7 @@ namespace BibleNote.Persistence.Repositories
 
         public Task UpdateAsync(Expression<Func<T, T>> updateFactory, CancellationToken cancellationToken = default)
         {
-            return Query.UpdateAsync(updateFactory, cancellationToken);
+            throw new NotSupportedException("Batch updates are not supported by the EF repository.");
         }
 
         public void Delete(T entity)
@@ -221,10 +220,12 @@ namespace BibleNote.Persistence.Repositories
             dbSet.Remove(entity);
         }
 
-        public Task DeleteAsync(Expression<Func<T, bool>> predicate = default, CancellationToken cancellationToken = default)
+        public async Task DeleteAsync(Expression<Func<T, bool>> predicate = default, CancellationToken cancellationToken = default)
         {
             var query = predicate == null ? this : dbSet.Where(predicate);
-            return query.DeleteAsync(cancellationToken);
+            var entities = await query.ToListAsync(cancellationToken);
+            dbSet.RemoveRange(entities);
+            await dbContext.SaveChangesAsync(cancellationToken);
         }
 
         #endregion

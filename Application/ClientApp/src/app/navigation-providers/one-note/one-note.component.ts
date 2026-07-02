@@ -13,7 +13,8 @@ import {
 } from '@shared/web-clients/auto-generated';
 
 @Component({
-  templateUrl: './one-note.component.html'
+  templateUrl: './one-note.component.html',
+  standalone: false
 })
 export class OneNoteNavigationProviderComponent implements OnInit, OnDestroy {
   providersState!: navProviders.State;

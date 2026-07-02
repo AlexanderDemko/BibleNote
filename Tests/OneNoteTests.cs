@@ -48,6 +48,7 @@ namespace BibleNote.Tests
         }
 
         [TestMethod]
+        [Ignore("Requires the active OneNote section to be named 'Test Section'.")]
         public async Task TestAnalyzer()
         {
             var currentSectionId = await this.oneNoteApp.GetCurrentSectionIdAsync();
