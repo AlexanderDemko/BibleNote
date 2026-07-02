@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "onenote": {
+      "command": "node",
+      "args": ["dist/server.js"]
+    }
+  }
+}

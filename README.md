@@ -1,50 +1,32 @@
-# BibleNote
+﻿# BibleNote
 
-Bible study software
+BibleNote is organized as a single repository with two top-level projects:
 
-The next version of http://BibleNote.pro
+- `Api` - the .NET BibleNote application, domain services, providers, modules, and tests.
+- `Web` - the TypeScript/Electron desktop shell, OneNote cache UI, MCP server, and packaging scripts.
 
-## Progress
-- Analytics
-  - [x] Modules support
-  - [x] Parallel verses support
-  - [x] String parser
-  - [x] Paragraph parser
-  - [x] Document parser
-  - [ ] Providers
-    - [ ] FileSystem navigation provider
-      - [x] Directory reader
-      - [ ] File change watcher      
-    - [ ] Web navigation provider
-      - [ ] Web page loading
-      - [ ] Web page caching
-    - [ ] Html support
-      - [x] Html read provider    
-      - [ ] Html document linking
-      - [ ] Html viewer
-    - [ ] OneNote support
-      - [x] OneNote navigation provider
-      - [x] OneNote read provider
-      - [ ] OneNote page linking
-      - [ ] OneNote addin
-    - [ ] Word support
-    - [ ] Pdf support
-  - [x] DB Storage
-    - [x] Verse entries processing
-    - [x] Verse relation processing
-  - [ ] Background service
-    - [ ] Automatic tasks
-    - [ ] User actions handler
-	- [ ] Divide reading and parsing documents into two different threads
-  - [x] Move to .NET Core
-- UI
-  - [x] Platform for UI
-  - [x] Navigation Providers management form
-  - [ ] Common configuration form
-  - [ ] Bible Verse reports form
-  - [ ] Bible text form?
-- Installer
-  - [ ] Installer core
-  - [ ] Version detector
-  - [ ] Regedit editor  
-- New web site
+## Build
+
+Build the API solution:
+
+```powershell
+cd Api
+dotnet build BibleNote.sln -p:GenerateCode=False
+```
+
+Build the Web project:
+
+```powershell
+cd Web
+npm install
+npm run build
+```
+
+Create Windows desktop artifacts from `Web`:
+
+```powershell
+cd Web
+npm run dist:win
+```
+
+The Web packaging flow stages the .NET API from `Api/Application` and bundles it into the desktop application resources.
