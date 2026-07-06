@@ -1,10 +1,14 @@
 import './env.js';
+import { spawn, type ChildProcess } from 'node:child_process';
 import fs from 'node:fs';
 import http, { type IncomingMessage, type ServerResponse } from 'node:http';
 import path from 'node:path';
 import { pathToFileURL, URL } from 'node:url';
 import { bibleParseConfigFromEnv, getVerseTextWithBibleNote, parsePageWithBibleNote } from './bible.js';
-import { cacheStatus, defaultDbPath, findParallelBibleReferenceNotes, findParallelBibleReferences, getCachedPage, getSyncState, openCacheDb, readCachedPage, searchCache } from './cache.js';
+import { cacheStatus, defaultDbPath, findParallelBibleReferenceNotes, findParallelBibleReferences, getCachedPage, getSyncState, openCacheDb, readCachedPage, searchCache, updatePageHtml } from './cache.js';
+import { graphBinary } from './graph.js';
+import { readOneNoteAccessSettings, saveOneNoteAccessSettings } from './onenote-settings.js';
+import { configureRuntimeLogging, readRuntimeLoggingSettings, runtimeLog, saveRuntimeLoggingSettings } from './runtime-logging.js';
 import { syncOneNoteCache, type SyncProgressEvent, type SyncResult } from './sync.js';
 
 type UiOptions = {
@@ -24,6 +28,9 @@ type SyncUiState = {
 type CacheDb = ReturnType<typeof openCacheDb>;
 
 const startupTimingStartedAt = Date.now();
+const imageProxyCache = new Map<string, { buffer: Buffer; contentType: string; etag?: string; cachedAt: number }>();
+const imageProxyCacheTtlMs = 30 * 60 * 1000;
+const imageProxyCacheMaxEntries = 200;
 
 function logStartupTiming(message: string): void {
   if (process.env.ONENOTE_STARTUP_TIMING !== '1') return;
@@ -71,7 +78,7 @@ const pageHtml = String.raw`<!doctype html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>OneNote Cache Explorer</title>
+  <title>BibleNote</title>
   <script>
     try {
       const savedTheme = localStorage.getItem('onenote.theme');
@@ -88,34 +95,33 @@ const pageHtml = String.raw`<!doctype html>
     button, input { font:inherit; }
     .app { position:relative; display:grid; grid-template-columns:var(--sidebar-width) 5px minmax(0,1fr); height:100%; }
     .app.sidebar-collapsed { grid-template-columns:0 0 minmax(0,1fr); }
-    .sidebar { display:flex; flex-direction:column; min-width:0; min-height:0; height:100%; overflow:hidden; background:var(--sidebar); border-right:1px solid var(--line); }
+    .sidebar { display:grid; grid-template-rows:auto auto auto auto auto auto minmax(0,1fr) auto; min-width:0; min-height:0; height:100%; overflow:hidden; background:var(--sidebar); border-right:1px solid var(--line); }
     .app.sidebar-collapsed .sidebar { visibility:hidden; border:0; }
     .sidebar-resizer { position:relative; z-index:9; width:5px; cursor:col-resize; touch-action:none; background:transparent; }
     .sidebar-resizer::after { content:''; position:absolute; inset:0 2px; background:transparent; transition:background .14s; }
     .sidebar-resizer:hover::after, .sidebar-resizer.dragging::after, .sidebar-resizer:focus-visible::after { background:var(--accent); }
     .sidebar-resizer:focus-visible { outline:none; }
     .app.sidebar-collapsed .sidebar-resizer { pointer-events:none; }
-    .sidebar-toggle { position:absolute; z-index:12; top:14px; left:calc(var(--sidebar-width) - 14px); display:grid; place-items:center; width:28px; height:28px; padding:0; border:1px solid var(--input-line); border-radius:8px; background:var(--panel); color:var(--summary); box-shadow:0 2px 8px rgba(20,16,26,.12); cursor:pointer; transition:left .16s, background .14s, color .14s; }
+    .sidebar-toggle { position:absolute; z-index:12; top:14px; left:calc(var(--sidebar-width) - 52px); display:grid; place-items:center; width:40px; height:40px; padding:0; border:1px solid var(--input-line); border-radius:10px; background:var(--input-bg); color:var(--summary); box-shadow:0 2px 8px rgba(20,16,26,.12); cursor:pointer; transition:left .16s, background .14s, color .14s; }
     .sidebar-toggle:hover, .sidebar-toggle:focus-visible { color:var(--accent); background:var(--accent-soft); outline:none; }
     .app.sidebar-collapsed .sidebar-toggle { left:10px; }
-    .brand { padding:22px 22px 14px; }
-    .brand-line { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+    .brand { padding:14px 68px 12px 16px; }
+    .brand-line { display:flex; align-items:center; justify-content:space-between; gap:10px; }
     .brand h1 { margin:0; font:700 21px/1.2 var(--title-font); letter-spacing:.2px; }
     .brand p { margin:7px 0 0; color:var(--muted); font-size:13px; }
-    .theme-select { min-width:112px; padding:6px 8px; border:1px solid var(--input-line); border-radius:7px; background:var(--input-bg); color:var(--ink); font-size:11px; outline:none; cursor:pointer; }
-    .theme-select:focus { border-color:var(--accent); box-shadow:0 0 0 2px color-mix(in srgb, var(--accent) 22%, transparent); }
     .brand-actions { display:flex; align-items:center; gap:7px; flex:none; }
-    .settings-button { display:grid; place-items:center; width:31px; height:31px; padding:0; border:1px solid var(--input-line); border-radius:7px; background:var(--input-bg); color:var(--summary); cursor:pointer; }
+    .settings-button { display:grid; place-items:center; width:40px; height:40px; padding:0; border:1px solid var(--input-line); border-radius:10px; background:var(--input-bg); color:var(--summary); cursor:pointer; flex:none; }
     .settings-button:hover, .settings-button:focus-visible { border-color:var(--accent); color:var(--accent); outline:none; }
-    .search-wrap { position:relative; padding:0 16px 14px; }
-    .search-control { display:flex; align-items:center; gap:2px; min-width:0; padding:3px 4px 3px 10px; border:1px solid var(--input-line); border-radius:10px; background:var(--input-bg); }
+    .search-wrap { position:relative; min-width:0; flex:1; padding:0; }
+    .search-control { display:flex; align-items:center; gap:2px; min-width:0; height:40px; padding:3px 4px 3px 10px; border:1px solid var(--input-line); border-radius:10px; background:var(--input-bg); }
     .search-control:focus-within { border-color:var(--accent); box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent); }
     .search { min-width:0; flex:1; padding:8px 3px; border:0; background:transparent; color:var(--ink); outline:none; }
-    .search-option { display:grid; place-items:center; width:27px; height:27px; padding:0; border:1px solid transparent; border-radius:5px; background:transparent; color:var(--muted); font:600 11px/1 "Segoe UI", sans-serif; cursor:pointer; flex:none; }
+    .search-option { display:grid; place-items:center; width:27px; height:27px; padding:0; border:1px solid transparent; border-radius:5px; background:transparent; color:var(--muted); font:600 11px/1 "Segoe UI", sans-serif; cursor:pointer; flex:none; align-self:center; }
+    #searchHistory { font-size:14px; }
     .search-option:hover { background:var(--hover); color:var(--ink); }
     .search-option[aria-pressed="true"] { border-color:var(--accent); background:var(--accent-soft); color:var(--accent); }
     .search-option:focus-visible { outline:1px solid var(--accent); outline-offset:1px; }
-    .search-history-menu { position:absolute; z-index:30; left:16px; right:16px; top:43px; max-height:260px; overflow:auto; padding:5px; border:1px solid var(--input-line); border-radius:10px; background:var(--panel); box-shadow:0 12px 34px rgba(20,16,26,.24); }
+    .search-history-menu { position:absolute; z-index:30; left:0; right:0; top:44px; max-height:260px; overflow:auto; padding:5px; border:1px solid var(--input-line); border-radius:10px; background:var(--panel); box-shadow:0 12px 34px rgba(20,16,26,.24); }
     .search-history-menu.hidden { display:none; }
     .search-history-empty { padding:9px 10px; color:var(--muted); font-size:12px; }
     .search-history-row { display:flex; align-items:center; gap:7px; width:100%; min-height:31px; padding:6px 8px; border:0; border-radius:7px; background:transparent; color:var(--ink); text-align:left; cursor:pointer; }
@@ -123,18 +129,19 @@ const pageHtml = String.raw`<!doctype html>
     .search-history-text { min-width:0; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .search-history-remove { display:grid; place-items:center; width:22px; height:22px; border:0; border-radius:5px; background:transparent; color:var(--muted); cursor:pointer; flex:none; }
     .search-history-remove:hover { background:var(--hover); color:var(--danger); }
-    .sync-panel, .settings-panel, .notebook-panel, .bible-panel, .log-panel { margin:0 16px; border:0; border-top:1px solid var(--line); background:transparent; overflow:visible; }
+    .sync-panel, .settings-panel, .notebook-panel, .notes-panel, .bible-reader-panel, .log-panel { margin:0 16px; border:0; border-top:1px solid var(--line); background:transparent; overflow:visible; }
     .log-panel { border-bottom:1px solid var(--line); margin-bottom:10px; }
-    .sync-panel summary, .settings-panel summary, .notebook-panel summary, .bible-panel summary, .log-panel summary { display:flex; align-items:center; min-height:42px; padding:10px 3px; cursor:pointer; color:var(--summary); font-weight:650; font-size:11px; letter-spacing:.055em; line-height:1.25; list-style:none; text-transform:uppercase; }
-    .sync-panel summary:hover, .settings-panel summary:hover, .notebook-panel summary:hover, .bible-panel summary:hover, .log-panel summary:hover { color:var(--accent); }
-    .sync-panel summary:focus-visible, .settings-panel summary:focus-visible, .notebook-panel summary:focus-visible, .bible-panel summary:focus-visible, .log-panel summary:focus-visible { outline:0; box-shadow:inset 2px 0 0 var(--accent); }
-    .sync-panel summary::-webkit-details-marker, .settings-panel summary::-webkit-details-marker, .notebook-panel summary::-webkit-details-marker, .bible-panel summary::-webkit-details-marker, .log-panel summary::-webkit-details-marker { display:none; }
-    .sync-panel summary::after, .settings-panel summary::after, .notebook-panel summary::after, .bible-panel summary::after, .log-panel summary::after { content:''; width:6px; height:6px; margin-left:auto; margin-right:3px; border-right:1.5px solid currentColor; border-bottom:1.5px solid currentColor; transform:rotate(45deg) translate(-1px, 1px); transition:transform .16s ease; opacity:.65; }
-    .sync-panel[open] summary::after, .settings-panel[open] summary::after, .notebook-panel[open] summary::after, .bible-panel[open] summary::after, .log-panel[open] summary::after { transform:rotate(225deg) translate(-1px, 1px); }
+    .sync-panel summary, .settings-panel summary, .notebook-panel summary, .notes-panel summary, .bible-reader-panel summary, .log-panel summary { display:flex; align-items:center; min-height:42px; padding:10px 3px; cursor:pointer; color:var(--summary); font-weight:650; font-size:11px; letter-spacing:.055em; line-height:1.25; list-style:none; text-transform:uppercase; }
+    .sync-panel summary:hover, .settings-panel summary:hover, .notebook-panel summary:hover, .notes-panel summary:hover, .bible-reader-panel summary:hover, .log-panel summary:hover { color:var(--accent); }
+    .sync-panel summary:focus-visible, .settings-panel summary:focus-visible, .notebook-panel summary:focus-visible, .notes-panel summary:focus-visible, .bible-reader-panel summary:focus-visible, .log-panel summary:focus-visible { outline:0; box-shadow:inset 2px 0 0 var(--accent); }
+    .sync-panel summary::-webkit-details-marker, .settings-panel summary::-webkit-details-marker, .notebook-panel summary::-webkit-details-marker, .notes-panel summary::-webkit-details-marker, .bible-reader-panel summary::-webkit-details-marker, .log-panel summary::-webkit-details-marker { display:none; }
+    .sync-panel summary::after, .settings-panel summary::after, .notebook-panel summary::after, .notes-panel summary::after, .bible-reader-panel summary::after, .log-panel summary::after { content:''; width:6px; height:6px; margin-left:auto; margin-right:3px; border-right:1.5px solid currentColor; border-bottom:1.5px solid currentColor; transform:rotate(45deg) translate(-1px, 1px); transition:transform .16s ease; opacity:.65; }
+    .sync-panel[open] summary::after, .settings-panel[open] summary::after, .notebook-panel[open] summary::after, .notes-panel[open] summary::after, .bible-reader-panel[open] summary::after, .log-panel[open] summary::after { transform:rotate(225deg) translate(-1px, 1px); }
     .sync-panel summary::before { content:'↻'; display:inline-block; margin-right:8px; color:var(--accent); }
     .settings-panel summary::before { content:'⚙'; display:inline-block; margin-right:8px; color:var(--accent); }
     .notebook-panel summary::before { content:'▤'; display:inline-block; margin-right:8px; color:var(--accent); }
-    .bible-panel summary::before { content:'#'; display:inline-block; margin-right:8px; color:var(--accent); }
+    .notes-panel summary::before { content:'☷'; display:inline-block; margin-right:8px; color:var(--accent); }
+    .bible-reader-panel summary::before { content:'¶'; display:inline-block; margin-right:8px; color:var(--accent); }
     .log-panel summary::before { content:'☷'; display:inline-block; margin-right:8px; color:var(--accent); }
     .notebook-controls { padding:8px 3px 13px; border-top:0; }
     .notebook-actions { display:flex; gap:7px; margin-bottom:8px; }
@@ -161,6 +168,14 @@ const pageHtml = String.raw`<!doctype html>
     .sync-button:disabled { opacity:.55; cursor:wait; }
     .sync-state { min-height:16px; color:var(--muted); font-size:11px; line-height:1.35; }
     .log-controls, .bible-controls { display:flex; gap:6px; padding:0 3px 9px; border-top:0; }
+    .bible-reader-controls { display:grid; gap:7px; padding:0 3px 11px; border-top:0; }
+    .bible-reader-row { display:flex; align-items:center; gap:6px; }
+    .bible-reader-select { min-width:0; width:100%; padding:6px 7px; border:1px solid var(--input-line); border-radius:6px; background:var(--input-bg); color:var(--ink); font-size:11px; }
+    .bible-reader-select.book { flex:1; }
+    .bible-reader-select.chapter { width:78px; flex:none; }
+    .notes-panel { grid-row:7; position:relative; min-height:0; height:100%; overflow:hidden; }
+    .notes-panel[open] > summary { position:relative; z-index:2; }
+    .notes-panel[open] > .tree-shell { position:absolute; left:0; right:0; top:42px; bottom:0; height:auto; }
     .log-filter { min-width:0; flex:1; padding:6px 7px; border:1px solid var(--input-line); border-radius:6px; background:var(--input-bg); color:var(--ink); font-size:11px; }
     .log-list, .bible-list { display:grid; gap:5px; max-height:240px; overflow:auto; padding:0 0 8px; }
     .log-row { width:100%; padding:8px; border:1px solid transparent; border-radius:7px; background:var(--surface-soft); color:inherit; text-align:left; cursor:pointer; }
@@ -173,8 +188,8 @@ const pageHtml = String.raw`<!doctype html>
     .log-badge.error { background:var(--danger); }
     .log-badge.missing { background:var(--pending); }
     .log-pager { display:flex; align-items:center; justify-content:space-between; gap:6px; padding:0 3px 11px; color:var(--muted); font-size:10px; }
-    .tree-shell { position:relative; flex:1; min-height:0; }
-    .tree { height:100%; min-height:0; overflow-x:hidden; overflow-y:scroll; padding:0 20px 18px 10px; scrollbar-width:none; }
+    .tree-shell { position:relative; min-height:0; height:100%; overflow:hidden; }
+    .tree { height:100%; min-height:0; overflow-x:hidden; overflow-y:scroll; padding:0 20px 54px 10px; scrollbar-width:none; overscroll-behavior:contain; }
     .tree::-webkit-scrollbar, .content::-webkit-scrollbar { display:none; width:0; height:0; }
     .tree-row { display:flex; align-items:center; gap:7px; width:100%; min-height:34px; padding:6px 9px 6px calc(9px + var(--tree-level, 0) * 20px); border:0; border-radius:var(--row-radius); background:transparent; color:inherit; text-align:left; cursor:pointer; }
     .tree-row:hover { background:var(--hover); }
@@ -194,7 +209,7 @@ const pageHtml = String.raw`<!doctype html>
     .status-dot.error { background:var(--danger); }
     .status-dot.pending { background:var(--pending); }
     .status-dot.empty { background:var(--muted); }
-    .sidebar-footer { display:block; width:100%; border:0; border-top:1px solid var(--line); padding:11px 16px; color:var(--muted); font-size:12px; background:var(--surface-soft); text-align:left; cursor:pointer; }
+    .sidebar-footer { grid-row:8; display:block; width:100%; margin-top:0; border:0; border-top:1px solid var(--line); padding:11px 16px; color:var(--muted); font-size:12px; background:var(--surface-soft); text-align:left; cursor:pointer; }
     .sidebar-footer:hover, .sidebar-footer:focus-visible { color:var(--accent); outline:none; }
     .content-shell { position:relative; min-width:0; min-height:0; height:100%; overflow:hidden; background:var(--bg); }
     .content { width:100%; height:100%; min-width:0; min-height:0; overflow-x:hidden; overflow-y:scroll; padding-right:15px; background:var(--bg); scrollbar-width:none; }
@@ -212,22 +227,42 @@ const pageHtml = String.raw`<!doctype html>
     .notebook-list::-webkit-scrollbar-thumb:hover, .log-list::-webkit-scrollbar-thumb:hover { background:var(--scroll-thumb-hover); }
     .empty-state { height:100%; display:grid; place-items:center; padding:40px; color:var(--muted); text-align:center; }
     .empty-mark { display:block; margin:auto auto 14px; width:58px; height:58px; border:2px solid var(--muted); border-radius:18px; transform:rotate(3deg); opacity:.65; }
-    .page { max-width:920px; margin:0 auto; padding:42px 54px 80px; }
-    .breadcrumbs { color:var(--muted); font-size:12px; margin-bottom:14px; }
+    .page { max-width:980px; margin:0 auto; padding:30px 42px 32px; }
+    .page.html-view-active { padding-bottom:16px; }
+    .bible-reader-page { max-width:900px; }
+    .bible-reader-toolbar { display:flex; align-items:center; flex-wrap:wrap; gap:8px; margin:14px 0 18px; padding-bottom:14px; border-bottom:1px solid var(--line); }
+    .bible-reader-nav-button { display:grid; place-items:center; width:32px; height:32px; padding:0; border:1px solid var(--input-line); border-radius:7px; background:var(--panel); color:var(--accent); cursor:pointer; }
+    .bible-reader-nav-button:hover, .bible-reader-nav-button:focus-visible { border-color:var(--accent); background:var(--accent-soft); outline:none; }
+    .bible-reader-nav-button:disabled { opacity:.45; cursor:not-allowed; }
+    .bible-reader-verses { display:grid; gap:7px; font:17px/1.65 var(--reader-font); }
+    .bible-reader-verse-block { display:grid; gap:5px; }
+    .bible-reader-verse { display:grid; grid-template-columns:44px minmax(0,1fr) auto; align-items:start; gap:8px; padding:5px 8px; border-radius:7px; cursor:pointer; scroll-margin-top:80px; }
+    .bible-reader-verse:hover { background:var(--hover); }
+    .bible-reader-verse.selected { background:var(--accent-soft); box-shadow:inset 3px 0 0 var(--accent); color:var(--selected-ink); }
+    .bible-reader-verse-number { color:var(--accent); font:650 12px/1.8 Inter, "Segoe UI", sans-serif; text-align:right; user-select:none; }
+    .bible-reader-verse-text { min-width:0; }
+    .bible-reader-verse-actions { display:flex; align-items:center; gap:4px; opacity:.72; transition:opacity .14s; }
+    .bible-reader-verse:hover .bible-reader-verse-actions, .bible-reader-verse:focus-within .bible-reader-verse-actions { opacity:1; }
+    .bible-reader-action { display:grid; place-items:center; width:27px; height:27px; padding:0; border:1px solid var(--input-line); border-radius:6px; background:var(--panel); color:var(--accent); font:650 13px/1 Inter, "Segoe UI", sans-serif; cursor:pointer; }
+    .bible-reader-action:hover, .bible-reader-action:focus-visible { border-color:var(--accent); background:var(--accent-soft); outline:none; }
+    .bible-reader-verse-block > .bible-parallel { margin:2px 8px 8px 52px; }
+    .breadcrumbs { color:var(--muted); font-size:12px; margin-bottom:10px; }
     .page-heading { display:flex; align-items:flex-start; gap:12px; }
-    .page h2 { flex:1; min-width:0; margin:0; font:700 34px/1.15 var(--title-font); }
-    .title-sync { display:grid; place-items:center; width:34px; height:34px; margin-top:2px; border:1px solid transparent; border-radius:9px; background:transparent; color:var(--accent); font-size:21px; cursor:pointer; flex:none; }
-    .title-sync:hover, .title-sync:focus { border-color:var(--input-line); background:var(--accent-soft); outline:none; }
-    .title-sync:disabled { opacity:.45; cursor:wait; }
+    .page h2 { flex:1; min-width:0; margin:0; font:700 32px/1.12 var(--title-font); }
+    .page-heading-actions { display:flex; align-items:center; gap:6px; margin-top:2px; flex:none; }
+    .title-tool { display:grid; place-items:center; width:34px; height:34px; border:1px solid transparent; border-radius:9px; background:transparent; color:var(--accent); font-size:20px; cursor:pointer; flex:none; }
+    .title-tool:hover, .title-tool:focus { border-color:var(--input-line); background:var(--accent-soft); outline:none; }
+    .title-tool:disabled { opacity:.45; cursor:wait; }
+    .title-sync { font-size:21px; }
     .title-sync.syncing { animation:spin .85s linear infinite; }
-    .meta { display:flex; flex-wrap:wrap; gap:8px 18px; margin:17px 0 30px; padding-bottom:18px; border-bottom:1px solid var(--line); color:var(--muted); font-size:12px; }
-    .page-actions { display:flex; align-items:center; flex-wrap:wrap; gap:8px; margin:-15px 0 24px; }
-    .bible-page-refs { margin:-12px 0 26px; padding:0; border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
-    .bible-page-refs summary { display:flex; align-items:center; min-height:42px; padding:10px 0; cursor:pointer; color:var(--summary); font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:.055em; list-style:none; }
+    .meta { display:flex; align-items:center; flex-wrap:wrap; gap:8px 16px; margin:12px 0 0; padding-bottom:12px; border-bottom:1px solid var(--line); color:var(--muted); font-size:12px; }
+    .page-actions { display:flex; align-items:center; flex-wrap:nowrap; gap:8px; margin-left:auto; }
+    .bible-page-refs { margin:0 0 14px; padding:0; border-bottom:1px solid var(--line); }
+    .bible-page-refs summary { display:flex; align-items:center; min-height:40px; padding:9px 0; cursor:pointer; color:var(--summary); font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.055em; list-style:none; }
     .bible-page-refs summary::-webkit-details-marker { display:none; }
     .bible-page-refs summary::after { content:''; width:7px; height:7px; margin-left:auto; border-right:1.5px solid currentColor; border-bottom:1.5px solid currentColor; transform:rotate(45deg) translate(-1px, 1px); transition:transform .16s ease; opacity:.65; }
     .bible-page-refs[open] summary::after { transform:rotate(225deg) translate(-1px, 1px); }
-    .bible-paragraph { display:grid; gap:6px; padding:10px 0; border-top:1px solid color-mix(in srgb, var(--line) 70%, transparent); }
+    .bible-paragraph { display:grid; gap:7px; padding:10px 0; border-top:1px solid color-mix(in srgb, var(--line) 70%, transparent); }
     .bible-paragraph:first-of-type { border-top:0; }
     .bible-ref-row { display:flex; flex-wrap:wrap; gap:6px; }
     .bible-chip { display:inline-flex; align-items:center; max-width:100%; padding:4px 7px; border:1px solid var(--input-line); border-radius:6px; background:var(--accent-soft); color:var(--selected-ink); font-size:12px; line-height:1.25; cursor:pointer; text-decoration:underline; text-underline-offset:2px; }
@@ -235,6 +270,11 @@ const pageHtml = String.raw`<!doctype html>
     .bible-inline-ref { padding:1px 3px; border-radius:4px; background:var(--accent-soft); color:var(--selected-ink); font-weight:650; text-decoration:underline; text-decoration-thickness:1px; text-underline-offset:2px; cursor:pointer; }
     .bible-inline-ref:hover, .bible-inline-ref:focus-visible { outline:1px solid var(--accent); outline-offset:1px; }
     .bible-paragraph-target { display:inline; border-radius:5px; background:color-mix(in srgb, var(--accent) 16%, transparent); box-shadow:0 0 0 2px color-mix(in srgb, var(--accent) 55%, transparent); scroll-margin-top:80px; }
+    .bible-paragraph-target.current-match { background:color-mix(in srgb, var(--accent) 26%, transparent); box-shadow:0 0 0 2px var(--accent), inset 4px 0 0 var(--accent); }
+    .bible-ref-texts { display:grid; gap:5px; }
+    .bible-ref-text { color:var(--muted); font-size:12px; line-height:1.45; white-space:pre-wrap; }
+    .bible-ref-text.loading { opacity:.75; }
+    .bible-ref-text.error { color:var(--danger); }
     .bible-snippet { color:var(--muted); font-size:12px; line-height:1.45; white-space:pre-wrap; }
     .bible-parallel { margin-top:8px; padding:8px 10px; border-left:3px solid var(--accent); background:var(--surface-soft); color:var(--summary); font-size:12px; line-height:1.5; }
     .bible-parallel-button { display:inline-grid; place-items:center; min-height:27px; padding:4px 7px; border:1px solid var(--input-line); border-radius:6px; background:var(--panel); color:var(--accent); font-size:12px; cursor:pointer; }
@@ -252,6 +292,9 @@ const pageHtml = String.raw`<!doctype html>
     .bible-parallel-note-title { font-weight:650; }
     .bible-parallel-note-meta { color:var(--muted); font-size:11px; }
     .bible-parallel-note-text { color:var(--summary); font-size:12px; line-height:1.4; white-space:pre-wrap; }
+    .bible-parallel-verse-text { color:var(--ink); }
+    .bible-parallel-verse-text.loading { color:var(--muted); }
+    .bible-parallel-verse-text.error { color:var(--danger); }
     .bible-parallel-note-card { display:grid; gap:7px; padding:8px; border:1px solid var(--input-line); border-radius:7px; background:var(--panel); }
     .bible-parallel-fragment { display:grid; gap:3px; width:100%; padding:7px 8px; border:1px solid color-mix(in srgb, var(--input-line) 70%, transparent); border-radius:6px; background:transparent; color:var(--ink); text-align:left; cursor:pointer; }
     .bible-parallel-fragment:hover, .bible-parallel-fragment:focus-visible { border-color:var(--accent); background:var(--accent-soft); outline:none; }
@@ -259,13 +302,13 @@ const pageHtml = String.raw`<!doctype html>
     .match-count { min-width:54px; padding:0 7px; color:var(--muted); font-size:12px; text-align:center; white-space:nowrap; }
     .match-button { display:grid; place-items:center; width:28px; height:28px; padding:0; border:0; border-radius:5px; background:transparent; color:var(--ink); font-size:17px; cursor:pointer; }
     .match-button:hover, .match-button:focus-visible { background:var(--accent-soft); color:var(--accent); outline:none; }
-    .view-button { padding:8px 12px; border:1px solid var(--input-line); border-radius:8px; background:var(--accent-soft); color:var(--selected-ink); font-weight:650; cursor:pointer; }
-    .view-button:hover { border-color:var(--accent); }
-    .html-zoom { display:flex; align-items:center; gap:8px; padding:6px 10px; border:1px solid var(--input-line); border-radius:8px; background:var(--panel); color:var(--muted); font-size:12px; }
+    .view-button { display:grid; place-items:center; width:31px; height:31px; padding:0; border:1px solid transparent; border-radius:7px; background:transparent; color:var(--accent); font-size:18px; font-weight:700; cursor:pointer; }
+    .view-button:hover, .view-button:focus-visible { border-color:var(--input-line); background:var(--accent-soft); outline:none; }
+    .html-zoom { display:flex; align-items:center; gap:8px; padding:3px 0; border:0; background:transparent; color:var(--muted); font-size:12px; }
     .html-zoom input { width:130px; accent-color:var(--accent); }
     .html-zoom-value { min-width:42px; color:var(--ink); font-variant-numeric:tabular-nums; text-align:right; }
     .page-text { white-space:pre-wrap; font:16px/1.72 var(--reader-font); word-break:break-word; }
-    .html-frame { display:none; width:100%; min-height:70vh; border:1px solid var(--line); border-radius:10px; background:white; }
+    .html-frame { display:none; width:100%; height:calc(100vh - 220px); min-height:520px; border:1px solid var(--line); border-radius:10px; background:white; }
     .error-box { margin:18px 0; padding:12px 14px; border-left:3px solid var(--danger); background:color-mix(in srgb, var(--danger) 13%, var(--panel)); color:var(--danger); }
     .search-heading { padding:7px 10px 9px; color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.08em; }
     .activity-toast { position:fixed; z-index:20; top:18px; right:20px; max-width:min(430px, calc(100vw - 40px)); padding:11px 14px; border:1px solid var(--input-line); border-radius:10px; background:var(--panel); color:var(--selected-ink); box-shadow:0 10px 30px rgba(20,16,26,.24); font-size:13px; line-height:1.35; opacity:0; transform:translateY(-8px); pointer-events:none; transition:opacity .18s, transform .18s; }
@@ -292,17 +335,23 @@ const pageHtml = String.raw`<!doctype html>
     .settings-dialog-header { padding:20px 22px 12px; border-bottom:1px solid var(--line); }
     .settings-dialog-header h2 { margin:0; font:700 22px/1.25 var(--title-font); }
     .settings-dialog-header p { margin:6px 0 0; color:var(--muted); font-size:12px; line-height:1.45; }
-    .settings-dialog-content { display:grid; gap:14px; min-height:0; overflow:auto; padding:14px 22px 18px; }
-    #settingsMovedPanels { display:grid; gap:14px; }
-    .settings-dialog-content .sync-panel, .settings-dialog-content .settings-panel, .settings-dialog-content .notebook-panel { margin:0; border:1px solid var(--line); border-radius:8px; background:var(--surface-soft); }
-    .settings-dialog-content .sync-panel summary, .settings-dialog-content .settings-panel summary, .settings-dialog-content .notebook-panel summary { padding:11px 12px; }
-    .settings-dialog-content .sync-form, .settings-dialog-content .sync-settings, .settings-dialog-content .notebook-controls { padding:2px 12px 13px; }
-    .settings-module-section { display:grid; gap:10px; padding:12px; border:1px solid var(--line); border-radius:8px; background:var(--surface-soft); }
-    .settings-module-section summary { display:flex; align-items:center; min-height:30px; color:var(--ink); cursor:pointer; font:700 15px/1.25 var(--title-font); list-style:none; }
+    .settings-dialog-content { display:flex; flex-direction:column; gap:14px; min-height:0; overflow:auto; padding:14px 22px 18px; }
+    #settingsMovedPanels { display:flex; flex-direction:column; gap:14px; }
+    .settings-dialog-content .sync-panel, .settings-dialog-content .settings-panel, .settings-dialog-content .notebook-panel, .settings-module-section { margin:0; padding:0; border:1px solid var(--line); border-radius:8px; background:var(--surface-soft); overflow:hidden; }
+    .settings-dialog-content .sync-panel, .settings-dialog-content .settings-panel, .settings-dialog-content .notebook-panel, .settings-module-section, #settingsMovedPanels { flex:0 0 auto; }
+    .settings-dialog-content .sync-panel summary, .settings-dialog-content .settings-panel summary, .settings-dialog-content .notebook-panel summary, .settings-module-section summary { display:flex; align-items:center; min-height:44px; padding:11px 12px; cursor:pointer; color:var(--summary); font:650 11px/1.25 Inter, "Segoe UI", sans-serif; letter-spacing:.055em; list-style:none; text-transform:uppercase; }
+    .settings-dialog-content .sync-panel summary:hover, .settings-dialog-content .settings-panel summary:hover, .settings-dialog-content .notebook-panel summary:hover, .settings-module-section summary:hover { color:var(--accent); }
+    .settings-dialog-content .sync-panel summary:focus-visible, .settings-dialog-content .settings-panel summary:focus-visible, .settings-dialog-content .notebook-panel summary:focus-visible, .settings-module-section summary:focus-visible { outline:0; box-shadow:inset 2px 0 0 var(--accent); }
     .settings-module-section summary::-webkit-details-marker { display:none; }
-    .settings-module-section summary::after { content:''; width:7px; height:7px; margin-left:auto; border-right:1.5px solid currentColor; border-bottom:1.5px solid currentColor; transform:rotate(45deg) translate(-1px, 1px); transition:transform .16s ease; opacity:.65; }
+    .settings-dialog-content .sync-form, .settings-dialog-content .sync-settings, .settings-dialog-content .notebook-controls, .settings-module-body { display:grid; gap:10px; padding:2px 12px 13px; }
+    .settings-module-section summary::before { display:inline-block; min-width:16px; margin-right:8px; color:var(--accent); text-align:center; }
+    .settings-module-section.onenote-settings summary::before { content:'@'; }
+    .settings-module-section.biblenote-settings summary::before { content:'✚'; }
+    .settings-module-section.protocol-settings summary::before { content:'↗'; }
+    .settings-module-section.view-settings summary::before { content:'◱'; }
+    .settings-module-section.diagnostic-settings summary::before { content:'☷'; }
+    .settings-module-section summary::after { content:''; width:6px; height:6px; margin-left:auto; margin-right:3px; border-right:1.5px solid currentColor; border-bottom:1.5px solid currentColor; transform:rotate(45deg) translate(-1px, 1px); transition:transform .16s ease; opacity:.65; }
     .settings-module-section[open] summary::after { transform:rotate(225deg) translate(-1px, 1px); }
-    .settings-module-section[open] { display:grid; }
     .settings-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
     .settings-status { color:var(--muted); font-size:12px; line-height:1.45; white-space:pre-wrap; }
     .settings-file { max-width:100%; color:var(--muted); font-size:12px; }
@@ -312,6 +361,23 @@ const pageHtml = String.raw`<!doctype html>
     .settings-module-name { font-size:12px; font-weight:650; color:var(--ink); }
     .settings-module-meta { margin-top:2px; color:var(--muted); font-size:11px; line-height:1.35; }
     .settings-dialog-footer { padding:12px 22px 18px; border-top:1px solid var(--line); }
+    .setup-wizard-dialog { width:min(640px, calc(100vw - 32px)); padding:0; border:1px solid var(--input-line); border-radius:14px; background:var(--panel); color:var(--ink); box-shadow:0 22px 70px rgba(20,16,26,.38); overflow:hidden; }
+    .setup-wizard-dialog::backdrop { background:rgba(39,35,31,.36); backdrop-filter:blur(2px); }
+    .setup-wizard-body { display:grid; grid-template-rows:auto minmax(0,1fr) auto; max-height:min(86vh, 720px); }
+    .setup-wizard-header { padding:20px 22px 12px; border-bottom:1px solid var(--line); }
+    .setup-wizard-header h2 { margin:0; font:700 24px/1.25 var(--title-font); }
+    .setup-wizard-header p { margin:7px 0 0; color:var(--muted); font-size:12px; line-height:1.45; }
+    .setup-wizard-content { display:grid; gap:14px; min-height:0; overflow:auto; padding:16px 22px 20px; }
+    .setup-wizard-progress { display:flex; gap:6px; }
+    .setup-wizard-dot { height:4px; flex:1; border-radius:999px; background:var(--line); }
+    .setup-wizard-dot.active { background:var(--accent); }
+    .setup-wizard-step { display:grid; gap:12px; }
+    .setup-wizard-step h3 { margin:0; font:700 18px/1.3 var(--title-font); }
+    .setup-wizard-step[hidden] { display:none; }
+    .setup-wizard-status { min-height:18px; color:var(--muted); font-size:12px; line-height:1.45; }
+    .setup-wizard-status.error { color:var(--danger); }
+    .setup-wizard-footer { display:flex; align-items:center; justify-content:flex-end; gap:8px; padding:12px 22px 18px; border-top:1px solid var(--line); }
+    .setup-wizard-footer .setup-wizard-later { margin-right:auto; }
     .log-dialog { width:min(840px, calc(100vw - 32px)); max-height:min(86vh, 780px); padding:0; border:1px solid var(--input-line); border-radius:14px; background:var(--panel); color:var(--ink); box-shadow:0 22px 70px rgba(20,16,26,.38); overflow:hidden; }
     .log-dialog::backdrop { background:rgba(39,35,31,.32); backdrop-filter:blur(2px); }
     .log-dialog-body { display:grid; grid-template-rows:auto minmax(0,1fr) auto; max-height:min(86vh, 780px); }
@@ -326,9 +392,17 @@ const pageHtml = String.raw`<!doctype html>
     .bible-text-dialog { width:min(620px, calc(100vw - 32px)); padding:0; border:1px solid var(--input-line); border-radius:12px; background:var(--panel); color:var(--ink); box-shadow:0 22px 70px rgba(20,16,26,.38); }
     .bible-text-dialog::backdrop { background:rgba(39,35,31,.32); backdrop-filter:blur(2px); }
     .bible-text-body { display:grid; gap:10px; padding:20px; }
+    .bible-text-header { display:flex; align-items:flex-start; gap:10px; }
     .bible-text-body h2 { margin:0; font:700 22px/1.25 var(--title-font); }
+    .bible-text-header h2 { flex:1; min-width:0; }
+    .bible-text-nav { display:flex; gap:5px; margin-left:auto; flex:none; }
+    .bible-text-nav-button { display:grid; place-items:center; width:30px; height:30px; padding:0; border:1px solid var(--input-line); border-radius:7px; background:var(--panel); color:var(--accent); font-size:16px; cursor:pointer; }
+    .bible-text-nav-button:hover, .bible-text-nav-button:focus-visible { border-color:var(--accent); background:var(--accent-soft); outline:none; }
+    .bible-text-nav-button:disabled { opacity:.38; cursor:not-allowed; }
     .bible-text-meta { color:var(--muted); font-size:12px; }
     .bible-text-content { max-height:min(56vh, 520px); overflow:auto; padding:12px 14px; border:1px solid var(--line); border-radius:8px; background:var(--surface-soft); font:16px/1.55 var(--reader-font); white-space:pre-wrap; }
+    .bible-context-line { display:block; margin:1px 0; padding:2px 6px; border-radius:6px; }
+    .bible-context-highlight { background:color-mix(in srgb, var(--accent) 18%, transparent); box-shadow:inset 3px 0 0 var(--accent); }
     @keyframes spin { to { transform:rotate(360deg); } }
     mark { padding:0 1px; background:var(--mark); color:inherit; border-radius:2px; }
     mark.current-match { outline:2px solid var(--accent); outline-offset:1px; background:color-mix(in srgb, var(--mark) 58%, var(--accent)); }
@@ -356,12 +430,19 @@ const pageHtml = String.raw`<!doctype html>
   </dialog>
   <dialog id="bibleTextDialog" class="bible-text-dialog">
     <div class="bible-text-body">
-      <h2 id="bibleTextTitle">Библейская ссылка</h2>
+      <div class="bible-text-header">
+        <h2 id="bibleTextTitle">Библейская ссылка</h2>
+        <div class="bible-text-nav" aria-label="История библейских ссылок">
+          <button id="bibleTextBack" class="bible-text-nav-button" type="button" title="Назад" aria-label="Назад">‹</button>
+          <button id="bibleTextForward" class="bible-text-nav-button" type="button" title="Вперед" aria-label="Вперед">›</button>
+        </div>
+      </div>
       <div id="bibleTextMeta" class="bible-text-meta"></div>
       <div id="bibleTextContent" class="bible-text-content"></div>
       <div id="bibleTextParallelPanel"></div>
       <button id="showBibleTextContext" class="dialog-button" type="button">Показать в контексте</button>
       <button id="showBibleTextParallel" class="dialog-button" type="button">Параллельные</button>
+      <button id="showBibleTextInReader" class="dialog-button" type="button">Открыть в Библии</button>
       <div class="name-dialog-actions">
         <button id="closeBibleText" class="dialog-button primary" type="button">Закрыть</button>
       </div>
@@ -371,40 +452,73 @@ const pageHtml = String.raw`<!doctype html>
     <div class="settings-dialog-body">
       <header class="settings-dialog-header">
         <h2>Параметры</h2>
-        <p>Блокноты, синхронизация, BibleNote и обработка внешних библейских ссылок.</p>
+        <p>Записные книжки, синхронизация, модули и обработка внешних библейских ссылок.</p>
       </header>
       <div id="settingsDialogContent" class="settings-dialog-content">
-        <details class="settings-module-section">
-          <summary>BibleNote</summary>
-          <div id="bibleNoteStatus" class="settings-status">Статус BibleNote пока не проверен.</div>
-          <label class="field">Основной модуль
-            <input id="bibleModuleName" type="text" maxlength="80" placeholder="rst" autocomplete="off">
-          </label>
-          <div class="settings-row">
-            <input id="bibleModuleFile" class="settings-file" type="file" accept=".bnm,.zip" multiple>
-            <button id="uploadBibleModule" class="small-button" type="button" disabled>Загрузить модули</button>
-          </div>
-          <div id="bibleModulesList" class="settings-module-list"></div>
-          <div id="bibleModuleStatus" class="settings-status"></div>
-        </details>
-        <details class="settings-module-section">
-          <summary>Ссылки на Библию</summary>
-          <div id="protocolStatus" class="settings-status">Статус обработчика ссылок пока не проверен.</div>
-          <div class="settings-row">
-            <button id="registerBibleProtocol" class="small-button" type="button">Зарегистрировать обработчик</button>
+        <details class="settings-module-section onenote-settings">
+          <summary>Доступ к OneNote</summary>
+          <div class="settings-module-body">
+            <div id="oneNoteAccessStatus" class="settings-status">Параметры доступа еще не загружены.</div>
+            <label class="field">Azure Client ID
+              <input id="oneNoteClientId" type="text" autocomplete="off" spellcheck="false">
+            </label>
+            <input id="oneNoteTenantId" type="hidden" value="common">
+            <input id="oneNoteScopes" type="hidden" value="Notes.Read User.Read offline_access">
+            <input id="oneNoteTokenCache" type="hidden">
           </div>
         </details>
-        <details class="settings-module-section">
+        <details class="settings-module-section biblenote-settings">
+          <summary>Модули</summary>
+          <div class="settings-module-body">
+            <div id="bibleNoteStatus" class="settings-status">Статус BibleNote пока не проверен.</div>
+            <label class="field">Основной модуль
+              <select id="bibleModuleName"></select>
+            </label>
+            <div class="settings-row">
+              <input id="bibleModuleFile" class="settings-file" type="file" accept=".bnm,.zip" multiple>
+              <button id="uploadBibleModule" class="small-button" type="button" disabled>Загрузить модули</button>
+            </div>
+            <div id="bibleModulesList" class="settings-module-list"></div>
+            <div id="bibleModuleStatus" class="settings-status"></div>
+          </div>
+        </details>
+        <details class="settings-module-section protocol-settings">
+          <summary>Обработка ссылок на Библию</summary>
+          <div class="settings-module-body">
+            <div id="protocolStatus" class="settings-status">Статус обработчика ссылок пока не проверен.</div>
+            <div class="settings-row">
+              <button id="registerBibleProtocol" class="small-button" type="button">Зарегистрировать обработчик</button>
+            </div>
+          </div>
+        </details>
+        <details class="settings-module-section view-settings">
           <summary>Просмотр заметок</summary>
-          <label class="field">Открывать страницу
-            <select id="pageViewMode">
-              <option value="text">Текст</option>
-              <option value="html">HTML, если загружен</option>
-            </select>
-          </label>
-          <label class="field">Масштаб HTML по умолчанию
-            <input id="defaultHtmlZoom" type="number" min="50" max="200" step="10">
-          </label>
+          <div class="settings-module-body">
+            <label class="field">Тема интерфейса
+              <select id="themeSelect">
+                <option value="a">A · Тёплая</option>
+                <option value="b">B · Светлая</option>
+                <option value="c">C · Тёмная</option>
+              </select>
+            </label>
+            <label class="field">Открывать страницу
+              <select id="pageViewMode">
+                <option value="text">Текст</option>
+                <option value="html" selected>HTML, если загружен</option>
+              </select>
+            </label>
+            <label class="field">Масштаб HTML по умолчанию
+              <input id="defaultHtmlZoom" type="number" min="50" max="200" step="10" value="100">
+            </label>
+            <label class="check"><input id="showAuxBibleRefs" type="checkbox">Показывать ссылки в [] и {}</label>
+          </div>
+        </details>
+        <details class="settings-module-section diagnostic-settings">
+          <summary>Диагностика</summary>
+          <div class="settings-module-body">
+            <label class="check"><input id="verboseLogging" type="checkbox">Расширенное логирование</label>
+            <div id="verboseLoggingStatus" class="settings-status">Расширенное логирование выключено.</div>
+          </div>
         </details>
         <div id="settingsMovedPanels"></div>
       </div>
@@ -412,6 +526,49 @@ const pageHtml = String.raw`<!doctype html>
         <div class="name-dialog-actions">
           <button id="closeSettings" class="dialog-button primary" type="button">Закрыть</button>
         </div>
+      </footer>
+    </div>
+  </dialog>
+  <dialog id="setupWizardDialog" class="setup-wizard-dialog">
+    <div class="setup-wizard-body">
+      <header class="setup-wizard-header">
+        <h2>Первичная настройка</h2>
+        <p>Настройте обязательные параметры, чтобы BibleNote мог читать OneNote и показывать тексты библейских ссылок.</p>
+      </header>
+      <div class="setup-wizard-content">
+        <div class="setup-wizard-progress" aria-hidden="true">
+          <span class="setup-wizard-dot active"></span>
+          <span class="setup-wizard-dot"></span>
+          <span class="setup-wizard-dot"></span>
+        </div>
+        <section class="setup-wizard-step" data-setup-step="0">
+          <h3>Доступ к OneNote</h3>
+          <label class="field">Azure Client ID
+            <input id="setupOneNoteClientId" type="text" autocomplete="off" spellcheck="false">
+          </label>
+          <p class="settings-note">Это идентификатор приложения Azure, через которое BibleNote получает доступ к Microsoft Graph. Остальные параметры используются со стандартными значениями.</p>
+        </section>
+        <section class="setup-wizard-step" data-setup-step="1" hidden>
+          <h3>Модуль BibleNote</h3>
+          <label class="field">Основной модуль
+            <select id="setupBibleModule"></select>
+          </label>
+          <div class="settings-row">
+            <input id="setupBibleModuleFile" class="settings-file" type="file" accept=".bnm,.zip" multiple>
+            <button id="setupUploadBibleModule" class="small-button" type="button" disabled>Загрузить модули</button>
+          </div>
+          <div id="setupBibleModuleStatus" class="settings-status"></div>
+          <p class="settings-note">Если не менять значение, будет использоваться модуль rst. Можно сразу загрузить модуль .bnm или .zip.</p>
+        </section>
+        <section class="setup-wizard-step" data-setup-step="2" hidden>
+          <h3>Готово к работе</h3>
+          <div id="setupWizardSummary" class="settings-status"></div>
+        </section>
+        <div id="setupWizardStatus" class="setup-wizard-status"></div>
+      </div>
+      <footer class="setup-wizard-footer">
+        <button id="setupWizardBack" class="dialog-button" type="button">Назад</button>
+        <button id="setupWizardNext" class="dialog-button primary" type="button">Далее</button>
       </footer>
     </div>
   </dialog>
@@ -433,30 +590,23 @@ const pageHtml = String.raw`<!doctype html>
     <aside id="sidebar" class="sidebar">
       <header class="brand">
         <div class="brand-line">
-          <h1>OneNote Cache</h1>
+          <div class="search-wrap">
+            <div class="search-control">
+              <input id="search" class="search" type="search" placeholder="Поиск по заголовкам, тексту и ссылкам..." autocomplete="off">
+              <button id="searchHistory" class="search-option" type="button" aria-label="История поиска" aria-expanded="false" title="История поиска (↑/↓)">▾</button>
+              <button id="searchCase" class="search-option" type="button" aria-label="Учитывать регистр" aria-pressed="false" title="Учитывать регистр (Aa)">Aa</button>
+              <button id="searchPhrase" class="search-option" type="button" aria-label="Искать всю фразу" aria-pressed="false" title="Искать всю фразу">“ ”</button>
+              <button id="searchRegex" class="search-option" type="button" aria-label="Использовать регулярное выражение" aria-pressed="false" title="Использовать регулярное выражение (.*)">.*</button>
+            </div>
+            <div id="searchHistoryMenu" class="search-history-menu hidden" role="listbox" aria-label="История поиска"></div>
+          </div>
           <div class="brand-actions">
           <button id="openSettings" class="settings-button" type="button" aria-label="Параметры" title="Параметры">⚙</button>
-          <select id="themeSelect" class="theme-select" aria-label="Тема интерфейса">
-            <option value="a">A · Тёплая</option>
-            <option value="b">B · Светлая</option>
-            <option value="c">C · Тёмная</option>
-          </select>
           </div>
         </div>
-        <p>Локальный read-only обозреватель</p>
       </header>
-      <div class="search-wrap">
-        <div class="search-control">
-          <input id="search" class="search" type="search" placeholder="Поиск по заголовкам и тексту…" autocomplete="off">
-          <button id="searchHistory" class="search-option" type="button" aria-label="История поиска" aria-expanded="false" title="История поиска (↑/↓)">⌄</button>
-          <button id="searchCase" class="search-option" type="button" aria-label="Учитывать регистр" aria-pressed="false" title="Учитывать регистр (Aa)">Aa</button>
-          <button id="searchPhrase" class="search-option" type="button" aria-label="Искать всю фразу" aria-pressed="false" title="Искать всю фразу">“ ”</button>
-          <button id="searchRegex" class="search-option" type="button" aria-label="Использовать регулярное выражение" aria-pressed="false" title="Использовать регулярное выражение (.*)">.*</button>
-        </div>
-        <div id="searchHistoryMenu" class="search-history-menu hidden" role="listbox" aria-label="История поиска"></div>
-      </div>
       <details class="notebook-panel">
-        <summary id="notebookSummary">Блокноты</summary>
+        <summary id="notebookSummary">Записные книжки</summary>
         <div class="notebook-controls">
           <div class="notebook-actions">
             <button id="selectAllNotebooks" class="small-button" type="button">Выбрать все</button>
@@ -465,14 +615,18 @@ const pageHtml = String.raw`<!doctype html>
           <div id="notebookList" class="notebook-list"></div>
         </div>
       </details>
-      <details class="bible-panel">
-        <summary id="bibleSummary">Библейские ссылки</summary>
-        <div class="bible-controls">
-          <input id="bibleQuery" class="log-filter" type="search" placeholder="Ин 3:16">
-          <button id="bibleSearch" class="small-button" type="button">Найти</button>
+      <details class="bible-reader-panel">
+        <summary id="bibleReaderSummary">Библия</summary>
+        <div class="bible-reader-controls">
+          <select id="bibleReaderModule" class="bible-reader-select" title="Модуль"></select>
+          <select id="bibleReaderBook" class="bible-reader-select book" title="Книга"></select>
+          <div class="bible-reader-row">
+            <button id="bibleReaderPrev" class="small-button" type="button" title="Предыдущая глава">←</button>
+            <select id="bibleReaderChapter" class="bible-reader-select chapter" title="Глава"></select>
+            <button id="bibleReaderNext" class="small-button" type="button" title="Следующая глава">→</button>
+          </div>
+          <div id="bibleReaderStatus" class="sync-state"></div>
         </div>
-        <div id="bibleStats" class="sync-state"></div>
-        <div id="bibleResults" class="bible-list"></div>
       </details>
       <details class="settings-panel">
         <summary id="syncSettingsSummary">Параметры синхронизации</summary>
@@ -485,9 +639,9 @@ const pageHtml = String.raw`<!doctype html>
           </div>
           <label class="check"><input id="syncMetadataOnly" type="checkbox">Только метаданные</label>
           <label class="check"><input id="syncForceContent" type="checkbox">Перезагрузить весь контент</label>
-          <label class="check"><input id="syncIncludeHtml" type="checkbox">Сохранять HTML</label>
-          <label class="check"><input id="syncParseBibleRefs" type="checkbox">Распознать библейские ссылки</label>
-          <label class="check"><input id="syncForceBibleParse" type="checkbox">Перепарсить библейские ссылки</label>
+          <label class="check"><input id="syncIncludeHtml" type="checkbox" checked>Сохранять HTML</label>
+          <label class="check"><input id="syncParseBibleRefs" type="checkbox" checked>Распознать библейские ссылки</label>
+          <label class="check"><input id="syncForceBibleParse" type="checkbox" checked>Перепарсить библейские ссылки</label>
         </div>
       </details>
       <details class="sync-panel">
@@ -517,10 +671,13 @@ const pageHtml = String.raw`<!doctype html>
           <button id="logNext" class="small-button" type="button">Далее</button>
         </div>
       </details>
-      <div class="tree-shell">
+      <details class="notes-panel" open>
+        <summary id="notesSummary">Заметки</summary>
+        <div class="tree-shell">
         <nav id="tree" class="tree" aria-label="Структура OneNote"></nav>
         <div id="treeScrollbar" class="custom-scrollbar" role="scrollbar" aria-label="Прокрутка дерева OneNote" aria-controls="tree" tabindex="0"><div class="custom-scrollbar-thumb"></div></div>
-      </div>
+        </div>
+      </details>
       <button id="status" class="sidebar-footer" type="button">Загрузка статуса…</button>
     </aside>
     <div id="sidebarResizer" class="sidebar-resizer" role="separator" aria-label="Изменить ширину левой панели" aria-orientation="vertical" tabindex="0"></div>
@@ -549,6 +706,22 @@ const pageHtml = String.raw`<!doctype html>
     const settingsDialog = document.getElementById('settingsDialog');
     const settingsMovedPanels = document.getElementById('settingsMovedPanels');
     const closeSettingsButton = document.getElementById('closeSettings');
+    const oneNoteAccessStatusEl = document.getElementById('oneNoteAccessStatus');
+    const oneNoteClientIdInput = document.getElementById('oneNoteClientId');
+    const oneNoteTenantIdInput = document.getElementById('oneNoteTenantId');
+    const oneNoteScopesInput = document.getElementById('oneNoteScopes');
+    const oneNoteTokenCacheInput = document.getElementById('oneNoteTokenCache');
+    const saveOneNoteAccessButton = document.getElementById('saveOneNoteAccess');
+    const setupWizardDialog = document.getElementById('setupWizardDialog');
+    const setupOneNoteClientIdInput = document.getElementById('setupOneNoteClientId');
+    const setupBibleModuleInput = document.getElementById('setupBibleModule');
+    const setupBibleModuleFileInput = document.getElementById('setupBibleModuleFile');
+    const setupUploadBibleModuleButton = document.getElementById('setupUploadBibleModule');
+    const setupBibleModuleStatusEl = document.getElementById('setupBibleModuleStatus');
+    const setupWizardSummaryEl = document.getElementById('setupWizardSummary');
+    const setupWizardStatusEl = document.getElementById('setupWizardStatus');
+    const setupWizardBackButton = document.getElementById('setupWizardBack');
+    const setupWizardNextButton = document.getElementById('setupWizardNext');
     const bibleNoteStatusEl = document.getElementById('bibleNoteStatus');
     const bibleModuleNameInput = document.getElementById('bibleModuleName');
     const bibleModuleFileInput = document.getElementById('bibleModuleFile');
@@ -559,6 +732,9 @@ const pageHtml = String.raw`<!doctype html>
     const registerBibleProtocolButton = document.getElementById('registerBibleProtocol');
     const pageViewModeSelect = document.getElementById('pageViewMode');
     const defaultHtmlZoomInput = document.getElementById('defaultHtmlZoom');
+    const showAuxBibleRefsInput = document.getElementById('showAuxBibleRefs');
+    const verboseLoggingInput = document.getElementById('verboseLogging');
+    const verboseLoggingStatusEl = document.getElementById('verboseLoggingStatus');
     const downloadLogDialog = document.getElementById('downloadLogDialog');
     const downloadLogDialogContent = document.getElementById('downloadLogDialogContent');
     const closeDownloadLogButton = document.getElementById('closeDownloadLog');
@@ -578,19 +754,24 @@ const pageHtml = String.raw`<!doctype html>
     const bibleTextMeta = document.getElementById('bibleTextMeta');
     const bibleTextContent = document.getElementById('bibleTextContent');
     const bibleTextParallelPanel = document.getElementById('bibleTextParallelPanel');
+    const bibleTextBackButton = document.getElementById('bibleTextBack');
+    const bibleTextForwardButton = document.getElementById('bibleTextForward');
     const showBibleTextContextButton = document.getElementById('showBibleTextContext');
     const showBibleTextParallelButton = document.getElementById('showBibleTextParallel');
+    const showBibleTextInReaderButton = document.getElementById('showBibleTextInReader');
     const closeBibleTextButton = document.getElementById('closeBibleText');
     const notebookListEl = document.getElementById('notebookList');
     const notebookSummaryEl = document.getElementById('notebookSummary');
     const syncNotebookSelectionEl = document.getElementById('syncNotebookSelection');
     const selectAllNotebooksButton = document.getElementById('selectAllNotebooks');
     const clearAllNotebooksButton = document.getElementById('clearAllNotebooks');
-    const bibleSummaryEl = document.getElementById('bibleSummary');
-    const bibleQueryEl = document.getElementById('bibleQuery');
-    const bibleSearchButton = document.getElementById('bibleSearch');
-    const bibleStatsEl = document.getElementById('bibleStats');
-    const bibleResultsEl = document.getElementById('bibleResults');
+    const bibleReaderSummaryEl = document.getElementById('bibleReaderSummary');
+    const bibleReaderModuleEl = document.getElementById('bibleReaderModule');
+    const bibleReaderBookEl = document.getElementById('bibleReaderBook');
+    const bibleReaderChapterEl = document.getElementById('bibleReaderChapter');
+    const bibleReaderPrevButton = document.getElementById('bibleReaderPrev');
+    const bibleReaderNextButton = document.getElementById('bibleReaderNext');
+    const bibleReaderStatusEl = document.getElementById('bibleReaderStatus');
     const logSummaryEl = document.getElementById('logSummary');
     const logFilterEl = document.getElementById('logFilter');
     const logListEl = document.getElementById('logList');
@@ -611,12 +792,24 @@ const pageHtml = String.raw`<!doctype html>
     let searchOptions = loadSearchOptions();
     let searchHistory = loadSearchHistory();
     let searchHistoryIndex = -1;
+    let verboseLoggingEnabled = false;
     let searchHistoryDraft = '';
     let syncPollTimer;
     let syncRunning = false;
     let activeSyncContext = null;
+    let lastSyncLogRefreshAt = 0;
     let currentBibleTextRef = null;
+    let bibleTextHistory = [];
+    let bibleTextHistoryIndex = -1;
+    let bibleReaderBooks = [];
+    let bibleReaderLoading = false;
     let currentTargetParagraphIndex;
+    let currentTargetParagraphIndexes = [];
+    let viewHistory = [];
+    let viewHistoryIndex = -1;
+    let navigatingViewHistory = false;
+    let setupWizardStep = 0;
+    let setupWizardCanClose = false;
     let activityToastTimer;
     let editingNotebookId = null;
 
@@ -647,6 +840,27 @@ const pageHtml = String.raw`<!doctype html>
       if (location.pathname + location.search + location.hash === nextUrl) return;
       const method = replace ? 'replaceState' : 'pushState';
       history[method]({ pageId:pageId || null, paragraphIndex:Number.isInteger(paragraphIndex) ? paragraphIndex : null }, '', nextUrl);
+    }
+
+    function updateTreeSelection(pageId) {
+      tree.querySelectorAll('.tree-row.selected').forEach(item => item.classList.remove('selected'));
+      if (!pageId) return;
+      const selected = tree.querySelector('.tree-row[data-page-id="' + CSS.escape(String(pageId)) + '"]');
+      if (selected) selected.classList.add('selected');
+    }
+
+    function scrollTreeSelectionIntoView(behavior = 'smooth') {
+      const selected = tree.querySelector('.tree-row.selected');
+      if (!selected) return;
+      const selectedRect = selected.getBoundingClientRect();
+      const treeRect = tree.getBoundingClientRect();
+      const bottomPadding = 44;
+      if (selectedRect.top >= treeRect.top && selectedRect.bottom <= treeRect.bottom - bottomPadding) return;
+      const selectedCenter = selected.offsetTop + selected.offsetHeight / 2;
+      tree.scrollTo({
+        top:Math.max(0, selectedCenter - tree.clientHeight / 2),
+        behavior
+      });
     }
 
     function renderEmptyPage() {
@@ -806,6 +1020,21 @@ const pageHtml = String.raw`<!doctype html>
         mode:searchOptions.regex ? 'regex' : (searchOptions.phrase || quoted ? 'phrase' : 'and'),
         caseSensitive:searchOptions.caseSensitive
       };
+    }
+
+    function looksLikeBibleReferenceSearch(query) {
+      if (!query) return false;
+      const request = searchRequest(query);
+      if (request.mode === 'regex') return false;
+      return /(?:bnVerse:|isbtBibleVerse:|\d+\s*:\s*\d+)/i.test(request.query)
+        && /[\p{L}]/u.test(request.query);
+    }
+
+    function pageHighlightQuery(options = {}) {
+      if (typeof options.highlightQuery === 'string') return options.highlightQuery;
+      return currentTargetParagraphIndexes.length > 0 && looksLikeBibleReferenceSearch(activeSearchQuery)
+        ? ''
+        : activeSearchQuery;
     }
 
     function rerunSearch() {
@@ -991,9 +1220,14 @@ const pageHtml = String.raw`<!doctype html>
           settingsMovedPanels.append(panel);
         }
       }
+      if (!localStorage.getItem('onenote.defaultHtmlZoom.100Default')) {
+        localStorage.setItem('onenote.defaultHtmlZoom', '100');
+        localStorage.setItem('onenote.defaultHtmlZoom.100Default', 'true');
+      }
       bibleModuleNameInput.value = localStorage.getItem('onenote.bibleModule') || 'rst';
       pageViewModeSelect.value = defaultPageViewMode();
       defaultHtmlZoomInput.value = String(defaultHtmlZoom());
+      showAuxBibleRefsInput.checked = showAuxBibleRefs();
       updateBibleModuleUploadState();
     }
 
@@ -1006,6 +1240,7 @@ const pageHtml = String.raw`<!doctype html>
     }
 
     function openDownloadLogDialog() {
+      uiLog('ui.openDownloadLog', {});
       if (!downloadLogDialog.open) downloadLogDialog.showModal();
       loadDownloadLog(false).catch(showError);
     }
@@ -1018,12 +1253,45 @@ const pageHtml = String.raw`<!doctype html>
       localStorage.setItem('onenote.bibleModule', currentBibleModule());
     }
 
+    function moduleDisplayName(module) {
+      return [module.shortName, module.displayName].filter(Boolean).join(' · ') || '(без имени)';
+    }
+
+    function fillBibleModuleSelect(select, modules, selectedModule) {
+      select.replaceChildren();
+      const selected = String(selectedModule || '').trim();
+      for (const module of modules) {
+        if (!module.shortName) continue;
+        const option = document.createElement('option');
+        option.value = module.shortName;
+        option.textContent = moduleDisplayName(module);
+        option.selected = module.shortName === selected || (!selected && module.isCurrent);
+        select.append(option);
+      }
+      if (select.options.length === 0) {
+        const option = document.createElement('option');
+        option.value = '';
+        option.textContent = 'Нет загруженных модулей';
+        select.append(option);
+      }
+      select.disabled = select.options.length === 0 || select.options[0].value === '';
+    }
+
     function defaultPageViewMode() {
-      return localStorage.getItem('onenote.pageViewMode') === 'html' ? 'html' : 'text';
+      return localStorage.getItem('onenote.pageViewMode') === 'text' ? 'text' : 'html';
     }
 
     function defaultHtmlZoom() {
       return clampHtmlZoom(localStorage.getItem('onenote.defaultHtmlZoom'));
+    }
+
+    function showAuxBibleRefs() {
+      return localStorage.getItem('onenote.showAuxBibleRefs') === 'true';
+    }
+
+    function addBibleDisplayParams(params = new URLSearchParams()) {
+      if (showAuxBibleRefs()) params.set('includeAux', '1');
+      return params;
     }
 
     function clampHtmlZoom(value) {
@@ -1039,14 +1307,194 @@ const pageHtml = String.raw`<!doctype html>
       localStorage.setItem('onenote.defaultHtmlZoom', String(zoom));
     }
 
+    function saveBibleDisplaySettings() {
+      localStorage.setItem('onenote.showAuxBibleRefs', String(showAuxBibleRefsInput.checked));
+      if (activeSearchQuery) renderSearch(activeSearchQuery).catch(showError);
+      if (selectedPageId) openPage(selectedPageId, { updateUrl:false, paragraphIndex:currentTargetParagraphIndex }).catch(showError);
+    }
+
+    function renderRuntimeSettings(settings) {
+      verboseLoggingEnabled = settings.verboseLogging === true;
+      verboseLoggingInput.checked = verboseLoggingEnabled;
+      verboseLoggingStatusEl.textContent = verboseLoggingEnabled
+        ? 'Расширенное логирование включено. Файл: ' + (settings.logPath || '')
+        : 'Расширенное логирование выключено. Файл: ' + (settings.logPath || '');
+    }
+
+    async function refreshRuntimeSettings() {
+      renderRuntimeSettings(await api('/api/runtime-settings'));
+    }
+
+    async function saveRuntimeSettings() {
+      renderRuntimeSettings(await api('/api/runtime-settings', {
+        method:'PUT',
+        headers:{ 'Content-Type':'application/json' },
+        body:JSON.stringify({ verboseLogging:verboseLoggingInput.checked })
+      }));
+      uiLog('settings.verboseLoggingChanged', { enabled:verboseLoggingEnabled });
+    }
+
     function openSettingsDialog() {
+      uiLog('ui.openSettings', {});
       if (!settingsDialog.open) settingsDialog.showModal();
+      refreshRuntimeSettings().catch(error => {
+        verboseLoggingStatusEl.textContent = 'Не удалось загрузить параметры диагностики: ' + error.message;
+      });
+      refreshOneNoteAccessSettings().catch(error => {
+        oneNoteAccessStatusEl.textContent = 'Не удалось загрузить параметры OneNote: ' + error.message;
+      });
       refreshBibleNoteSettings().catch(error => {
         bibleNoteStatusEl.textContent = 'Не удалось проверить BibleNote: ' + error.message;
       });
       refreshProtocolSettings().catch(error => {
         protocolStatusEl.textContent = 'Не удалось проверить обработчик ссылок: ' + error.message;
       });
+    }
+
+    async function refreshOneNoteAccessSettings() {
+      const result = await api('/api/onenote/access-settings');
+      oneNoteClientIdInput.value = result.clientId || '';
+      oneNoteTenantIdInput.value = result.tenantId || 'common';
+      oneNoteScopesInput.value = result.scopes || 'Notes.Read User.Read offline_access';
+      oneNoteTokenCacheInput.value = result.tokenCache || '';
+      oneNoteAccessStatusEl.textContent = oneNoteClientIdConfigured(result.clientId)
+        ? 'Доступ к OneNote настроен.'
+        : 'Укажите Azure Client ID для доступа к OneNote.';
+      return result;
+    }
+
+    async function saveOneNoteAccessSettings() {
+      if (saveOneNoteAccessButton) saveOneNoteAccessButton.disabled = true;
+      oneNoteAccessStatusEl.textContent = 'Сохранение параметров OneNote...';
+      try {
+        const result = await api('/api/onenote/access-settings', {
+          method:'PUT',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({
+            clientId:oneNoteClientIdInput.value,
+            tenantId:oneNoteTenantIdInput.value,
+            scopes:oneNoteScopesInput.value,
+            tokenCache:oneNoteTokenCacheInput.value
+          })
+        });
+        oneNoteClientIdInput.value = result.clientId || '';
+        oneNoteTenantIdInput.value = result.tenantId || 'common';
+        oneNoteScopesInput.value = result.scopes || 'Notes.Read User.Read offline_access';
+        oneNoteTokenCacheInput.value = result.tokenCache || '';
+        oneNoteAccessStatusEl.textContent = 'Доступ к OneNote сохранен.';
+        return result;
+      } finally {
+        if (saveOneNoteAccessButton) saveOneNoteAccessButton.disabled = false;
+      }
+    }
+
+    function oneNoteClientIdConfigured(value) {
+      const clientId = String(value || '').trim();
+      return Boolean(clientId) && clientId !== '00000000-0000-0000-0000-000000000000';
+    }
+
+    function setupWizardCompleted() {
+      return localStorage.getItem('biblenote.setupWizardDone') === 'true';
+    }
+
+    function setupWizardSteps() {
+      return [...setupWizardDialog.querySelectorAll('[data-setup-step]')];
+    }
+
+    function setupBibleModuleSelected() {
+      return Boolean(String(setupBibleModuleInput.value || '').trim());
+    }
+
+    function updateSetupWizard() {
+      const steps = setupWizardSteps();
+      for (const step of steps) step.hidden = Number(step.dataset.setupStep) !== setupWizardStep;
+      setupWizardDialog.querySelectorAll('.setup-wizard-dot').forEach((dot, index) => {
+        dot.classList.toggle('active', index <= setupWizardStep);
+      });
+      setupWizardBackButton.disabled = setupWizardStep === 0;
+      setupWizardNextButton.textContent = setupWizardStep === steps.length - 1 ? 'Сохранить' : 'Далее';
+      setupWizardStatusEl.textContent = '';
+      setupWizardStatusEl.classList.remove('error');
+      if (setupWizardStep === 2) {
+        setupWizardSummaryEl.textContent = [
+          'OneNote Client ID: ' + (setupOneNoteClientIdInput.value.trim() || 'не указан'),
+          'Модуль BibleNote: ' + ((setupBibleModuleInput.value || 'rst').trim() || 'rst')
+        ].join('\n');
+      }
+    }
+
+    async function openSetupWizardIfNeeded() {
+      const settings = await api('/api/onenote/access-settings');
+      const shouldOpen = !setupWizardCompleted() || !oneNoteClientIdConfigured(settings.clientId);
+      if (!shouldOpen || setupWizardDialog.open) return;
+      if (settingsDialog.open) settingsDialog.close();
+      setupWizardCanClose = false;
+      setupOneNoteClientIdInput.value = settings.clientId || '';
+      await refreshBibleNoteSettings().catch(error => {
+        setupBibleModuleStatusEl.textContent = 'Не удалось получить список модулей BibleNote: ' + (error?.message || String(error));
+      });
+      setupWizardStep = 0;
+      updateSetupWizard();
+      setupWizardDialog.showModal();
+      setupOneNoteClientIdInput.focus();
+    }
+
+    async function finishSetupWizard() {
+      const clientId = setupOneNoteClientIdInput.value.trim();
+      if (!oneNoteClientIdConfigured(clientId)) {
+        setupWizardStep = 0;
+        updateSetupWizard();
+        setupWizardStatusEl.textContent = 'Укажите корректный Azure Client ID.';
+        setupWizardStatusEl.classList.add('error');
+        setupOneNoteClientIdInput.focus();
+        return;
+      }
+      if (!setupBibleModuleSelected()) {
+        setupWizardStep = 1;
+        updateSetupWizard();
+        setupWizardStatusEl.textContent = 'Выберите загруженный модуль BibleNote или сначала загрузите модуль.';
+        setupWizardStatusEl.classList.add('error');
+        return;
+      }
+      setupWizardNextButton.disabled = true;
+      setupWizardStatusEl.textContent = 'Сохранение параметров...';
+      try {
+        oneNoteClientIdInput.value = clientId;
+        await saveOneNoteAccessSettings();
+        bibleModuleNameInput.value = setupBibleModuleInput.value;
+        saveBibleModuleSetting();
+        localStorage.setItem('biblenote.setupWizardDone', 'true');
+        setupWizardCanClose = true;
+        setupWizardDialog.close();
+        showActivity('Первичная настройка сохранена.', 'success');
+        refreshBibleNoteSettings().catch(error => console.warn(error));
+      } catch (error) {
+        setupWizardStatusEl.textContent = 'Не удалось сохранить настройки: ' + (error?.message || String(error));
+        setupWizardStatusEl.classList.add('error');
+      } finally {
+        setupWizardNextButton.disabled = false;
+      }
+    }
+
+    function nextSetupWizardStep() {
+      if (setupWizardStep === 0 && !oneNoteClientIdConfigured(setupOneNoteClientIdInput.value)) {
+        setupWizardStatusEl.textContent = 'Укажите Azure Client ID.';
+        setupWizardStatusEl.classList.add('error');
+        setupOneNoteClientIdInput.focus();
+        return;
+      }
+      if (setupWizardStep === 1 && !setupBibleModuleSelected()) {
+        setupWizardStatusEl.textContent = 'Выберите загруженный модуль BibleNote или сначала загрузите модуль.';
+        setupWizardStatusEl.classList.add('error');
+        return;
+      }
+      const lastStep = setupWizardSteps().length - 1;
+      if (setupWizardStep >= lastStep) {
+        finishSetupWizard().catch(showError);
+        return;
+      }
+      setupWizardStep += 1;
+      updateSetupWizard();
     }
 
     async function refreshBibleNoteSettings() {
@@ -1068,10 +1516,14 @@ const pageHtml = String.raw`<!doctype html>
       const result = await api('/api/biblenote/modules');
       bibleModulesListEl.replaceChildren();
       if (!result.available) {
+        fillBibleModuleSelect(bibleModuleNameInput, [], '');
+        fillBibleModuleSelect(setupBibleModuleInput, [], '');
         bibleModulesListEl.textContent = result.error || 'Не удалось получить список модулей.';
         return;
       }
       const modules = Array.isArray(result.modules) ? result.modules : [];
+      fillBibleModuleSelect(bibleModuleNameInput, modules, localStorage.getItem('onenote.bibleModule') || result.module);
+      fillBibleModuleSelect(setupBibleModuleInput, modules, localStorage.getItem('onenote.bibleModule') || result.module);
       if (modules.length === 0) {
         bibleModulesListEl.textContent = 'Установленные модули не найдены.';
         return;
@@ -1093,7 +1545,7 @@ const pageHtml = String.raw`<!doctype html>
         const body = document.createElement('div');
         const title = document.createElement('div');
         title.className = 'settings-module-name';
-        title.textContent = [module.shortName, module.displayName].filter(Boolean).join(' · ') || '(без имени)';
+        title.textContent = moduleDisplayName(module);
         const meta = document.createElement('div');
         meta.className = 'settings-module-meta';
         meta.textContent = [module.type, module.locale, module.isCurrent ? 'текущий в BibleNote' : ''].filter(Boolean).join(' · ');
@@ -1117,20 +1569,24 @@ const pageHtml = String.raw`<!doctype html>
       uploadBibleModuleButton.disabled = !bibleModuleFileInput.files || bibleModuleFileInput.files.length === 0;
     }
 
-    async function uploadBibleModule() {
-      const files = [...(bibleModuleFileInput.files || [])];
+    function updateSetupBibleModuleUploadState() {
+      setupUploadBibleModuleButton.disabled = !setupBibleModuleFileInput.files || setupBibleModuleFileInput.files.length === 0;
+    }
+
+    async function uploadBibleModuleFiles(fileInput, uploadButton, statusElement, moduleInput, saveModule) {
+      const files = [...(fileInput.files || [])];
       if (files.length === 0) {
-        bibleModuleStatusEl.textContent = 'Выберите файл модуля .bnm.';
-        updateBibleModuleUploadState();
+        statusElement.textContent = 'Выберите файл модуля .bnm или .zip.';
+        uploadButton.disabled = true;
         return;
       }
-      uploadBibleModuleButton.disabled = true;
-      bibleModuleStatusEl.textContent = 'Загрузка модулей: 0/' + files.length;
+      uploadButton.disabled = true;
+      statusElement.textContent = 'Загрузка модулей: 0/' + files.length;
       try {
         const installed = [];
         for (let index = 0; index < files.length; index += 1) {
           const file = files[index];
-          bibleModuleStatusEl.textContent = 'Загрузка модулей: ' + index + '/' + files.length + ' · ' + file.name;
+          statusElement.textContent = 'Загрузка модулей: ' + index + '/' + files.length + ' · ' + file.name;
           const contentBase64 = arrayBufferToBase64(await file.arrayBuffer());
           const result = await api('/api/biblenote/modules/upload', {
             method:'POST',
@@ -1140,17 +1596,29 @@ const pageHtml = String.raw`<!doctype html>
           if (result.moduleName) installed.push(result.moduleName);
         }
         if (installed.length > 0) {
-          bibleModuleNameInput.value = installed[installed.length - 1];
-          saveBibleModuleSetting();
+          moduleInput.value = installed[installed.length - 1];
+          if (saveModule) saveBibleModuleSetting();
         }
-        bibleModuleStatusEl.textContent = 'Загружено модулей: ' + installed.length + '/' + files.length;
-        bibleModuleFileInput.value = '';
+        statusElement.textContent = 'Загружено модулей: ' + installed.length + '/' + files.length;
+        fileInput.value = '';
         await refreshBibleNoteSettings();
+        if (installed.length > 0) moduleInput.value = installed[installed.length - 1];
       } catch (error) {
-        bibleModuleStatusEl.textContent = 'Не удалось загрузить модуль: ' + error.message;
+        statusElement.textContent = 'Не удалось загрузить модуль: ' + error.message;
       } finally {
-        updateBibleModuleUploadState();
+        uploadButton.disabled = true;
       }
+    }
+
+    async function uploadBibleModule() {
+      await uploadBibleModuleFiles(bibleModuleFileInput, uploadBibleModuleButton, bibleModuleStatusEl, bibleModuleNameInput, true);
+      updateBibleModuleUploadState();
+    }
+
+    async function uploadSetupBibleModule() {
+      await uploadBibleModuleFiles(setupBibleModuleFileInput, setupUploadBibleModuleButton, setupBibleModuleStatusEl, setupBibleModuleInput, false);
+      updateSetupBibleModuleUploadState();
+      updateSetupWizard();
     }
 
     async function refreshProtocolSettings() {
@@ -1192,6 +1660,45 @@ const pageHtml = String.raw`<!doctype html>
 
     openSettingsButton.addEventListener('click', openSettingsDialog);
     closeSettingsButton.addEventListener('click', () => settingsDialog.close());
+    if (saveOneNoteAccessButton) saveOneNoteAccessButton.addEventListener('click', () => saveOneNoteAccessSettings().catch(error => {
+      oneNoteAccessStatusEl.textContent = 'Не удалось сохранить параметры OneNote: ' + error.message;
+      saveOneNoteAccessButton.disabled = false;
+    }));
+    oneNoteClientIdInput.addEventListener('change', () => saveOneNoteAccessSettings().catch(error => {
+      oneNoteAccessStatusEl.textContent = 'Не удалось сохранить параметры OneNote: ' + error.message;
+    }));
+    oneNoteClientIdInput.addEventListener('keydown', event => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        oneNoteClientIdInput.blur();
+      }
+    });
+    setupWizardBackButton.addEventListener('click', () => {
+      setupWizardStep = Math.max(0, setupWizardStep - 1);
+      updateSetupWizard();
+    });
+    setupWizardNextButton.addEventListener('click', nextSetupWizardStep);
+    setupWizardDialog.addEventListener('cancel', event => {
+      if (!setupWizardCanClose) {
+        event.preventDefault();
+        setupWizardStatusEl.textContent = 'Сначала завершите первичную настройку.';
+        setupWizardStatusEl.classList.add('error');
+      }
+    });
+    setupWizardDialog.addEventListener('keydown', event => {
+      if (event.key === 'Escape' && !setupWizardCanClose) {
+        event.preventDefault();
+        event.stopPropagation();
+        setupWizardStatusEl.textContent = 'Сначала завершите первичную настройку.';
+        setupWizardStatusEl.classList.add('error');
+      }
+    }, true);
+    setupWizardDialog.addEventListener('close', () => {
+      if (setupWizardCanClose) return;
+      setTimeout(() => {
+        if (!setupWizardDialog.open) setupWizardDialog.showModal();
+      }, 0);
+    });
     settingsDialog.addEventListener('cancel', event => {
       if (event.target !== settingsDialog) {
         event.stopPropagation();
@@ -1206,32 +1713,98 @@ const pageHtml = String.raw`<!doctype html>
     });
     bibleModuleFileInput.addEventListener('change', updateBibleModuleUploadState);
     uploadBibleModuleButton.addEventListener('click', () => uploadBibleModule().catch(showError));
+    setupBibleModuleFileInput.addEventListener('click', () => {
+      setupBibleModuleFileInput.value = '';
+      updateSetupBibleModuleUploadState();
+    });
+    setupBibleModuleFileInput.addEventListener('change', updateSetupBibleModuleUploadState);
+    setupUploadBibleModuleButton.addEventListener('click', () => uploadSetupBibleModule().catch(showError));
     registerBibleProtocolButton.addEventListener('click', () => registerBibleProtocol().catch(showError));
     pageViewModeSelect.addEventListener('change', savePageViewSettings);
     defaultHtmlZoomInput.addEventListener('change', savePageViewSettings);
+    showAuxBibleRefsInput.addEventListener('change', saveBibleDisplaySettings);
+    verboseLoggingInput.addEventListener('change', () => saveRuntimeSettings().catch(error => {
+      verboseLoggingStatusEl.textContent = 'Не удалось сохранить параметры диагностики: ' + error.message;
+    }));
     statusEl.addEventListener('click', openDownloadLogDialog);
     closeDownloadLogButton.addEventListener('click', () => downloadLogDialog.close());
     downloadLogDialog.addEventListener('cancel', () => downloadLogDialog.close());
 
+    function uiLog(action, details) {
+      if (!verboseLoggingEnabled || action === 'api.runtime-log') return;
+      fetch('/api/runtime-log', {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json' },
+        body:JSON.stringify({ action, details })
+      }).catch(() => {});
+    }
+
     async function api(path, options) {
-      const response = await fetch(path, options);
-      const body = await response.json();
+      const timeoutMs = options?.timeoutMs || 45000;
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), timeoutMs);
+      const fetchOptions = { ...(options || {}), signal:options?.signal || controller.signal };
+      delete fetchOptions.timeoutMs;
+      const method = fetchOptions.method || 'GET';
+      const startedAt = Date.now();
+      if (path !== '/api/runtime-log') uiLog('api.request', { method, path, timeoutMs });
+      let response;
+      let text = '';
+      try {
+        response = await fetch(path, fetchOptions);
+        text = await response.text();
+      } catch (error) {
+        const message = error?.name === 'AbortError' ? 'Request timed out after ' + timeoutMs + ' ms' : (error?.message || String(error));
+        uiLog('api.error', { method, path, durationMs:Date.now() - startedAt, error:message });
+        if (error?.name === 'AbortError') throw new Error(message);
+        throw error;
+      } finally {
+        clearTimeout(timeout);
+      }
+      let body = {};
+      try {
+        body = text ? JSON.parse(text) : {};
+      } catch {
+        body = { error:text || 'Invalid JSON response' };
+      }
       if (!response.ok) {
         const error = new Error(body.error || 'Request failed');
         error.status = response.status;
+        uiLog('api.error', { method, path, status:response.status, durationMs:Date.now() - startedAt, error:error.message });
         throw error;
       }
       if (!response.ok) throw new Error(body.error || 'Ошибка запроса');
+      uiLog('api.response', { method, path, status:response.status, durationMs:Date.now() - startedAt });
       return body;
     }
 
-    function pageHtmlFrameSrcdoc(rawHtml) {
-      const normalizeBibleHref = href => String(href || '').trim().replace(/^https?:\/\/isbtBibleVerse:/i, 'isbtBibleVerse:');
+    function decodeHtmlText(value) {
+      const textarea = document.createElement('textarea');
+      textarea.innerHTML = String(value || '');
+      return textarea.value;
+    }
+
+    function normalizeParagraphText(value) {
+      return decodeHtmlText(value).replace(/\s+/g, ' ').trim();
+    }
+
+    function pageHtmlFrameSrcdoc(rawHtml, targetParagraphs) {
+      const normalizeBibleHref = href => String(href || '').trim()
+        .replace(/^https?:\/\/isbtBibleVerse:/i, 'isbtBibleVerse:')
+        .replace(/^https?:\/\/bnVerse:/i, 'bnVerse:');
       const isBibleHref = href => {
         const value = normalizeBibleHref(href);
-        if (/^isbtBibleVerse:/i.test(value)) return true;
+        if (/^(?:isbtBibleVerse|bnVerse):/i.test(value)) return true;
         try {
-          return /^isbtBibleVerse:/i.test(normalizeBibleHref(decodeURIComponent(value)));
+          return /^(?:isbtBibleVerse|bnVerse):/i.test(normalizeBibleHref(decodeURIComponent(value)));
+        } catch {
+          return false;
+        }
+      };
+      const isGraphImageSrc = src => {
+        try {
+          const value = new URL(String(src || ''), location.href);
+          return value.protocol === 'https:' && value.hostname === 'graph.microsoft.com' && value.pathname.startsWith('/v1.0/');
         } catch {
           return false;
         }
@@ -1245,12 +1818,80 @@ const pageHtml = String.raw`<!doctype html>
         link.setAttribute('href', '#');
         link.setAttribute('target', '_self');
       }
+      for (const image of doc.querySelectorAll('img[src]')) {
+        const src = image.getAttribute('src') || '';
+        if (!isGraphImageSrc(src)) continue;
+        const absoluteSrc = new URL(src, location.href).toString();
+        image.setAttribute('data-onenote-original-src', absoluteSrc);
+        image.setAttribute('src', '/api/onenote-image?src=' + encodeURIComponent(absoluteSrc));
+        image.removeAttribute('srcset');
+      }
+      const targetItems = (Array.isArray(targetParagraphs) ? targetParagraphs : [targetParagraphs])
+        .map(item => {
+          if (typeof item === 'string') return { text:normalizeParagraphText(item), references:[] };
+          return {
+            text:normalizeParagraphText(item?.text || ''),
+            references:Array.isArray(item?.references) ? item.references : []
+          };
+        })
+        .filter(item => item.text || item.references.length > 0);
+      if (targetItems.length > 0) {
+        const style = doc.createElement('style');
+        style.textContent = '[data-onenote-target-paragraph="true"]{background:rgba(116,84,166,.16)!important;box-shadow:inset 4px 0 0 #7454a6!important;outline:1px solid rgba(116,84,166,.35)!important;scroll-margin:80px!important;}[data-onenote-target-paragraph-current="true"]{background:rgba(116,84,166,.26)!important;outline:2px solid #7454a6!important;}';
+        doc.head.append(style);
+        const used = new Set();
+        const markTargetElement = (element, targetIndex) => {
+          used.add(element);
+          element.setAttribute('data-onenote-target-paragraph', 'true');
+          element.setAttribute('data-onenote-target-paragraph-index', String(targetIndex));
+          if (targetIndex === 0) element.setAttribute('data-onenote-target-paragraph-current', 'true');
+        };
+        const refMatchesTarget = (link, references) => {
+          const linkText = normalizeParagraphText(link.textContent);
+          const href = normalizeBibleHref(decodeURIComponent(link.getAttribute('data-onenote-bible-href') || link.getAttribute('href') || ''));
+          return references.some(ref => {
+            const original = normalizeParagraphText(ref?.originalText);
+            const normalized = normalizeParagraphText(ref?.normalizedRef);
+            if (original && linkText === original) return true;
+            if (normalized && linkText === normalized) return true;
+            const bookIndex = Number(ref?.bookIndex);
+            const chapter = Number(ref?.chapter);
+            const verse = Number(ref?.verse);
+            if (!Number.isInteger(bookIndex) || !Number.isInteger(chapter) || !Number.isInteger(verse)) return false;
+            return href.includes('/' + bookIndex + ' ' + chapter + ':' + verse)
+              || href.includes('/' + bookIndex + '%20' + chapter + ':' + verse);
+          });
+        };
+        for (let targetIndex = 0; targetIndex < targetItems.length; targetIndex += 1) {
+          const targetText = targetItems[targetIndex].text;
+          let best = null;
+          if (targetText) {
+            for (const element of doc.body.querySelectorAll('p,div,li,td,th,blockquote,h1,h2,h3,h4,h5,h6')) {
+              if (used.has(element)) continue;
+              const text = normalizeParagraphText(element.textContent);
+              if (!text) continue;
+              if (!text.includes(targetText)) continue;
+              if (!best || text.length < best.text.length) best = { element, text };
+            }
+          }
+          if (best?.element) {
+            markTargetElement(best.element, targetIndex);
+            continue;
+          }
+          const links = [...doc.body.querySelectorAll('a[href],a[data-onenote-bible-href]')];
+          const link = links.find(item => refMatchesTarget(item, targetItems[targetIndex].references));
+          const target = link?.closest('li,p,td,th,blockquote,div') || link;
+          if (target && !used.has(target)) {
+            markTargetElement(target, targetIndex);
+          }
+        }
+      }
       const bridgeScript = [
         '<scr' + 'ipt>',
         '(function(){',
         'function decodeSafe(value){try{return decodeURIComponent(value);}catch(error){return value;}}',
-        'function normalizeBibleHref(href){return String(href||"").trim().replace(/^https?:\\/\\/isbtBibleVerse:/i,"isbtBibleVerse:");}',
-        'function isBibleHref(href){return /^isbtBibleVerse:/i.test(normalizeBibleHref(href))||/^isbtBibleVerse:/i.test(normalizeBibleHref(decodeSafe(href||"")));}',
+        'function normalizeBibleHref(href){return String(href||"").trim().replace(/^https?:\\/\\/isbtBibleVerse:/i,"isbtBibleVerse:").replace(/^https?:\\/\\/bnVerse:/i,"bnVerse:");}',
+        'function isBibleHref(href){return /^(?:isbtBibleVerse|bnVerse):/i.test(normalizeBibleHref(href))||/^(?:isbtBibleVerse|bnVerse):/i.test(normalizeBibleHref(decodeSafe(href||"")));}',
         'function sendBibleLink(href){parent.postMessage({type:"onenote-bible-link",href:normalizeBibleHref(decodeSafe(href))},"*");}',
         'document.addEventListener("click",function(event){',
         'var target=event.target;',
@@ -1259,15 +1900,33 @@ const pageHtml = String.raw`<!doctype html>
         'var href=link.getAttribute("data-onenote-bible-href")||link.getAttribute("href")||"";',
         'if(isBibleHref(href)){event.preventDefault();event.stopPropagation();sendBibleLink(href);}',
         '},true);',
+        'function scrollTargetParagraph(index){var selector="[data-onenote-target-paragraph=true]";var target=Number.isInteger(index)?document.querySelector("[data-onenote-target-paragraph-index=\\"" + index + "\\"]"):document.querySelector(selector);document.querySelectorAll(selector).forEach(function(item){item.removeAttribute("data-onenote-target-paragraph-current");});if(target){target.setAttribute("data-onenote-target-paragraph-current","true");target.scrollIntoView({block:"center"});}}',
         'window.addEventListener("message",function(event){',
         'var data=event.data||{};',
         'if(data.type==="onenote-html-zoom"){document.documentElement.style.zoom=String(data.zoom||1);}',
+        'if(data.type==="onenote-scroll-target-paragraph"){var index=Number.isInteger(data.targetIndex)?data.targetIndex:undefined;scrollTargetParagraph(index);setTimeout(function(){scrollTargetParagraph(index);},80);setTimeout(function(){scrollTargetParagraph(index);},240);}',
         '});',
+        'window.addEventListener("load",function(){scrollTargetParagraph();setTimeout(scrollTargetParagraph,80);setTimeout(scrollTargetParagraph,240);});',
         '}());',
         '</scr' + 'ipt>'
       ].join('');
       doc.body.insertAdjacentHTML('beforeend', bridgeScript);
       return '<!doctype html>\n' + doc.documentElement.outerHTML;
+    }
+
+    async function loadPageHtmlWithFallback(params) {
+      try {
+        return { ...(await api('/api/page-html?' + params.toString(), { timeoutMs:15000 })), degraded:false };
+      } catch (error) {
+        const rawParams = new URLSearchParams(params);
+        rawParams.set('raw', '1');
+        const raw = await api('/api/page-html?' + rawParams.toString(), { timeoutMs:5000 });
+        return {
+          ...raw,
+          degraded:true,
+          warning:'HTML показан из локального кэша без обновления библейских ссылок: ' + (error?.message || String(error))
+        };
+      }
     }
 
     function postHtmlFrameZoom(frame, percent) {
@@ -1276,7 +1935,10 @@ const pageHtml = String.raw`<!doctype html>
     }
 
     async function openBibleRef(rawRef) {
-      const normalizedRef = String(rawRef || '').trim().replace(/^https?:\/\/isbtBibleVerse:/i, 'isbtBibleVerse:');
+      uiLog('ui.openBibleRef', { rawRef });
+      const normalizedRef = String(rawRef || '').trim()
+        .replace(/^https?:\/\/isbtBibleVerse:/i, 'isbtBibleVerse:')
+        .replace(/^https?:\/\/bnVerse:/i, 'bnVerse:');
       const params = new URLSearchParams({ ref:normalizedRef, module:currentBibleModule() });
       const result = await api('/api/bible/parse-link?' + params.toString());
       if (result.reference) await showBibleText(result.reference);
@@ -1304,7 +1966,7 @@ const pageHtml = String.raw`<!doctype html>
     function saveNotebookSelection() {
       localStorage.setItem('onenote.hiddenNotebookIds', JSON.stringify([...hiddenNotebookIds]));
       const selected = selectedNotebookIds();
-      notebookSummaryEl.textContent = 'Блокноты: ' + selected.length + '/' + notebooksCache.length;
+      notebookSummaryEl.textContent = 'Записные книжки: ' + selected.length + '/' + notebooksCache.length;
       syncNotebookSelectionEl.textContent = selected.length
         ? 'Будут синхронизированы выбранные блокноты: ' + selected.length
         : 'Выберите хотя бы один блокнот';
@@ -1328,7 +1990,6 @@ const pageHtml = String.raw`<!doctype html>
           saveNotebookSelection();
           if (activeSearchQuery) renderSearch(activeSearchQuery).catch(showError); else renderTree().catch(showError);
           loadDownloadLog(true).catch(showError);
-          searchBibleRefs().catch(showError);
         });
         const text = document.createElement('span');
         text.className = 'notebook-name';
@@ -1392,6 +2053,10 @@ const pageHtml = String.raw`<!doctype html>
     });
     notebookNameDialog.addEventListener('cancel', () => { editingNotebookId = null; });
     closeBibleTextButton.addEventListener('click', () => bibleTextDialog.close());
+    bibleTextBackButton.addEventListener('click', () => navigateBibleTextHistory(-1).catch(showError));
+    bibleTextForwardButton.addEventListener('click', () => navigateBibleTextHistory(1).catch(showError));
+    updateBibleTextHistoryButtons();
+    showBibleTextInReaderButton.addEventListener('click', () => openBibleTextInReader().catch(showError));
     showBibleTextContextButton.addEventListener('click', () => showBibleTextContext().catch(showError));
     showBibleTextParallelButton.addEventListener('click', () => {
       if (currentBibleTextRef) loadParallelRefs(currentBibleTextRef, bibleTextParallelPanel).catch(showError);
@@ -1483,74 +2148,377 @@ const pageHtml = String.raw`<!doctype html>
       loadDownloadLog(false).catch(showError);
     });
 
-    async function loadBibleStats() {
-      const stats = await api('/api/bible/stats');
-      bibleSummaryEl.textContent = 'Библейские ссылки: ' + stats.references;
-      bibleStatsEl.textContent = stats.paragraphs + ' абзацев · ' + stats.pages + ' страниц · ' + stats.errors + ' ' + pluralRu(stats.errors, 'ошибка', 'ошибки', 'ошибок');
+    function bibleReaderSavedState() {
+      if (!localStorage.getItem('biblenote.reader.emptyChapterDefault')) {
+        localStorage.removeItem('biblenote.reader.chapter');
+        localStorage.removeItem('biblenote.reader.verse');
+        localStorage.setItem('biblenote.reader.emptyChapterDefault', 'true');
+      }
+      const savedChapter = Number(localStorage.getItem('biblenote.reader.chapter') || '');
+      return {
+        module:localStorage.getItem('biblenote.reader.module') || currentBibleModule(),
+        bookIndex:Number(localStorage.getItem('biblenote.reader.bookIndex') || '40') || 40,
+        chapter:Number.isInteger(savedChapter) && savedChapter > 0 ? savedChapter : undefined,
+        verse:Number(localStorage.getItem('biblenote.reader.verse') || '0') || undefined
+      };
     }
 
-    async function searchBibleRefs() {
-      const query = bibleQueryEl.value.trim();
-      bibleResultsEl.replaceChildren();
-      const selectedIds = selectedNotebookIds();
-      if (selectedIds.length === 0) {
-        const empty = document.createElement('div');
-        empty.className = 'search-heading';
-        empty.textContent = 'Не выбраны блокноты';
-        bibleResultsEl.append(empty);
+    function saveBibleReaderState(extra = {}) {
+      const state = {
+        module:bibleReaderModuleEl.value || currentBibleModule(),
+        bookIndex:Number(bibleReaderBookEl.value) || undefined,
+        chapter:Number(bibleReaderChapterEl.value) || undefined,
+        ...extra
+      };
+      if (state.module) localStorage.setItem('biblenote.reader.module', state.module);
+      if (state.bookIndex) localStorage.setItem('biblenote.reader.bookIndex', String(state.bookIndex));
+      if (state.chapter) localStorage.setItem('biblenote.reader.chapter', String(state.chapter));
+      else localStorage.removeItem('biblenote.reader.chapter');
+      if (state.verse) localStorage.setItem('biblenote.reader.verse', String(state.verse));
+      else localStorage.removeItem('biblenote.reader.verse');
+    }
+
+    function selectedBibleReaderBook() {
+      const bookIndex = Number(bibleReaderBookEl.value);
+      return bibleReaderBooks.find(book => Number(book.index) === bookIndex);
+    }
+
+    function updateBibleReaderNavButtons() {
+      const book = selectedBibleReaderBook();
+      const chapter = Number(bibleReaderChapterEl.value);
+      const chapters = Array.isArray(book?.chapters) ? book.chapters.map(Number) : [];
+      const firstChapter = chapters[0] || 1;
+      const lastChapter = chapters[chapters.length - 1] || Number(book?.chapterCount || 1);
+      const hasBook = Boolean(book);
+      bibleReaderPrevButton.disabled = !hasBook || !Number.isInteger(chapter) || chapter <= firstChapter;
+      bibleReaderNextButton.disabled = !hasBook || !Number.isInteger(chapter) || chapter >= lastChapter;
+    }
+
+    function fillBibleReaderChapters(preferredChapter) {
+      const book = selectedBibleReaderBook();
+      bibleReaderChapterEl.replaceChildren();
+      const preferred = Number(preferredChapter);
+      const hasPreferred = Number.isInteger(preferred) && preferred > 0;
+      const placeholder = document.createElement('option');
+      placeholder.value = '';
+      placeholder.textContent = 'Глава';
+      placeholder.selected = !hasPreferred;
+      bibleReaderChapterEl.append(placeholder);
+      const chapters = Array.isArray(book?.chapters) && book.chapters.length > 0
+        ? book.chapters
+        : Array.from({ length:Number(book?.chapterCount || 0) }, (_, index) => index + 1);
+      for (const chapter of chapters) {
+        const option = document.createElement('option');
+        option.value = String(chapter);
+        option.textContent = String(chapter);
+        option.selected = Number(chapter) === preferred;
+        bibleReaderChapterEl.append(option);
+      }
+      bibleReaderChapterEl.disabled = chapters.length === 0;
+      updateBibleReaderNavButtons();
+    }
+
+    function fillBibleReaderBooks(books, preferredBookIndex, preferredChapter) {
+      bibleReaderBooks = books;
+      bibleReaderBookEl.replaceChildren();
+      for (const book of books) {
+        const option = document.createElement('option');
+        option.value = String(book.index);
+        option.textContent = book.name || book.shortName || String(book.index);
+        if (book.shortName && book.name && book.shortName !== book.name) option.title = book.shortName;
+        option.selected = Number(book.index) === Number(preferredBookIndex);
+        bibleReaderBookEl.append(option);
+      }
+      bibleReaderBookEl.disabled = bibleReaderBookEl.options.length === 0;
+      if (bibleReaderBookEl.options.length > 0 && !bibleReaderBookEl.value) bibleReaderBookEl.selectedIndex = 0;
+      fillBibleReaderChapters(preferredChapter);
+    }
+
+    function currentBibleReaderLocation() {
+      return {
+        module:bibleReaderModuleEl.value || currentBibleModule(),
+        book:selectedBibleReaderBook(),
+        bookIndex:Number(bibleReaderBookEl.value),
+        chapter:Number(bibleReaderChapterEl.value)
+      };
+    }
+
+    async function refreshBibleReaderModules() {
+      const state = bibleReaderSavedState();
+      bibleReaderStatusEl.textContent = 'Загрузка модулей...';
+      const result = await api('/api/biblenote/modules');
+      const modules = Array.isArray(result.modules) ? result.modules : [];
+      fillBibleModuleSelect(bibleReaderModuleEl, modules, state.module);
+      if (bibleReaderModuleEl.disabled) {
+        bibleReaderStatusEl.textContent = result.available ? 'Загруженные модули не найдены.' : (result.error || 'BibleNote недоступен.');
+        fillBibleReaderBooks([], undefined, undefined);
         return;
       }
-      const params = new URLSearchParams({ limit:'80' });
-      if (query) params.set('q', query);
-      for (const notebookId of selectedIds) params.append('notebookId', notebookId);
-      const result = await api('/api/bible/search?' + params.toString());
-      bibleStatsEl.textContent = result.total + ' ' + pluralRu(result.total, 'совпадение', 'совпадения', 'совпадений');
-      if (result.rows.length === 0) {
-        const empty = document.createElement('div');
-        empty.className = 'search-heading';
-        empty.textContent = 'Ничего не найдено';
-        bibleResultsEl.append(empty);
-        return;
+      await refreshBibleReaderBooks(state.bookIndex, state.chapter);
+    }
+
+    async function refreshBibleReaderBooks(preferredBookIndex, preferredChapter, options = {}) {
+      if (!bibleReaderModuleEl.value) return;
+      bibleReaderLoading = true;
+      bibleReaderStatusEl.textContent = 'Загрузка книг...';
+      try {
+        const result = await api('/api/bible/books?' + new URLSearchParams({ module:bibleReaderModuleEl.value }).toString(), { timeoutMs:60000 });
+        const books = Array.isArray(result.books) ? result.books : [];
+        fillBibleReaderBooks(books, preferredBookIndex, preferredChapter);
+        bibleReaderStatusEl.textContent = books.length > 0 ? '' : 'В модуле не найдены книги.';
+        if (books.length > 0 && options.open === true && Number(bibleReaderChapterEl.value) > 0) await openBibleReaderChapter();
+      } finally {
+        bibleReaderLoading = false;
       }
-      for (const item of result.rows) {
+    }
+
+    function bibleReaderVerseRef(result, verse) {
+      const book = selectedBibleReaderBook();
+      const bookName = result.bookName || book?.name;
+      const bookShortName = result.bookShortName || book?.shortName;
+      const referenceName = bookShortName || bookName || 'Библия';
+      const verseReference = String(verse.reference || '').trim();
+      const fullReference = /[A-Za-zА-Яа-яЁё]/.test(verseReference)
+        ? verseReference
+        : referenceName + ' ' + verse.chapter + ':' + verse.verse;
+      return {
+        normalizedRef:fullReference,
+        originalText:fullReference,
+        module:result.module || bibleReaderModuleEl.value || currentBibleModule(),
+        bookIndex:result.bookIndex || Number(bibleReaderBookEl.value),
+        bookName,
+        bookShortName,
+        chapter:Number(verse.chapter),
+        verse:Number(verse.verse),
+        topChapter:Number(verse.chapter),
+        topVerse:Number(verse.verse)
+      };
+    }
+
+    async function showBibleReaderVerseNotes(ref) {
+      const query = ref.normalizedRef || ref.originalText || '';
+      searchInput.value = query;
+      activeSearchQuery = query;
+      rememberSearch(query);
+      const notesPanel = document.querySelector('.notes-panel');
+      if (notesPanel) notesPanel.setAttribute('open', '');
+      await renderSearch(query);
+    }
+
+    function renderBibleReaderChapter(result, highlightRef) {
+      content.replaceChildren();
+      selectedPageId = null;
+      currentTargetParagraphIndex = undefined;
+      const article = document.createElement('article');
+      article.className = 'page bible-reader-page';
+      const crumbs = document.createElement('div');
+      crumbs.className = 'breadcrumbs';
+      crumbs.textContent = ['Библия', result.moduleName || result.module].filter(Boolean).join(' / ');
+      const title = document.createElement('h2');
+      title.textContent = [result.bookName || selectedBibleReaderBook()?.name || 'Книга', result.chapter].filter(Boolean).join(' ');
+      const heading = document.createElement('div');
+      heading.className = 'page-heading';
+      const headingActions = document.createElement('div');
+      headingActions.className = 'page-heading-actions';
+      headingActions.append(createViewHistoryButtons());
+      heading.append(title, headingActions);
+      const toolbar = document.createElement('div');
+      toolbar.className = 'bible-reader-toolbar';
+      const previous = document.createElement('button');
+      previous.className = 'bible-reader-nav-button';
+      previous.type = 'button';
+      previous.textContent = '←';
+      previous.title = 'Предыдущая глава';
+      previous.disabled = bibleReaderPrevButton.disabled;
+      previous.addEventListener('click', () => stepBibleReaderChapter(-1).catch(showError));
+      const next = document.createElement('button');
+      next.className = 'bible-reader-nav-button';
+      next.type = 'button';
+      next.textContent = '→';
+      next.title = 'Следующая глава';
+      next.disabled = bibleReaderNextButton.disabled;
+      next.addEventListener('click', () => stepBibleReaderChapter(1).catch(showError));
+      const meta = document.createElement('div');
+      meta.className = 'bible-text-meta';
+      meta.textContent = result.reference || '';
+      toolbar.append(previous, next, meta);
+      const versesEl = document.createElement('div');
+      versesEl.className = 'bible-reader-verses';
+      let firstHighlighted = null;
+      for (const verse of Array.isArray(result.verses) ? result.verses : []) {
         const block = document.createElement('div');
-        block.className = 'log-row';
-        block.addEventListener('click', () => openPage(item.pageId, { paragraphIndex:item.paragraphIndex }).catch(showError));
-        const title = document.createElement('div');
-        title.className = 'log-title';
-        const badge = document.createElement('span');
-        badge.className = 'log-badge downloaded';
-        const link = document.createElement('button');
-        link.className = 'bible-chip';
-        link.type = 'button';
-        link.textContent = item.normalizedRef || item.originalText || '(ссылка)';
-        link.title = 'Показать текст стиха';
-        link.addEventListener('click', event => {
+        block.className = 'bible-reader-verse-block';
+        const row = document.createElement('div');
+        row.className = 'bible-reader-verse';
+        row.id = 'bible-verse-' + verse.chapter + '-' + verse.verse;
+        row.tabIndex = 0;
+        const ref = bibleReaderVerseRef(result, verse);
+        const number = document.createElement('span');
+        number.className = 'bible-reader-verse-number';
+        number.textContent = String(verse.verse);
+        const text = document.createElement('span');
+        text.className = 'bible-reader-verse-text';
+        text.textContent = verse.text || '';
+        const actions = document.createElement('span');
+        actions.className = 'bible-reader-verse-actions';
+        const notesButton = document.createElement('button');
+        notesButton.className = 'bible-reader-action';
+        notesButton.type = 'button';
+        notesButton.textContent = '≡';
+        notesButton.title = 'Показать заметки';
+        notesButton.setAttribute('aria-label', 'Показать заметки для ' + (ref.normalizedRef || ref.originalText));
+        notesButton.addEventListener('click', event => {
           event.stopPropagation();
-          showBibleText({
-            normalizedRef:item.normalizedRef,
-            originalText:item.originalText,
-            bookIndex:item.bookIndex,
-            chapter:item.chapter,
-            verse:item.verse
-          }).catch(showError);
+          showBibleReaderVerseNotes(ref).catch(showError);
         });
-        title.append(badge, link);
-        const path = document.createElement('div');
-        path.className = 'log-path';
-        path.textContent = [item.notebook, item.section, item.pageTitle, Number.isInteger(item.paragraphIndex) ? 'абзац ' + (item.paragraphIndex + 1) : ''].filter(Boolean).join(' / ');
-        const detail = document.createElement('div');
-        detail.className = 'log-detail';
-        detail.textContent = item.paragraphText || '';
-        block.append(title, path, detail);
-        bibleResultsEl.append(block);
+        const parallelButton = document.createElement('button');
+        parallelButton.className = 'bible-reader-action';
+        parallelButton.type = 'button';
+        parallelButton.textContent = '⇄';
+        parallelButton.title = 'Показать параллельные ссылки';
+        parallelButton.setAttribute('aria-label', 'Показать параллельные ссылки для ' + (ref.normalizedRef || ref.originalText));
+        parallelButton.addEventListener('click', event => {
+          event.stopPropagation();
+          loadParallelRefs(ref, block).catch(showError);
+        });
+        actions.append(notesButton, parallelButton);
+        row.append(number, text, actions);
+        row.addEventListener('click', () => {
+          versesEl.querySelectorAll('.bible-reader-verse.selected').forEach(item => item.classList.remove('selected'));
+          row.classList.add('selected');
+          saveBibleReaderState({ verse:Number(verse.verse) });
+        });
+        if (bibleVerseIsInsideReference(verse, highlightRef)) {
+          row.classList.add('selected');
+          if (!firstHighlighted) firstHighlighted = row;
+        }
+        block.append(row);
+        versesEl.append(block);
       }
+      article.append(crumbs, heading, toolbar, versesEl);
+      content.append(article);
+      if (firstHighlighted) requestAnimationFrame(() => firstHighlighted.scrollIntoView({ block:'center', behavior:'smooth' }));
     }
 
-    bibleSearchButton.addEventListener('click', () => searchBibleRefs().catch(showError));
-    bibleQueryEl.addEventListener('keydown', event => {
-      if (event.key === 'Enter') searchBibleRefs().catch(showError);
+    async function openBibleReaderChapter(options = {}) {
+      const location = currentBibleReaderLocation();
+      if (!location.book || !Number.isInteger(location.chapter) || location.chapter <= 0) {
+        bibleReaderStatusEl.textContent = 'Выберите модуль, книгу и главу.';
+        return;
+      }
+      saveBibleReaderState({ verse:options.ref?.verse || options.verse });
+      bibleReaderStatusEl.textContent = 'Загрузка главы...';
+      const params = new URLSearchParams({
+        module:location.module,
+        bookIndex:String(location.bookIndex),
+        chapter:String(location.chapter)
+      });
+      if (location.book.name) params.set('bookName', location.book.name);
+      if (location.book.shortName) params.set('bookShortName', location.book.shortName);
+      const result = await api('/api/bible/text?' + params.toString(), { timeoutMs:60000 });
+      bibleReaderSummaryEl.textContent = 'Библия: ' + (result.bookShortName || location.book.shortName || location.book.name) + ' ' + location.chapter;
+      bibleReaderStatusEl.textContent = '';
+      const highlightRef = options.ref || (options.verse ? {
+        module:location.module,
+        bookIndex:location.bookIndex,
+        bookName:location.book.name,
+        bookShortName:location.book.shortName,
+        chapter:location.chapter,
+        verse:Number(options.verse),
+        topChapter:location.chapter,
+        topVerse:Number(options.verse)
+      } : null);
+      if (options.rememberHistory !== false) {
+        rememberViewHistory({
+          type:'bible',
+          module:location.module,
+          bookIndex:location.bookIndex,
+          chapter:location.chapter,
+          verse:highlightRef?.verse,
+          topChapter:highlightRef?.topChapter,
+          topVerse:highlightRef?.topVerse
+        });
+      } else {
+        updateViewHistoryButtons();
+      }
+      renderBibleReaderChapter(result, highlightRef);
+    }
+
+    async function stepBibleReaderChapter(delta) {
+      const book = selectedBibleReaderBook();
+      if (!book) return;
+      const chapters = Array.isArray(book.chapters) && book.chapters.length > 0
+        ? book.chapters.map(Number)
+        : Array.from({ length:Number(book.chapterCount || 0) }, (_, index) => index + 1);
+      const current = Number(bibleReaderChapterEl.value);
+      const currentIndex = chapters.indexOf(current);
+      const nextIndex = currentIndex + delta;
+      if (nextIndex < 0 || nextIndex >= chapters.length) return;
+      bibleReaderChapterEl.value = String(chapters[nextIndex]);
+      updateBibleReaderNavButtons();
+      await openBibleReaderChapter();
+    }
+
+    async function openBibleReaderLocation(location, options = {}) {
+      if (!location?.module || !location?.bookIndex || !location?.chapter) return;
+      if (bibleReaderModuleEl.value !== location.module) {
+        bibleReaderModuleEl.value = location.module;
+        localStorage.setItem('biblenote.reader.module', location.module);
+        await refreshBibleReaderBooks(Number(location.bookIndex), Number(location.chapter));
+      } else if (bibleReaderBookEl.disabled || Number(bibleReaderBookEl.value) !== Number(location.bookIndex)) {
+        await refreshBibleReaderBooks(Number(location.bookIndex), Number(location.chapter));
+      }
+      bibleReaderBookEl.value = String(location.bookIndex);
+      fillBibleReaderChapters(Number(location.chapter));
+      bibleReaderChapterEl.value = String(location.chapter);
+      updateBibleReaderNavButtons();
+      await openBibleReaderChapter({
+        rememberHistory:options.rememberHistory,
+        ref:location.verse ? {
+          module:location.module,
+          bookIndex:Number(location.bookIndex),
+          chapter:Number(location.chapter),
+          verse:Number(location.verse),
+          topChapter:Number(location.topChapter || location.chapter),
+          topVerse:Number(location.topVerse || location.verse)
+        } : undefined
+      });
+    }
+
+    async function openBibleTextInReader(ref = currentBibleTextRef) {
+      if (!ref?.bookIndex || !ref?.chapter) return;
+      const moduleName = ref.module || currentBibleModule();
+      if (bibleReaderModuleEl.value !== moduleName) {
+        bibleReaderModuleEl.value = moduleName;
+        localStorage.setItem('biblenote.reader.module', moduleName);
+      }
+      if (bibleReaderBookEl.disabled || Number(bibleReaderBookEl.value) !== Number(ref.bookIndex)) {
+        await refreshBibleReaderBooks(Number(ref.bookIndex), Number(ref.chapter));
+      }
+      bibleReaderBookEl.value = String(ref.bookIndex);
+      fillBibleReaderChapters(Number(ref.chapter));
+      bibleReaderChapterEl.value = String(ref.chapter);
+      updateBibleReaderNavButtons();
+      if (bibleTextDialog.open) bibleTextDialog.close();
+      await openBibleReaderChapter({ ref });
+    }
+
+    bibleReaderModuleEl.addEventListener('change', () => {
+      const state = bibleReaderSavedState();
+      localStorage.setItem('biblenote.reader.module', bibleReaderModuleEl.value);
+      refreshBibleReaderBooks(state.bookIndex, state.chapter, { open:true }).catch(showError);
     });
+    bibleReaderBookEl.addEventListener('change', () => {
+      fillBibleReaderChapters(undefined);
+      saveBibleReaderState();
+    });
+    bibleReaderChapterEl.addEventListener('change', () => {
+      updateBibleReaderNavButtons();
+      saveBibleReaderState();
+      if (Number(bibleReaderChapterEl.value) > 0) openBibleReaderChapter().catch(showError);
+    });
+    bibleReaderPrevButton.addEventListener('click', () => stepBibleReaderChapter(-1).catch(showError));
+    bibleReaderNextButton.addEventListener('click', () => stepBibleReaderChapter(1).catch(showError));
 
     function row(label, level, options = {}) {
       const button = document.createElement('button');
@@ -1674,6 +2642,53 @@ const pageHtml = String.raw`<!doctype html>
       tree.scrollTop = savedScrollTop;
     }
 
+    async function revealPageInTree(page) {
+      const notebookId = page?.parentNotebook?.id;
+      const sectionId = page?.parentSection?.id;
+      if (!page?.id || !notebookId || !sectionId) {
+        showActivity('Не удалось определить положение страницы в дереве.', 'error');
+        return;
+      }
+
+      hideSearchHistory();
+      searchHistoryIndex = -1;
+      searchInput.value = '';
+      activeSearchQuery = '';
+
+      const notesPanel = document.querySelector('.notes-panel');
+      if (notesPanel) notesPanel.setAttribute('open', '');
+
+      if (hiddenNotebookIds.has(notebookId)) {
+        hiddenNotebookIds.delete(notebookId);
+        saveNotebookSelection();
+        const checkbox = notebookListEl.querySelector('input[data-notebook-id="' + CSS.escape(String(notebookId)) + '"]');
+        if (checkbox) checkbox.checked = true;
+      }
+
+      expanded.add('n:' + notebookId);
+      const [sections, groups] = await Promise.all([
+        api('/api/sections?notebookId=' + encodeURIComponent(notebookId)),
+        api('/api/section-groups?notebookId=' + encodeURIComponent(notebookId))
+      ]);
+      const section = sections.find(item => item.id === sectionId);
+      const groupsById = new Map(groups.map(group => [group.id, group]));
+      let groupId = section?.parentGroupId || '';
+      const visited = new Set();
+      while (groupId && !visited.has(groupId)) {
+        visited.add(groupId);
+        expanded.add('g:' + groupId);
+        groupId = groupsById.get(groupId)?.parentGroupId || '';
+      }
+      expanded.add('s:' + sectionId);
+
+      await renderTree();
+      updateTreeSelection(page.id);
+      requestAnimationFrame(() => {
+        updateTreeScrollbar();
+        scrollTreeSelectionIntoView('smooth');
+      });
+    }
+
     async function renderSections(notebookId, target) {
       const sections = await api('/api/sections?notebookId=' + encodeURIComponent(notebookId));
       const groups = await api('/api/section-groups?notebookId=' + encodeURIComponent(notebookId));
@@ -1752,9 +2767,35 @@ const pageHtml = String.raw`<!doctype html>
           syncLabel:'Синхронизировать страницу «' + page.title + '»',
           onSync:() => startTargetedSync({ pageId:page.id }, 'страницу «' + page.title + '»')
         });
+        button.dataset.pageId = page.id;
         button.onclick = () => openPage(page.id);
         target.append(button);
       }
+    }
+
+    function groupedSearchResults(results) {
+      const notebooks = new Map();
+      for (const page of results) {
+        const notebookKey = page.notebookId || page.notebook || '';
+        if (!notebooks.has(notebookKey)) {
+          notebooks.set(notebookKey, {
+            name:page.notebook || '(без блокнота)',
+            count:0,
+            sections:new Map()
+          });
+        }
+        const notebook = notebooks.get(notebookKey);
+        notebook.count += 1;
+        const sectionKey = page.section || '';
+        if (!notebook.sections.has(sectionKey)) {
+          notebook.sections.set(sectionKey, {
+            name:page.section || '(без раздела)',
+            pages:[]
+          });
+        }
+        notebook.sections.get(sectionKey).pages.push(page);
+      }
+      return [...notebooks.values()];
     }
 
     async function renderSearch(query) {
@@ -1778,6 +2819,7 @@ const pageHtml = String.raw`<!doctype html>
         mode:request.mode,
         caseSensitive:String(request.caseSensitive)
       });
+      addBibleDisplayParams(params);
       for (const notebookId of selectedIds) params.append('notebookId', notebookId);
       const results = await api('/api/search?' + params.toString());
       if (!results.length) {
@@ -1786,37 +2828,219 @@ const pageHtml = String.raw`<!doctype html>
         empty.textContent = 'Ничего не найдено';
         tree.append(empty);
       }
-      for (const page of results) {
-        const button = row(page.title, 0, {
-          selected:page.id === selectedPageId,
-          title:[page.notebook, page.section].filter(Boolean).join(' / '),
-          syncLabel:'Синхронизировать страницу «' + page.title + '»',
-          onSync:() => startTargetedSync({ pageId:page.id }, 'страницу «' + page.title + '»')
-        });
-        button.onclick = () => openPage(page.id);
-        tree.append(button);
+      for (const notebook of groupedSearchResults(results)) {
+        tree.append(row(notebook.name, 0, {
+          expandable:true,
+          open:true,
+          count:notebook.count,
+          title:notebook.name
+        }));
+        for (const section of notebook.sections.values()) {
+          tree.append(row(section.name, 1, {
+            expandable:true,
+            open:true,
+            folder:true,
+            count:section.pages.length,
+            title:[notebook.name, section.name].filter(Boolean).join(' / ')
+          }));
+          for (const page of section.pages) {
+            const button = row(page.title, 2, {
+              selected:page.id === selectedPageId,
+              title:[page.notebook, page.section, page.snippet].filter(Boolean).join(' / '),
+              syncLabel:'Синхронизировать страницу «' + page.title + '»',
+              onSync:() => startTargetedSync({ pageId:page.id }, 'страницу «' + page.title + '»')
+            });
+            const paragraphIndexes = Array.isArray(page.paragraphIndexes)
+              ? page.paragraphIndexes.filter(Number.isInteger)
+              : (Number.isInteger(page.paragraphIndex) ? [page.paragraphIndex] : []);
+            button.dataset.pageId = page.id;
+            button.onclick = () => openPage(page.id, {
+              paragraphIndex:paragraphIndexes[0],
+              paragraphIndexes,
+              highlightQuery:page.bibleRef ? '' : activeSearchQuery
+            });
+            tree.append(button);
+          }
+        }
+      }
+      updateTreeSelection(selectedPageId);
+      requestAnimationFrame(() => {
+        updateTreeScrollbar();
+        scrollTreeSelectionIntoView('auto');
+      });
+    }
+
+    function scrollToTargetParagraph(paragraphIndex, behavior = 'smooth') {
+      if (!Number.isInteger(paragraphIndex)) return;
+      let attempts = 0;
+      const run = () => {
+        const target = document.getElementById('paragraph-' + paragraphIndex);
+        if (target && target.getClientRects().length > 0) {
+          target.scrollIntoView({ block:'center', behavior });
+          const targetRect = target.getBoundingClientRect();
+          const contentRect = content.getBoundingClientRect();
+          const targetCenter = targetRect.top + targetRect.height / 2;
+          const contentCenter = contentRect.top + contentRect.height / 2;
+          content.scrollTop += targetCenter - contentCenter;
+          return;
+        }
+        attempts += 1;
+        if (attempts <= 10) setTimeout(run, 80);
+      };
+      requestAnimationFrame(run);
+    }
+
+    function scrollHtmlFrameToTargetParagraph(frame, paragraphIndex, targetIndex) {
+      if (!Number.isInteger(paragraphIndex) || !frame) return;
+      frame.scrollIntoView({ block:'nearest', behavior:'smooth' });
+      const post = () => frame.contentWindow?.postMessage({
+        type:'onenote-scroll-target-paragraph',
+        paragraphIndex,
+        targetIndex:Number.isInteger(targetIndex) ? targetIndex : undefined
+      }, '*');
+      requestAnimationFrame(() => {
+        post();
+        setTimeout(post, 120);
+        setTimeout(post, 360);
+      });
+    }
+
+    function viewHistoryKey(entry) {
+      return JSON.stringify(entry);
+    }
+
+    function viewHistoryAvailability() {
+      return {
+        back:viewHistoryIndex > 0,
+        forward:viewHistoryIndex >= 0 && viewHistoryIndex < viewHistory.length - 1
+      };
+    }
+
+    function setViewHistoryButtonState(button, enabled) {
+      button.disabled = !enabled;
+      button.setAttribute('aria-disabled', String(!enabled));
+    }
+
+    function updateViewHistoryButtons() {
+      const state = viewHistoryAvailability();
+      document.querySelectorAll('.view-history-back').forEach(button => setViewHistoryButtonState(button, state.back));
+      document.querySelectorAll('.view-history-forward').forEach(button => setViewHistoryButtonState(button, state.forward));
+    }
+
+    function rememberViewHistory(entry) {
+      if (!entry || navigatingViewHistory) {
+        updateViewHistoryButtons();
+        return;
+      }
+      if (viewHistoryIndex >= 0 && viewHistoryKey(viewHistory[viewHistoryIndex]) === viewHistoryKey(entry)) {
+        updateViewHistoryButtons();
+        return;
+      }
+      viewHistory = viewHistory.slice(0, viewHistoryIndex + 1);
+      viewHistory.push(entry);
+      if (viewHistory.length > 120) viewHistory.shift();
+      viewHistoryIndex = viewHistory.length - 1;
+      updateViewHistoryButtons();
+    }
+
+    function createViewHistoryButtons() {
+      const state = viewHistoryAvailability();
+      const back = document.createElement('button');
+      back.className = 'title-tool view-history-back';
+      back.type = 'button';
+      back.textContent = '‹';
+      back.title = 'Назад';
+      back.setAttribute('aria-label', 'Назад');
+      setViewHistoryButtonState(back, state.back);
+      back.addEventListener('click', () => navigateViewHistory(-1).catch(showError));
+      const forward = document.createElement('button');
+      forward.className = 'title-tool view-history-forward';
+      forward.type = 'button';
+      forward.textContent = '›';
+      forward.title = 'Вперёд';
+      forward.setAttribute('aria-label', 'Вперёд');
+      setViewHistoryButtonState(forward, state.forward);
+      forward.addEventListener('click', () => navigateViewHistory(1).catch(showError));
+      const fragment = document.createDocumentFragment();
+      fragment.append(back, forward);
+      return fragment;
+    }
+
+    async function navigateViewHistory(step) {
+      const nextIndex = viewHistoryIndex + step;
+      if (nextIndex < 0 || nextIndex >= viewHistory.length) return;
+      viewHistoryIndex = nextIndex;
+      updateViewHistoryButtons();
+      const entry = viewHistory[viewHistoryIndex];
+      navigatingViewHistory = true;
+      try {
+        if (entry.type === 'page') {
+          await openPage(entry.pageId, {
+            paragraphIndex:entry.paragraphIndex,
+            paragraphIndexes:Array.isArray(entry.paragraphIndexes) ? entry.paragraphIndexes : [],
+            rememberHistory:false
+          });
+        } else if (entry.type === 'bible') {
+          await openBibleReaderLocation(entry, { rememberHistory:false });
+        }
+      } finally {
+        navigatingViewHistory = false;
+        updateViewHistoryButtons();
       }
     }
 
     async function openPage(id, options = {}) {
+      uiLog('ui.openPage', { id, options });
       selectedPageId = id;
-      const targetParagraphIndex = Number.isInteger(options.paragraphIndex) ? options.paragraphIndex : paragraphIndexFromUrl();
+      const optionParagraphIndexes = Array.isArray(options.paragraphIndexes)
+        ? options.paragraphIndexes.filter(Number.isInteger)
+        : [];
+      const urlParagraphIndex = paragraphIndexFromUrl();
+      const targetParagraphIndex = Number.isInteger(options.paragraphIndex)
+        ? options.paragraphIndex
+        : (optionParagraphIndexes[0] ?? urlParagraphIndex);
+      currentTargetParagraphIndexes = optionParagraphIndexes.length > 0
+        ? optionParagraphIndexes
+        : (Number.isInteger(targetParagraphIndex) ? [targetParagraphIndex] : []);
       currentTargetParagraphIndex = targetParagraphIndex;
+      updateTreeSelection(id);
       if (options.updateUrl !== false) updatePageUrl(id, options.replaceUrl === true, targetParagraphIndex);
       const page = await api('/api/page?id=' + encodeURIComponent(id));
+      if (options.rememberHistory !== false) {
+        rememberViewHistory({
+          type:'page',
+          pageId:id,
+          paragraphIndex:Number.isInteger(targetParagraphIndex) ? targetParagraphIndex : undefined,
+          paragraphIndexes:currentTargetParagraphIndexes
+        });
+      } else {
+        updateViewHistoryButtons();
+      }
       content.replaceChildren();
       content.scrollTop = 0;
       const article = document.createElement('article');
       article.className = 'page';
       const crumbs = document.createElement('div');
       crumbs.className = 'breadcrumbs';
-      crumbs.textContent = [page.parentNotebook?.displayName, page.parentSection?.displayName].filter(Boolean).join('  /  ');
+      crumbs.textContent = pagePathLabel(page);
       const title = document.createElement('h2');
-      const titleMatches = appendHighlightedText(title, page.title || '(без названия)', activeSearchQuery);
+      const highlightQuery = pageHighlightQuery(options);
+      const titleMatches = appendHighlightedText(title, page.title || '(без названия)', highlightQuery);
       const heading = document.createElement('div');
       heading.className = 'page-heading';
+      const headingActions = document.createElement('div');
+      headingActions.className = 'page-heading-actions';
+      const revealPageButton = document.createElement('button');
+      revealPageButton.className = 'title-tool title-reveal';
+      revealPageButton.type = 'button';
+      revealPageButton.textContent = '⌖';
+      revealPageButton.title = 'Показать в дереве';
+      revealPageButton.setAttribute('aria-label', 'Показать страницу «' + (page.title || 'без названия') + '» в дереве заметок');
+      revealPageButton.addEventListener('click', () => {
+        revealPageInTree(page).catch(showError);
+      });
       const syncPageButton = document.createElement('button');
-      syncPageButton.className = 'title-sync' + (syncRunning && activeSyncContext?.pageId === page.id ? ' syncing' : '');
+      syncPageButton.className = 'title-tool title-sync' + (syncRunning && activeSyncContext?.pageId === page.id ? ' syncing' : '');
       syncPageButton.type = 'button';
       syncPageButton.disabled = syncRunning;
       syncPageButton.textContent = '↻';
@@ -1825,10 +3049,15 @@ const pageHtml = String.raw`<!doctype html>
       syncPageButton.addEventListener('click', () => {
         if (!syncRunning) startTargetedSync({ pageId:page.id }, 'страницу «' + page.title + '»');
       });
-      heading.append(title, syncPageButton);
+      headingActions.append(createViewHistoryButtons());
+      heading.append(title, headingActions);
       const meta = document.createElement('div');
       meta.className = 'meta';
-      meta.append(metaItem('Изменена', formatDate(page.lastModifiedDateTime)), metaItem('Синхронизирована', formatDate(page.contentSyncedAt)), metaItem('ID', page.id));
+      meta.append(metaItem('Изменена', formatDate(page.lastModifiedDateTime)), metaItem('Синхронизирована', formatDate(page.contentSyncedAt)));
+      const actions = document.createElement('div');
+      actions.className = 'page-actions';
+      actions.append(revealPageButton, syncPageButton);
+      meta.append(actions);
       article.append(crumbs, heading, meta);
       if (page.fetchError) {
         const error = document.createElement('div');
@@ -1836,28 +3065,70 @@ const pageHtml = String.raw`<!doctype html>
         error.textContent = page.fetchError;
         article.append(error);
       }
-      const bibleRefs = await api('/api/bible/page?id=' + encodeURIComponent(page.id));
+      const biblePageParams = addBibleDisplayParams(new URLSearchParams({ id:page.id }));
+      let bibleRefs = { paragraphs: [] };
+      let bibleRefsError;
+      try {
+        bibleRefs = await api('/api/bible/page?' + biblePageParams.toString(), { timeoutMs:5000 });
+      } catch (error) {
+        bibleRefsError = error;
+      }
+      const targetBibleParagraphs = currentTargetParagraphIndexes
+        .map(index => bibleRefs.paragraphs.find(paragraph => paragraph.index === index))
+        .filter(Boolean);
+      const targetBibleParagraph = targetBibleParagraphs[0] || null;
+      let bibleRefsSection;
       if (bibleRefs.paragraphs.length > 0) {
-        article.append(renderBiblePageRefs(bibleRefs));
+        bibleRefsSection = renderBiblePageRefs(bibleRefs);
+        article.append(bibleRefsSection);
+      } else if (bibleRefsError) {
+        const bibleRefsWarning = document.createElement('div');
+        bibleRefsWarning.className = 'error-box';
+        bibleRefsWarning.textContent = 'Библейские ссылки не загрузились. Заметка показана без них. ' + (bibleRefsError?.message || String(bibleRefsError));
+        article.append(bibleRefsWarning);
       }
       const text = document.createElement('div');
       text.className = 'page-text';
       const matches = [
         ...titleMatches,
-        ...appendPageTextWithBibleRefs(text, page.text || 'Текст страницы ещё не загружен.', activeSearchQuery, bibleRefs)
+        ...appendPageTextWithBibleRefs(text, page.text || 'Текст страницы ещё не загружен.', highlightQuery, bibleRefs)
       ];
+      const paragraphTargets = [...text.querySelectorAll('.bible-paragraph-target')];
+      const virtualParagraphTargets = paragraphTargets.length > 0
+        ? []
+        : currentTargetParagraphIndexes.filter(Number.isInteger).map(paragraphIndex => {
+            const target = document.createElement('span');
+            target.className = 'bible-paragraph-target';
+            target.dataset.paragraphIndex = String(paragraphIndex);
+            return target;
+          });
+      const navigationTargets = paragraphTargets.length > 0
+        ? paragraphTargets
+        : (virtualParagraphTargets.length > 0 ? virtualParagraphTargets : matches);
+      let htmlFrame;
+      let showingHtml = false;
       let activeMatchIndex = 0;
       let matchCount;
       const goToMatch = (index, smooth = true) => {
-        if (matches.length === 0) return;
-        matches[activeMatchIndex]?.classList.remove('current-match');
-        activeMatchIndex = (index + matches.length) % matches.length;
-        const match = matches[activeMatchIndex];
+        if (navigationTargets.length === 0) return;
+        navigationTargets[activeMatchIndex]?.classList.remove('current-match');
+        activeMatchIndex = (index + navigationTargets.length) % navigationTargets.length;
+        const match = navigationTargets[activeMatchIndex];
         match.classList.add('current-match');
-        matchCount.textContent = (activeMatchIndex + 1) + ' / ' + matches.length;
-        match.scrollIntoView({ block:'center', behavior:smooth ? 'smooth' : 'auto' });
+        matchCount.textContent = (activeMatchIndex + 1) + ' / ' + navigationTargets.length;
+        const paragraphIndex = Number(match.dataset?.paragraphIndex);
+        if (Number.isInteger(paragraphIndex)) {
+          currentTargetParagraphIndex = paragraphIndex;
+          history.replaceState(
+            { pageId:id, paragraphIndex },
+            '',
+            pageUrl(id, paragraphIndex)
+          );
+          if (showingHtml) scrollHtmlFrameToTargetParagraph(htmlFrame, paragraphIndex, activeMatchIndex);
+        }
+        if (!showingHtml) match.scrollIntoView({ block:'center', behavior:smooth ? 'smooth' : 'auto' });
       };
-      if (matches.length > 0) {
+      if (navigationTargets.length > 0) {
         const matchNav = document.createElement('div');
         matchNav.className = 'match-nav';
         matchNav.setAttribute('aria-label', 'Совпадения на странице');
@@ -1880,14 +3151,15 @@ const pageHtml = String.raw`<!doctype html>
         matchNav.append(matchCount, previousMatch, nextMatch);
         article.append(matchNav);
       }
+      const preferHtmlView = page.hasHtml && defaultPageViewMode() === 'html';
       let openDefaultHtmlView;
       if (page.hasHtml) {
-        const actions = document.createElement('div');
-        actions.className = 'page-actions';
         const htmlButton = document.createElement('button');
         htmlButton.className = 'view-button';
         htmlButton.type = 'button';
-        htmlButton.textContent = 'Показать HTML';
+        htmlButton.textContent = '<>';
+        htmlButton.title = 'Показать HTML';
+        htmlButton.setAttribute('aria-label', 'Показать HTML');
         const htmlZoom = defaultHtmlZoom();
         const zoomLabel = document.createElement('label');
         zoomLabel.className = 'html-zoom';
@@ -1902,37 +3174,60 @@ const pageHtml = String.raw`<!doctype html>
         zoomValue.className = 'html-zoom-value';
         zoomValue.textContent = htmlZoom + '%';
         zoomLabel.append(zoomRange, zoomValue);
-        let htmlFrame;
-        let showingHtml = false;
+        let htmlLoadError;
         zoomRange.addEventListener('input', () => {
           zoomValue.textContent = zoomRange.value + '%';
           postHtmlFrameZoom(htmlFrame, Number(zoomRange.value));
         });
         const setHtmlView = async showHtml => {
           try {
+            htmlLoadError?.remove();
+            htmlLoadError = undefined;
             if (!htmlFrame) {
               htmlButton.disabled = true;
-              htmlButton.textContent = 'Загрузка HTML…';
-              const result = await api('/api/page-html?id=' + encodeURIComponent(page.id));
+              htmlButton.textContent = '…';
+              htmlButton.title = 'Загрузка HTML';
+              htmlButton.setAttribute('aria-label', 'Загрузка HTML');
+              const htmlParams = new URLSearchParams({ id:page.id, module:currentBibleModule() });
+              const result = await loadPageHtmlWithFallback(htmlParams);
               htmlFrame = document.createElement('iframe');
               htmlFrame.className = 'html-frame';
               htmlFrame.title = 'HTML: ' + (page.title || 'страница OneNote');
               htmlFrame.setAttribute('sandbox', 'allow-scripts');
               htmlFrame.referrerPolicy = 'no-referrer';
               htmlFrame.addEventListener('load', () => postHtmlFrameZoom(htmlFrame, Number(zoomRange.value)));
-              htmlFrame.srcdoc = pageHtmlFrameSrcdoc(result.html);
+              htmlFrame.srcdoc = pageHtmlFrameSrcdoc(result.html, targetBibleParagraphs);
               text.after(htmlFrame);
+              if (result.degraded) {
+                htmlLoadError = document.createElement('div');
+                htmlLoadError.className = 'error-box';
+                htmlLoadError.textContent = result.warning;
+                htmlFrame.before(htmlLoadError);
+              }
               htmlButton.disabled = false;
             }
             showingHtml = showHtml;
+            article.classList.toggle('html-view-active', showingHtml);
             text.style.display = showingHtml ? 'none' : '';
             htmlFrame.style.display = showingHtml ? 'block' : 'none';
             if (showingHtml) postHtmlFrameZoom(htmlFrame, Number(zoomRange.value));
-            htmlButton.textContent = showingHtml ? 'Показать текст' : 'Показать HTML';
+            if (showingHtml) scrollHtmlFrameToTargetParagraph(htmlFrame, currentTargetParagraphIndex, activeMatchIndex);
+            htmlButton.textContent = showingHtml ? '¶' : '<>';
+            htmlButton.title = showingHtml ? 'Показать текст' : 'Показать HTML';
+            htmlButton.setAttribute('aria-label', showingHtml ? 'Показать текст' : 'Показать HTML');
           } catch (error) {
             htmlButton.disabled = false;
-            htmlButton.textContent = 'Показать HTML';
-            showError(error);
+            htmlButton.textContent = '<>';
+            htmlButton.title = 'Показать HTML';
+            htmlButton.setAttribute('aria-label', 'Показать HTML');
+            showingHtml = false;
+            article.classList.remove('html-view-active');
+            text.style.display = '';
+            if (htmlFrame) htmlFrame.style.display = 'none';
+            htmlLoadError = document.createElement('div');
+            htmlLoadError.className = 'error-box';
+            htmlLoadError.textContent = 'Не удалось загрузить HTML. Показана текстовая версия. ' + (error?.message || String(error));
+            text.before(htmlLoadError);
           }
         };
         htmlButton.addEventListener('click', () => {
@@ -1940,20 +3235,29 @@ const pageHtml = String.raw`<!doctype html>
         });
         openDefaultHtmlView = () => setHtmlView(true);
         actions.append(htmlButton, zoomLabel);
-        article.append(actions);
       }
+      if (preferHtmlView) text.style.display = 'none';
       article.append(text);
       content.append(article);
-      if (openDefaultHtmlView && defaultPageViewMode() === 'html') {
-        openDefaultHtmlView().catch(showError);
+      if (openDefaultHtmlView && preferHtmlView) {
+        openDefaultHtmlView().catch(error => console.warn(error));
       }
-      if (matches.length > 0) requestAnimationFrame(() => goToMatch(0, false));
-      if (Number.isInteger(targetParagraphIndex)) {
-        requestAnimationFrame(() => {
-          document.getElementById('paragraph-' + targetParagraphIndex)?.scrollIntoView({ block:'center', behavior:'smooth' });
-        });
+      if (navigationTargets.length > 0) requestAnimationFrame(() => goToMatch(0, false));
+      if (Number.isInteger(targetParagraphIndex) && !showingHtml) {
+        scrollToTargetParagraph(targetParagraphIndex);
       }
-      if (searchInput.value.trim()) renderSearch(searchInput.value.trim()); else renderTree();
+    }
+
+    function pagePathLabel(page) {
+      const parts = [];
+      const add = value => {
+        const text = String(value || '').trim();
+        if (text && parts[parts.length - 1] !== text) parts.push(text);
+      };
+      add(page.parentNotebook?.displayName);
+      for (const item of String(page.sectionGroupPath || '').split(/[\\/]+/)) add(item);
+      add(page.parentSection?.displayName);
+      return parts.join(' / ');
     }
 
     function renderBiblePageRefs(data) {
@@ -1964,11 +3268,16 @@ const pageHtml = String.raw`<!doctype html>
       heading.textContent = 'Библейские ссылки';
       heading.textContent = 'Библейские ссылки: ' + refsCount;
       section.append(heading);
+      section.addEventListener('toggle', () => {
+        if (section.open) loadBiblePageRefTexts(section).catch(error => console.warn(error));
+      });
       for (const paragraph of data.paragraphs) {
         const block = document.createElement('div');
         block.className = 'bible-paragraph';
         const row = document.createElement('div');
         row.className = 'bible-ref-row';
+        const refTexts = document.createElement('div');
+        refTexts.className = 'bible-ref-texts';
         for (const ref of paragraph.references) {
           const chip = document.createElement('a');
           chip.className = 'bible-chip';
@@ -1987,14 +3296,48 @@ const pageHtml = String.raw`<!doctype html>
           parallelButton.setAttribute('aria-label', 'Показать параллельные ссылки для ' + (ref.normalizedRef || ref.originalText));
           parallelButton.addEventListener('click', () => loadParallelRefs(ref, block).catch(showError));
           row.append(chip, parallelButton);
+          const refText = document.createElement('div');
+          refText.className = 'bible-ref-text loading';
+          refText.dataset.bibleTextUrl = bibleTextUrl(ref);
+          refText.textContent = 'Загрузка текста...';
+          refTexts.append(refText);
         }
-        const snippet = document.createElement('div');
-        snippet.className = 'bible-snippet';
-        snippet.textContent = paragraph.text;
-        block.append(row, snippet);
+        block.append(row, refTexts);
         section.append(block);
       }
       return section;
+    }
+
+    async function loadBiblePageRefTexts(section) {
+      if (section.dataset.bibleTextsLoaded === 'true' || section.dataset.bibleTextsLoading === 'true') return;
+      section.dataset.bibleTextsLoading = 'true';
+      const targets = [...section.querySelectorAll('[data-bible-text-url]')];
+      let hasErrors = false;
+      let cursor = 0;
+      const loadOne = async target => {
+        try {
+          const result = await api(target.dataset.bibleTextUrl);
+          const verseText = Array.isArray(result.verses)
+            ? result.verses.map(verse => verse.text).filter(Boolean).join('\n')
+            : '';
+          target.textContent = verseText || result.text || 'Текст не найден.';
+          target.classList.remove('loading', 'error');
+        } catch (error) {
+          hasErrors = true;
+          target.textContent = 'Не удалось загрузить текст: ' + (error?.message || String(error));
+          target.classList.remove('loading');
+          target.classList.add('error');
+        }
+      };
+      const workers = Array.from({ length:Math.min(6, targets.length) }, async () => {
+        while (cursor < targets.length) {
+          const target = targets[cursor++];
+          await loadOne(target);
+        }
+      });
+      await Promise.all(workers);
+      section.dataset.bibleTextsLoading = 'false';
+      if (!hasErrors) section.dataset.bibleTextsLoaded = 'true';
     }
 
     function bibleTextUrl(ref) {
@@ -2006,35 +3349,156 @@ const pageHtml = String.raw`<!doctype html>
       if (ref.topChapter) params.set('topChapter', String(ref.topChapter));
       if (ref.topVerse) params.set('topVerse', String(ref.topVerse));
       if (ref.contextVerses) params.set('contextVerses', String(ref.contextVerses));
+      if (ref.bookName) params.set('bookName', ref.bookName);
+      if (ref.bookShortName) params.set('bookShortName', ref.bookShortName);
+      if (ref.originalText) params.set('originalText', ref.originalText);
       return '/api/bible/text?' + params.toString();
     }
 
-    async function showBibleText(ref) {
+    function compareBibleVerse(aChapter, aVerse, bChapter, bVerse) {
+      return Number(aChapter) - Number(bChapter) || Number(aVerse) - Number(bVerse);
+    }
+
+    function bibleVerseIsInsideReference(verse, ref) {
+      if (!verse || !ref?.verse) return false;
+      const startChapter = Number(ref.chapter);
+      const startVerse = Number(ref.verse);
+      const endChapter = Number(ref.topChapter || ref.chapter);
+      const endVerse = Number(ref.topVerse || ref.verse);
+      const chapter = Number(verse.chapter);
+      const verseNumber = Number(verse.verse);
+      if (![startChapter, startVerse, endChapter, endVerse, chapter, verseNumber].every(Number.isFinite)) return false;
+      return compareBibleVerse(chapter, verseNumber, startChapter, startVerse) >= 0
+        && compareBibleVerse(chapter, verseNumber, endChapter, endVerse) <= 0;
+    }
+
+    function bibleVerseText(result) {
+      if (Array.isArray(result?.verses) && result.verses.length > 0) {
+        return result.verses
+          .map(verse => [verse.reference, verse.text].filter(Boolean).join(' '))
+          .filter(Boolean)
+          .join('\n');
+      }
+      return result?.text || '';
+    }
+
+    function cloneBibleTextRef(ref) {
+      return {
+        normalizedRef:ref.normalizedRef,
+        originalText:ref.originalText,
+        module:ref.module,
+        bookIndex:ref.bookIndex,
+        bookName:ref.bookName,
+        bookShortName:ref.bookShortName,
+        chapter:ref.chapter,
+        verse:ref.verse,
+        topChapter:ref.topChapter,
+        topVerse:ref.topVerse
+      };
+    }
+
+    function bibleTextHistoryKey(entry) {
+      return JSON.stringify({ mode:entry.mode, ref:entry.ref });
+    }
+
+    function updateBibleTextHistoryButtons() {
+      bibleTextBackButton.disabled = bibleTextHistoryIndex <= 0;
+      bibleTextForwardButton.disabled = bibleTextHistoryIndex < 0 || bibleTextHistoryIndex >= bibleTextHistory.length - 1;
+    }
+
+    function rememberBibleTextHistory(ref, mode) {
+      const entry = { ref:cloneBibleTextRef(ref), mode };
+      if (bibleTextHistoryIndex >= 0 && bibleTextHistoryKey(bibleTextHistory[bibleTextHistoryIndex]) === bibleTextHistoryKey(entry)) {
+        updateBibleTextHistoryButtons();
+        return;
+      }
+      bibleTextHistory = bibleTextHistory.slice(0, bibleTextHistoryIndex + 1);
+      bibleTextHistory.push(entry);
+      if (bibleTextHistory.length > 80) bibleTextHistory.shift();
+      bibleTextHistoryIndex = bibleTextHistory.length - 1;
+      updateBibleTextHistoryButtons();
+    }
+
+    async function navigateBibleTextHistory(step) {
+      const nextIndex = bibleTextHistoryIndex + step;
+      if (nextIndex < 0 || nextIndex >= bibleTextHistory.length) return;
+      bibleTextHistoryIndex = nextIndex;
+      updateBibleTextHistoryButtons();
+      const entry = bibleTextHistory[bibleTextHistoryIndex];
+      if (entry.mode === 'context') await showBibleTextContext({ ref:entry.ref, remember:false });
+      else await showBibleText(entry.ref, { remember:false });
+    }
+
+    function renderBibleContextText(result, highlightRef) {
+      bibleTextContent.replaceChildren();
+      const verses = Array.isArray(result.verses) ? result.verses : [];
+      if (verses.length === 0) {
+        bibleTextContent.textContent = result.text || 'Текст не найден.';
+        return;
+      }
+
+      let firstHighlighted = null;
+      for (const verse of verses) {
+        const line = document.createElement('div');
+        line.className = 'bible-context-line';
+        line.textContent = [verse.reference, verse.text].filter(Boolean).join(' ');
+        if (bibleVerseIsInsideReference(verse, highlightRef)) {
+          line.classList.add('bible-context-highlight');
+          if (!firstHighlighted) firstHighlighted = line;
+        }
+        bibleTextContent.append(line);
+      }
+      if (firstHighlighted) requestAnimationFrame(() => firstHighlighted.scrollIntoView({ block:'center' }));
+    }
+
+    async function showBibleText(ref, options = {}) {
       if (!ref.bookIndex || !ref.chapter) return;
+      uiLog('ui.showBibleText', { ref });
       currentBibleTextRef = ref;
+      if (options.remember !== false) rememberBibleTextHistory(ref, 'text');
+      else updateBibleTextHistoryButtons();
       bibleTextParallelPanel.replaceChildren();
       showBibleTextContextButton.hidden = !ref.verse;
       showBibleTextContextButton.disabled = !ref.verse;
       showBibleTextParallelButton.disabled = false;
+      showBibleTextInReaderButton.disabled = !ref.bookIndex || !ref.chapter;
       bibleTextTitle.textContent = ref.normalizedRef || ref.originalText || 'Библейская ссылка';
       bibleTextMeta.textContent = 'BibleNote';
       bibleTextContent.textContent = 'Загрузка...';
       if (!bibleTextDialog.open) bibleTextDialog.showModal();
 
-      const result = await api(bibleTextUrl(ref));
-      bibleTextTitle.textContent = result.reference || ref.normalizedRef || ref.originalText || 'Библейская ссылка';
-      bibleTextMeta.textContent = [result.moduleName || result.module, result.bookName].filter(Boolean).join(' · ');
-      bibleTextContent.textContent = result.text || 'Текст не найден.';
+      try {
+        const result = await api(bibleTextUrl(ref));
+        bibleTextTitle.textContent = result.reference || ref.normalizedRef || ref.originalText || 'Библейская ссылка';
+        bibleTextMeta.textContent = [result.moduleName || result.module, result.bookName].filter(Boolean).join(' · ');
+        bibleTextContent.textContent = bibleVerseText(result) || 'Текст не найден.';
+      } catch (error) {
+        bibleTextMeta.textContent = 'BibleNote';
+        bibleTextContent.textContent = 'Не удалось загрузить текст: ' + (error?.message || String(error));
+        showBibleTextContextButton.disabled = true;
+        showBibleTextParallelButton.disabled = true;
+        showBibleTextInReaderButton.disabled = true;
+      }
     }
 
-    async function showBibleTextContext() {
-      if (!currentBibleTextRef?.verse) return;
+    async function showBibleTextContext(options = {}) {
+      const ref = options.ref || currentBibleTextRef;
+      if (!ref?.verse) return;
+      currentBibleTextRef = ref;
+      if (options.remember !== false) rememberBibleTextHistory(ref, 'context');
+      else updateBibleTextHistoryButtons();
       showBibleTextContextButton.disabled = true;
       bibleTextContent.textContent = 'Загрузка контекста...';
-      const result = await api(bibleTextUrl({ ...currentBibleTextRef, contextVerses:10 }));
-      bibleTextTitle.textContent = (result.reference || currentBibleTextRef.normalizedRef || currentBibleTextRef.originalText || 'Библейская ссылка') + ' · контекст';
-      bibleTextMeta.textContent = [result.moduleName || result.module, result.bookName, '10 стихов до и после'].filter(Boolean).join(' · ');
-      bibleTextContent.textContent = result.text || 'Текст не найден.';
+      try {
+        const result = await api(bibleTextUrl({ ...ref, contextVerses:10 }));
+        bibleTextTitle.textContent = (result.reference || ref.normalizedRef || ref.originalText || 'Библейская ссылка') + ' · контекст';
+        bibleTextMeta.textContent = [result.moduleName || result.module, result.bookName, '10 стихов до и после'].filter(Boolean).join(' · ');
+        bibleTextContent.textContent = result.text || 'Текст не найден.';
+        renderBibleContextText(result, ref);
+      } catch (error) {
+        bibleTextContent.textContent = 'Не удалось загрузить контекст: ' + (error?.message || String(error));
+        showBibleTextContextButton.disabled = false;
+      }
     }
 
     async function openExternalBibleRefFromUrl() {
@@ -2080,8 +3544,10 @@ const pageHtml = String.raw`<!doctype html>
 
     function appendPageTextWithBibleRefs(container, pageText, query, bibleRefs) {
       const ranges = bibleTextRanges(pageText, bibleRefs);
-      const targetParagraph = bibleParagraphRanges(pageText, bibleRefs).find(item => item.index === currentTargetParagraphIndex);
-      if (ranges.length === 0 && !targetParagraph) return appendHighlightedText(container, pageText, query);
+      const targetParagraphIndexSet = new Set(currentTargetParagraphIndexes.filter(Number.isInteger));
+      const targetParagraphs = bibleParagraphRanges(pageText, bibleRefs)
+        .filter(item => targetParagraphIndexSet.has(item.index));
+      if (ranges.length === 0 && targetParagraphs.length === 0) return appendHighlightedText(container, pageText, query);
 
       const matches = [];
       const points = new Set([0, pageText.length]);
@@ -2089,9 +3555,13 @@ const pageHtml = String.raw`<!doctype html>
         points.add(range.start);
         points.add(range.end);
       }
-      if (targetParagraph) {
+      const targetByStart = new Map();
+      const targetByEnd = new Map();
+      for (const targetParagraph of targetParagraphs) {
         points.add(targetParagraph.start);
         points.add(targetParagraph.end);
+        targetByStart.set(targetParagraph.start, targetParagraph);
+        targetByEnd.set(targetParagraph.end, targetParagraph);
       }
 
       const sortedPoints = [...points].sort((a, b) => a - b);
@@ -2101,10 +3571,12 @@ const pageHtml = String.raw`<!doctype html>
         const end = sortedPoints[pointIndex + 1];
         if (start >= end) continue;
 
-        if (targetParagraph && start === targetParagraph.start) {
+        const startingTargetParagraph = targetByStart.get(start);
+        if (startingTargetParagraph) {
           paragraphWrapper = document.createElement('span');
-          paragraphWrapper.id = 'paragraph-' + targetParagraph.index;
+          paragraphWrapper.id = 'paragraph-' + startingTargetParagraph.index;
           paragraphWrapper.className = 'bible-paragraph-target';
+          paragraphWrapper.dataset.paragraphIndex = String(startingTargetParagraph.index);
         }
 
         const target = paragraphWrapper || container;
@@ -2126,7 +3598,7 @@ const pageHtml = String.raw`<!doctype html>
           target.append(span);
         }
 
-        if (targetParagraph && end === targetParagraph.end && paragraphWrapper) {
+        if (targetByEnd.has(end) && paragraphWrapper) {
           container.append(paragraphWrapper);
           paragraphWrapper = null;
         }
@@ -2190,11 +3662,11 @@ const pageHtml = String.raw`<!doctype html>
     async function loadParallelRefsLegacy(ref, block) {
       block.querySelectorAll('.bible-parallel').forEach(item => item.remove());
       if (!ref.bookIndex || !ref.chapter) return;
-      const params = new URLSearchParams({
+      const params = addBibleDisplayParams(new URLSearchParams({
         bookIndex:String(ref.bookIndex),
         chapter:String(ref.chapter),
         limit:'20'
-      });
+      }));
       if (ref.verse) params.set('verse', String(ref.verse));
       const result = await api('/api/bible/parallel?' + params.toString());
       const panel = document.createElement('div');
@@ -2211,23 +3683,23 @@ const pageHtml = String.raw`<!doctype html>
     }
 
     function parallelParams(ref) {
-      const params = new URLSearchParams({
+      const params = addBibleDisplayParams(new URLSearchParams({
         bookIndex:String(ref.bookIndex),
         chapter:String(ref.chapter),
         limit:'30'
-      });
+      }));
       if (ref.verse) params.set('verse', String(ref.verse));
       return params;
     }
 
     function parallelNotesParams(targetRef, relatedRef) {
-      const params = new URLSearchParams({
+      const params = addBibleDisplayParams(new URLSearchParams({
         bookIndex:String(targetRef.bookIndex),
         chapter:String(targetRef.chapter),
         relatedBookIndex:String(relatedRef.bookIndex),
         relatedChapter:String(relatedRef.chapter),
         limit:'50'
-      });
+      }));
       if (targetRef.verse) params.set('verse', String(targetRef.verse));
       if (relatedRef.verse) params.set('relatedVerse', String(relatedRef.verse));
       return params;
@@ -2357,6 +3829,21 @@ const pageHtml = String.raw`<!doctype html>
       }
     }
 
+    async function loadParallelVerseText(ref, host) {
+      host.textContent = 'Загрузка текста...';
+      host.classList.add('loading');
+      host.classList.remove('error');
+      try {
+        const result = await api(bibleTextUrl(ref));
+        host.textContent = bibleVerseText(result) || 'Текст не найден.';
+        host.classList.remove('loading');
+      } catch (error) {
+        host.textContent = 'Не удалось загрузить текст: ' + (error?.message || String(error));
+        host.classList.remove('loading');
+        host.classList.add('error');
+      }
+    }
+
     async function loadParallelRefs(ref, block) {
       block.querySelectorAll('.bible-parallel').forEach(item => item.remove());
       if (!ref.bookIndex || !ref.chapter) return;
@@ -2405,6 +3892,8 @@ const pageHtml = String.raw`<!doctype html>
         meta.textContent = 'индекс ' + Number(item.relationWeight || 0).toFixed(2)
           + ' · связей ' + (item.relations || 0)
           + ' · заметок ' + (item.pages || 0);
+        const verseText = document.createElement('div');
+        verseText.className = 'bible-parallel-note-text bible-parallel-verse-text loading';
         const notes = document.createElement('div');
         notes.className = 'bible-parallel-notes';
         notesButton.addEventListener('click', () => {
@@ -2415,8 +3904,9 @@ const pageHtml = String.raw`<!doctype html>
           loadParallelNotes(ref, relatedRef, notes).catch(showError);
         });
         head.append(refButton, meta, notesButton);
-        row.append(head, notes);
+        row.append(head, verseText, notes);
         list.append(row);
+        loadParallelVerseText(relatedRef, verseText).catch(showError);
       }
       panel.append(list);
     }
@@ -2584,7 +4074,7 @@ const pageHtml = String.raw`<!doctype html>
       syncSettingsSummaryEl.textContent = settings.metadataOnly
         ? 'Параметры синхронизации · только метаданные'
         : settings.parseBibleRefs
-          ? 'Параметры синхронизации · BibleNote'
+          ? 'Параметры синхронизации'
           : settings.includeHtml
             ? 'Параметры синхронизации · с HTML'
             : 'Параметры синхронизации';
@@ -2602,15 +4092,22 @@ const pageHtml = String.raw`<!doctype html>
 
     function loadSyncSettings() {
       try {
-        const settings = JSON.parse(localStorage.getItem('onenote.syncSettings') || '{}');
+        const rawSettings = localStorage.getItem('onenote.syncSettings');
+        const settings = JSON.parse(rawSettings || '{}');
+        if (!localStorage.getItem('onenote.syncSettings.defaultBibleParse')) {
+          settings.includeHtml = true;
+          settings.parseBibleRefs = true;
+          settings.forceBibleParse = true;
+          localStorage.setItem('onenote.syncSettings.defaultBibleParse', 'true');
+        }
         if (Number.isInteger(settings.maxPages) && settings.maxPages > 0) document.getElementById('syncMaxPages').value = String(settings.maxPages);
         if ([1, 2, 3].includes(settings.concurrency)) document.getElementById('syncConcurrency').value = String(settings.concurrency);
         if (Number.isInteger(settings.refreshOlderThanHours) && settings.refreshOlderThanHours >= 0) document.getElementById('syncRefreshHours').value = String(settings.refreshOlderThanHours);
         document.getElementById('syncMetadataOnly').checked = settings.metadataOnly === true;
         document.getElementById('syncForceContent').checked = settings.forceContent === true;
-        document.getElementById('syncIncludeHtml').checked = settings.includeHtml === true;
-        document.getElementById('syncParseBibleRefs').checked = settings.parseBibleRefs === true;
-        document.getElementById('syncForceBibleParse').checked = settings.forceBibleParse === true;
+        document.getElementById('syncIncludeHtml').checked = settings.includeHtml !== false;
+        document.getElementById('syncParseBibleRefs').checked = settings.parseBibleRefs !== false;
+        document.getElementById('syncForceBibleParse').checked = settings.forceBibleParse !== false;
         if (typeof settings.bibleModule === 'string' && settings.bibleModule.trim()) bibleModuleNameInput.value = settings.bibleModule.trim();
       } catch {
         localStorage.removeItem('onenote.syncSettings');
@@ -2622,24 +4119,48 @@ const pageHtml = String.raw`<!doctype html>
       document.getElementById(id).addEventListener('change', saveSyncSettings);
     }
 
+    function errorMessage(error) {
+      return error?.message || String(error);
+    }
+
+    function handleSyncStartError(error) {
+      const message = errorMessage(error);
+      updateSyncControls(false);
+      activeSyncContext = null;
+      syncStateEl.textContent = 'Ошибка синхронизации: ' + message;
+      showActivity('Ошибка синхронизации: ' + message, 'error');
+    }
+
+    function handleSyncPollError(error) {
+      const message = errorMessage(error);
+      syncStateEl.textContent = 'Ожидание ответа синхронизации: ' + message;
+      showActivity('Ожидание ответа синхронизации: ' + message, 'running', true);
+      if (syncRunning || activeSyncContext) {
+        clearTimeout(syncPollTimer);
+        syncPollTimer = setTimeout(() => refreshSyncState().catch(handleSyncPollError), 3000);
+      }
+    }
+
     async function submitSync(payload, label, context = {}) {
       if (syncRunning) return;
+      uiLog('ui.submitSync', { label, context, payload });
       activeSyncContext = { ...context, label };
       updateSyncControls(true);
       syncStateEl.textContent = 'Запуск: ' + label;
       showActivity('Синхронизация: ' + label + '…', 'running', true);
+      let started = false;
       try {
         await api('/api/sync', {
           method:'POST',
           headers:{'Content-Type':'application/json'},
-          body:JSON.stringify(payload)
+          body:JSON.stringify(payload),
+          timeoutMs:180000
         });
+        started = true;
         await refreshSyncState();
       } catch (error) {
-        updateSyncControls(false);
-        activeSyncContext = null;
-        syncStateEl.textContent = error.message;
-        showActivity('Ошибка синхронизации: ' + error.message, 'error');
+        if (started) handleSyncPollError(error);
+        else handleSyncStartError(error);
       }
     }
 
@@ -2663,7 +4184,7 @@ const pageHtml = String.raw`<!doctype html>
 
     async function refreshSyncState() {
       clearTimeout(syncPollTimer);
-      const state = await api('/api/sync');
+      const state = await api('/api/sync', { timeoutMs:120000 });
       const running = state.status === 'running';
       updateSyncControls(running);
       syncButton.textContent = running ? 'Синхронизация выполняется…' : 'Запустить синхронизацию';
@@ -2679,8 +4200,11 @@ const pageHtml = String.raw`<!doctype html>
         if (progress.errors) parts.push('ошибок: ' + progress.errors);
         syncStateEl.textContent = parts.join(' · ');
         showActivity(parts.join(' · '), 'running', true);
-        await loadDownloadLog(false);
-        syncPollTimer = setTimeout(() => refreshSyncState().catch(showError), 700);
+        if (Date.now() - lastSyncLogRefreshAt > 5000) {
+          lastSyncLogRefreshAt = Date.now();
+          loadDownloadLog(false).catch(error => console.warn(error));
+        }
+        syncPollTimer = setTimeout(() => refreshSyncState().catch(handleSyncPollError), 700);
       } else if (state.status === 'success') {
         const result = state.result;
         const completedContext = activeSyncContext;
@@ -2689,15 +4213,16 @@ const pageHtml = String.raw`<!doctype html>
         showActivity(successMessage, 'success');
         const status = await api('/api/status');
         statusEl.textContent = cacheStatusText(status);
-        await loadNotebookSelector();
-        await loadDownloadLog(true);
-        await loadBibleStats();
-        await searchBibleRefs();
         if (completedContext?.pageId && selectedPageId === completedContext.pageId) {
-          await openPage(completedContext.pageId);
+          loadDownloadLog(false).catch(error => console.warn(error));
+          await openPage(completedContext.pageId, { updateUrl:false, paragraphIndex:currentTargetParagraphIndex });
         } else if (activeSearchQuery) {
+          await loadNotebookSelector();
+          await loadDownloadLog(true);
           await renderSearch(activeSearchQuery);
         } else {
+          await loadNotebookSelector();
+          await loadDownloadLog(true);
           await renderTree();
         }
         activeSyncContext = null;
@@ -2730,18 +4255,26 @@ const pageHtml = String.raw`<!doctype html>
 
     async function initializeApp() {
       try {
-        const [status] = await Promise.all([api('/api/status'), loadNotebookSelector(), refreshSyncState(), loadBibleStats()]);
+        await refreshRuntimeSettings().catch(error => console.warn(error));
+        const [status] = await Promise.all([api('/api/status'), loadNotebookSelector()]);
+        refreshSyncState().catch(handleSyncPollError);
+        refreshBibleReaderModules().catch(error => {
+          console.warn(error);
+          bibleReaderStatusEl.textContent = error?.message || String(error);
+        });
         statusEl.textContent = cacheStatusText(status);
         const initialPageId = pageIdFromUrl();
         if (initialPageId) {
           await openPage(initialPageId, { replaceUrl:true });
+          if (activeSearchQuery) await renderSearch(activeSearchQuery);
+          else await renderTree();
         } else {
           renderEmptyPage();
           await renderTree();
         }
-        await loadDownloadLog(true);
-        await searchBibleRefs();
+        loadDownloadLog(true).catch(error => console.warn(error));
         await openExternalBibleRefFromUrl();
+        openSetupWizardIfNeeded().catch(error => console.warn(error));
       } catch (error) {
         if (error && error.status === 503) {
           showStartupWait();
@@ -2778,10 +4311,101 @@ function page(response: ServerResponse): void {
   response.end(pageHtml);
 }
 
+function cachedOneNoteImage(src: string) {
+  const cached = imageProxyCache.get(src);
+  if (!cached) return undefined;
+  if (Date.now() - cached.cachedAt > imageProxyCacheTtlMs) {
+    imageProxyCache.delete(src);
+    return undefined;
+  }
+  return cached;
+}
+
+function setCachedOneNoteImage(src: string, value: { buffer: Buffer; contentType: string; etag?: string }): void {
+  if (imageProxyCache.size >= imageProxyCacheMaxEntries) {
+    const oldest = [...imageProxyCache.entries()]
+      .sort((left, right) => left[1].cachedAt - right[1].cachedAt)[0]?.[0];
+    if (oldest) imageProxyCache.delete(oldest);
+  }
+  imageProxyCache.set(src, { ...value, cachedAt: Date.now() });
+}
+
+function validatedOneNoteImageSource(value: string): string {
+  const src = new URL(value);
+  if (src.protocol !== 'https:' || src.hostname !== 'graph.microsoft.com' || !src.pathname.startsWith('/v1.0/')) {
+    const error = new Error('Only Microsoft Graph v1.0 image URLs can be proxied.') as Error & { statusCode?: number };
+    error.statusCode = 400;
+    throw error;
+  }
+  return src.toString();
+}
+
+async function oneNoteImage(response: ServerResponse, srcValue: string): Promise<void> {
+  const src = validatedOneNoteImageSource(srcValue);
+  let image = cachedOneNoteImage(src);
+  if (!image) {
+    const fetched = await graphBinary(src, 'image/*,*/*');
+    if (!fetched.contentType.toLowerCase().startsWith('image/')) {
+      const error = new Error(`Graph resource is not an image: ${fetched.contentType}`) as Error & { statusCode?: number };
+      error.statusCode = 415;
+      throw error;
+    }
+    setCachedOneNoteImage(src, fetched);
+    image = cachedOneNoteImage(src);
+  }
+  if (!image) throw new Error('OneNote image cache failed.');
+  response.writeHead(200, {
+    'Content-Type': image.contentType,
+    'Cache-Control': 'private, max-age=1800',
+    'X-Content-Type-Options': 'nosniff',
+    ...(image.etag ? { ETag: image.etag } : {})
+  });
+  response.end(image.buffer);
+}
+
 function required(url: URL, name: string): string {
   const value = url.searchParams.get(name);
   if (!value) throw new Error(`Missing query parameter: ${name}`);
   return value;
+}
+
+function includeAuxiliaryBibleRefs(url: URL): boolean {
+  return url.searchParams.get('includeAux') === '1' || url.searchParams.get('includeAux') === 'true';
+}
+
+function visibleBibleRefSql(alias: string, paragraphAlias?: string): string {
+  const fragment = paragraphAlias
+    ? `AND instr(substr(COALESCE(${paragraphAlias}.text, ''), COALESCE(${alias}.start_index, 0) + 1, COALESCE(${alias}.end_index, ${alias}.start_index) - COALESCE(${alias}.start_index, 0) + 1), '[') = 0
+    AND instr(substr(COALESCE(${paragraphAlias}.text, ''), COALESCE(${alias}.start_index, 0) + 1, COALESCE(${alias}.end_index, ${alias}.start_index) - COALESCE(${alias}.start_index, 0) + 1), ']') = 0
+    AND instr(substr(COALESCE(${paragraphAlias}.text, ''), COALESCE(${alias}.start_index, 0) + 1, COALESCE(${alias}.end_index, ${alias}.start_index) - COALESCE(${alias}.start_index, 0) + 1), '{') = 0
+    AND instr(substr(COALESCE(${paragraphAlias}.text, ''), COALESCE(${alias}.start_index, 0) + 1, COALESCE(${alias}.end_index, ${alias}.start_index) - COALESCE(${alias}.start_index, 0) + 1), '}') = 0`
+    : '';
+  return `COALESCE(${alias}.entry_options, 'None') NOT IN ('IsExcluded', 'InSquareBrackets')
+    AND COALESCE(${alias}.entry_options, '') NOT LIKE '%Excluded%'
+    AND COALESCE(${alias}.entry_options, '') NOT LIKE '%Square%'
+    AND COALESCE(${alias}.entry_options, '') NOT LIKE '%Curly%'
+    AND COALESCE(${alias}.entry_options, '') NOT LIKE '%Bracket%'
+    AND COALESCE(${alias}.entry_options, '') NOT LIKE '%Brace%'
+    AND COALESCE(${alias}.entry_type, '') NOT LIKE '%Excluded%'
+    AND COALESCE(${alias}.entry_type, '') NOT LIKE '%Square%'
+    AND COALESCE(${alias}.entry_type, '') NOT LIKE '%Curly%'
+    AND COALESCE(${alias}.entry_type, '') NOT LIKE '%Bracket%'
+    AND COALESCE(${alias}.entry_type, '') NOT LIKE '%Brace%'
+    AND TRIM(COALESCE(${alias}.original_text, '')) NOT LIKE '[%'
+    AND TRIM(COALESCE(${alias}.original_text, '')) NOT LIKE '{%'
+    ${fragment}`;
+}
+
+function visibleBibleScopeSql(pageAlias: string, sectionAlias?: string): string {
+  const values = [
+    `COALESCE(${pageAlias}.title, '')`,
+    `COALESCE(${pageAlias}.parent_section_name, '')`
+  ];
+  if (sectionAlias) values.push(`COALESCE(${sectionAlias}.section_group_path, '')`);
+  return values.map(value => `instr(${value}, '[') = 0
+    AND instr(${value}, ']') = 0
+    AND instr(${value}, '{') = 0
+    AND instr(${value}, '}') = 0`).join('\n    AND ');
 }
 
 async function fetchJson(url: string, init?: RequestInit): Promise<any> {
@@ -2804,6 +4428,16 @@ async function bibleNoteModules(): Promise<Array<Record<string, unknown>>> {
   return fetchJson(`${bibleConfig.apiUrl.replace(/\/+$/, '')}/api/VerseParsing/Modules`) as Promise<Array<Record<string, unknown>>>;
 }
 
+async function bibleNoteBooks(module: string): Promise<Array<Record<string, unknown>>> {
+  const bibleConfig = bibleParseConfigFromEnv();
+  const params = new URLSearchParams({ module });
+  return fetchJson(`${bibleConfig.apiUrl.replace(/\/+$/, '')}/api/VerseParsing/Books?${params.toString()}`) as Promise<Array<Record<string, unknown>>>;
+}
+
+let localBibleNoteProcess: ChildProcess | undefined;
+let localBibleNoteEnsurePromise: Promise<void> | undefined;
+let bibleNoteHealthyUntil = 0;
+
 function electronControlUrl(pathname: string): string | undefined {
   const base = process.env.ONENOTE_ELECTRON_CONTROL_URL;
   if (!base) return undefined;
@@ -2815,6 +4449,94 @@ async function electronControl(pathname: string, method = 'GET'): Promise<Record
   if (!target) return { available:false };
   return fetchJson(target, { method }) as Promise<Record<string, unknown>>;
 }
+
+function messageOf(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+async function waitForBibleNoteHealth(timeoutMs: number): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  let lastError: unknown;
+  while (Date.now() < deadline) {
+    try {
+      await bibleNoteHealth();
+      return;
+    } catch (error) {
+      lastError = error;
+    }
+    await new Promise(resolve => setTimeout(resolve, 500));
+  }
+  throw lastError instanceof Error ? lastError : new Error(String(lastError));
+}
+
+function startLocalBibleNoteProcess(): void {
+  const exe = process.env.BIBLENOTE_EXE_PATH;
+  if (!exe) throw new Error('BIBLENOTE_EXE_PATH is not set.');
+  if (!fs.existsSync(exe)) throw new Error(`BibleNote executable was not found: ${exe}`);
+  if (localBibleNoteProcess && !localBibleNoteProcess.killed) return;
+
+  const bibleConfig = bibleParseConfigFromEnv();
+  logStartupTiming(`starting local BibleNote API exe=${exe}`);
+  localBibleNoteProcess = spawn(exe, ['--urls', bibleConfig.apiUrl], {
+    cwd:path.dirname(exe),
+    env:{
+      ...process.env,
+      ASPNETCORE_ENVIRONMENT:process.env.ASPNETCORE_ENVIRONMENT ?? 'Development',
+      BIBLENOTE_API_URL:bibleConfig.apiUrl
+    },
+    windowsHide:true,
+    stdio:['ignore', 'pipe', 'pipe']
+  });
+  localBibleNoteProcess.stdout?.on('data', chunk => logStartupTiming(`[biblenote] ${chunk.toString().trimEnd()}`));
+  localBibleNoteProcess.stderr?.on('data', chunk => logStartupTiming(`[biblenote] ${chunk.toString().trimEnd()}`));
+  localBibleNoteProcess.on('error', error => logStartupTiming(`local BibleNote API process error: ${error.message}`));
+  localBibleNoteProcess.on('exit', (code, signal) => {
+    logStartupTiming(`local BibleNote API process exited code=${code ?? 'null'} signal=${signal ?? 'null'}`);
+    localBibleNoteProcess = undefined;
+  });
+}
+
+async function ensureLocalBibleNoteAvailable(): Promise<void> {
+  if (!localBibleNoteEnsurePromise) {
+    localBibleNoteEnsurePromise = (async () => {
+      startLocalBibleNoteProcess();
+      await waitForBibleNoteHealth(30000);
+      bibleNoteHealthyUntil = Date.now() + 30000;
+    })().finally(() => {
+      localBibleNoteEnsurePromise = undefined;
+    });
+  }
+  await localBibleNoteEnsurePromise;
+}
+
+async function ensureBibleNoteAvailable(): Promise<void> {
+  if (Date.now() < bibleNoteHealthyUntil) return;
+  try {
+    await bibleNoteHealth();
+    bibleNoteHealthyUntil = Date.now() + 30000;
+    return;
+  } catch (firstError) {
+    const result = await electronControl('/biblenote/ensure', 'POST').catch(error => ({
+      available:false,
+      error:messageOf(error)
+    }));
+    if (result.available) {
+      await bibleNoteHealth();
+      bibleNoteHealthyUntil = Date.now() + 30000;
+      return;
+    }
+    try {
+      await ensureLocalBibleNoteAvailable();
+      return;
+    } catch (localError) {
+      throw new Error(`BibleNote API is unavailable: ${String(result.error || messageOf(firstError))}; local start failed: ${messageOf(localError)}`);
+    }
+  }
+}
+
+process.once('exit', () => {
+  if (localBibleNoteProcess && !localBibleNoteProcess.killed) localBibleNoteProcess.kill();
+});
 
 function cleanModuleName(fileName: string): string {
   const parsed = path.parse(fileName);
@@ -2829,7 +4551,7 @@ async function uploadBibleNoteModule(fileName: string, contentBase64: string): P
   const bibleConfig = bibleParseConfigFromEnv();
   const apiUrl = bibleConfig.apiUrl.replace(/\/+$/, '');
   const moduleName = cleanModuleName(fileName);
-  const uploadDir = path.join(process.env.APPDATA || process.cwd(), 'OneNote Bible Explorer', 'BibleNoteModules');
+  const uploadDir = path.join(process.env.APPDATA || process.cwd(), 'BibleNote', 'BibleNoteModules');
   fs.mkdirSync(uploadDir, { recursive:true });
   const tempFile = path.join(uploadDir, `${moduleName}${path.extname(fileName).toLowerCase()}`);
   fs.writeFileSync(tempFile, Buffer.from(contentBase64, 'base64'));
@@ -2891,12 +4613,15 @@ function parseIsbtBibleVerse(rawRef: string): Record<string, unknown> | undefine
 }
 
 async function parseExternalBibleRef(rawRef: string, module?: string): Promise<Record<string, unknown>> {
-  const normalizedRawRef = rawRef.trim().replace(/^https?:\/\/isbtBibleVerse:/i, 'isbtBibleVerse:');
+  const normalizedRawRef = rawRef.trim()
+    .replace(/^https?:\/\/isbtBibleVerse:/i, 'isbtBibleVerse:')
+    .replace(/^https?:\/\/bnVerse:/i, 'bnVerse:');
   const isbtReference = /^isbtBibleVerse:/i.test(normalizedRawRef) ? parseIsbtBibleVerse(normalizedRawRef) : undefined;
   if (isbtReference) return isbtReference;
 
   const text = normalizedRawRef.replace(/^bnVerse:/i, '').trim();
   if (!text) throw new Error('Bible reference is empty.');
+  await ensureBibleNoteAvailable();
   const bibleConfig = bibleParseConfigFromEnv();
   const parsed = await parsePageWithBibleNote({
     apiUrl:bibleConfig.apiUrl,
@@ -3027,6 +4752,7 @@ function optionalString(value: unknown, name: string): string | undefined {
 }
 
 export function startCacheUi(options: UiOptions): http.Server {
+  configureRuntimeLogging(path.dirname(options.dbPath));
   let cacheDb: CacheDb | undefined;
   let dbInitStarted = false;
   let dbInitError: Error | undefined;
@@ -3063,13 +4789,56 @@ export function startCacheUi(options: UiOptions): http.Server {
   const server = http.createServer(async (request: IncomingMessage, response: ServerResponse) => {
     try {
       const url = new URL(request.url ?? '/', `http://${request.headers.host ?? '127.0.0.1'}`);
+      const requestStartedAt = Date.now();
+      response.on('finish', () => {
+        if (url.pathname !== '/api/runtime-log') {
+          runtimeLog('http', `${request.method ?? 'GET'} ${url.pathname}`, {
+            statusCode: response.statusCode,
+            durationMs: Date.now() - requestStartedAt,
+            query: Object.fromEntries(url.searchParams.entries())
+          });
+        }
+      });
       if (request.method === 'GET' && (url.pathname === '/' || url.pathname.startsWith('/page/'))) return page(response);
+      if (url.pathname === '/api/onenote-image' && request.method === 'GET') {
+        await oneNoteImage(response, required(url, 'src'));
+        return;
+      }
       if (url.pathname === '/api/sync' && request.method === 'GET') return json(response, 200, syncState);
       if (url.pathname === '/api/startup' && request.method === 'GET') return json(response, dbInitError ? 500 : 200, {
         ready: Boolean(cacheDb),
         starting: dbInitStarted && !cacheDb && !dbInitError,
         error: dbInitError?.message
       });
+      if (url.pathname === '/api/runtime-settings' && request.method === 'GET') {
+        return json(response, 200, readRuntimeLoggingSettings());
+      }
+      if (url.pathname === '/api/runtime-settings' && request.method === 'PUT') {
+        const ownOrigin = `http://${request.headers.host ?? `127.0.0.1:${options.port}`}`;
+        if (request.headers.origin && request.headers.origin !== ownOrigin) {
+          return json(response, 403, { error: 'Cross-origin runtime settings requests are not allowed.' });
+        }
+        return json(response, 200, await saveRuntimeLoggingSettings(await readJsonBody(request)));
+      }
+      if (url.pathname === '/api/runtime-log' && request.method === 'POST') {
+        const ownOrigin = `http://${request.headers.host ?? `127.0.0.1:${options.port}`}`;
+        if (request.headers.origin && request.headers.origin !== ownOrigin) {
+          return json(response, 403, { error: 'Cross-origin runtime log requests are not allowed.' });
+        }
+        const body = await readJsonBody(request);
+        runtimeLog('ui', typeof body.action === 'string' ? body.action : 'event', body.details);
+        return json(response, 200, {});
+      }
+      if (url.pathname === '/api/onenote/access-settings' && request.method === 'GET') {
+        return json(response, 200, readOneNoteAccessSettings());
+      }
+      if (url.pathname === '/api/onenote/access-settings' && request.method === 'PUT') {
+        const ownOrigin = `http://${request.headers.host ?? `127.0.0.1:${options.port}`}`;
+        if (request.headers.origin && request.headers.origin !== ownOrigin) {
+          return json(response, 403, { error: 'Cross-origin OneNote settings requests are not allowed.' });
+        }
+        return json(response, 200, await saveOneNoteAccessSettings(await readJsonBody(request)));
+      }
       if (url.pathname === '/api/biblenote/health' && request.method === 'GET') {
         try {
           const health = await bibleNoteHealth();
@@ -3130,6 +4899,20 @@ export function startCacheUi(options: UiOptions): http.Server {
         if (scopeCount > 1) throw new Error('Specify only one sync scope: notebookIds, sectionId, or pageId.');
         const startedAt = new Date().toISOString();
         syncState = { status: 'running', startedAt, progress: { phase: 'starting', message: 'Подготовка' } };
+        runtimeLog('sync', 'Sync started', {
+          maxPages,
+          concurrency,
+          refreshOlderThanHours,
+          metadataOnly: body.metadataOnly === true,
+          forceContent: body.forceContent === true,
+          includeHtml: body.includeHtml === true,
+          parseBibleRefs: body.parseBibleRefs === true,
+          forceBibleParse: body.forceBibleParse === true,
+          bibleModule,
+          notebookIds,
+          sectionId,
+          pageId
+        });
         void syncOneNoteCache({
           dbPath: options.dbPath,
           maxPages,
@@ -3145,13 +4928,16 @@ export function startCacheUi(options: UiOptions): http.Server {
           sectionId,
           pageId,
           onProgress: progress => {
+            runtimeLog('sync-progress', progress.phase || 'progress', progress);
             syncState = { ...syncState, progress };
           }
         }).then(result => {
           console.log(`Sync completed: pages=${result.pages}, contentDownloaded=${result.contentDownloaded}, bibleRefsRecognized=${result.bibleRefsRecognized}, contentErrors=${result.contentErrors}, bibleParseErrors=${result.bibleRefsParseErrors}`);
+          runtimeLog('sync', 'Sync completed', result);
           syncState = { status: 'success', startedAt, finishedAt: new Date().toISOString(), result };
         }).catch(error => {
           console.error(`Sync failed: ${(error?.message ?? String(error)).slice(0, 4000)}`);
+          runtimeLog('sync', 'Sync failed', { error: error?.stack ?? error?.message ?? String(error) });
           syncState = {
             status: 'failed',
             startedAt,
@@ -3190,12 +4976,25 @@ export function startCacheUi(options: UiOptions): http.Server {
       if (url.pathname === '/api/status') return json(response, 200, cacheStatus(db));
       if (url.pathname === '/api/bible/stats') {
         const one = (sql: string) => (db.prepare(sql).get() as any)?.value ?? 0;
+        const includeAux = includeAuxiliaryBibleRefs(url);
+        const refFilter = includeAux ? '1' : visibleBibleRefSql('r');
+        const scopeFilter = includeAux ? '1' : visibleBibleScopeSql('p', 's');
+        const statsFrom = `paragraph_verse_refs r
+          JOIN pages p ON p.id = r.page_id
+          LEFT JOIN sections s ON s.id = p.parent_section_id`;
+        const statsWhere = `${refFilter} AND ${scopeFilter}`;
         return json(response, 200, {
-          pages: one('SELECT COUNT(DISTINCT page_id) AS value FROM paragraph_verse_refs'),
-          paragraphs: one('SELECT COUNT(*) AS value FROM page_paragraphs'),
-          references: one('SELECT COUNT(*) AS value FROM paragraph_verse_refs'),
+          pages: one(`SELECT COUNT(DISTINCT r.page_id) AS value FROM ${statsFrom} WHERE ${statsWhere}`),
+          paragraphs: one(`SELECT COUNT(DISTINCT r.page_id || ':' || r.paragraph_index) AS value FROM ${statsFrom} WHERE ${statsWhere}`),
+          references: one(`SELECT COUNT(*) AS value FROM ${statsFrom} WHERE ${statsWhere}`),
           errors: one("SELECT COUNT(*) AS value FROM page_bible_parse_state WHERE parse_error IS NOT NULL")
         });
+      }
+      if (url.pathname === '/api/bible/books') {
+        const bibleConfig = bibleParseConfigFromEnv();
+        const module = url.searchParams.get('module')?.trim() || bibleConfig.module;
+        await ensureBibleNoteAvailable();
+        return json(response, 200, { module, books:await bibleNoteBooks(module) });
       }
       if (url.pathname === '/api/bible/text') {
         const bookIndex = Number(required(url, 'bookIndex'));
@@ -3217,10 +5016,14 @@ export function startCacheUi(options: UiOptions): http.Server {
         }
         const bibleConfig = bibleParseConfigFromEnv();
         const module = url.searchParams.get('module')?.trim() || bibleConfig.module;
+        await ensureBibleNoteAvailable();
         return json(response, 200, await getVerseTextWithBibleNote({
           apiUrl: bibleConfig.apiUrl,
           module,
           bookIndex,
+          bookName: url.searchParams.get('bookName'),
+          bookShortName: url.searchParams.get('bookShortName'),
+          originalText: url.searchParams.get('originalText'),
           chapter,
           verse,
           topChapter,
@@ -3231,6 +5034,9 @@ export function startCacheUi(options: UiOptions): http.Server {
       }
       if (url.pathname === '/api/bible/page') {
         const pageId = required(url, 'id');
+        const includeAux = includeAuxiliaryBibleRefs(url);
+        const refFilter = includeAux ? '1' : visibleBibleRefSql('r', 'pp');
+        const scopeFilter = includeAux ? '1' : visibleBibleScopeSql('p', 's');
         const rows = db.prepare(`
           SELECT
             pp.paragraph_index AS paragraphIndex,
@@ -3252,7 +5058,11 @@ export function startCacheUi(options: UiOptions): http.Server {
             r.entry_options AS entryOptions
           FROM page_paragraphs pp
           JOIN paragraph_verse_refs r ON r.page_id = pp.page_id AND r.paragraph_index = pp.paragraph_index
+          JOIN pages p ON p.id = r.page_id
+          LEFT JOIN sections s ON s.id = p.parent_section_id
           WHERE pp.page_id = ?
+            AND ${refFilter}
+            AND ${scopeFilter}
           ORDER BY pp.paragraph_index, r.start_index
         `).all(pageId) as Array<Record<string, any>>;
         const paragraphs = new Map<number, any>();
@@ -3289,10 +5099,44 @@ export function startCacheUi(options: UiOptions): http.Server {
         const limit = Math.max(1, Math.min(Number(url.searchParams.get('limit') ?? '80') || 80, 200));
         const notebookIds = [...new Set(url.searchParams.getAll('notebookId').filter(Boolean))];
         const filters = ['p.deleted_at IS NULL'];
+        if (!includeAuxiliaryBibleRefs(url)) {
+          filters.push(visibleBibleRefSql('r', 'pp'));
+          filters.push(visibleBibleScopeSql('p', 's'));
+        }
         const params: Record<string, unknown> = { limit };
         if (query) {
-          filters.push('(r.normalized_ref LIKE @query OR r.original_text LIKE @query OR r.book_name LIKE @query OR pp.text LIKE @query)');
           params.query = `%${query}%`;
+          const textFilter = '(r.normalized_ref LIKE @query OR r.original_text LIKE @query OR r.book_name LIKE @query OR r.book_short_name LIKE @query OR pp.text LIKE @query)';
+          let referenceFilter = '';
+          try {
+            const parsedRef = await parseExternalBibleRef(query, url.searchParams.get('module')?.trim() || undefined);
+            const bookIndex = Number(parsedRef.bookIndex);
+            const chapter = Number(parsedRef.chapter);
+            const verse = Number(parsedRef.verse);
+            if (Number.isInteger(bookIndex) && Number.isInteger(chapter)) {
+              params.refBookIndex = bookIndex;
+              params.refStartChapter = chapter;
+              params.refEndChapter = Number.isInteger(Number(parsedRef.topChapter)) ? Number(parsedRef.topChapter) : chapter;
+              if (Number.isInteger(verse)) {
+                params.refStartVerse = verse;
+                params.refEndVerse = Number.isInteger(Number(parsedRef.topVerse)) ? Number(parsedRef.topVerse) : verse;
+                referenceFilter = `
+                  (
+                    r.book_index = @refBookIndex
+                    AND r.chapter = @refStartChapter
+                    AND COALESCE(r.verse, 0) = @refStartVerse
+                    AND COALESCE(r.top_chapter, r.chapter) = @refEndChapter
+                    AND COALESCE(r.top_verse, r.verse, 0) = @refEndVerse
+                  )
+                `;
+              } else {
+                referenceFilter = '(r.book_index = @refBookIndex AND r.chapter = @refStartChapter)';
+              }
+            }
+          } catch {
+            // Keep text search behavior when BibleNote does not recognize the query as a reference.
+          }
+          filters.push(referenceFilter ? `(${textFilter} OR ${referenceFilter})` : textFilter);
         }
         if (notebookIds.length > 0) {
           const placeholders = notebookIds.map((_, index) => {
@@ -3306,6 +5150,7 @@ export function startCacheUi(options: UiOptions): http.Server {
           SELECT COUNT(*) AS value
           FROM paragraph_verse_refs r
           JOIN pages p ON p.id = r.page_id
+          LEFT JOIN sections s ON s.id = p.parent_section_id
           JOIN page_paragraphs pp ON pp.page_id = r.page_id AND pp.paragraph_index = r.paragraph_index
           WHERE ${whereSql}
         `).get(params) as { value: number }).value;
@@ -3324,6 +5169,7 @@ export function startCacheUi(options: UiOptions): http.Server {
             r.verse
           FROM paragraph_verse_refs r
           JOIN pages p ON p.id = r.page_id
+          LEFT JOIN sections s ON s.id = p.parent_section_id
           JOIN page_paragraphs pp ON pp.page_id = r.page_id AND pp.paragraph_index = r.paragraph_index
           LEFT JOIN notebooks n ON n.id = p.parent_notebook_id
           WHERE ${whereSql}
@@ -3341,7 +5187,13 @@ export function startCacheUi(options: UiOptions): http.Server {
         if (!Number.isInteger(bookIndex) || !Number.isInteger(chapter) || (verse != null && !Number.isInteger(verse))) {
           throw new Error('bookIndex, chapter, and verse must be integers.');
         }
-        return json(response, 200, { rows:findParallelBibleReferences(db, { bookIndex, chapter, verse, limit }) });
+        return json(response, 200, { rows:findParallelBibleReferences(db, {
+          bookIndex,
+          chapter,
+          verse,
+          limit,
+          includeAuxiliaryRefs:includeAuxiliaryBibleRefs(url)
+        }) });
       }
       if (url.pathname === '/api/bible/parallel/notes') {
         const bookIndex = Number(required(url, 'bookIndex'));
@@ -3367,7 +5219,8 @@ export function startCacheUi(options: UiOptions): http.Server {
             relatedBookIndex,
             relatedChapter,
             relatedVerse,
-            limit
+            limit,
+            includeAuxiliaryRefs:includeAuxiliaryBibleRefs(url)
           })
         });
       }
@@ -3509,7 +5362,20 @@ export function startCacheUi(options: UiOptions): http.Server {
           mode = 'phrase';
         }
         if (!['and', 'phrase', 'regex'].includes(mode)) throw new Error(`Unknown search mode: ${mode}`);
-        const rawResults = mode === 'and' && !caseSensitive
+        let parsedSearchRef: Awaited<ReturnType<typeof parseExternalBibleRef>> | null = null;
+        if (mode !== 'regex' && /(?:\d|:|bnVerse:|isbtBibleVerse:)/i.test(query)) {
+          try {
+            const parsed = await parseExternalBibleRef(query, url.searchParams.get('module')?.trim() || undefined);
+            if (Number.isInteger(Number(parsed.bookIndex)) && Number.isInteger(Number(parsed.chapter))) {
+              parsedSearchRef = parsed;
+            }
+          } catch {
+            parsedSearchRef = null;
+          }
+        }
+        const rawResults = parsedSearchRef
+          ? []
+          : mode === 'and' && !caseSensitive
           ? searchCache(db, query, {
               limit:100,
               mode:'and',
@@ -3521,14 +5387,137 @@ export function startCacheUi(options: UiOptions): http.Server {
               caseSensitive,
               notebookIds
             });
-        const results = rawResults.map((item: any) => ({
-          id: item.id,
-          title: item.title,
-          notebookId: item.parent_notebook_id,
-          notebook: item.parent_notebook_name,
-          section: item.parent_section_name,
-          snippet: item.snippet
-        }));
+        const resultsById = new Map<string, Record<string, unknown>>();
+        const addResult = (item: Record<string, any>) => {
+          const id = String(item.id);
+          const paragraphIndex = Number.isInteger(item.paragraphIndex) ? item.paragraphIndex : undefined;
+          const existing = resultsById.get(id);
+          if (existing) {
+            if (existing.paragraphIndex == null && paragraphIndex != null) existing.paragraphIndex = paragraphIndex;
+            if (paragraphIndex != null) {
+              const paragraphIndexes = Array.isArray(existing.paragraphIndexes) ? existing.paragraphIndexes : [];
+              if (!paragraphIndexes.includes(paragraphIndex)) paragraphIndexes.push(paragraphIndex);
+              existing.paragraphIndexes = paragraphIndexes;
+            }
+            if (!existing.snippet && item.snippet) existing.snippet = item.snippet;
+            if (!existing.bibleRef && item.bibleRef) existing.bibleRef = item.bibleRef;
+            if (item.bibleMatchScore != null) {
+              const currentScore = Number(existing.bibleMatchScore ?? Number.POSITIVE_INFINITY);
+              const nextScore = Number(item.bibleMatchScore);
+              if (Number.isFinite(nextScore) && nextScore < currentScore) existing.bibleMatchScore = nextScore;
+            }
+            return;
+          }
+          resultsById.set(id, {
+            id:item.id,
+            title:item.title,
+            notebookId:item.parent_notebook_id,
+            notebook:item.parent_notebook_name,
+            section:item.parent_section_name,
+            snippet:item.snippet,
+            paragraphIndex,
+            paragraphIndexes:paragraphIndex != null ? [paragraphIndex] : [],
+            bibleRef:item.bibleRef,
+            bibleMatchScore:item.bibleMatchScore
+          });
+        };
+        rawResults.forEach((item: any) => addResult(item));
+
+        if (parsedSearchRef) {
+          try {
+            const parsedRef = parsedSearchRef;
+            const bookIndex = Number(parsedRef.bookIndex);
+            const chapter = Number(parsedRef.chapter);
+            const verse = Number(parsedRef.verse);
+            if (Number.isInteger(bookIndex) && Number.isInteger(chapter)) {
+              const filters = ['p.deleted_at IS NULL'];
+              if (!includeAuxiliaryBibleRefs(url)) {
+                filters.push(visibleBibleRefSql('r', 'pp'));
+                filters.push(visibleBibleScopeSql('p', 's'));
+              }
+              const bibleParams: Record<string, unknown> = {
+                limit:100,
+                refBookIndex:bookIndex,
+                refStartChapter:chapter,
+                refEndChapter:Number.isInteger(Number(parsedRef.topChapter)) ? Number(parsedRef.topChapter) : chapter,
+                refStartVerse:null,
+                refEndVerse:null
+              };
+              if (Number.isInteger(verse)) {
+                bibleParams.refStartVerse = verse;
+                bibleParams.refEndVerse = Number.isInteger(Number(parsedRef.topVerse)) ? Number(parsedRef.topVerse) : verse;
+                filters.push(`
+                  r.book_index = @refBookIndex
+                  AND r.chapter = @refStartChapter
+                  AND COALESCE(r.verse, 0) = @refStartVerse
+                  AND COALESCE(r.top_chapter, r.chapter) = @refEndChapter
+                  AND COALESCE(r.top_verse, r.verse, 0) = @refEndVerse
+                `);
+              } else {
+                filters.push('r.book_index = @refBookIndex AND r.chapter = @refStartChapter');
+              }
+              if (notebookIds.length > 0) {
+                const placeholders = notebookIds.map((_, index) => {
+                  bibleParams[`notebookId${index}`] = notebookIds[index];
+                  return `@notebookId${index}`;
+                });
+                filters.push(`p.parent_notebook_id IN (${placeholders.join(', ')})`);
+              }
+              const bibleRows = db.prepare(`
+                SELECT
+                  r.page_id AS id,
+                  p.title,
+                  p.parent_notebook_id,
+                  COALESCE(n.custom_display_name, p.parent_notebook_name) AS parent_notebook_name,
+                  p.parent_section_name,
+                  r.paragraph_index AS paragraphIndex,
+                  pp.text AS snippet,
+                  COALESCE(r.normalized_ref, r.original_text) AS bibleRef,
+                  CASE
+                    WHEN @refStartVerse IS NULL THEN 0
+                    WHEN r.chapter = @refStartChapter AND COALESCE(r.verse, 0) = @refStartVerse
+                      AND COALESCE(r.top_chapter, r.chapter) = @refEndChapter
+                      AND COALESCE(r.top_verse, r.verse, 0) = @refEndVerse THEN 0
+                    WHEN r.chapter = @refStartChapter AND COALESCE(r.verse, 0) = @refStartVerse THEN 1
+                    WHEN COALESCE(r.top_chapter, r.chapter) = @refEndChapter
+                      AND COALESCE(r.top_verse, r.verse, 0) = @refEndVerse THEN 2
+                    ELSE 10
+                  END AS bibleMatchScore
+                FROM paragraph_verse_refs r
+                JOIN pages p ON p.id = r.page_id
+                LEFT JOIN sections s ON s.id = p.parent_section_id
+                JOIN page_paragraphs pp ON pp.page_id = r.page_id AND pp.paragraph_index = r.paragraph_index
+                LEFT JOIN notebooks n ON n.id = p.parent_notebook_id
+                WHERE ${filters.join(' AND ')}
+                ORDER BY p.last_modified_date_time DESC, r.page_id, r.paragraph_index, r.start_index
+                LIMIT @limit
+              `).all(bibleParams) as Array<Record<string, unknown>>;
+              bibleRows.forEach(addResult);
+            }
+          } catch (error) {
+            runtimeLog('search', 'Bible reference search skipped', {
+              query,
+              error:error instanceof Error ? error.message : String(error)
+            });
+          }
+        }
+        for (const result of resultsById.values()) {
+          if (Array.isArray(result.paragraphIndexes)) {
+            const paragraphIndexes = result.paragraphIndexes as unknown[];
+            const sortedParagraphIndexes = [...new Set(paragraphIndexes)]
+              .filter((value): value is number => Number.isInteger(value))
+              .sort((left, right) => left - right);
+            result.paragraphIndexes = sortedParagraphIndexes;
+            result.paragraphIndex = sortedParagraphIndexes[0] ?? result.paragraphIndex;
+          }
+        }
+        const results = [...resultsById.values()]
+          .sort((left, right) => {
+            const bibleCompare = Number(Boolean(right.bibleRef)) - Number(Boolean(left.bibleRef));
+            if (bibleCompare !== 0) return bibleCompare;
+            return Number(left.bibleMatchScore ?? 1000) - Number(right.bibleMatchScore ?? 1000);
+          })
+          .slice(0, 100);
         return json(response, 200, results);
       }
       if (url.pathname === '/api/page') {
@@ -3544,11 +5533,36 @@ export function startCacheUi(options: UiOptions): http.Server {
         const row = getCachedPage(db, pageId);
         if (!row || row.deleted_at) return json(response, 404, { error: 'Page is not in the active cache.' });
         if (!row.content_html) return json(response, 404, { error: 'HTML is not cached for this page.' });
-        return json(response, 200, { id: pageId, html: row.content_html });
+        if (url.searchParams.get('raw') === '1') return json(response, 200, { id: pageId, html: row.content_html });
+        await ensureBibleNoteAvailable();
+        const bibleConfig = bibleParseConfigFromEnv();
+        const parsed = await parsePageWithBibleNote({
+          apiUrl: bibleConfig.apiUrl,
+          pageId,
+          title: row.title,
+          html: row.content_html,
+          text: row.content_text,
+          module: url.searchParams.get('module') || bibleConfig.module,
+          useCommaDelimiter: bibleConfig.useCommaDelimiter,
+          timeoutMs: bibleConfig.timeoutMs,
+          updateHtml: true
+        });
+        if (parsed.html && parsed.html !== row.content_html) {
+          updatePageHtml(db, pageId, parsed.html);
+          runtimeLog('http', 'Updated cached page HTML from page-html request', {
+            pageId,
+            htmlBytes: parsed.html.length
+          });
+        }
+        return json(response, 200, { id: pageId, html: parsed.html || row.content_html });
       }
       return json(response, 404, { error: 'Not found.' });
     } catch (error: any) {
       const statusCode = Number.isInteger(error?.statusCode) ? error.statusCode : 400;
+      runtimeLog('http-error', `${request.method ?? 'GET'} ${request.url ?? ''}`, {
+        statusCode,
+        error: error?.stack ?? error?.message ?? String(error)
+      });
       return json(response, statusCode, { error: error?.message ?? String(error) });
     }
   });
@@ -3556,7 +5570,7 @@ export function startCacheUi(options: UiOptions): http.Server {
   server.on('close', () => cacheDb?.close());
   server.listen(options.port, '127.0.0.1', () => {
     logStartupTiming(`server listening port=${options.port}`);
-    console.log(`OneNote Cache Explorer: http://127.0.0.1:${options.port}`);
+    console.log(`BibleNote: http://127.0.0.1:${options.port}`);
     console.log(`Database: ${options.dbPath}`);
     console.log('Press Ctrl+C to stop.');
     startDbInit();

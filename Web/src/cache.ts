@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import type { BibleParseResult } from './bible.js';
+import { runtimeLog } from './runtime-logging.js';
 
 export type NotebookRow = {
   id: string;
@@ -140,10 +141,46 @@ type ParagraphWithReferences = {
   refs: StoredBibleReference[];
 };
 
+function visibleBibleRefSql(alias: string, paragraphAlias?: string): string {
+  const fragment = paragraphAlias
+    ? `AND instr(substr(COALESCE(${paragraphAlias}.text, ''), COALESCE(${alias}.start_index, 0) + 1, COALESCE(${alias}.end_index, ${alias}.start_index) - COALESCE(${alias}.start_index, 0) + 1), '[') = 0
+    AND instr(substr(COALESCE(${paragraphAlias}.text, ''), COALESCE(${alias}.start_index, 0) + 1, COALESCE(${alias}.end_index, ${alias}.start_index) - COALESCE(${alias}.start_index, 0) + 1), ']') = 0
+    AND instr(substr(COALESCE(${paragraphAlias}.text, ''), COALESCE(${alias}.start_index, 0) + 1, COALESCE(${alias}.end_index, ${alias}.start_index) - COALESCE(${alias}.start_index, 0) + 1), '{') = 0
+    AND instr(substr(COALESCE(${paragraphAlias}.text, ''), COALESCE(${alias}.start_index, 0) + 1, COALESCE(${alias}.end_index, ${alias}.start_index) - COALESCE(${alias}.start_index, 0) + 1), '}') = 0`
+    : '';
+  return `COALESCE(${alias}.entry_options, 'None') NOT IN ('IsExcluded', 'InSquareBrackets')
+    AND COALESCE(${alias}.entry_options, '') NOT LIKE '%Excluded%'
+    AND COALESCE(${alias}.entry_options, '') NOT LIKE '%Square%'
+    AND COALESCE(${alias}.entry_options, '') NOT LIKE '%Curly%'
+    AND COALESCE(${alias}.entry_options, '') NOT LIKE '%Bracket%'
+    AND COALESCE(${alias}.entry_options, '') NOT LIKE '%Brace%'
+    AND COALESCE(${alias}.entry_type, '') NOT LIKE '%Excluded%'
+    AND COALESCE(${alias}.entry_type, '') NOT LIKE '%Square%'
+    AND COALESCE(${alias}.entry_type, '') NOT LIKE '%Curly%'
+    AND COALESCE(${alias}.entry_type, '') NOT LIKE '%Bracket%'
+    AND COALESCE(${alias}.entry_type, '') NOT LIKE '%Brace%'
+    AND TRIM(COALESCE(${alias}.original_text, '')) NOT LIKE '[%'
+    AND TRIM(COALESCE(${alias}.original_text, '')) NOT LIKE '{%'
+    ${fragment}`;
+}
+
+function visibleBibleScopeSql(pageAlias: string, sectionAlias?: string): string {
+  const values = [
+    `COALESCE(${pageAlias}.title, '')`,
+    `COALESCE(${pageAlias}.parent_section_name, '')`
+  ];
+  if (sectionAlias) values.push(`COALESCE(${sectionAlias}.section_group_path, '')`);
+  return values.map(value => `instr(${value}, '[') = 0
+    AND instr(${value}, ']') = 0
+    AND instr(${value}, '{') = 0
+    AND instr(${value}, '}') = 0`).join('\n    AND ');
+}
+
 export const defaultCacheDir = path.join(os.homedir(), '.codex-onenote-mcp');
 export const defaultDbPath = process.env.ONENOTE_CACHE_DB ?? path.join(defaultCacheDir, 'onenote-cache.sqlite');
 
 const startupTimingStartedAt = Date.now();
+const maxBibleRelationsPerPage = 50_000;
 
 function logStartupTiming(message: string): void {
   if (process.env.ONENOTE_STARTUP_TIMING !== '1') return;
@@ -350,11 +387,17 @@ function migrate(db: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_pages_content_synced ON pages(content_synced_at);
     CREATE INDEX IF NOT EXISTS idx_pages_deleted ON pages(deleted_at);
     CREATE INDEX IF NOT EXISTS idx_bible_refs_page ON paragraph_verse_refs(page_id);
+    CREATE INDEX IF NOT EXISTS idx_bible_refs_page_paragraph ON paragraph_verse_refs(page_id, paragraph_index);
     CREATE INDEX IF NOT EXISTS idx_bible_refs_ref ON paragraph_verse_refs(book_index, chapter, verse, top_chapter, top_verse);
     CREATE INDEX IF NOT EXISTS idx_bible_refs_normalized ON paragraph_verse_refs(normalized_ref);
+    CREATE INDEX IF NOT EXISTS idx_bible_relations_verse_ref ON paragraph_verse_relations(verse_ref_id);
+    CREATE INDEX IF NOT EXISTS idx_bible_relations_relative_verse_ref ON paragraph_verse_relations(relative_verse_ref_id);
     CREATE INDEX IF NOT EXISTS idx_bible_relations_verse ON paragraph_verse_relations(verse_id);
     CREATE INDEX IF NOT EXISTS idx_bible_relations_relative ON paragraph_verse_relations(relative_verse_id);
     CREATE INDEX IF NOT EXISTS idx_bible_relations_page ON paragraph_verse_relations(page_id);
+    CREATE INDEX IF NOT EXISTS idx_bible_relations_page_paragraph ON paragraph_verse_relations(page_id, paragraph_index);
+    CREATE INDEX IF NOT EXISTS idx_bible_relations_page_relative_paragraph ON paragraph_verse_relations(page_id, relative_paragraph_index);
+    CREATE INDEX IF NOT EXISTS idx_bible_not_found_page_paragraph ON paragraph_verse_not_found(page_id, paragraph_index);
     CREATE INDEX IF NOT EXISTS idx_page_bible_parse_state_module ON page_bible_parse_state(module, parser_version);
 
     CREATE VIRTUAL TABLE IF NOT EXISTS pages_fts USING fts5(
@@ -671,6 +714,15 @@ export function updatePageContent(
   tx();
 }
 
+export function updatePageHtml(db: Database.Database, pageId: string, html: string, updatedAt = nowIso()): void {
+  db.prepare(`
+    UPDATE pages SET
+      content_html = ?,
+      content_synced_at = ?
+    WHERE id = ?
+  `).run(html, updatedAt, pageId);
+}
+
 export function setPageFetchError(db: Database.Database, pageId: string, error: string): void {
   db.prepare('UPDATE pages SET fetch_error = ? WHERE id = ?').run(error.slice(0, 4000), pageId);
 }
@@ -784,12 +836,13 @@ function buildBibleRelations(pageId: string, paragraphs: ParagraphWithReferences
     source: StoredBibleReference,
     target: StoredBibleReference,
     relationWeight: number
-  ) => {
+  ): boolean => {
     const sourceVerses = getStoredReferenceVerseIds(source);
     const targetVerses = getStoredReferenceVerseIds(target);
     for (const sourceVerse of sourceVerses) {
       for (const targetVerse of targetVerses) {
         if (sourceVerse.verseId === targetVerse.verseId) continue;
+        if (rows.length >= maxBibleRelationsPerPage) return false;
         rows.push({
           page_id: pageId,
           verse_ref_id: sourceVerse.refId,
@@ -805,6 +858,7 @@ function buildBibleRelations(pageId: string, paragraphs: ParagraphWithReferences
         });
       }
     }
+    return rows.length < maxBibleRelationsPerPage;
   };
 
   for (let paragraphIndex = 0; paragraphIndex < paragraphs.length; paragraphIndex++) {
@@ -814,13 +868,19 @@ function buildBibleRelations(pageId: string, paragraphs: ParagraphWithReferences
 
       for (let nextRefIndex = refIndex + 1; nextRefIndex < paragraph.refs.length; nextRefIndex++) {
         const target = paragraph.refs[nextRefIndex];
-        addRelations(source, target, getWithinParagraphRelationWeight(source, target));
+        if (!addRelations(source, target, getWithinParagraphRelationWeight(source, target))) {
+          runtimeLog('cache', 'Bible relation limit reached', { pageId, maxBibleRelationsPerPage, relations: rows.length });
+          return rows;
+        }
       }
 
       for (let nextParagraphIndex = paragraphIndex + 1; nextParagraphIndex < paragraphs.length; nextParagraphIndex++) {
         const relationWeight = getParagraphsWeight(paragraphs, paragraphIndex, nextParagraphIndex);
         for (const target of paragraphs[nextParagraphIndex].refs) {
-          addRelations(source, target, relationWeight);
+          if (!addRelations(source, target, relationWeight)) {
+            runtimeLog('cache', 'Bible relation limit reached', { pageId, maxBibleRelationsPerPage, relations: rows.length });
+            return rows;
+          }
         }
       }
     }
@@ -933,18 +993,34 @@ export function upsertBibleParseResult(
   parserVersion: string,
   parsedAt = nowIso()
 ): void {
+  const startedAt = Date.now();
   const module = result.module || 'rst';
   const paragraphs = result.paragraphs ?? [];
   const valuableParagraphs = paragraphs.filter(paragraph =>
     (paragraph.references?.length ?? 0) > 0 || (paragraph.notFound?.length ?? 0) > 0
   );
   const refsCount = valuableParagraphs.reduce((sum, paragraph) => sum + (paragraph.references?.length ?? 0), 0);
+  runtimeLog('cache', 'Upserting Bible parse result', {
+    pageId,
+    module,
+    paragraphs: paragraphs.length,
+    valuableParagraphs: valuableParagraphs.length,
+    refsCount
+  });
 
   const tx = db.transaction(() => {
+    runtimeLog('cache', 'Deleting old Bible relations', { pageId, elapsedMs: Date.now() - startedAt });
     db.prepare('DELETE FROM paragraph_verse_relations WHERE page_id = ?').run(pageId);
+    runtimeLog('cache', 'Deleted old Bible relations', { pageId, elapsedMs: Date.now() - startedAt });
+    runtimeLog('cache', 'Deleting old Bible refs', { pageId, elapsedMs: Date.now() - startedAt });
     db.prepare('DELETE FROM paragraph_verse_refs WHERE page_id = ?').run(pageId);
+    runtimeLog('cache', 'Deleted old Bible refs', { pageId, elapsedMs: Date.now() - startedAt });
+    runtimeLog('cache', 'Deleting old Bible not-found refs', { pageId, elapsedMs: Date.now() - startedAt });
     db.prepare('DELETE FROM paragraph_verse_not_found WHERE page_id = ?').run(pageId);
+    runtimeLog('cache', 'Deleted old Bible not-found refs', { pageId, elapsedMs: Date.now() - startedAt });
+    runtimeLog('cache', 'Deleting old Bible paragraphs', { pageId, elapsedMs: Date.now() - startedAt });
     db.prepare('DELETE FROM page_paragraphs WHERE page_id = ?').run(pageId);
+    runtimeLog('cache', 'Deleted old Bible paragraphs', { pageId, elapsedMs: Date.now() - startedAt });
     const storedParagraphs = new Map<number, ParagraphWithReferences>();
 
     const insertParagraph = db.prepare(`
@@ -1080,6 +1156,7 @@ export function upsertBibleParseResult(
         });
       }
     }
+    runtimeLog('cache', 'Inserted Bible refs', { pageId, refsCount, paragraphsCount: valuableParagraphs.length, elapsedMs: Date.now() - startedAt });
 
     const relationParagraphs = [...storedParagraphs.values()]
       .map(paragraph => ({
@@ -1087,7 +1164,15 @@ export function upsertBibleParseResult(
         refs: paragraph.refs.sort((a, b) => (a.start_index ?? 0) - (b.start_index ?? 0))
       }))
       .sort((a, b) => a.index - b.index);
-    for (const relation of buildBibleRelations(pageId, relationParagraphs, module, parserVersion, parsedAt)) {
+    const relations = buildBibleRelations(pageId, relationParagraphs, module, parserVersion, parsedAt);
+    runtimeLog('cache', 'Built Bible relations', {
+      pageId,
+      refsCount,
+      relationParagraphs: relationParagraphs.length,
+      relations: relations.length,
+      capped: relations.length >= maxBibleRelationsPerPage
+    });
+    for (const relation of relations) {
       insertRelation.run(relation);
     }
 
@@ -1119,6 +1204,12 @@ export function upsertBibleParseResult(
   });
 
   tx();
+  runtimeLog('cache', 'Upserted Bible parse result', {
+    pageId,
+    refsCount,
+    paragraphsCount: valuableParagraphs.length,
+    durationMs: Date.now() - startedAt
+  });
 }
 
 export function setBibleParseError(
@@ -1297,6 +1388,9 @@ export function readCachedPage(db: Database.Database, pageId: string, includeHtm
   const notebook = row.parent_notebook_id
     ? db.prepare('SELECT custom_display_name FROM notebooks WHERE id = ?').get(row.parent_notebook_id) as { custom_display_name: string | null } | undefined
     : undefined;
+  const section = row.parent_section_id
+    ? db.prepare('SELECT section_group_path FROM sections WHERE id = ?').get(row.parent_section_id) as { section_group_path: string | null } | undefined
+    : undefined;
   return {
     id: row.id,
     title: row.title,
@@ -1305,6 +1399,7 @@ export function readCachedPage(db: Database.Database, pageId: string, includeHtm
     contentSyncedAt: row.content_synced_at,
     parentNotebook: { id: row.parent_notebook_id, displayName: notebook?.custom_display_name ?? row.parent_notebook_name },
     parentSection: { id: row.parent_section_id, displayName: row.parent_section_name },
+    sectionGroupPath: section?.section_group_path ?? undefined,
     text: (row.content_text ?? '').slice(0, maxTextChars),
     html: includeHtml ? row.content_html : undefined,
     links: row.links_json ? JSON.parse(row.links_json) : undefined,
@@ -1320,10 +1415,15 @@ export function searchBibleReferences(
     chapter?: number;
     verse?: number;
     limit?: number;
+    includeAuxiliaryRefs?: boolean;
   }
 ): BibleReferenceSearchResult[] {
   const limit = Math.max(1, Math.min(options.limit ?? 50, 200));
   const filters = ['p.deleted_at IS NULL'];
+  if (!options.includeAuxiliaryRefs) {
+    filters.push(visibleBibleRefSql('r', 'pp'));
+    filters.push(visibleBibleScopeSql('p', 's'));
+  }
   const params: Record<string, unknown> = { limit };
 
   if (options.normalized?.trim()) {
@@ -1350,7 +1450,9 @@ export function searchBibleReferences(
     }
   }
 
-  if (filters.length === 1) throw new Error('Specify normalized or bookIndex/chapter.');
+  if (!options.normalized?.trim() && options.bookIndex == null && options.chapter == null) {
+    throw new Error('Specify normalized or bookIndex/chapter.');
+  }
 
   return db.prepare(`
     SELECT
@@ -1371,6 +1473,7 @@ export function searchBibleReferences(
       r.top_verse
     FROM paragraph_verse_refs r
     JOIN pages p ON p.id = r.page_id
+    LEFT JOIN sections s ON s.id = p.parent_section_id
     JOIN page_paragraphs pp ON pp.page_id = r.page_id AND pp.paragraph_index = r.paragraph_index
     LEFT JOIN notebooks n ON n.id = p.parent_notebook_id
     WHERE ${filters.join(' AND ')}
@@ -1386,6 +1489,7 @@ export function findParallelBibleReferences(
     chapter: number;
     verse?: number;
     limit?: number;
+    includeAuxiliaryRefs?: boolean;
   }
 ): Array<Record<string, unknown>> {
   const limit = Math.max(1, Math.min(options.limit ?? 50, 200));
@@ -1419,6 +1523,9 @@ export function findParallelBibleReferences(
     `;
   const sourceVerseFilter = options.verse == null ? '' : 'AND rel.verse_id = @targetVerseId';
   const relativeVerseFilter = options.verse == null ? '' : 'AND rel.relative_verse_id = @targetVerseId';
+  const targetVisibilityFilter = options.includeAuxiliaryRefs ? '1' : visibleBibleRefSql('target');
+  const relatedVisibilityFilter = options.includeAuxiliaryRefs ? '1' : visibleBibleRefSql('r');
+  const pageVisibilityFilter = options.includeAuxiliaryRefs ? '1' : visibleBibleScopeSql('p', 's');
 
   return db.prepare(`
     WITH matched_relations AS (
@@ -1431,6 +1538,7 @@ export function findParallelBibleReferences(
       FROM paragraph_verse_relations rel
       JOIN paragraph_verse_refs target ON target.id = rel.verse_ref_id
       WHERE ${targetFilter}
+        AND ${targetVisibilityFilter}
         ${sourceVerseFilter}
 
       UNION ALL
@@ -1444,6 +1552,7 @@ export function findParallelBibleReferences(
       FROM paragraph_verse_relations rel
       JOIN paragraph_verse_refs target ON target.id = rel.relative_verse_ref_id
       WHERE ${targetFilter}
+        AND ${targetVisibilityFilter}
         ${relativeVerseFilter}
     )
     SELECT
@@ -1463,7 +1572,10 @@ export function findParallelBibleReferences(
     FROM matched_relations mr
     JOIN paragraph_verse_refs r ON r.id = mr.ref_id
     JOIN pages p ON p.id = r.page_id
+    LEFT JOIN sections s ON s.id = p.parent_section_id
     WHERE p.deleted_at IS NULL
+      AND ${relatedVisibilityFilter}
+      AND ${pageVisibilityFilter}
       AND NOT (${relatedFilter})
     GROUP BY r.normalized_ref, r.book_index, r.book_name, r.chapter, r.verse, r.top_chapter, r.top_verse
     ORDER BY relationWeight DESC, maxRelationWeight DESC, pages DESC, normalizedRef COLLATE NOCASE
@@ -1481,6 +1593,7 @@ export function findParallelBibleReferenceNotes(
     relatedChapter: number;
     relatedVerse?: number;
     limit?: number;
+    includeAuxiliaryRefs?: boolean;
   }
 ): Array<Record<string, unknown>> {
   const limit = Math.max(1, Math.min(options.limit ?? 50, 200));
@@ -1521,6 +1634,11 @@ export function findParallelBibleReferenceNotes(
   const relativeVerseFilter = options.verse == null ? '' : 'AND rel.relative_verse_id = @targetVerseId';
   const relatedAsRelativeVerseFilter = options.relatedVerse == null ? '' : 'AND rel.relative_verse_id = @relatedVerseId';
   const relatedAsSourceVerseFilter = options.relatedVerse == null ? '' : 'AND rel.verse_id = @relatedVerseId';
+  const targetVisibilityFilter = options.includeAuxiliaryRefs ? '1' : visibleBibleRefSql('target');
+  const relatedVisibilityFilter = options.includeAuxiliaryRefs ? '1' : visibleBibleRefSql('r');
+  const finalTargetVisibilityFilter = options.includeAuxiliaryRefs ? '1' : visibleBibleRefSql('target');
+  const finalRelatedVisibilityFilter = options.includeAuxiliaryRefs ? '1' : visibleBibleRefSql('related');
+  const pageVisibilityFilter = options.includeAuxiliaryRefs ? '1' : visibleBibleScopeSql('p', 's');
 
   return db.prepare(`
     WITH matched_relations AS (
@@ -1535,8 +1653,10 @@ export function findParallelBibleReferenceNotes(
       JOIN paragraph_verse_refs target ON target.id = rel.verse_ref_id
       JOIN paragraph_verse_refs r ON r.id = rel.relative_verse_ref_id
       WHERE ${targetFilter}
+        AND ${targetVisibilityFilter}
         ${sourceVerseFilter}
         AND ${relatedFilter}
+        AND ${relatedVisibilityFilter}
         ${relatedAsRelativeVerseFilter}
 
       UNION ALL
@@ -1552,8 +1672,10 @@ export function findParallelBibleReferenceNotes(
       JOIN paragraph_verse_refs target ON target.id = rel.relative_verse_ref_id
       JOIN paragraph_verse_refs r ON r.id = rel.verse_ref_id
       WHERE ${targetFilter}
+        AND ${targetVisibilityFilter}
         ${relativeVerseFilter}
         AND ${relatedFilter}
+        AND ${relatedVisibilityFilter}
         ${relatedAsSourceVerseFilter}
     )
     SELECT
@@ -1574,12 +1696,16 @@ export function findParallelBibleReferenceNotes(
       COUNT(*) AS relations
     FROM matched_relations mr
     JOIN pages p ON p.id = mr.page_id
+    LEFT JOIN sections s ON s.id = p.parent_section_id
     LEFT JOIN notebooks n ON n.id = p.parent_notebook_id
     JOIN paragraph_verse_refs target ON target.id = mr.target_ref_id
     JOIN paragraph_verse_refs related ON related.id = mr.related_ref_id
     JOIN page_paragraphs tpp ON tpp.page_id = mr.page_id AND tpp.paragraph_index = mr.target_paragraph_index
     JOIN page_paragraphs rpp ON rpp.page_id = mr.page_id AND rpp.paragraph_index = mr.related_paragraph_index
     WHERE p.deleted_at IS NULL
+      AND ${finalTargetVisibilityFilter}
+      AND ${finalRelatedVisibilityFilter}
+      AND ${pageVisibilityFilter}
     GROUP BY
       mr.page_id,
       mr.target_paragraph_index,

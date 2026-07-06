@@ -1,6 +1,6 @@
 {
   "name": "biblenote",
-  "version": "0.2.13",
+  "version": "4.0.19",
   "description": "BibleNote desktop and OneNote cache application.",
   "type": "module",
   "engines": {
@@ -17,9 +17,10 @@
     "node:rebuild": "npm rebuild better-sqlite3",
     "electron:dev": "npm run node:rebuild && npm run build && electron dist/electron-main.js",
     "electron:rebuild": "electron-builder install-app-deps",
-    "dist:portable": "npm run node:rebuild && npm run node:stage && npm run biblenote:stage && npm run build && electron-builder --win portable",
-    "dist:installer": "npm run node:rebuild && npm run node:stage && npm run biblenote:stage && npm run build && electron-builder --win nsis",
-    "dist:win": "npm run node:rebuild && npm run node:stage && npm run biblenote:stage && npm run build && electron-builder --win nsis portable",
+    "version:bump": "node scripts/bump-version.mjs",
+    "dist:portable": "npm run version:bump && npm run node:rebuild && npm run node:stage && npm run biblenote:stage && npm run build && electron-builder --win portable",
+    "dist:installer": "npm run version:bump && npm run node:rebuild && npm run node:stage && npm run biblenote:stage && npm run build && electron-builder --win nsis",
+    "dist:win": "npm run version:bump && npm run node:rebuild && npm run node:stage && npm run biblenote:stage && npm run build && electron-builder --win nsis portable",
     "login": "tsx src/login.ts",
     "dev": "tsx src/server.ts",
     "start": "node dist/server.js",

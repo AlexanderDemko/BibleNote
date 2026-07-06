@@ -19,6 +19,7 @@ let bibleNoteProcess: ChildProcess | undefined;
 let uiProcess: ChildProcess | undefined;
 let controlServer: http.Server | undefined;
 let mainWindow: BrowserWindow | undefined;
+let bibleNoteEnsurePromise: Promise<void> | undefined;
 let uiProcessLog = '';
 let uiProcessExit: { code: number | null; signal: NodeJS.Signals | null } | undefined;
 let startupStartedAt = Date.now();
@@ -114,6 +115,14 @@ function startControlServer(): void {
       send(200, { ...bibleProtocolStatus(), registered:ok && app.isDefaultProtocolClient(bibleProtocol) });
       return;
     }
+    if (url.pathname === '/biblenote/ensure' && request.method === 'POST') {
+      ensureBibleNote().then(() => {
+        send(200, { available:true, url:bibleNoteUrl });
+      }).catch(error => {
+        send(500, { available:false, error:error instanceof Error ? error.message : String(error) });
+      });
+      return;
+    }
     send(404, { error:'Not found.' });
   });
   controlServer.listen(electronControlPort, '127.0.0.1', () => {
@@ -185,28 +194,45 @@ function startBibleNote(): void {
   };
   const exe = bibleNoteExecutablePath();
   if (exe) {
+    logStartup(`starting BibleNote API exe=${exe}`);
     bibleNoteProcess = spawn(exe, ['--urls', bibleNoteUrl], {
       cwd: path.dirname(exe),
       env,
       windowsHide: true,
-      stdio: 'ignore'
+      stdio: ['ignore', 'pipe', 'pipe']
     });
+    bibleNoteProcess.stdout?.on('data', chunk => rememberUiLog(`[biblenote] ${chunk}`));
+    bibleNoteProcess.stderr?.on('data', chunk => rememberUiLog(`[biblenote] ${chunk}`));
+    bibleNoteProcess.on('error', error => logStartup(`BibleNote API process error: ${error.message}`));
+    bibleNoteProcess.on('exit', (code, signal) => logStartup(`BibleNote API process exited code=${code ?? 'null'} signal=${signal ?? 'null'}`));
     return;
   }
 
   const projectDir = path.resolve(__dirname, '..', '..', 'BibleNote', 'Application');
+  logStartup(`starting BibleNote API via dotnet cwd=${projectDir}`);
   bibleNoteProcess = spawn('dotnet', ['run', '--no-build', '--launch-profile', 'Application', '--', '--urls', bibleNoteUrl], {
     cwd: projectDir,
     env,
     windowsHide: true,
-    stdio: 'ignore'
+    stdio: ['ignore', 'pipe', 'pipe']
   });
+  bibleNoteProcess.stdout?.on('data', chunk => rememberUiLog(`[biblenote] ${chunk}`));
+  bibleNoteProcess.stderr?.on('data', chunk => rememberUiLog(`[biblenote] ${chunk}`));
+  bibleNoteProcess.on('error', error => logStartup(`BibleNote API process error: ${error.message}`));
+  bibleNoteProcess.on('exit', (code, signal) => logStartup(`BibleNote API process exited code=${code ?? 'null'} signal=${signal ?? 'null'}`));
 }
 
 async function ensureBibleNote(): Promise<void> {
   if (await isBibleNoteHealthy()) return;
-  startBibleNote();
-  await waitForHttp(`${bibleNoteUrl}/api/VerseParsing/Health`, 30000);
+  if (!bibleNoteEnsurePromise) {
+    bibleNoteEnsurePromise = (async () => {
+      startBibleNote();
+      await waitForHttp(`${bibleNoteUrl}/api/VerseParsing/Health`, 30000);
+    })().finally(() => {
+      bibleNoteEnsurePromise = undefined;
+    });
+  }
+  await bibleNoteEnsurePromise;
 }
 
 function rememberUiLog(chunk: Buffer | string): void {
@@ -239,6 +265,7 @@ function startCacheUiProcess(): void {
     env: {
       ...process.env,
       BIBLENOTE_API_URL: bibleNoteUrl,
+      BIBLENOTE_EXE_PATH: bibleNoteExecutablePath() ?? '',
       ONENOTE_ELECTRON_CONTROL_URL: `http://127.0.0.1:${electronControlPort}`,
       ONENOTE_STARTUP_TIMING: '1',
       ONENOTE_STARTUP_LOG: startupLogPath
@@ -280,7 +307,7 @@ function loadingHtml(): string {
 <html>
 <head>
   <meta charset="utf-8">
-  <title>OneNote Bible Explorer</title>
+  <title>BibleNote</title>
   <style>
     body { margin: 0; height: 100vh; display: grid; place-items: center; background: #151216; color: #f4edf0; font-family: "Segoe UI", sans-serif; }
     main { display: grid; gap: 10px; text-align: center; }
@@ -288,7 +315,7 @@ function loadingHtml(): string {
     @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
-<body><main><div class="spinner"></div><div>Starting OneNote Bible Explorer...</div></main></body>
+<body><main><div class="spinner"></div><div>Starting BibleNote...</div></main></body>
 </html>`;
 }
 
@@ -310,7 +337,7 @@ async function createWindow(): Promise<void> {
     height: 860,
     minWidth: 980,
     minHeight: 640,
-    title: 'OneNote Bible Explorer',
+    title: 'BibleNote',
     icon: appIconPath(),
     webPreferences: {
       contextIsolation: true,
@@ -359,7 +386,7 @@ if (!singleInstanceLock) {
     if (bibleLink) {
       openBibleLink(bibleLink).catch(error => {
         const message = error instanceof Error ? error.stack ?? error.message : String(error);
-        dialog.showErrorBox('OneNote Bible Explorer failed to open Bible link', message);
+        dialog.showErrorBox('BibleNote failed to open Bible link', message);
       });
     } else if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore();
@@ -373,7 +400,7 @@ app.on('open-url', (event, url) => {
   if (/^isbtBibleVerse:/i.test(url)) {
     openBibleLink(url).catch(error => {
       const message = error instanceof Error ? error.stack ?? error.message : String(error);
-      dialog.showErrorBox('OneNote Bible Explorer failed to open Bible link', message);
+      dialog.showErrorBox('BibleNote failed to open Bible link', message);
     });
   }
 });
@@ -383,7 +410,7 @@ if (singleInstanceLock) {
     .then(createWindow)
     .catch(error => {
       const message = error instanceof Error ? error.stack ?? error.message : String(error);
-      dialog.showErrorBox('OneNote Bible Explorer failed to start', message);
+      dialog.showErrorBox('BibleNote failed to start', message);
       app.quit();
     });
 }

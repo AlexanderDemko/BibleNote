@@ -34,7 +34,9 @@ namespace BibleNote.Tests
         public void Init()
         {
             documentParseContext = new DocumentParseContext();
-            base.Init(services => services.AddScoped(sp => documentParseContext));
+            base.Init(services => services
+                .AddScoped(sp => documentParseContext)
+                .AddTransient<IVerseLinkService, MockVerseLinkService>());
 
             documentProvider = new MockDocumentProviderInfo(ServiceProvider.GetService<IVerseLinkService>());
             versePointerFactory = ServiceProvider.GetService<IVersePointerFactory>();                        
@@ -645,6 +647,26 @@ lang=ru>&nbsp;Тим&nbsp;</span><span style='color:#444444' lang=en-US>2:2). </
         {
             var input = "Об этом говорится в книге Второзаконие. 1 и единственная причина...";
             CheckVerses(input, null, null);
+        }
+
+        [TestMethod]
+        public void Test54()
+        {
+            var input = "Учение Петра (<a href='bnVerse:1Петра 1:12'>1Петр 1:12</a><span>, </span><a href='bnVerse:1Петра 3:22'>1</a>Петр 3:22)";
+            var htmlDoc = new HtmlNodeWrapper(input);
+
+            ParagraphParseResult result;
+            using (var docParser = this.documentParserFactory.Create(documentProvider, new FileDocumentId(0, null, false)))
+            {
+                result = docParser.ParseParagraph(htmlDoc);
+            }
+
+            Assert.AreEqual(2, result.VerseEntries.Count);
+            var versePointers = result.VerseEntries.Select(ve => ve.VersePointer);
+            Assert.IsTrue(versePointers.Contains(this.versePointerFactory.CreateVersePointer("1Петр 1:12")));
+            Assert.IsTrue(versePointers.Contains(this.versePointerFactory.CreateVersePointer("1Петр 3:22")));
+            htmlDoc.InnerXml.Should().Contain(">1Петр 3:22</a>");
+            htmlDoc.InnerXml.Should().NotContain(">1</a>Петр 3:22");
         }
     }
 }

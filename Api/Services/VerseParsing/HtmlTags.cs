@@ -11,6 +11,12 @@ namespace BibleNote.Services.VerseParsing
         public const string Head = "head";
         public const string Html = "html";        
 
+        public static readonly string[] InlineElements = new string[] {
+            A, "abbr", "b", "bdi", "bdo", "big", "cite", "code", "data", "dfn",
+            "em", "font", "i", "kbd", "label", "mark", "q", "rp", "rt", "ruby",
+            "s", "samp", "small", "span", "strike", "strong", "sub", "sup",
+            "time", "tt", "u", "var", "wbr"
+        };
         public static readonly string[] TableCells = new string[] { "td", "th" };
         public static readonly string[] ListElements = new string[] { "li", "dt" };
         public static readonly string[] Lists = new string[] { "ul", "ol", "dl" };
@@ -19,5 +25,11 @@ namespace BibleNote.Services.VerseParsing
             "div", "article", "body", "aside", "footer", "nav", "section", "html",
             "#document", "header", "fieldset", "form", "hgroup", "main"
         };
+
+        public static bool IsInlineElement(string name)
+        {
+            return System.Array.Exists(InlineElements, tag =>
+                string.Equals(tag, name, System.StringComparison.OrdinalIgnoreCase));
+        }
     }
 }

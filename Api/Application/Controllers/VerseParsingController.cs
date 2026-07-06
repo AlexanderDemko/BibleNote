@@ -9,6 +9,7 @@ using BibleNote.Services.Configuration.Contracts;
 using BibleNote.Services.Contracts;
 using BibleNote.Services.ModulesManager.Contracts;
 using BibleNote.Services.ModulesManager.Models;
+using BibleNote.Services.ModulesManager.Scheme.Module;
 using BibleNote.Services.ModulesManager.Scheme.ZefaniaXml;
 using BibleNote.Services.VerseParsing;
 using BibleNote.Services.VerseParsing.Contracts;
@@ -77,6 +78,36 @@ namespace BibleNote.Application.Controllers
                 .ToList();
         }
 
+        [HttpGet]
+        public ActionResult<List<BibleBookResponse>> Books([FromQuery] string module)
+        {
+            var moduleShortName = string.IsNullOrWhiteSpace(module)
+                ? configurationManager.ModuleShortName
+                : module.Trim();
+            if (string.IsNullOrWhiteSpace(moduleShortName))
+                moduleShortName = "rst";
+
+            var bible = applicationManager.GetBibleContent(moduleShortName);
+            var moduleInfo = modulesManager.GetModuleInfo(moduleShortName);
+            return bible.Books
+                .OrderBy(book => book.Index)
+                .Select(book =>
+                {
+                    var bookInfo = moduleInfo.BibleStructure.BibleBooks.FirstOrDefault(item => item.Index == book.Index);
+                    var name = bookInfo?.Name ?? book.bname;
+                    var shortName = bookInfo?.FriendlyShortName ?? book.bsname ?? name;
+                    return new BibleBookResponse
+                    {
+                        Index = book.Index,
+                        Name = name,
+                        ShortName = shortName,
+                        ChapterCount = book.Chapters.Count,
+                        Chapters = book.Chapters.Select(chapter => chapter.Index).OrderBy(index => index).ToList()
+                    };
+                })
+                .ToList();
+        }
+
         [HttpPost]
         public ActionResult<UploadModuleResponse> UploadModule([FromBody] UploadModuleRequest request)
         {
@@ -139,15 +170,17 @@ namespace BibleNote.Application.Controllers
                     configurationManager.UseCommaDelimiter = request.UseCommaDelimiter ?? configurationManager.UseCommaDelimiter;
                     applicationManager.ReloadInfo();
 
-                    var documentId = new ParserDocumentId(0);
-                    var provider = new ReadOnlyDocumentProviderInfo(verseLinkService);
+                    var updateHtml = request.UpdateHtml == true && !string.IsNullOrWhiteSpace(request.Html);
+                    var documentId = new ParserDocumentId(0, !updateHtml);
+                    var provider = new ReadOnlyDocumentProviderInfo(verseLinkService, !updateHtml);
                     var paragraphs = new List<ParagraphParseResult>();
+                    string updatedHtml = null;
 
                     using (var parser = documentParserFactory.Create(provider, documentId))
                     {
                         if (!string.IsNullOrWhiteSpace(request.Html))
                         {
-                            ParseHtml(parser, request.Html, paragraphs);
+                            updatedHtml = ParseHtml(parser, request.Html, paragraphs, updateHtml);
                         }
                         else
                         {
@@ -187,6 +220,7 @@ namespace BibleNote.Application.Controllers
                         PageId = request.PageId,
                         Module = applicationManager.CurrentModuleInfo.ShortName,
                         UseCommaDelimiter = configurationManager.UseCommaDelimiter,
+                        Html = updateHtml ? updatedHtml : null,
                         Paragraphs = paragraphs.Select(ToParagraphResponse).ToList()
                     };
                 }
@@ -216,10 +250,10 @@ namespace BibleNote.Application.Controllers
 
             var bible = applicationManager.GetBibleContent(module);
             var moduleInfo = modulesManager.GetModuleInfo(module);
-            if (!bible.BooksDictionary.TryGetValue(request.BookIndex, out var book))
+            if (!TryResolveVerseTextBook(bible, moduleInfo, request, out var book, out var bookInfo))
                 return NotFound($"Book {request.BookIndex} was not found in module '{module}'.");
 
-            var bookInfo = moduleInfo.BibleStructure.BibleBooks.FirstOrDefault(item => item.Index == request.BookIndex);
+            request.BookIndex = book.Index;
             var bookName = bookInfo?.Name ?? book.bname;
             var bookShortName = bookInfo?.FriendlyShortName ?? book.bsname ?? bookName;
             var verses = GetVerseTexts(book, module, request);
@@ -230,7 +264,7 @@ namespace BibleNote.Application.Controllers
             {
                 Module = module,
                 ModuleName = moduleInfo.DisplayName,
-                BookIndex = request.BookIndex,
+                BookIndex = book.Index,
                 BookName = bookName,
                 BookShortName = bookShortName,
                 Chapter = request.Chapter,
@@ -241,6 +275,104 @@ namespace BibleNote.Application.Controllers
                 Text = string.Join(Environment.NewLine, verses.Select(item => $"{item.Reference} {item.Text}")),
                 Verses = verses
             };
+        }
+
+        private static bool TryResolveVerseTextBook(XMLBIBLE bible, ModuleInfo moduleInfo, VerseTextRequest request, out BIBLEBOOK book, out BibleBookInfo bookInfo)
+        {
+            if (bible.BooksDictionary.TryGetValue(request.BookIndex, out book))
+            {
+                var bookIndex = book.Index;
+                bookInfo = moduleInfo.BibleStructure.BibleBooks.FirstOrDefault(item => item.Index == bookIndex);
+                return true;
+            }
+
+            var candidates = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            AddBookLookupCandidate(candidates, request.BookName);
+            AddBookLookupCandidate(candidates, request.BookShortName);
+            AddBookLookupCandidate(candidates, ExtractBookNameCandidate(request.OriginalText));
+
+            foreach (var item in moduleInfo.BibleStructure.BibleBooks)
+            {
+                if (!BookMatches(item, candidates))
+                    continue;
+
+                if (bible.BooksDictionary.TryGetValue(item.Index, out book))
+                {
+                    bookInfo = item;
+                    return true;
+                }
+            }
+
+            foreach (var item in bible.BooksDictionary.Values)
+            {
+                if (!candidates.Contains(NormalizeBookLookupKey(item.bname))
+                    && !candidates.Contains(NormalizeBookLookupKey(item.bsname)))
+                    continue;
+
+                book = item;
+                var bookIndex = item.Index;
+                bookInfo = moduleInfo.BibleStructure.BibleBooks.FirstOrDefault(info => info.Index == bookIndex);
+                return true;
+            }
+
+            book = null;
+            bookInfo = null;
+            return false;
+        }
+
+        private static bool BookMatches(BibleBookInfo bookInfo, HashSet<string> candidates)
+        {
+            if (bookInfo == null || candidates.Count == 0)
+                return false;
+
+            if (candidates.Contains(NormalizeBookLookupKey(bookInfo.Name))
+                || candidates.Contains(NormalizeBookLookupKey(bookInfo.ShortName))
+                || candidates.Contains(NormalizeBookLookupKey(bookInfo.FriendlyShortName)))
+                return true;
+
+            return bookInfo.Abbreviations?.Any(item => candidates.Contains(NormalizeBookLookupKey(item.Value))) == true;
+        }
+
+        private static string ExtractBookNameCandidate(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return value;
+
+            var trimmed = value.Trim();
+            var colonIndex = trimmed.IndexOf(':');
+            if (colonIndex <= 0)
+                return trimmed;
+
+            var prefix = trimmed.Substring(0, colonIndex).TrimEnd();
+            while (prefix.Length > 0 && char.IsDigit(prefix[prefix.Length - 1]))
+                prefix = prefix.Substring(0, prefix.Length - 1).TrimEnd();
+            return prefix;
+        }
+
+        private static void AddBookLookupCandidate(HashSet<string> candidates, string value)
+        {
+            var normalized = NormalizeBookLookupKey(value);
+            if (!string.IsNullOrWhiteSpace(normalized))
+                candidates.Add(normalized);
+        }
+
+        private static string NormalizeBookLookupKey(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return string.Empty;
+
+            var chars = new List<char>(value.Length);
+            foreach (var raw in value.Trim().ToLowerInvariant())
+            {
+                if (!char.IsLetterOrDigit(raw))
+                    continue;
+
+                if ((raw == 'е' || raw == 'я') && chars.Count > 0 && char.IsDigit(chars[chars.Count - 1]))
+                    continue;
+
+                chars.Add(raw);
+            }
+            return new string(chars.ToArray());
         }
 
         private static List<VerseTextItemResponse> GetVerseTexts(BIBLEBOOK book, string module, VerseTextRequest request)
@@ -364,7 +496,7 @@ namespace BibleNote.Application.Controllers
             return $"<p>{WebUtility.HtmlEncode(text)}</p>";
         }
 
-        private static void ParseHtml(IDocumentParser parser, string html, List<ParagraphParseResult> paragraphs)
+        private static string ParseHtml(IDocumentParser parser, string html, List<ParagraphParseResult> paragraphs, bool updateHtml)
         {
             var htmlDocument = new HtmlDocument
             {
@@ -372,7 +504,9 @@ namespace BibleNote.Application.Controllers
                 OptionOutputOptimizeAttributeValues = false
             };
             htmlDocument.LoadHtml(html);
-            ParseNode(parser, htmlDocument.DocumentNode, false, paragraphs);
+            foreach (var childNode in htmlDocument.DocumentNode.ChildNodes.ToList())
+                ParseNode(parser, childNode, !updateHtml, paragraphs);
+            return updateHtml ? htmlDocument.DocumentNode.OuterHtml : null;
         }
 
         private static void ParseNode(IDocumentParser parser, HtmlNode node, bool isReadonly, List<ParagraphParseResult> paragraphs)
@@ -384,7 +518,7 @@ namespace BibleNote.Application.Controllers
                 {
                     if (IsHierarchy(node))
                     {
-                        foreach (var childNode in node.ChildNodes)
+                        foreach (var childNode in node.ChildNodes.ToList())
                             ParseNode(parser, childNode, state == ElementType.Title || isReadonly, paragraphs);
                     }
                     else
@@ -424,7 +558,7 @@ namespace BibleNote.Application.Controllers
             return node.ChildNodes.Any(n =>
                 n.NodeType != HtmlNodeType.Text
                 && n.NodeType != HtmlNodeType.Comment
-                && n.Name != HtmlTags.A);
+                && !HtmlTags.IsInlineElement(n.Name));
         }
 
         private static ElementType GetParagraphType(HtmlNode node)
@@ -510,16 +644,17 @@ namespace BibleNote.Application.Controllers
 
         private sealed class ParserDocumentId : IDocumentId
         {
-            public ParserDocumentId(int documentId)
+            public ParserDocumentId(int documentId, bool isReadonly = true)
             {
                 DocumentId = documentId;
+                IsReadonly = isReadonly;
             }
 
             public int DocumentId { get; }
 
             public bool Changed { get; private set; }
 
-            public bool IsReadonly { get; private set; } = true;
+            public bool IsReadonly { get; private set; }
 
             public void SetReadonly()
             {
@@ -535,13 +670,15 @@ namespace BibleNote.Application.Controllers
         private sealed class ReadOnlyDocumentProviderInfo : IDocumentProviderInfo
         {
             private readonly IVerseLinkService verseLinkService;
+            private readonly bool isReadonly;
 
-            public ReadOnlyDocumentProviderInfo(IVerseLinkService verseLinkService)
+            public ReadOnlyDocumentProviderInfo(IVerseLinkService verseLinkService, bool isReadonly = true)
             {
                 this.verseLinkService = verseLinkService;
+                this.isReadonly = isReadonly;
             }
 
-            public bool IsReadonly => true;
+            public bool IsReadonly => isReadonly;
 
             public FileType[] SupportedFileTypes => new[] { FileType.Html, FileType.Text, FileType.OneNote };
 
@@ -566,6 +703,8 @@ namespace BibleNote.Application.Controllers
 
         public bool? UseCommaDelimiter { get; set; }
 
+        public bool? UpdateHtml { get; set; }
+
         public List<ParseParagraphRequest> Paragraphs { get; set; }
     }
 
@@ -587,6 +726,8 @@ namespace BibleNote.Application.Controllers
         public string Module { get; set; }
 
         public bool UseCommaDelimiter { get; set; }
+
+        public string Html { get; set; }
 
         public List<ParseParagraphResponse> Paragraphs { get; set; }
     }
@@ -700,11 +841,30 @@ namespace BibleNote.Application.Controllers
         public bool IsCurrent { get; set; }
     }
 
+    public class BibleBookResponse
+    {
+        public int Index { get; set; }
+
+        public string Name { get; set; }
+
+        public string ShortName { get; set; }
+
+        public int ChapterCount { get; set; }
+
+        public List<int> Chapters { get; set; }
+    }
+
     public class VerseTextRequest
     {
         public string Module { get; set; }
 
         public int BookIndex { get; set; }
+
+        public string BookName { get; set; }
+
+        public string BookShortName { get; set; }
+
+        public string OriginalText { get; set; }
 
         public int Chapter { get; set; }
 

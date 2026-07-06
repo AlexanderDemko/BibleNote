@@ -96,7 +96,7 @@ namespace BibleNote.Providers.Html
             var result = node.ChildNodes.Any(n =>
                 n.NodeType != HtmlNodeType.Text
                 && n.NodeType != HtmlNodeType.Comment
-                && n.Name != HtmlTags.A);            
+                && !HtmlTags.IsInlineElement(n.Name));            
 
             return result;
         }
