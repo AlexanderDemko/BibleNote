@@ -4,17 +4,30 @@ import path from 'node:path';
 import os from 'node:os';
 import { PublicClientApplication, Configuration, AuthenticationResult } from '@azure/msal-node';
 
-const tenantId = process.env.ONENOTE_TENANT_ID ?? 'common';
+export type OneNoteAuthConfig = {
+  clientId: string | undefined;
+  tenantId: string;
+  scopes: string[];
+  cachePath: string;
+};
 
-export const scopes = (process.env.ONENOTE_SCOPES ?? 'Notes.Read User.Read offline_access')
-  .split(/\s+/)
-  .filter(Boolean);
+export function oneNoteAuthConfig(): OneNoteAuthConfig {
+  return {
+    clientId: process.env.ONENOTE_CLIENT_ID,
+    tenantId: process.env.ONENOTE_TENANT_ID ?? 'common',
+    scopes: (process.env.ONENOTE_SCOPES ?? 'Notes.Read User.Read offline_access')
+      .split(/\s+/)
+      .filter(Boolean),
+    cachePath: process.env.ONENOTE_TOKEN_CACHE
+      ?? path.join(os.homedir(), '.codex-onenote-mcp', 'msal-cache.json')
+  };
+}
 
-export const cachePath = process.env.ONENOTE_TOKEN_CACHE
-  ?? path.join(os.homedir(), '.codex-onenote-mcp', 'msal-cache.json');
+export const scopes = oneNoteAuthConfig().scopes;
+export const cachePath = oneNoteAuthConfig().cachePath;
 
 export function createMsalClient(): PublicClientApplication {
-  const clientId = process.env.ONENOTE_CLIENT_ID;
+  const { clientId, tenantId } = oneNoteAuthConfig();
   if (!clientId || clientId === '00000000-0000-0000-0000-000000000000') {
     throw new Error('ONENOTE_CLIENT_ID is not set. Copy .env.example to .env or %USERPROFILE%\\.codex-onenote-mcp\\.env and fill your Azure app client ID.');
   }
@@ -30,6 +43,7 @@ export function createMsalClient(): PublicClientApplication {
 }
 
 export async function loadCache(pca: PublicClientApplication): Promise<void> {
+  const { cachePath } = oneNoteAuthConfig();
   try {
     const serialized = await fs.readFile(cachePath, 'utf8');
     pca.getTokenCache().deserialize(serialized);
@@ -39,11 +53,13 @@ export async function loadCache(pca: PublicClientApplication): Promise<void> {
 }
 
 export async function saveCache(pca: PublicClientApplication): Promise<void> {
+  const { cachePath } = oneNoteAuthConfig();
   await fs.mkdir(path.dirname(cachePath), { recursive: true });
   await fs.writeFile(cachePath, pca.getTokenCache().serialize(), 'utf8');
 }
 
 export async function acquireTokenSilent(forceRefresh = false): Promise<AuthenticationResult> {
+  const { scopes } = oneNoteAuthConfig();
   const pca = createMsalClient();
   await loadCache(pca);
 
@@ -65,6 +81,7 @@ export async function acquireTokenSilent(forceRefresh = false): Promise<Authenti
 }
 
 export async function acquireTokenByDeviceCode(): Promise<AuthenticationResult> {
+  const { scopes } = oneNoteAuthConfig();
   const pca = createMsalClient();
   await loadCache(pca);
 

@@ -78,5 +78,6 @@ namespace BibleNote.Tests
                 new string[] { "Ин 1:1" },
                 new string[] { "Ин 2:2" });
         }
+
     }
 }

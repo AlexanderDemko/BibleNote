@@ -1,5 +1,6 @@
 import { setTimeout as delay } from 'node:timers/promises';
 import { acquireTokenSilent } from './auth.js';
+import { runtimeLog } from './runtime-logging.js';
 
 const graphRoot = 'https://graph.microsoft.com/v1.0';
 let tokenResultPromise: ReturnType<typeof acquireTokenSilent> | undefined;
@@ -18,6 +19,10 @@ let graphRetryObserver: ((event: GraphRetryEvent) => void) | undefined;
 
 export function setGraphRetryObserver(observer?: (event: GraphRetryEvent) => void): void {
   graphRetryObserver = observer;
+}
+
+export function resetGraphAccessToken(): void {
+  tokenResultPromise = undefined;
 }
 
 function configuredMinIntervalMs(): number {
@@ -137,6 +142,7 @@ function fetchErrorDelayMs(attempt: number): number {
 async function graphFetchText(pathOrUrl: string, accept: string): Promise<string> {
   let token = await accessToken();
   const url = graphUrl(pathOrUrl);
+  const startedAt = Date.now();
   const configuredAttempts = Number(process.env.ONENOTE_GRAPH_MAX_ATTEMPTS ?? '10');
   const maxAttempts = Number.isInteger(configuredAttempts) && configuredAttempts > 0
     ? configuredAttempts
@@ -154,6 +160,7 @@ async function graphFetchText(pathOrUrl: string, accept: string): Promise<string
     await waitForGraphRequestSlot();
     let response: Response;
     try {
+      runtimeLog('graph', 'Graph request', { url, accept, transientAttempts, throttleAttempts });
       response = await fetch(url, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -163,6 +170,7 @@ async function graphFetchText(pathOrUrl: string, accept: string): Promise<string
     } catch (error) {
       if (!isTransientFetchError(error)) throw error;
       transientAttempts += 1;
+      runtimeLog('graph', 'Graph request transient error', { url, attempt: transientAttempts, error: errorMessage(error) });
       if (transientAttempts >= maxAttempts) {
         throw new Error(`Graph request failed after ${maxAttempts} attempts: ${errorMessage(error)}`);
       }
@@ -178,6 +186,7 @@ async function graphFetchText(pathOrUrl: string, accept: string): Promise<string
     } catch (error) {
       if (!isTransientFetchError(error)) throw error;
       transientAttempts += 1;
+      runtimeLog('graph', 'Graph response body transient error', { url, status: response.status, attempt: transientAttempts, error: errorMessage(error) });
       if (transientAttempts >= maxAttempts) {
         throw new Error(`Graph response body failed after ${maxAttempts} attempts: ${errorMessage(error)}`);
       }
@@ -189,6 +198,7 @@ async function graphFetchText(pathOrUrl: string, accept: string): Promise<string
 
     if (response.ok) {
       relaxAdaptiveInterval();
+      runtimeLog('graph', 'Graph response', { url, status: response.status, durationMs: Date.now() - startedAt, bytes: responseText.length });
       return responseText;
     }
 
@@ -196,6 +206,7 @@ async function graphFetchText(pathOrUrl: string, accept: string): Promise<string
     if (response.status === 401 && !authenticationRefreshAttempted) {
       authenticationRefreshAttempted = true;
       token = await accessToken(true);
+      runtimeLog('graph', 'Graph token refreshed after 401', { url });
       continue;
     }
     if (response.status === 429) {
@@ -207,11 +218,13 @@ async function graphFetchText(pathOrUrl: string, accept: string): Promise<string
       const waitMs = retryDelayMs(response, throttleAttempts) + Math.floor(Math.random() * 250);
       extendGlobalBackoff(waitMs);
       graphRetryObserver?.({ status: response.status, attempt: throttleAttempts, maxAttempts: maxThrottleAttempts, retryAfterMs: waitMs });
+      runtimeLog('graph', 'Graph throttled', { url, status: response.status, attempt: throttleAttempts, retryAfterMs: waitMs, body: lastResponseText.slice(0, 1000) });
       continue;
     }
 
     const shouldRetry = [408, 500, 502, 503, 504].includes(response.status);
     if (!shouldRetry) {
+      runtimeLog('graph', 'Graph failed response', { url, status: response.status, durationMs: Date.now() - startedAt, body: lastResponseText.slice(0, 1000) });
       throw new Error(`Graph returned ${response.status} ${response.statusText}: ${lastResponseText}`);
     }
     transientAttempts += 1;
@@ -221,6 +234,7 @@ async function graphFetchText(pathOrUrl: string, accept: string): Promise<string
     const waitMs = retryDelayMs(response, transientAttempts) + Math.floor(Math.random() * 250);
     extendGlobalBackoff(waitMs);
     graphRetryObserver?.({ status: response.status, attempt: transientAttempts, maxAttempts, retryAfterMs: waitMs });
+    runtimeLog('graph', 'Graph retryable response', { url, status: response.status, attempt: transientAttempts, retryAfterMs: waitMs, body: lastResponseText.slice(0, 1000) });
   }
 }
 
@@ -231,6 +245,73 @@ export async function graphJson<T>(pathOrUrl: string): Promise<T> {
 
 export async function graphText(pathOrUrl: string): Promise<string> {
   return graphFetchText(pathOrUrl, 'text/html');
+}
+
+export type GraphBinaryResponse = {
+  buffer: Buffer;
+  contentType: string;
+  etag?: string;
+};
+
+export async function graphBinary(pathOrUrl: string, accept = '*/*'): Promise<GraphBinaryResponse> {
+  let token = await accessToken();
+  const url = graphUrl(pathOrUrl);
+  const startedAt = Date.now();
+  let authenticationRefreshAttempted = false;
+  for (let attempt = 1; ; attempt += 1) {
+    await waitForGraphRequestSlot();
+    runtimeLog('graph', 'Graph binary request', { url, accept, attempt });
+    const response = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: accept
+      }
+    });
+    if (response.ok) {
+      relaxAdaptiveInterval();
+      const arrayBuffer = await response.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+      runtimeLog('graph', 'Graph binary response', {
+        url,
+        status: response.status,
+        durationMs: Date.now() - startedAt,
+        bytes: buffer.length
+      });
+      return {
+        buffer,
+        contentType: response.headers.get('content-type') || 'application/octet-stream',
+        etag: response.headers.get('etag') || undefined
+      };
+    }
+    const body = await response.text().catch(() => '');
+    if (response.status === 401 && !authenticationRefreshAttempted) {
+      authenticationRefreshAttempted = true;
+      token = await accessToken(true);
+      runtimeLog('graph', 'Graph token refreshed after binary 401', { url });
+      continue;
+    }
+    if (response.status === 429 || [408, 500, 502, 503, 504].includes(response.status)) {
+      increaseAdaptiveInterval();
+      const waitMs = retryDelayMs(response, attempt) + Math.floor(Math.random() * 250);
+      extendGlobalBackoff(waitMs);
+      graphRetryObserver?.({ status: response.status, attempt, maxAttempts: 5, retryAfterMs: waitMs });
+      runtimeLog('graph', 'Graph binary retryable response', {
+        url,
+        status: response.status,
+        attempt,
+        retryAfterMs: waitMs,
+        body: body.slice(0, 1000)
+      });
+      if (attempt < 5) continue;
+    }
+    runtimeLog('graph', 'Graph binary failed response', {
+      url,
+      status: response.status,
+      durationMs: Date.now() - startedAt,
+      body: body.slice(0, 1000)
+    });
+    throw new Error(`Graph returned ${response.status} ${response.statusText}: ${body}`);
+  }
 }
 
 export async function graphListAll<T>(

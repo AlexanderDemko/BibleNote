@@ -1,3 +1,5 @@
+import { runtimeLog } from './runtime-logging.js';
+
 export const bibleParserVersion = 'biblenote-http-v1';
 
 export type BibleReference = {
@@ -40,6 +42,7 @@ export type BibleParseResult = {
   pageId?: string;
   module?: string;
   useCommaDelimiter?: boolean;
+  html?: string | null;
   paragraphs?: BibleParsedParagraph[];
 };
 
@@ -90,6 +93,13 @@ export function bibleParseConfigFromEnv(overrides: Partial<BibleParseConfig> = {
   );
 }
 
+function fetchErrorMessage(error: unknown, target: string): string {
+  if (!(error instanceof Error)) return String(error);
+  const cause = (error as Error & { cause?: unknown }).cause;
+  const causeMessage = cause instanceof Error ? `: ${cause.message}` : '';
+  return `${error.message}${causeMessage} (${target})`;
+}
+
 export async function parsePageWithBibleNote(options: {
   apiUrl: string;
   pageId: string;
@@ -99,6 +109,7 @@ export async function parsePageWithBibleNote(options: {
   module: string;
   useCommaDelimiter: boolean;
   timeoutMs: number;
+  updateHtml?: boolean;
 }): Promise<BibleParseResult> {
   if (!options.html && !options.text && !options.title) {
     return { pageId: options.pageId, module: options.module, paragraphs: [] };
@@ -106,8 +117,19 @@ export async function parsePageWithBibleNote(options: {
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), options.timeoutMs);
+  const target = `${options.apiUrl.replace(/\/+$/, '')}/api/VerseParsing/ParsePage`;
+  const startedAt = Date.now();
+  runtimeLog('biblenote-api', 'ParsePage request', {
+    pageId: options.pageId,
+    title: options.title,
+    module: options.module,
+    hasHtml: Boolean(options.html),
+    hasText: Boolean(options.text),
+    updateHtml: options.updateHtml === true,
+    timeoutMs: options.timeoutMs
+  });
   try {
-    const response = await fetch(`${options.apiUrl.replace(/\/+$/, '')}/api/VerseParsing/ParsePage`, {
+    const response = await fetch(target, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -116,7 +138,8 @@ export async function parsePageWithBibleNote(options: {
         html: options.html ?? undefined,
         text: options.html ? undefined : options.text ?? undefined,
         module: options.module,
-        useCommaDelimiter: options.useCommaDelimiter
+        useCommaDelimiter: options.useCommaDelimiter,
+        updateHtml: options.updateHtml === true
       }),
       signal: controller.signal
     });
@@ -126,12 +149,26 @@ export async function parsePageWithBibleNote(options: {
       throw new Error(`BibleNote API returned ${response.status}: ${responseText.slice(0, 2000)}`);
     }
 
-    return responseText ? JSON.parse(responseText) as BibleParseResult : { pageId: options.pageId, module: options.module, paragraphs: [] };
+    const parsed = responseText ? JSON.parse(responseText) as BibleParseResult : { pageId: options.pageId, module: options.module, paragraphs: [] };
+    runtimeLog('biblenote-api', 'ParsePage response', {
+      pageId: options.pageId,
+      status: response.status,
+      durationMs: Date.now() - startedAt,
+      paragraphs: parsed.paragraphs?.length ?? 0,
+      references: (parsed.paragraphs ?? []).reduce((sum, paragraph) => sum + (paragraph.references?.length ?? 0), 0),
+      hasHtml: Boolean(parsed.html)
+    });
+    return parsed;
   } catch (error: any) {
+    runtimeLog('biblenote-api', 'ParsePage failed', {
+      pageId: options.pageId,
+      durationMs: Date.now() - startedAt,
+      error: error?.stack ?? error?.message ?? String(error)
+    });
     if (error?.name === 'AbortError') {
       throw new Error(`BibleNote API timed out after ${options.timeoutMs} ms`);
     }
-    throw error;
+    throw new Error(`BibleNote API request failed: ${fetchErrorMessage(error, target)}`);
   } finally {
     clearTimeout(timeout);
   }
@@ -141,6 +178,9 @@ export async function getVerseTextWithBibleNote(options: {
   apiUrl: string;
   module: string;
   bookIndex: number;
+  bookName?: string | null;
+  bookShortName?: string | null;
+  originalText?: string | null;
   chapter: number;
   verse?: number | null;
   topChapter?: number | null;
@@ -150,18 +190,35 @@ export async function getVerseTextWithBibleNote(options: {
 }): Promise<BibleVerseText> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), options.timeoutMs);
+  const startedAt = Date.now();
   try {
     const params = new URLSearchParams({
       module: options.module,
       bookIndex: String(options.bookIndex),
       chapter: String(options.chapter)
     });
+    if (options.bookName) params.set('bookName', options.bookName);
+    if (options.bookShortName) params.set('bookShortName', options.bookShortName);
+    if (options.originalText) params.set('originalText', options.originalText);
     if (options.verse != null) params.set('verse', String(options.verse));
     if (options.topChapter != null) params.set('topChapter', String(options.topChapter));
     if (options.topVerse != null) params.set('topVerse', String(options.topVerse));
     if (options.contextVerses != null) params.set('contextVerses', String(options.contextVerses));
 
-    const response = await fetch(`${options.apiUrl.replace(/\/+$/, '')}/api/VerseParsing/VerseText?${params.toString()}`, {
+    const target = `${options.apiUrl.replace(/\/+$/, '')}/api/VerseParsing/VerseText?${params.toString()}`;
+    runtimeLog('biblenote-api', 'VerseText request', {
+      module: options.module,
+      bookIndex: options.bookIndex,
+      bookName: options.bookName,
+      bookShortName: options.bookShortName,
+      chapter: options.chapter,
+      verse: options.verse,
+      topChapter: options.topChapter,
+      topVerse: options.topVerse,
+      contextVerses: options.contextVerses,
+      timeoutMs: options.timeoutMs
+    });
+    const response = await fetch(target, {
       signal: controller.signal
     });
 
@@ -170,12 +227,26 @@ export async function getVerseTextWithBibleNote(options: {
       throw new Error(`BibleNote API returned ${response.status}: ${responseText.slice(0, 2000)}`);
     }
 
-    return responseText ? JSON.parse(responseText) as BibleVerseText : {};
+    const parsed = responseText ? JSON.parse(responseText) as BibleVerseText : {};
+    runtimeLog('biblenote-api', 'VerseText response', {
+      status: response.status,
+      durationMs: Date.now() - startedAt,
+      reference: parsed.reference,
+      verses: parsed.verses?.length ?? 0
+    });
+    return parsed;
   } catch (error: any) {
+    runtimeLog('biblenote-api', 'VerseText failed', {
+      durationMs: Date.now() - startedAt,
+      bookIndex: options.bookIndex,
+      chapter: options.chapter,
+      verse: options.verse,
+      error: error?.stack ?? error?.message ?? String(error)
+    });
     if (error?.name === 'AbortError') {
       throw new Error(`BibleNote API timed out after ${options.timeoutMs} ms`);
     }
-    throw error;
+    throw new Error(`BibleNote API request failed: ${fetchErrorMessage(error, `${options.apiUrl.replace(/\/+$/, '')}/api/VerseParsing/VerseText`)}`);
   } finally {
     clearTimeout(timeout);
   }
