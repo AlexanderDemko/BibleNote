@@ -27,8 +27,16 @@ namespace BibleNote.Application
         {       
             var args = e?.Arguments != null ? string.Join(";", e.Arguments) : "No args";
             Console.WriteLine(args);
-            File.WriteAllText(@"c:\temp\secondInstance.txt", args);
-            ProcessCommandAsync(args).GetAwaiter();
+            var secondInstanceLogPath = Path.Combine(Path.GetTempPath(), "BibleNote", "secondInstance.txt");
+            var secondInstanceLogDirectory = Path.GetDirectoryName(secondInstanceLogPath);
+            if (!string.IsNullOrEmpty(secondInstanceLogDirectory))
+                Directory.CreateDirectory(secondInstanceLogDirectory);
+
+            File.WriteAllText(secondInstanceLogPath, args);
+            _ = ProcessCommandAsync(args).ContinueWith(task =>
+            {
+                Console.Error.WriteLine(task.Exception);
+            }, TaskContinuationOptions.OnlyOnFaulted);
         }
 
         private static async Task ProcessCommandAsync(string args)

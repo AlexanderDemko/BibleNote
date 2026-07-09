@@ -1,7 +1,6 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import * as z from 'zod/v4';
-import * as cheerio from 'cheerio';
 import {
   cacheStatus,
   findParallelBibleReferences,
@@ -13,6 +12,7 @@ import {
   searchCache
 } from './cache.js';
 import { graphJson, graphText, GraphCollection, encodeODataValue } from './graph.js';
+import { htmlToText } from './html.js';
 import { loadNotebookSectionsRecursively, syncOneNoteCache } from './sync.js';
 
 type Notebook = {
@@ -47,18 +47,6 @@ function toolText(value: unknown) {
   return {
     content: [{ type: 'text' as const, text: typeof value === 'string' ? value : JSON.stringify(value, null, 2) }]
   };
-}
-
-function htmlToText(html: string): string {
-  const $ = cheerio.load(html);
-  $('script,style,noscript').remove();
-  $('br').replaceWith('\n');
-  $('p,div,li,h1,h2,h3,h4,h5,h6,table,tr').append('\n');
-  return $.text()
-    .replace(/\r/g, '')
-    .replace(/[\t ]+/g, ' ')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
 }
 
 async function getPages(top: number, sectionId?: string): Promise<Page[]> {

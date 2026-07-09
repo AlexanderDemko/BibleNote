@@ -43,11 +43,12 @@ namespace BibleNote.Tests.TestsBase
 
         protected async Task TestFileAsync(string filePath, bool copyFile, bool shouldChange, params string[][] expectedResults)
         {
-            var newFilePath = filePath;
+            var sourceFilePath = ResolveTestDataFilePath(filePath);
+            var newFilePath = sourceFilePath;
             if (copyFile)
             {
-                newFilePath = Path.Combine(this.tempFolderPath, Path.GetFileName(filePath));
-                File.Copy(filePath, newFilePath);
+                newFilePath = Path.Combine(this.tempFolderPath, Path.GetFileName(sourceFilePath));
+                File.Copy(sourceFilePath, newFilePath);
             }
 
             var fileContent = File.ReadAllText(newFilePath);

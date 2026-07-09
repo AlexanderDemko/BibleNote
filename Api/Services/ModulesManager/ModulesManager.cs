@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Threading;
 using BibleNote.Services.Configuration.Contracts;
 using BibleNote.Services.ModulesManager.Contracts;
 using BibleNote.Services.ModulesManager.Models.Exceptions;
@@ -206,18 +205,17 @@ namespace BibleNote.Services.ModulesManager
 
             var destFilePath = Path.Combine(GetModulesPackagesDirectory(), moduleName + SystemConstants.ModuleFileExtension);
             destFilePath = CopyModulePackage(originalFilePath, destFilePath);
-
-            string destFolder = GetModuleDirectory(moduleName);
-            if (Directory.Exists(destFolder))
-                Directory.Delete(destFolder, true);
-
-            Directory.CreateDirectory(destFolder);
+            var tempFolder = Path.Combine(GetTempFolderPath(), $"{moduleName}_{Guid.NewGuid():N}");
+            Directory.CreateDirectory(tempFolder);
 
             try
             {
-                ZipLibHelper.ExtractZipFile(File.ReadAllBytes(destFilePath), destFolder);
-                var module = GetModuleInfo(moduleName);
+                ZipLibHelper.ExtractZipFile(File.ReadAllBytes(destFilePath), tempFolder);
+                var module = ReadModuleInfoFromDirectory(tempFolder);
                 CheckModule(module);
+
+                ReplaceModuleDirectory(tempFolder, GetModuleDirectory(moduleName));
+                tempFolder = null;
 
                 if (module.Type == Scheme.Module.ModuleType.Bible || module.Type == Scheme.Module.ModuleType.Strong)
                 {
@@ -232,33 +230,36 @@ namespace BibleNote.Services.ModulesManager
 
                 return module;
             }
+            catch (InvalidModuleException)
+            {
+                throw;
+            }
             catch (Exception ex)
             {
+                _log.LogError(ex.ToString());
                 throw new InvalidModuleException(ex.Message);
+            }
+            finally
+            {
+                if (tempFolder != null)
+                    DeleteDirectorySafely(tempFolder);
             }
         }
 
         public ModuleInfo ReadModuleInfo(string moduleFilePath)
         {            
-            string destFolder = Path.Combine(GetTempFolderPath(), Path.GetFileNameWithoutExtension(moduleFilePath));
+            string destFolder = Path.Combine(GetTempFolderPath(), $"{Path.GetFileNameWithoutExtension(moduleFilePath)}_{Guid.NewGuid():N}");
             try
             {
-                if (Directory.Exists(destFolder))
-                    Directory.Delete(destFolder, true);
-
                 Directory.CreateDirectory(destFolder);
 
                 ZipLibHelper.ExtractZipFile(File.ReadAllBytes(moduleFilePath), destFolder, new string[] { SystemConstants.ManifestFileName });
 
-                string manifestFilePath = Path.Combine(destFolder, SystemConstants.ManifestFileName);
-                if (!File.Exists(manifestFilePath))
-                    throw new InvalidModuleException($"File '{manifestFilePath}' not found.");
-
-                return Dessirialize<ModuleInfo>(manifestFilePath);                                
+                return ReadModuleInfoFromDirectory(destFolder);
             }
             finally
             {
-                ThreadPool.QueueUserWorkItem(DeleteDirectory, destFolder);
+                DeleteDirectorySafely(destFolder);
             }
         }
 
@@ -320,13 +321,45 @@ namespace BibleNote.Services.ModulesManager
             return assembly.GetName().Version;
         }
 
-        private void DeleteDirectory(object directoryPath)
+        private ModuleInfo ReadModuleInfoFromDirectory(string moduleDirectory)
         {
-            Thread.Sleep(500);
+            string manifestFilePath = Path.Combine(moduleDirectory, SystemConstants.ManifestFileName);
+            if (!File.Exists(manifestFilePath))
+                throw new InvalidModuleException($"File '{manifestFilePath}' not found.");
+
+            return Dessirialize<ModuleInfo>(manifestFilePath);
+        }
+
+        private void ReplaceModuleDirectory(string sourceDirectory, string destDirectory)
+        {
+            var backupDirectory = $"{destDirectory}.backup-{Guid.NewGuid():N}";
+            var hadExistingModule = Directory.Exists(destDirectory);
+
             try
             {
-                if (Directory.Exists((string)directoryPath))
-                    Directory.Delete((string)directoryPath, true);
+                if (hadExistingModule)
+                    Directory.Move(destDirectory, backupDirectory);
+
+                Directory.Move(sourceDirectory, destDirectory);
+
+                if (hadExistingModule)
+                    DeleteDirectorySafely(backupDirectory);
+            }
+            catch
+            {
+                if (hadExistingModule && Directory.Exists(backupDirectory) && !Directory.Exists(destDirectory))
+                    Directory.Move(backupDirectory, destDirectory);
+
+                throw;
+            }
+        }
+
+        private void DeleteDirectorySafely(string directoryPath)
+        {
+            try
+            {
+                if (Directory.Exists(directoryPath))
+                    Directory.Delete(directoryPath, true);
             }
             catch (Exception ex)
             {

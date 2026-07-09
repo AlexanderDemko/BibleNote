@@ -7,16 +7,16 @@ namespace BibleNote.Services.ModulesManager
 {
     static class ZipLibHelper
     {
+        private static readonly StringCodec ZipStringCodec = StringCodec.FromCodePage(65001);
+
         public static void ExtractZipFile(byte[] fileData, string directoryPath, string[] relativeFilePathsToExtract = null)
         {
             if (!Directory.Exists(directoryPath))
                 Directory.CreateDirectory(directoryPath);
 
-            ZipStrings.CodePage = 65001;    // 866
-
             using (MemoryStream ms = new MemoryStream(fileData))
             {
-                using (ZipInputStream s = new ZipInputStream(ms))
+                using (ZipInputStream s = new ZipInputStream(ms, ZipStringCodec))
                 {
                     ZipEntry theEntry;
                     while ((theEntry = s.GetNextEntry()) != null)
@@ -51,15 +51,13 @@ namespace BibleNote.Services.ModulesManager
 
         public static void PackfilesToZip(string tempFolderPath, string targetFilePath)
         {
-            ZipStrings.CodePage = 65001;    // 866
-
             // Depending on the directory this could be very large and would require more attention
             // in a commercial package.
             string[] filenames = Directory.GetFiles(tempFolderPath);
 
             // 'using' statements guarantee the stream is closed properly which is a big source
             // of problems otherwise.  Its exception safe as well which is great.
-            using (ZipOutputStream s = new ZipOutputStream(File.Create(targetFilePath)))
+            using (ZipOutputStream s = new ZipOutputStream(File.Create(targetFilePath), ZipStringCodec))
             {
                 s.SetLevel(9); // 0 - store only to 9 - means best compression
 

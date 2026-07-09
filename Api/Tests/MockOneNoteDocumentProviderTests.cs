@@ -31,7 +31,7 @@ namespace BibleNote.Tests
         [TestMethod]
         public Task Test1()
         {
-            return TestFileAsync(@"..\..\..\TestData\OneNote_1.html",
+            return TestFileAsync("OneNote_1.html",
                 new string[] { "Ин 1:1" },
                 new string[] { "Исх 12:27" },
                 new string[] { "1Кор 5:7" },
@@ -47,7 +47,7 @@ namespace BibleNote.Tests
         [TestMethod]
         public Task Test2()
         {
-            return TestFileAsync(@"..\..\..\TestData\OneNote_2.html",
+            return TestFileAsync("OneNote_2.html",
                new string[] { "Ин 1" },
                new string[] { "Ин 1:5" },
                new string[] { "Мк 2:5" },
@@ -60,7 +60,7 @@ namespace BibleNote.Tests
         [TestMethod]
         public Task Test3()
         {
-            return TestFileAsync(@"..\..\..\TestData\OneNote_3.html", 
+            return TestFileAsync("OneNote_3.html", 
                new string[] { "1Пет 3:3" },
                new string[] { "1Пет 3:9" },
                new string[] { "Мф 1:1" },

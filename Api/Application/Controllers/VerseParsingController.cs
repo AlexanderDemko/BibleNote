@@ -23,8 +23,6 @@ namespace BibleNote.Application.Controllers
 {
     public class VerseParsingController : BaseController
     {
-        private static readonly object ParseLock = new object();
-
         private readonly IDocumentParserFactory documentParserFactory;
         private readonly IVerseLinkService verseLinkService;
         private readonly IConfigurationManager configurationManager;
@@ -159,77 +157,61 @@ namespace BibleNote.Application.Controllers
             if (string.IsNullOrWhiteSpace(module))
                 module = "rst";
 
-            lock (ParseLock)
+            using (configurationManager.UseTemporarySettings(module, request.UseCommaDelimiter))
             {
-                var previousModule = configurationManager.ModuleShortName;
-                var previousUseCommaDelimiter = configurationManager.UseCommaDelimiter;
+                var updateHtml = request.UpdateHtml == true && !string.IsNullOrWhiteSpace(request.Html);
+                var documentId = new ParserDocumentId(0, !updateHtml);
+                var provider = new ReadOnlyDocumentProviderInfo(verseLinkService, !updateHtml);
+                var paragraphs = new List<ParagraphParseResult>();
+                string updatedHtml = null;
 
-                try
+                using (var parser = documentParserFactory.Create(provider, documentId))
                 {
-                    configurationManager.ModuleShortName = module;
-                    configurationManager.UseCommaDelimiter = request.UseCommaDelimiter ?? configurationManager.UseCommaDelimiter;
-                    applicationManager.ReloadInfo();
-
-                    var updateHtml = request.UpdateHtml == true && !string.IsNullOrWhiteSpace(request.Html);
-                    var documentId = new ParserDocumentId(0, !updateHtml);
-                    var provider = new ReadOnlyDocumentProviderInfo(verseLinkService, !updateHtml);
-                    var paragraphs = new List<ParagraphParseResult>();
-                    string updatedHtml = null;
-
-                    using (var parser = documentParserFactory.Create(provider, documentId))
+                    if (!string.IsNullOrWhiteSpace(request.Html))
                     {
-                        if (!string.IsNullOrWhiteSpace(request.Html))
+                        updatedHtml = ParseHtml(parser, request.Html, paragraphs, updateHtml);
+                    }
+                    else
+                    {
+                        if (!string.IsNullOrWhiteSpace(request.Title))
                         {
-                            updatedHtml = ParseHtml(parser, request.Html, paragraphs, updateHtml);
+                            using (parser.ParseHierarchyElement(ElementType.Title))
+                            {
+                                ParseParagraph(parser, HtmlFromText(request.Title), paragraphs);
+                            }
+                        }
+
+                        var requestParagraphs = request.Paragraphs?.Where(p => p != null).ToList();
+                        if (requestParagraphs?.Count > 0)
+                        {
+                            foreach (var paragraph in requestParagraphs)
+                            {
+                                var paragraphHtml = !string.IsNullOrEmpty(paragraph.Html)
+                                    ? paragraph.Html
+                                    : HtmlFromText(paragraph.Text ?? string.Empty);
+                                ParseParagraph(parser, paragraphHtml, paragraphs);
+                            }
+                        }
+                        else if (!string.IsNullOrWhiteSpace(request.Text))
+                        {
+                            foreach (var paragraph in SplitTextParagraphs(request.Text))
+                                ParseParagraph(parser, HtmlFromText(paragraph), paragraphs);
                         }
                         else
                         {
-                            if (!string.IsNullOrWhiteSpace(request.Title))
-                            {
-                                using (parser.ParseHierarchyElement(ElementType.Title))
-                                {
-                                    ParseParagraph(parser, HtmlFromText(request.Title), paragraphs);
-                                }
-                            }
-
-                            var requestParagraphs = request.Paragraphs?.Where(p => p != null).ToList();
-                            if (requestParagraphs?.Count > 0)
-                            {
-                                foreach (var paragraph in requestParagraphs)
-                                {
-                                    var paragraphHtml = !string.IsNullOrEmpty(paragraph.Html)
-                                        ? paragraph.Html
-                                        : HtmlFromText(paragraph.Text ?? string.Empty);
-                                    ParseParagraph(parser, paragraphHtml, paragraphs);
-                                }
-                            }
-                            else if (!string.IsNullOrWhiteSpace(request.Text))
-                            {
-                                foreach (var paragraph in SplitTextParagraphs(request.Text))
-                                    ParseParagraph(parser, HtmlFromText(paragraph), paragraphs);
-                            }
-                            else
-                            {
-                                return BadRequest("Specify html, text, or paragraphs.");
-                            }
+                            return BadRequest("Specify html, text, or paragraphs.");
                         }
                     }
+                }
 
-                    return new ParsePageResponse
-                    {
-                        PageId = request.PageId,
-                        Module = applicationManager.CurrentModuleInfo.ShortName,
-                        UseCommaDelimiter = configurationManager.UseCommaDelimiter,
-                        Html = updateHtml ? updatedHtml : null,
-                        Paragraphs = paragraphs.Select(ToParagraphResponse).ToList()
-                    };
-                }
-                finally
+                return new ParsePageResponse
                 {
-                    configurationManager.ModuleShortName = previousModule;
-                    configurationManager.UseCommaDelimiter = previousUseCommaDelimiter;
-                    applicationManager.ReloadInfo();
-                }
+                    PageId = request.PageId,
+                    Module = applicationManager.CurrentModuleInfo.ShortName,
+                    UseCommaDelimiter = configurationManager.UseCommaDelimiter,
+                    Html = updateHtml ? updatedHtml : null,
+                    Paragraphs = paragraphs.Select(ToParagraphResponse).ToList()
+                };
             }
         }
 
@@ -689,237 +671,4 @@ namespace BibleNote.Application.Controllers
         }
     }
 
-    public class ParsePageRequest
-    {
-        public string PageId { get; set; }
-
-        public string Title { get; set; }
-
-        public string Html { get; set; }
-
-        public string Text { get; set; }
-
-        public string Module { get; set; }
-
-        public bool? UseCommaDelimiter { get; set; }
-
-        public bool? UpdateHtml { get; set; }
-
-        public List<ParseParagraphRequest> Paragraphs { get; set; }
-    }
-
-    public class ParseParagraphRequest
-    {
-        public int? Index { get; set; }
-
-        public string Path { get; set; }
-
-        public string Html { get; set; }
-
-        public string Text { get; set; }
-    }
-
-    public class ParsePageResponse
-    {
-        public string PageId { get; set; }
-
-        public string Module { get; set; }
-
-        public bool UseCommaDelimiter { get; set; }
-
-        public string Html { get; set; }
-
-        public List<ParseParagraphResponse> Paragraphs { get; set; }
-    }
-
-    public class ParseParagraphResponse
-    {
-        public int Index { get; set; }
-
-        public string Path { get; set; }
-
-        public string Text { get; set; }
-
-        public int VersesCount { get; set; }
-
-        public List<VerseReferenceResponse> References { get; set; }
-
-        public List<VerseNotFoundResponse> NotFound { get; set; }
-    }
-
-    public class VerseReferenceResponse
-    {
-        public string OriginalText { get; set; }
-
-        public string Normalized { get; set; }
-
-        public int BookIndex { get; set; }
-
-        public string BookName { get; set; }
-
-        public string BookShortName { get; set; }
-
-        public int Chapter { get; set; }
-
-        public int Verse { get; set; }
-
-        public int TopChapter { get; set; }
-
-        public int TopVerse { get; set; }
-
-        public bool IsChapter { get; set; }
-
-        public int StartIndex { get; set; }
-
-        public int EndIndex { get; set; }
-
-        public string EntryType { get; set; }
-
-        public string EntryOptions { get; set; }
-    }
-
-    public class VerseNotFoundResponse
-    {
-        public string Normalized { get; set; }
-
-        public int BookIndex { get; set; }
-
-        public int Chapter { get; set; }
-
-        public int Verse { get; set; }
-
-        public int TopChapter { get; set; }
-
-        public int TopVerse { get; set; }
-
-        public bool IsChapter { get; set; }
-    }
-
-    public class VerseParsingHealthResponse
-    {
-        public string Status { get; set; }
-
-        public string Module { get; set; }
-
-        public string ModuleName { get; set; }
-
-        public bool UseCommaDelimiter { get; set; }
-
-        public string ModulesDirectory { get; set; }
-    }
-
-    public class UploadModuleRequest
-    {
-        public string FilePath { get; set; }
-
-        public string ModuleName { get; set; }
-    }
-
-    public class UploadModuleResponse
-    {
-        public string ShortName { get; set; }
-
-        public string DisplayName { get; set; }
-
-        public string Type { get; set; }
-
-        public string ModulesDirectory { get; set; }
-    }
-
-    public class ModuleResponse
-    {
-        public string ShortName { get; set; }
-
-        public string DisplayName { get; set; }
-
-        public string Type { get; set; }
-
-        public string Locale { get; set; }
-
-        public string Description { get; set; }
-
-        public bool IsCurrent { get; set; }
-    }
-
-    public class BibleBookResponse
-    {
-        public int Index { get; set; }
-
-        public string Name { get; set; }
-
-        public string ShortName { get; set; }
-
-        public int ChapterCount { get; set; }
-
-        public List<int> Chapters { get; set; }
-    }
-
-    public class VerseTextRequest
-    {
-        public string Module { get; set; }
-
-        public int BookIndex { get; set; }
-
-        public string BookName { get; set; }
-
-        public string BookShortName { get; set; }
-
-        public string OriginalText { get; set; }
-
-        public int Chapter { get; set; }
-
-        public int Verse { get; set; }
-
-        public int? TopChapter { get; set; }
-
-        public int? TopVerse { get; set; }
-
-        public int ContextVerses { get; set; }
-    }
-
-    public class VerseTextResponse
-    {
-        public string Module { get; set; }
-
-        public string ModuleName { get; set; }
-
-        public int BookIndex { get; set; }
-
-        public string BookName { get; set; }
-
-        public string BookShortName { get; set; }
-
-        public int Chapter { get; set; }
-
-        public int Verse { get; set; }
-
-        public int? TopChapter { get; set; }
-
-        public int? TopVerse { get; set; }
-
-        public string Reference { get; set; }
-
-        public string Text { get; set; }
-
-        public List<VerseTextItemResponse> Verses { get; set; }
-    }
-
-    public class VerseTextItemResponse
-    {
-        public int Chapter { get; set; }
-
-        public int Verse { get; set; }
-
-        public int? TopVerse { get; set; }
-
-        public string Reference { get; set; }
-
-        public string Text { get; set; }
-
-        public bool IsFullVerse { get; set; }
-
-        public bool IsPartOfBigVerse { get; set; }
-
-        public bool HasValueEvenIfEmpty { get; set; }
-    }
 }

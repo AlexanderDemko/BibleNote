@@ -1,9 +1,9 @@
 import './env.js';
-import * as cheerio from 'cheerio';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { bibleParseConfigFromEnv, bibleParserVersion, parsePageWithBibleNote } from './bible.js';
 import { runtimeLog } from './runtime-logging.js';
+import { htmlToText } from './html.js';
 import {
   cacheStatus,
   clearSyncState,
@@ -129,18 +129,6 @@ export type SyncResult = {
   finishedAt: string;
   status: Record<string, unknown>;
 };
-
-function htmlToText(html: string): string {
-  const $ = cheerio.load(html);
-  $('script,style,noscript').remove();
-  $('br').replaceWith('\n');
-  $('p,div,li,h1,h2,h3,h4,h5,h6,table,tr').append('\n');
-  return $.text()
-    .replace(/\r/g, '')
-    .replace(/[\t ]+/g, ' ')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
-}
 
 function countBibleReferences(result: Awaited<ReturnType<typeof parsePageWithBibleNote>>): number {
   return (result.paragraphs ?? []).reduce((sum, paragraph) => sum + (paragraph.references?.length ?? 0), 0);

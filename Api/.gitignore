@@ -252,5 +252,8 @@ paket-files/
 *.sln.iml
 Analytics/Persistence/BibleNote.Analytics.db
 Persistence/BibleNote.Analytics.db
+Application/BibleNote.Analytics.db
+Application/BibleNote.Analytics.db-shm
+Application/BibleNote.Analytics.db-wal
 UI/BibleNoteApp/ClientApp/dist
 Application/ClientApp/.angular

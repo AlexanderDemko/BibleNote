@@ -44,7 +44,7 @@ namespace BibleNote.Tests
         [TestMethod]
         public async Task Test1()
         {
-            var parseResult = await this.documentProvider.ParseDocumentAsync(new FileDocumentId(0, @"..\..\..\TestData\Html_CheckFullPage.html", true));
+            var parseResult = await this.documentProvider.ParseDocumentAsync(new FileDocumentId(0, ResolveTestDataFilePath("Html_CheckFullPage.html"), true));
             await this.documentParseResultProcessing.ProcessAsync(this.document.Id, parseResult);
 
             this.DbContext.VerseEntryRepository

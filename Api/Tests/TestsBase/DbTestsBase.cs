@@ -18,13 +18,13 @@ namespace BibleNote.Tests.TestsBase
         protected AnalyticsDbContext ConcreteContext { get; set; }
 
         private SqliteConnection connection;
+        private string dbFilePath;
         
         public override void Init(Action<IServiceCollection> registerServicesAction = null)
         {
-            this.connection = new SqliteConnection(
-                @"DataSource=..\..\..\..\Persistence\BibleNote.Analytics.db"
-                //"DataSource=:memory:"
-                );
+            this.dbFilePath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "BibleNote.Tests", $"{Guid.NewGuid():N}.db");
+            System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(this.dbFilePath));
+            this.connection = new SqliteConnection($"DataSource={this.dbFilePath}");
             connection.Open();
 
             base.Init(services =>
@@ -36,12 +36,13 @@ namespace BibleNote.Tests.TestsBase
             this.DbContext = ServiceProvider.GetService<ITrackingDbContext>();
             this.ConcreteContext = (AnalyticsDbContext)this.DbContext;
             this.ConcreteContext.Database.Migrate();
-            DbInitializer.InitializeAsync(this.ConcreteContext).GetAwaiter();            
+            DbInitializer.InitializeAsync(this.ConcreteContext).GetAwaiter().GetResult();
         }        
                 
         public virtual void Cleanup()
         {
             this.connection?.Close();
+            DeleteTestDatabaseFile();
         }
 
         protected async Task<Document> GetOrCreateDocument()
@@ -69,6 +70,21 @@ namespace BibleNote.Tests.TestsBase
         public void Dispose()
         {
             this.connection?.Dispose();
+            DeleteTestDatabaseFile();
+        }
+
+        private void DeleteTestDatabaseFile()
+        {
+            if (string.IsNullOrEmpty(this.dbFilePath) || !System.IO.File.Exists(this.dbFilePath))
+                return;
+
+            try
+            {
+                System.IO.File.Delete(this.dbFilePath);
+            }
+            catch
+            {
+            }
         }
     }
 }

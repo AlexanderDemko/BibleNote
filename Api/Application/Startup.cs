@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Reflection;
+using System.Threading.Tasks;
 using AutoMapper;
 using BibleNote.Common.DiContainer;
 using BibleNote.Domain.Contracts;
@@ -20,6 +21,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace BibleNote.Application
 {
@@ -65,7 +67,7 @@ namespace BibleNote.Application
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, IMapper mapper, ITrackingDbContext dbContext)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, IMapper mapper, ITrackingDbContext dbContext, ILogger<Startup> logger)
         {
             mapper.ConfigurationProvider.AssertConfigurationIsValid();
 
@@ -111,10 +113,10 @@ namespace BibleNote.Application
 
             if (HybridSupport.IsElectronActive)
             {
-                ElectronBootstrap();
+                _ = ElectronBootstrap(logger);
             }
 
-            dbContext.InitDatabaseAsync();
+            dbContext.InitDatabaseAsync().GetAwaiter().GetResult();
         }
 
         private static void UseSwaggerSpecification(IApplicationBuilder app)
@@ -134,20 +136,19 @@ namespace BibleNote.Application
             });
         }
 
-        public async void ElectronBootstrap()
+        private static async Task ElectronBootstrap(ILogger logger)
         {
             try
             {
                 if (await Electron.App.CommandLine.HasSwitchAsync("dog"))
                 {
                     string value = await Electron.App.CommandLine.GetSwitchValueAsync("dog");
-                    
-                    File.WriteAllText(@"c:\temp\args.txt", value);
+                    logger.LogInformation("Electron command switch dog={Value}", value);
                 }
             }
             catch (Exception ex)
             {
-                File.WriteAllText(@"c:\temp\error.txt", ex.ToString());
+                logger.LogError(ex, "Failed to read Electron command line switches.");
             }
 
             var options = new BrowserWindowOptions

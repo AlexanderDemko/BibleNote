@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using BibleNote.Services.Configuration.Contracts;
+using System.Collections.Generic;
 using BibleNote.Services.ModulesManager.Contracts;
 using BibleNote.Services.ModulesManager.Scheme.Module;
 using BibleNote.Services.ModulesManager.Scheme.ZefaniaXml;
@@ -10,28 +9,12 @@ namespace BibleNote.Services.ModulesManager
     {
         private readonly IModulesManager _modulesManager;
         private Dictionary<string, XMLBIBLE> _biblesContent;
-        private XMLBIBLE _currentBibleContent;
 
         private static readonly object _locker = new object();
 
-        public ModuleInfo CurrentModuleInfo { get; private set; }
+        public ModuleInfo CurrentModuleInfo => _modulesManager.GetCurrentModuleInfo();
 
-        public XMLBIBLE CurrentBibleContent
-        {
-            get
-            {
-                if (_currentBibleContent == null)
-                {
-                    lock (_locker)
-                    {
-                        if (_currentBibleContent == null)
-                            _currentBibleContent = _modulesManager.GetCurrentBibleContent();
-                    }
-                }
-
-                return _currentBibleContent;
-            }
-        }
+        public XMLBIBLE CurrentBibleContent => GetBibleContent(CurrentModuleInfo.ShortName);
 
         public ApplicationManager(IModulesManager modulesManager)
         {
@@ -41,26 +24,24 @@ namespace BibleNote.Services.ModulesManager
 
         public void ReloadInfo()
         {
-            CurrentModuleInfo = _modulesManager.GetCurrentModuleInfo();
-            _biblesContent = new Dictionary<string, XMLBIBLE>();
-            _currentBibleContent = null;
+            lock (_locker)
+            {
+                _biblesContent = new Dictionary<string, XMLBIBLE>();
+            }
         }
 
         public XMLBIBLE GetBibleContent(string moduleShortName)
         {
-            if (!_biblesContent.TryGetValue(moduleShortName, out XMLBIBLE bibleContent))
+            lock (_locker)
             {
-                lock (_locker)
+                if (!_biblesContent.TryGetValue(moduleShortName, out XMLBIBLE bibleContent))
                 {
-                    if (!_biblesContent.TryGetValue(moduleShortName, out bibleContent))
-                    {
-                        bibleContent = _modulesManager.GetModuleBibleContent(moduleShortName);
-                        _biblesContent.Add(moduleShortName, bibleContent);
-                    }
+                    bibleContent = _modulesManager.GetModuleBibleContent(moduleShortName);
+                    _biblesContent.Add(moduleShortName, bibleContent);
                 }
-            }
 
-            return bibleContent;
+                return bibleContent;
+            }
         }
     }
 }

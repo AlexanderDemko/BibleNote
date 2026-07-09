@@ -1,0 +1,34 @@
+# Build outputs
+bin/
+obj/
+Debug/
+Release/
+.codex-build/
+.tmp/
+
+# Node dependencies and generated frontend artifacts
+node_modules/
+dist/
+release/
+vendor/
+
+# Local configuration and caches
+.env
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+*.db-shm
+*.db-wal
+msal-cache.json
+npm-debug.log*
+
+# IDE/user files
+.vs/
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.user
+*.suo

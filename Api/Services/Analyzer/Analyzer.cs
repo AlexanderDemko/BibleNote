@@ -10,7 +10,7 @@ using BibleNote.Services.Analyzer.Models;
 using BibleNote.Services.Contracts;
 using BibleNote.Services.VerseParsing.Models.ParseResult;
 using BibleNote.Services.VerseProcessing.Contracts;
-using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace BibleNote.Services.Analyzer
 {
@@ -19,15 +19,18 @@ namespace BibleNote.Services.Analyzer
         readonly IOrderedEnumerable<IDocumentParseResultProcessing> documentParseResultProcessings;
         private readonly ITrackingDbContext dbContext;
         private readonly IAnalysisSessionsService analysisSessionsService;
+        private readonly ILogger<Analyzer> logger;
 
         public Analyzer(
             ITrackingDbContext dbContext, 
             IAnalysisSessionsService analysisSessionsService,
-            IEnumerable<IDocumentParseResultProcessing> documentParseResultProcessings)
+            IEnumerable<IDocumentParseResultProcessing> documentParseResultProcessings,
+            ILogger<Analyzer> logger)
         {
             this.dbContext = dbContext;
             this.analysisSessionsService = analysisSessionsService;
             this.documentParseResultProcessings = documentParseResultProcessings.OrderBy(rp => rp.Order);
+            this.logger = logger;
         }
 
         public async Task<AnalysisSession> AnalyzeAsync<T>(
@@ -71,7 +74,7 @@ namespace BibleNote.Services.Analyzer
                 catch (Exception ex)
                 {
                     wasError = true;
-                    // todo: куда сохранить ошибку?
+                    logger.LogError(ex, "Failed to analyze document {DocumentId}.", document.DocumentId);
                 }
             }
 

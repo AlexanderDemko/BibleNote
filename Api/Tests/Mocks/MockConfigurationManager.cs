@@ -1,4 +1,5 @@
-﻿using BibleNote.Services.Configuration.Contracts;
+using System;
+using BibleNote.Services.Configuration.Contracts;
 
 namespace BibleNote.Tests.Mocks
 {
@@ -11,13 +12,46 @@ namespace BibleNote.Tests.Mocks
         public int Language { get; set; }
 
         public MockConfigurationManager()
-        {           
+        {
             ModuleShortName = "rst";
-            UseCommaDelimiter = true;          
+            UseCommaDelimiter = true;
         }
 
         public void SaveChanges()
         {
+        }
+
+        public IDisposable UseTemporarySettings(string moduleShortName, bool? useCommaDelimiter = null)
+        {
+            var previousModuleShortName = ModuleShortName;
+            var previousUseCommaDelimiter = UseCommaDelimiter;
+            ModuleShortName = string.IsNullOrWhiteSpace(moduleShortName) ? ModuleShortName : moduleShortName;
+            UseCommaDelimiter = useCommaDelimiter ?? UseCommaDelimiter;
+            return new TemporarySettingsScope(() =>
+            {
+                ModuleShortName = previousModuleShortName;
+                UseCommaDelimiter = previousUseCommaDelimiter;
+            });
+        }
+
+        private sealed class TemporarySettingsScope : IDisposable
+        {
+            private readonly Action restore;
+            private bool disposed;
+
+            public TemporarySettingsScope(Action restore)
+            {
+                this.restore = restore;
+            }
+
+            public void Dispose()
+            {
+                if (disposed)
+                    return;
+
+                restore();
+                disposed = true;
+            }
         }
     }
 }

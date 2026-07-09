@@ -1,6 +1,6 @@
 {
   "name": "biblenote",
-  "version": "4.0.19",
+  "version": "4.0.20",
   "description": "BibleNote desktop and OneNote cache application.",
   "type": "module",
   "engines": {

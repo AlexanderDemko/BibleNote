@@ -46,6 +46,8 @@ namespace BibleNote.Console
             System.Console.WriteLine($"Total: {sw.Elapsed.TotalSeconds}");
             System.Console.ReadKey();
             return;
+
+#pragma warning disable CS0162 // Developer scratch code below is intentionally kept behind the early return.
             
             //var testsP = new ParagraphParserTests();
             //testsP.Init();

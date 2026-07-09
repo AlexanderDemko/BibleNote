@@ -4,9 +4,11 @@ import fs from 'node:fs';
 import http, { type IncomingMessage, type ServerResponse } from 'node:http';
 import path from 'node:path';
 import { pathToFileURL, URL } from 'node:url';
+import * as z from 'zod/v4';
 import { bibleParseConfigFromEnv, getVerseTextWithBibleNote, parsePageWithBibleNote } from './bible.js';
 import { cacheStatus, defaultDbPath, findParallelBibleReferenceNotes, findParallelBibleReferences, getCachedPage, getSyncState, openCacheDb, readCachedPage, searchCache, updatePageHtml } from './cache.js';
-import { graphBinary } from './graph.js';
+import { visibleBibleRefSql, visibleBibleScopeSql } from './cache-sql.js';
+import { oneNoteImage } from './image-proxy.js';
 import { readOneNoteAccessSettings, saveOneNoteAccessSettings } from './onenote-settings.js';
 import { configureRuntimeLogging, readRuntimeLoggingSettings, runtimeLog, saveRuntimeLoggingSettings } from './runtime-logging.js';
 import { syncOneNoteCache, type SyncProgressEvent, type SyncResult } from './sync.js';
@@ -27,11 +29,32 @@ type SyncUiState = {
 
 type CacheDb = ReturnType<typeof openCacheDb>;
 
-const startupTimingStartedAt = Date.now();
-const imageProxyCache = new Map<string, { buffer: Buffer; contentType: string; etag?: string; cachedAt: number }>();
-const imageProxyCacheTtlMs = 30 * 60 * 1000;
-const imageProxyCacheMaxEntries = 200;
+const syncRequestSchema = z.object({
+  maxPages: z.number().int().min(1).max(1_000_000).optional(),
+  concurrency: z.number().int().min(1).max(3).optional(),
+  refreshOlderThanHours: z.number().int().min(0).max(1_000_000).optional(),
+  notebookIds: z.array(z.string().min(1)).max(1000).optional(),
+  sectionId: z.string().min(1).optional(),
+  pageId: z.string().min(1).optional(),
+  bibleModule: z.string().min(1).optional(),
+  metadataOnly: z.boolean().optional(),
+  forceContent: z.boolean().optional(),
+  includeHtml: z.boolean().optional(),
+  parseBibleRefs: z.boolean().optional(),
+  forceBibleParse: z.boolean().optional()
+});
 
+const uploadBibleNoteModuleRequestSchema = z.object({
+  fileName: z.string().min(1),
+  contentBase64: z.string().min(1)
+});
+
+const notebookDisplayNameRequestSchema = z.object({
+  notebookId: z.string().min(1),
+  displayName: z.string().nullable().optional()
+});
+
+const startupTimingStartedAt = Date.now();
 function logStartupTiming(message: string): void {
   if (process.env.ONENOTE_STARTUP_TIMING !== '1') return;
   const line = `[cache-ui startup +${Date.now() - startupTimingStartedAt}ms] ${message}`;
@@ -825,6 +848,33 @@ const pageHtml = String.raw`<!doctype html>
       return new URLSearchParams(location.search).get('pageId');
     }
 
+    function bibleLocationFromUrl() {
+      const prefix = '/bible/';
+      if (!location.pathname.startsWith(prefix)) return null;
+      const parts = location.pathname.slice(prefix.length).split('/').filter(Boolean);
+      if (parts.length < 3) return null;
+      const params = new URLSearchParams(location.search);
+      try {
+        const module = decodeURIComponent(parts[0]);
+        const bookIndex = Number(decodeURIComponent(parts[1]));
+        const chapter = Number(decodeURIComponent(parts[2]));
+        const verse = Number(params.get('verse') || '');
+        const topChapter = Number(params.get('topChapter') || '');
+        const topVerse = Number(params.get('topVerse') || '');
+        if (!module || !Number.isInteger(bookIndex) || !Number.isInteger(chapter)) return null;
+        return {
+          module,
+          bookIndex,
+          chapter,
+          verse:Number.isInteger(verse) && verse > 0 ? verse : undefined,
+          topChapter:Number.isInteger(topChapter) && topChapter > 0 ? topChapter : undefined,
+          topVerse:Number.isInteger(topVerse) && topVerse > 0 ? topVerse : undefined
+        };
+      } catch {
+        return null;
+      }
+    }
+
     function paragraphIndexFromUrl() {
       const match = location.hash.match(/^#p-(\d+)$/);
       return match ? Number(match[1]) : undefined;
@@ -840,6 +890,28 @@ const pageHtml = String.raw`<!doctype html>
       if (location.pathname + location.search + location.hash === nextUrl) return;
       const method = replace ? 'replaceState' : 'pushState';
       history[method]({ pageId:pageId || null, paragraphIndex:Number.isInteger(paragraphIndex) ? paragraphIndex : null }, '', nextUrl);
+    }
+
+    function bibleReaderUrl(readerLocation, ref) {
+      const module = encodeURIComponent(readerLocation.module || currentBibleModule());
+      const bookIndex = encodeURIComponent(String(readerLocation.bookIndex));
+      const chapter = encodeURIComponent(String(readerLocation.chapter));
+      const params = new URLSearchParams();
+      const verse = Number(ref?.verse || readerLocation.verse || 0);
+      const topChapter = Number(ref?.topChapter || readerLocation.topChapter || 0);
+      const topVerse = Number(ref?.topVerse || readerLocation.topVerse || 0);
+      if (Number.isInteger(verse) && verse > 0) params.set('verse', String(verse));
+      if (Number.isInteger(topChapter) && topChapter > 0 && topChapter !== Number(readerLocation.chapter)) params.set('topChapter', String(topChapter));
+      if (Number.isInteger(topVerse) && topVerse > 0 && topVerse !== verse) params.set('topVerse', String(topVerse));
+      const query = params.toString();
+      return '/bible/' + module + '/' + bookIndex + '/' + chapter + (query ? '?' + query : '');
+    }
+
+    function updateBibleReaderUrl(readerLocation, replace = false, ref) {
+      const nextUrl = bibleReaderUrl(readerLocation, ref);
+      if (location.pathname + location.search + location.hash === nextUrl) return;
+      const method = replace ? 'replaceState' : 'pushState';
+      history[method]({ bible:readerLocation }, '', nextUrl);
     }
 
     function updateTreeSelection(pageId) {
@@ -2428,6 +2500,7 @@ const pageHtml = String.raw`<!doctype html>
         topChapter:location.chapter,
         topVerse:Number(options.verse)
       } : null);
+      if (options.updateUrl !== false) updateBibleReaderUrl(location, options.replaceUrl === true, highlightRef);
       if (options.rememberHistory !== false) {
         rememberViewHistory({
           type:'bible',
@@ -2474,6 +2547,8 @@ const pageHtml = String.raw`<!doctype html>
       updateBibleReaderNavButtons();
       await openBibleReaderChapter({
         rememberHistory:options.rememberHistory,
+        updateUrl:options.updateUrl,
+        replaceUrl:options.replaceUrl,
         ref:location.verse ? {
           module:location.module,
           bookIndex:Number(location.bookIndex),
@@ -3510,40 +3585,6 @@ const pageHtml = String.raw`<!doctype html>
 
     function appendPageTextWithBibleRefs(container, pageText, query, bibleRefs) {
       const ranges = bibleTextRanges(pageText, bibleRefs);
-      if (ranges.length === 0) return appendHighlightedText(container, pageText, query);
-
-      const matches = [];
-      let cursor = 0;
-      for (const range of ranges) {
-        if (range.start > cursor) {
-          const span = document.createElement('span');
-          matches.push(...appendHighlightedText(span, pageText.slice(cursor, range.start), query));
-          container.append(span);
-        }
-
-        const link = document.createElement('a');
-        link.className = 'bible-inline-ref';
-        link.href = bibleTextUrl(range.ref);
-        link.title = 'Показать текст стиха';
-        link.addEventListener('click', event => {
-          event.preventDefault();
-          showBibleText(range.ref).catch(showError);
-        });
-        matches.push(...appendHighlightedText(link, pageText.slice(range.start, range.end), query));
-        container.append(link);
-        cursor = range.end;
-      }
-
-      if (cursor < pageText.length) {
-        const span = document.createElement('span');
-        matches.push(...appendHighlightedText(span, pageText.slice(cursor), query));
-        container.append(span);
-      }
-      return matches;
-    }
-
-    function appendPageTextWithBibleRefs(container, pageText, query, bibleRefs) {
-      const ranges = bibleTextRanges(pageText, bibleRefs);
       const targetParagraphIndexSet = new Set(currentTargetParagraphIndexes.filter(Number.isInteger));
       const targetParagraphs = bibleParagraphRanges(pageText, bibleRefs)
         .filter(item => targetParagraphIndexSet.has(item.index));
@@ -3659,29 +3700,6 @@ const pageHtml = String.raw`<!doctype html>
       return result;
     }
 
-    async function loadParallelRefsLegacy(ref, block) {
-      block.querySelectorAll('.bible-parallel').forEach(item => item.remove());
-      if (!ref.bookIndex || !ref.chapter) return;
-      const params = addBibleDisplayParams(new URLSearchParams({
-        bookIndex:String(ref.bookIndex),
-        chapter:String(ref.chapter),
-        limit:'20'
-      }));
-      if (ref.verse) params.set('verse', String(ref.verse));
-      const result = await api('/api/bible/parallel?' + params.toString());
-      const panel = document.createElement('div');
-      panel.className = 'bible-parallel';
-      if (result.rows.length === 0) {
-        panel.textContent = 'Параллельных ссылок пока нет.';
-      } else {
-        panel.textContent = result.rows.map(item => {
-          const score = Number(item.relationWeight || 0).toFixed(2);
-          return item.normalizedRef + ' (вес ' + score + ', связей ' + item.relations + ')';
-        }).join(', ');
-      }
-      block.append(panel);
-    }
-
     function parallelParams(ref) {
       const params = addBibleDisplayParams(new URLSearchParams({
         bookIndex:String(ref.bookIndex),
@@ -3721,45 +3739,6 @@ const pageHtml = String.raw`<!doctype html>
     function compactText(value, limit = 260) {
       const text = String(value || '').replace(/\s+/g, ' ').trim();
       return text.length > limit ? text.slice(0, limit - 1) + '…' : text;
-    }
-
-    async function loadParallelNotes(targetRef, relatedRef, host) {
-      host.replaceChildren();
-      const loading = document.createElement('div');
-      loading.className = 'bible-parallel-meta';
-      loading.textContent = 'Загрузка заметок...';
-      host.append(loading);
-      const result = await api('/api/bible/parallel/notes?' + parallelNotesParams(targetRef, relatedRef).toString());
-      host.replaceChildren();
-      if (result.rows.length === 0) {
-        const empty = document.createElement('div');
-        empty.className = 'bible-parallel-meta';
-        empty.textContent = 'Совместных упоминаний не найдено.';
-        host.append(empty);
-        return;
-      }
-      for (const note of result.rows) {
-        const button = document.createElement('button');
-        button.className = 'bible-parallel-note';
-        button.type = 'button';
-        button.addEventListener('click', () => {
-          if (bibleTextDialog.open) bibleTextDialog.close();
-          openPage(note.pageId).catch(showError);
-        });
-        const title = document.createElement('div');
-        title.className = 'bible-parallel-note-title';
-        title.textContent = note.pageTitle || '(без названия)';
-        const meta = document.createElement('div');
-        meta.className = 'bible-parallel-note-meta';
-        meta.textContent = [note.notebook, note.section, 'индекс ' + Number(note.relationWeight || 0).toFixed(2)].filter(Boolean).join(' · ');
-        const text = document.createElement('div');
-        text.className = 'bible-parallel-note-text';
-        const target = compactText(note.targetParagraphText);
-        const related = note.relatedParagraphText === note.targetParagraphText ? '' : compactText(note.relatedParagraphText);
-        text.textContent = related ? target + '\n' + related : target;
-        button.append(title, meta, text);
-        host.append(button);
-      }
     }
 
     async function loadParallelNotes(targetRef, relatedRef, host) {
@@ -3845,10 +3824,17 @@ const pageHtml = String.raw`<!doctype html>
     }
 
     async function loadParallelRefs(ref, block) {
-      block.querySelectorAll('.bible-parallel').forEach(item => item.remove());
       if (!ref.bookIndex || !ref.chapter) return;
+      const parallelKey = parallelParams(ref).toString();
+      const existing = block.querySelector('.bible-parallel');
+      if (existing?.dataset.parallelKey === parallelKey) {
+        existing.remove();
+        return;
+      }
+      block.querySelectorAll('.bible-parallel').forEach(item => item.remove());
       const panel = document.createElement('div');
       panel.className = 'bible-parallel';
+      panel.dataset.parallelKey = parallelKey;
       const title = document.createElement('div');
       title.className = 'bible-parallel-title';
       title.textContent = 'Параллельные ссылки для ' + (ref.normalizedRef || ref.originalText);
@@ -3859,7 +3845,7 @@ const pageHtml = String.raw`<!doctype html>
       panel.append(loading);
       block.append(panel);
 
-      const result = await api('/api/bible/parallel?' + parallelParams(ref).toString());
+      const result = await api('/api/bible/parallel?' + parallelKey);
       loading.remove();
       if (result.rows.length === 0) {
         const empty = document.createElement('div');
@@ -4017,6 +4003,11 @@ const pageHtml = String.raw`<!doctype html>
       const pageId = pageIdFromUrl();
       if (pageId) {
         openPage(pageId, { updateUrl:false }).catch(showError);
+        return;
+      }
+      const bibleLocation = bibleLocationFromUrl();
+      if (bibleLocation) {
+        openBibleReaderLocation(bibleLocation, { updateUrl:false, rememberHistory:false }).catch(showError);
         return;
       }
       selectedPageId = null;
@@ -4258,16 +4249,21 @@ const pageHtml = String.raw`<!doctype html>
         await refreshRuntimeSettings().catch(error => console.warn(error));
         const [status] = await Promise.all([api('/api/status'), loadNotebookSelector()]);
         refreshSyncState().catch(handleSyncPollError);
-        refreshBibleReaderModules().catch(error => {
+        const initialBibleLocation = bibleLocationFromUrl();
+        const loadBibleModules = refreshBibleReaderModules().catch(error => {
           console.warn(error);
           bibleReaderStatusEl.textContent = error?.message || String(error);
         });
+        if (initialBibleLocation) await loadBibleModules;
         statusEl.textContent = cacheStatusText(status);
         const initialPageId = pageIdFromUrl();
         if (initialPageId) {
           await openPage(initialPageId, { replaceUrl:true });
           if (activeSearchQuery) await renderSearch(activeSearchQuery);
           else await renderTree();
+        } else if (initialBibleLocation) {
+          await openBibleReaderLocation(initialBibleLocation, { replaceUrl:true, rememberHistory:false });
+          await renderTree();
         } else {
           renderEmptyPage();
           await renderTree();
@@ -4311,58 +4307,6 @@ function page(response: ServerResponse): void {
   response.end(pageHtml);
 }
 
-function cachedOneNoteImage(src: string) {
-  const cached = imageProxyCache.get(src);
-  if (!cached) return undefined;
-  if (Date.now() - cached.cachedAt > imageProxyCacheTtlMs) {
-    imageProxyCache.delete(src);
-    return undefined;
-  }
-  return cached;
-}
-
-function setCachedOneNoteImage(src: string, value: { buffer: Buffer; contentType: string; etag?: string }): void {
-  if (imageProxyCache.size >= imageProxyCacheMaxEntries) {
-    const oldest = [...imageProxyCache.entries()]
-      .sort((left, right) => left[1].cachedAt - right[1].cachedAt)[0]?.[0];
-    if (oldest) imageProxyCache.delete(oldest);
-  }
-  imageProxyCache.set(src, { ...value, cachedAt: Date.now() });
-}
-
-function validatedOneNoteImageSource(value: string): string {
-  const src = new URL(value);
-  if (src.protocol !== 'https:' || src.hostname !== 'graph.microsoft.com' || !src.pathname.startsWith('/v1.0/')) {
-    const error = new Error('Only Microsoft Graph v1.0 image URLs can be proxied.') as Error & { statusCode?: number };
-    error.statusCode = 400;
-    throw error;
-  }
-  return src.toString();
-}
-
-async function oneNoteImage(response: ServerResponse, srcValue: string): Promise<void> {
-  const src = validatedOneNoteImageSource(srcValue);
-  let image = cachedOneNoteImage(src);
-  if (!image) {
-    const fetched = await graphBinary(src, 'image/*,*/*');
-    if (!fetched.contentType.toLowerCase().startsWith('image/')) {
-      const error = new Error(`Graph resource is not an image: ${fetched.contentType}`) as Error & { statusCode?: number };
-      error.statusCode = 415;
-      throw error;
-    }
-    setCachedOneNoteImage(src, fetched);
-    image = cachedOneNoteImage(src);
-  }
-  if (!image) throw new Error('OneNote image cache failed.');
-  response.writeHead(200, {
-    'Content-Type': image.contentType,
-    'Cache-Control': 'private, max-age=1800',
-    'X-Content-Type-Options': 'nosniff',
-    ...(image.etag ? { ETag: image.etag } : {})
-  });
-  response.end(image.buffer);
-}
-
 function required(url: URL, name: string): string {
   const value = url.searchParams.get(name);
   if (!value) throw new Error(`Missing query parameter: ${name}`);
@@ -4371,41 +4315,6 @@ function required(url: URL, name: string): string {
 
 function includeAuxiliaryBibleRefs(url: URL): boolean {
   return url.searchParams.get('includeAux') === '1' || url.searchParams.get('includeAux') === 'true';
-}
-
-function visibleBibleRefSql(alias: string, paragraphAlias?: string): string {
-  const fragment = paragraphAlias
-    ? `AND instr(substr(COALESCE(${paragraphAlias}.text, ''), COALESCE(${alias}.start_index, 0) + 1, COALESCE(${alias}.end_index, ${alias}.start_index) - COALESCE(${alias}.start_index, 0) + 1), '[') = 0
-    AND instr(substr(COALESCE(${paragraphAlias}.text, ''), COALESCE(${alias}.start_index, 0) + 1, COALESCE(${alias}.end_index, ${alias}.start_index) - COALESCE(${alias}.start_index, 0) + 1), ']') = 0
-    AND instr(substr(COALESCE(${paragraphAlias}.text, ''), COALESCE(${alias}.start_index, 0) + 1, COALESCE(${alias}.end_index, ${alias}.start_index) - COALESCE(${alias}.start_index, 0) + 1), '{') = 0
-    AND instr(substr(COALESCE(${paragraphAlias}.text, ''), COALESCE(${alias}.start_index, 0) + 1, COALESCE(${alias}.end_index, ${alias}.start_index) - COALESCE(${alias}.start_index, 0) + 1), '}') = 0`
-    : '';
-  return `COALESCE(${alias}.entry_options, 'None') NOT IN ('IsExcluded', 'InSquareBrackets')
-    AND COALESCE(${alias}.entry_options, '') NOT LIKE '%Excluded%'
-    AND COALESCE(${alias}.entry_options, '') NOT LIKE '%Square%'
-    AND COALESCE(${alias}.entry_options, '') NOT LIKE '%Curly%'
-    AND COALESCE(${alias}.entry_options, '') NOT LIKE '%Bracket%'
-    AND COALESCE(${alias}.entry_options, '') NOT LIKE '%Brace%'
-    AND COALESCE(${alias}.entry_type, '') NOT LIKE '%Excluded%'
-    AND COALESCE(${alias}.entry_type, '') NOT LIKE '%Square%'
-    AND COALESCE(${alias}.entry_type, '') NOT LIKE '%Curly%'
-    AND COALESCE(${alias}.entry_type, '') NOT LIKE '%Bracket%'
-    AND COALESCE(${alias}.entry_type, '') NOT LIKE '%Brace%'
-    AND TRIM(COALESCE(${alias}.original_text, '')) NOT LIKE '[%'
-    AND TRIM(COALESCE(${alias}.original_text, '')) NOT LIKE '{%'
-    ${fragment}`;
-}
-
-function visibleBibleScopeSql(pageAlias: string, sectionAlias?: string): string {
-  const values = [
-    `COALESCE(${pageAlias}.title, '')`,
-    `COALESCE(${pageAlias}.parent_section_name, '')`
-  ];
-  if (sectionAlias) values.push(`COALESCE(${sectionAlias}.section_group_path, '')`);
-  return values.map(value => `instr(${value}, '[') = 0
-    AND instr(${value}, ']') = 0
-    AND instr(${value}, '{') = 0
-    AND instr(${value}, '}') = 0`).join('\n    AND ');
 }
 
 async function fetchJson(url: string, init?: RequestInit): Promise<any> {
@@ -4729,28 +4638,6 @@ async function readJsonBody(request: IncomingMessage): Promise<Record<string, un
   return parsed as Record<string, unknown>;
 }
 
-function optionalInteger(value: unknown, name: string, min: number, max: number): number | undefined {
-  if (value == null) return undefined;
-  if (!Number.isInteger(value) || (value as number) < min || (value as number) > max) {
-    throw new Error(`${name} must be an integer from ${min} to ${max}.`);
-  }
-  return value as number;
-}
-
-function optionalStringArray(value: unknown, name: string, maxItems: number): string[] | undefined {
-  if (value == null) return undefined;
-  if (!Array.isArray(value) || value.length === 0 || value.length > maxItems || value.some(item => typeof item !== 'string' || !item)) {
-    throw new Error(`${name} must be a non-empty array of at most ${maxItems} strings.`);
-  }
-  return [...new Set(value)];
-}
-
-function optionalString(value: unknown, name: string): string | undefined {
-  if (value == null) return undefined;
-  if (typeof value !== 'string' || !value.trim()) throw new Error(`${name} must be a non-empty string.`);
-  return value;
-}
-
 export function startCacheUi(options: UiOptions): http.Server {
   configureRuntimeLogging(path.dirname(options.dbPath));
   let cacheDb: CacheDb | undefined;
@@ -4799,7 +4686,7 @@ export function startCacheUi(options: UiOptions): http.Server {
           });
         }
       });
-      if (request.method === 'GET' && (url.pathname === '/' || url.pathname.startsWith('/page/'))) return page(response);
+      if (request.method === 'GET' && (url.pathname === '/' || url.pathname.startsWith('/page/') || url.pathname.startsWith('/bible/'))) return page(response);
       if (url.pathname === '/api/onenote-image' && request.method === 'GET') {
         await oneNoteImage(response, required(url, 'src'));
         return;
@@ -4870,9 +4757,7 @@ export function startCacheUi(options: UiOptions): http.Server {
         if (request.headers.origin && request.headers.origin !== ownOrigin) {
           return json(response, 403, { error: 'Cross-origin module upload requests are not allowed.' });
         }
-        const body = await readJsonBody(request);
-        if (typeof body.fileName !== 'string' || !body.fileName) throw new Error('fileName must be a non-empty string.');
-        if (typeof body.contentBase64 !== 'string' || !body.contentBase64) throw new Error('contentBase64 must be a non-empty string.');
+        const body = uploadBibleNoteModuleRequestSchema.parse(await readJsonBody(request));
         return json(response, 200, await uploadBibleNoteModule(body.fileName, body.contentBase64));
       }
       if (url.pathname === '/api/bible/parse-link' && request.method === 'GET') {
@@ -4887,14 +4772,14 @@ export function startCacheUi(options: UiOptions): http.Server {
           return json(response, 403, { error: 'Cross-origin sync requests are not allowed.' });
         }
         if (syncState.status === 'running') return json(response, 409, { error: 'Synchronization is already running.' });
-        const body = await readJsonBody(request);
-        const maxPages = optionalInteger(body.maxPages, 'maxPages', 1, 1_000_000);
-        const concurrency = optionalInteger(body.concurrency, 'concurrency', 1, 3) ?? 2;
-        const refreshOlderThanHours = optionalInteger(body.refreshOlderThanHours, 'refreshOlderThanHours', 0, 1_000_000);
-        const notebookIds = optionalStringArray(body.notebookIds, 'notebookIds', 1000);
-        const sectionId = optionalString(body.sectionId, 'sectionId');
-        const pageId = optionalString(body.pageId, 'pageId');
-        const bibleModule = optionalString(body.bibleModule, 'bibleModule');
+        const body = syncRequestSchema.parse(await readJsonBody(request));
+        const maxPages = body.maxPages;
+        const concurrency = body.concurrency ?? 2;
+        const refreshOlderThanHours = body.refreshOlderThanHours;
+        const notebookIds = body.notebookIds ? [...new Set(body.notebookIds)] : undefined;
+        const sectionId = body.sectionId;
+        const pageId = body.pageId;
+        const bibleModule = body.bibleModule;
         const scopeCount = Number(Boolean(notebookIds)) + Number(Boolean(sectionId)) + Number(Boolean(pageId));
         if (scopeCount > 1) throw new Error('Specify only one sync scope: notebookIds, sectionId, or pageId.');
         const startedAt = new Date().toISOString();
@@ -4952,9 +4837,7 @@ export function startCacheUi(options: UiOptions): http.Server {
         if (request.headers.origin && request.headers.origin !== ownOrigin) {
           return json(response, 403, { error: 'Cross-origin cache changes are not allowed.' });
         }
-        const body = await readJsonBody(request);
-        if (typeof body.notebookId !== 'string' || !body.notebookId) throw new Error('notebookId must be a non-empty string.');
-        if (body.displayName != null && typeof body.displayName !== 'string') throw new Error('displayName must be a string or null.');
+        const body = notebookDisplayNameRequestSchema.parse(await readJsonBody(request));
         const customDisplayName = typeof body.displayName === 'string' ? body.displayName.trim() || null : null;
         if (customDisplayName && customDisplayName.length > 120) throw new Error('displayName must not exceed 120 characters.');
         if (customDisplayName && /[\u0000-\u001f\u007f]/.test(customDisplayName)) throw new Error('displayName contains unsupported control characters.');
@@ -4972,7 +4855,7 @@ export function startCacheUi(options: UiOptions): http.Server {
         return json(response, 200, notebook);
       }
       if (request.method !== 'GET') return json(response, 405, { error: 'Method not allowed.' });
-      if (url.pathname === '/' || url.pathname.startsWith('/page/')) return page(response);
+      if (url.pathname === '/' || url.pathname.startsWith('/page/') || url.pathname.startsWith('/bible/')) return page(response);
       if (url.pathname === '/api/status') return json(response, 200, cacheStatus(db));
       if (url.pathname === '/api/bible/stats') {
         const one = (sql: string) => (db.prepare(sql).get() as any)?.value ?? 0;
