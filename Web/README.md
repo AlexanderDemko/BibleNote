@@ -22,7 +22,7 @@ The cache stores:
 Default cache path:
 
 ```text
-~/.codex-onenote-mcp/onenote-cache.sqlite
+~/BibleNote/onenote-cache.sqlite
 ```
 
 For thousands of large pages, keep raw HTML disabled unless you really need it. Plain text is always cached and indexed.
@@ -78,6 +78,7 @@ Useful options:
 
 ```bash
 npm run sync -- --metadata-only
+npm run sync -- --replace-all
 npm run sync -- --force-content
 npm run sync -- --refresh-older-than-hours 720
 npm run sync -- --concurrency 1
@@ -88,6 +89,11 @@ npm run sync -- --notebook-id <notebook-id>
 npm run sync -- --db /absolute/path/onenote-cache.sqlite
 npm run cache:status
 ```
+
+`--replace-all` is only valid for a full content sync. It drops and recreates all local cache
+tables before loading the selected notebooks, including FTS data, Bible parsing results, sync
+history, and local notebook aliases. It cannot be combined with `--max-pages`, `--metadata-only`,
+`--section-id`, or `--page-id`.
 
 Recommended routine:
 
@@ -143,9 +149,10 @@ content, notebook selection for display/search/sync, and background synchronizat
 progress reporting. The notebook selection is saved in the browser.
 
 The separate synchronization settings panel applies to full sync and every targeted notebook,
-section, or page sync action. Settings are saved in the browser. To refresh one page with its raw
-OneNote HTML, enable `Сохранять HTML` and then use the page's `↻` action; after completion the page
-shows `Показать HTML`.
+section, or page sync action, except `Перезаписать данные полностью`, which is intentionally used
+only by the main full-sync button. Settings are saved in the browser. To refresh one page with its
+raw OneNote HTML, enable `Сохранять HTML` and then use the page's `↻` action; after completion the
+page shows `Показать HTML`.
 
 The theme selector in the viewer header offers three persistent themes: `A · Тёплая`,
 `B · Светлая`, and `C · Тёмная`.

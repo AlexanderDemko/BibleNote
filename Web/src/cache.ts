@@ -2,10 +2,10 @@ import './env.js';
 import Database from 'better-sqlite3';
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import type { BibleParseResult } from './bible.js';
 import { visibleBibleRefSql, visibleBibleScopeSql } from './cache-sql.js';
+import { defaultBibleNoteDir } from './paths.js';
 import { runtimeLog } from './runtime-logging.js';
 
 export type NotebookRow = {
@@ -34,6 +34,7 @@ export type SectionRow = {
   pages_scanned_at: string | null;
   pages_scan_complete: number | null;
   pages_seen_count: number | null;
+  pages_scan_error: string | null;
 };
 
 export type PageRow = {
@@ -95,6 +96,11 @@ export type BibleParseStateRow = {
   paragraphs_count: number;
 };
 
+export type PageAccessRow = {
+  page_id: string;
+  last_opened_at: string;
+};
+
 export type BibleReferenceSearchResult = {
   page_id: string;
   title: string | null;
@@ -142,7 +148,7 @@ type ParagraphWithReferences = {
   refs: StoredBibleReference[];
 };
 
-export const defaultCacheDir = path.join(os.homedir(), '.codex-onenote-mcp');
+export const defaultCacheDir = defaultBibleNoteDir;
 export const defaultDbPath = process.env.ONENOTE_CACHE_DB ?? path.join(defaultCacheDir, 'onenote-cache.sqlite');
 
 const startupTimingStartedAt = Date.now();
@@ -179,10 +185,32 @@ export function openCacheDb(dbPath = defaultDbPath): Database.Database {
   db.pragma('synchronous = NORMAL');
   db.pragma('foreign_keys = ON');
   db.pragma('busy_timeout = 5000');
+  db.pragma('wal_autocheckpoint = 1000');
+  db.pragma('journal_size_limit = 67108864');
   logStartupTiming('sqlite pragmas applied');
   migrate(db);
   logStartupTiming('openCacheDb complete');
   return db;
+}
+
+export function checkpointCacheDb(
+  db: Database.Database,
+  mode: 'PASSIVE' | 'TRUNCATE' = 'PASSIVE'
+): { busy: number; log: number; checkpointed: number } | undefined {
+  try {
+    const [result] = db.pragma(`wal_checkpoint(${mode})`) as Array<{
+      busy: number;
+      log: number;
+      checkpointed: number;
+    }>;
+    runtimeLog('cache', `SQLite WAL checkpoint ${mode.toLowerCase()}`, result);
+    return result;
+  } catch (error: any) {
+    runtimeLog('cache', `SQLite WAL checkpoint ${mode.toLowerCase()} failed`, {
+      error: error?.stack ?? error?.message ?? String(error)
+    });
+    return undefined;
+  }
 }
 
 function migrate(db: Database.Database): void {
@@ -213,7 +241,8 @@ function migrate(db: Database.Database): void {
       synced_at TEXT NOT NULL,
       pages_scanned_at TEXT,
       pages_scan_complete INTEGER,
-      pages_seen_count INTEGER
+      pages_seen_count INTEGER,
+      pages_scan_error TEXT
     );
 
     CREATE TABLE IF NOT EXISTS pages (
@@ -255,6 +284,11 @@ function migrate(db: Database.Database): void {
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL,
       updated_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS page_access (
+      page_id TEXT PRIMARY KEY,
+      last_opened_at TEXT NOT NULL
     );
 
     CREATE TABLE IF NOT EXISTS page_bible_parse_state (
@@ -352,6 +386,7 @@ function migrate(db: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_pages_last_modified ON pages(last_modified_date_time);
     CREATE INDEX IF NOT EXISTS idx_pages_content_synced ON pages(content_synced_at);
     CREATE INDEX IF NOT EXISTS idx_pages_deleted ON pages(deleted_at);
+    CREATE INDEX IF NOT EXISTS idx_page_access_last_opened ON page_access(last_opened_at DESC);
     CREATE INDEX IF NOT EXISTS idx_bible_refs_page ON paragraph_verse_refs(page_id);
     CREATE INDEX IF NOT EXISTS idx_bible_refs_page_paragraph ON paragraph_verse_refs(page_id, paragraph_index);
     CREATE INDEX IF NOT EXISTS idx_bible_refs_ref ON paragraph_verse_refs(book_index, chapter, verse, top_chapter, top_verse);
@@ -394,6 +429,9 @@ function migrate(db: Database.Database): void {
   }
   if (!sectionColumns.some(column => column.name === 'pages_seen_count')) {
     db.exec('ALTER TABLE sections ADD COLUMN pages_seen_count INTEGER');
+  }
+  if (!sectionColumns.some(column => column.name === 'pages_scan_error')) {
+    db.exec('ALTER TABLE sections ADD COLUMN pages_scan_error TEXT');
   }
   if (!sectionColumns.some(column => column.name === 'parent_section_group_id')) {
     db.exec('ALTER TABLE sections ADD COLUMN parent_section_group_id TEXT');
@@ -443,6 +481,41 @@ function migrate(db: Database.Database): void {
     logStartupTiming('rebuildBibleReferenceRelations complete');
   }
   logStartupTiming('migrate complete');
+}
+
+export function resetCacheDb(db: Database.Database): void {
+  const startedAt = Date.now();
+  const previousSecureDelete = Number(db.pragma('secure_delete', { simple: true }));
+  runtimeLog('cache', 'Resetting SQLite cache tables');
+
+  // This cache contains no secrets. Disabling secure_delete prevents SQLite
+  // from writing zeros for millions of discarded relation/index pages into WAL.
+  db.pragma('secure_delete = OFF');
+  try {
+    const reset = db.transaction(() => {
+      // page_access intentionally survives a cache rebuild so a new hydration
+      // run can still prioritize pages the user has opened before.
+      db.exec(`
+        DROP TABLE IF EXISTS pages_fts;
+        DROP TABLE IF EXISTS paragraph_verse_relations;
+        DROP TABLE IF EXISTS paragraph_verse_not_found;
+        DROP TABLE IF EXISTS paragraph_verse_refs;
+        DROP TABLE IF EXISTS page_paragraphs;
+        DROP TABLE IF EXISTS page_bible_parse_state;
+        DROP TABLE IF EXISTS pages;
+        DROP TABLE IF EXISTS section_groups;
+        DROP TABLE IF EXISTS sections;
+        DROP TABLE IF EXISTS notebooks;
+        DROP TABLE IF EXISTS sync_state;
+      `);
+      migrate(db);
+    });
+    reset();
+  } finally {
+    db.pragma(`secure_delete = ${previousSecureDelete}`);
+  }
+
+  runtimeLog('cache', 'Reset SQLite cache tables', { durationMs: Date.now() - startedAt });
 }
 
 export function getSyncState(db: Database.Database, key: string): string | undefined {
@@ -569,13 +642,58 @@ export function markSectionPagesScanned(
     UPDATE sections SET
       pages_scanned_at = ?,
       pages_scan_complete = ?,
-      pages_seen_count = ?
+      pages_seen_count = ?,
+      pages_scan_error = NULL
     WHERE id = ?
   `).run(scannedAt, Number(complete), pagesSeen, sectionId);
 }
 
+export function markSectionPagesScanFailed(
+  db: Database.Database,
+  sectionId: string,
+  error: string,
+  scannedAt = nowIso()
+): void {
+  db.prepare(`
+    UPDATE sections SET
+      pages_scanned_at = ?,
+      pages_scan_complete = 0,
+      pages_seen_count = NULL,
+      pages_scan_error = ?
+    WHERE id = ?
+  `).run(scannedAt, error.slice(0, 4000), sectionId);
+}
+
 export function getCachedPage(db: Database.Database, pageId: string): PageRow | undefined {
   return db.prepare('SELECT * FROM pages WHERE id = ?').get(pageId) as PageRow | undefined;
+}
+
+export function markPageOpened(db: Database.Database, pageId: string, openedAt = nowIso()): void {
+  db.prepare(`
+    INSERT INTO page_access(page_id, last_opened_at)
+    VALUES (?, ?)
+    ON CONFLICT(page_id) DO UPDATE SET
+      last_opened_at = MAX(page_access.last_opened_at, excluded.last_opened_at)
+  `).run(pageId, openedAt);
+}
+
+export function listPageAccess(db: Database.Database): PageAccessRow[] {
+  return db.prepare(`
+    SELECT page_id, last_opened_at
+    FROM page_access
+    ORDER BY last_opened_at DESC
+  `).all() as PageAccessRow[];
+}
+
+export function listRecentlyOpenedPageIds(db: Database.Database, limit = 100): string[] {
+  const safeLimit = Math.max(1, Math.min(Math.trunc(limit), 1000));
+  const rows = db.prepare(`
+    SELECT page_id
+    FROM page_access
+    ORDER BY last_opened_at DESC
+    LIMIT ?
+  `).all(safeLimit) as Array<{ page_id: string }>;
+  return rows.map(row => row.page_id);
 }
 
 export function upsertPageMetadata(db: Database.Database, page: any, syncedAt = nowIso()): void {
@@ -1257,6 +1375,7 @@ export function cacheStatus(db: Database.Database): Record<string, unknown> {
     deletedPages: one('SELECT COUNT(*) AS value FROM pages WHERE deleted_at IS NOT NULL'),
     pagesWithContent: one('SELECT COUNT(*) AS value FROM pages WHERE deleted_at IS NULL AND content_text IS NOT NULL'),
     pagesWithErrors: one("SELECT COUNT(*) AS value FROM pages WHERE deleted_at IS NULL AND fetch_error IS NOT NULL"),
+    sectionsWithScanErrors: one("SELECT COUNT(*) AS value FROM sections WHERE pages_scan_error IS NOT NULL"),
     bibleParsedPages: one("SELECT COUNT(*) AS value FROM page_bible_parse_state WHERE parsed_at IS NOT NULL AND parse_error IS NULL"),
     bibleParseErrors: one("SELECT COUNT(*) AS value FROM page_bible_parse_state WHERE parse_error IS NOT NULL"),
     bibleReferencedParagraphs: one('SELECT COUNT(*) AS value FROM page_paragraphs'),
@@ -1363,6 +1482,7 @@ export function readCachedPage(db: Database.Database, pageId: string, includeHtm
     createdDateTime: row.created_date_time,
     lastModifiedDateTime: row.last_modified_date_time,
     contentSyncedAt: row.content_synced_at,
+    hasContent: row.content_text != null,
     parentNotebook: { id: row.parent_notebook_id, displayName: notebook?.custom_display_name ?? row.parent_notebook_name },
     parentSection: { id: row.parent_section_id, displayName: row.parent_section_name },
     sectionGroupPath: section?.section_group_path ?? undefined,

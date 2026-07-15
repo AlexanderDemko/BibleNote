@@ -7,6 +7,7 @@ let tokenResultPromise: ReturnType<typeof acquireTokenSilent> | undefined;
 let graphRequestGate: Promise<void> = Promise.resolve();
 let nextGraphRequestAt = 0;
 let adaptiveMinIntervalMs = 0;
+let adaptiveSuccessStreak = 0;
 
 export type GraphRetryEvent = {
   status: number;
@@ -26,8 +27,8 @@ export function resetGraphAccessToken(): void {
 }
 
 function configuredMinIntervalMs(): number {
-  const value = Number(process.env.ONENOTE_GRAPH_MIN_INTERVAL_MS ?? '750');
-  return Number.isFinite(value) && value >= 0 ? Math.min(value, 60_000) : 750;
+  const value = Number(process.env.ONENOTE_GRAPH_MIN_INTERVAL_MS ?? '2000');
+  return Number.isFinite(value) && value >= 0 ? Math.max(2_000, Math.min(value, 60_000)) : 2_000;
 }
 
 async function waitForGraphRequestSlot(): Promise<void> {
@@ -46,12 +47,34 @@ async function waitForGraphRequestSlot(): Promise<void> {
 
 function increaseAdaptiveInterval(): void {
   const current = Math.max(configuredMinIntervalMs(), adaptiveMinIntervalMs);
-  adaptiveMinIntervalMs = Math.min(10_000, Math.ceil(current * 1.6));
+  adaptiveMinIntervalMs = Math.min(60_000, Math.ceil(current * 1.8));
+  adaptiveSuccessStreak = 0;
+  if (adaptiveMinIntervalMs !== current) {
+    runtimeLog('graph', 'Graph adaptive interval increased', {
+      previousIntervalMs: current,
+      intervalMs: adaptiveMinIntervalMs
+    });
+  }
 }
 
 function relaxAdaptiveInterval(): void {
   const base = configuredMinIntervalMs();
-  if (adaptiveMinIntervalMs > base) adaptiveMinIntervalMs = Math.max(base, Math.floor(adaptiveMinIntervalMs * 0.97));
+  if (adaptiveMinIntervalMs <= base) {
+    adaptiveMinIntervalMs = base;
+    adaptiveSuccessStreak = 0;
+    return;
+  }
+
+  adaptiveSuccessStreak++;
+  if (adaptiveSuccessStreak < 3) return;
+
+  const previousIntervalMs = adaptiveMinIntervalMs;
+  adaptiveMinIntervalMs = Math.max(base, Math.ceil(adaptiveMinIntervalMs / 2));
+  adaptiveSuccessStreak = 0;
+  runtimeLog('graph', 'Graph adaptive interval relaxed', {
+    previousIntervalMs,
+    intervalMs: adaptiveMinIntervalMs
+  });
 }
 
 function extendGlobalBackoff(delayMs: number): void {

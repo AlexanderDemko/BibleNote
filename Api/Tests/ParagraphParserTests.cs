@@ -264,6 +264,14 @@ namespace BibleNote.Tests
         }
 
         [TestMethod]
+        public void InvalidVerseAfterCommaFallbackDoesNotThrow()
+        {
+            MockConfigurationManager.UseCommaDelimiter = true;
+
+            CheckVerses("8, 45 2 Пар 32 3", null, null, new[] { "2 Пар 323" }, Array.Empty<string>());
+        }
+
+        [TestMethod]
         public void Test14()
         {
             var input = "в 1 Ин 1,2-3 и в Иисуса Навина 2-3 было написано про 1-е Кор 1,2-3,4-5;6-7,8-9,10 и в :7. Ин1,1 и Ин 2,1";

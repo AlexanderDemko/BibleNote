@@ -1,6 +1,6 @@
 {
   "name": "biblenote",
-  "version": "4.0.20",
+  "version": "4.0.26",
   "description": "BibleNote desktop and OneNote cache application.",
   "type": "module",
   "engines": {
@@ -12,6 +12,7 @@
   "main": "./dist/electron-main.js",
   "scripts": {
     "build": "tsc",
+    "test": "tsx --test tests/*.test.ts",
     "biblenote:stage": "powershell -ExecutionPolicy Bypass -File scripts/stage-biblenote.ps1",
     "node:stage": "powershell -ExecutionPolicy Bypass -File scripts/stage-node.ps1",
     "node:rebuild": "npm rebuild better-sqlite3",

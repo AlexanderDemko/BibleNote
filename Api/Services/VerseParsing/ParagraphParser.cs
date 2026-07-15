@@ -76,8 +76,12 @@ namespace BibleNote.Services.VerseParsing
                 if (!verseWasRecognized && configurationManager.UseCommaDelimiter
                     && verseEntry.EntryType <= VerseEntryType.ChapterVerse)
                 {
-                    verseEntry = stringParser.TryGetVerse(parseString.Value, index, index, false);
-                    verseWasRecognized = verseRecognitionService.TryRecognizeVerse(verseEntry, docParseContext);
+                    var verseEntryWithoutComma = stringParser.TryGetVerse(parseString.Value, index, index, false);
+                    if (verseEntryWithoutComma.VersePointerFound)
+                    {
+                        verseEntry = verseEntryWithoutComma;
+                        verseWasRecognized = verseRecognitionService.TryRecognizeVerse(verseEntry, docParseContext);
+                    }
                 }
 
                 if (verseWasRecognized)
@@ -96,9 +100,10 @@ namespace BibleNote.Services.VerseParsing
                     paragraphContextEditor.SetLatestVerseEntry(verseEntry);
                 }
 
-                if (verseEntry.VersePointer.SubVerses.NotFoundVerses.Count > 0)
+                var notFoundVerses = verseEntry.VersePointer?.SubVerses?.NotFoundVerses;
+                if (notFoundVerses?.Count > 0)
                 {
-                    paragraphContextEditor.ParseResult.NotFoundVerses.AddRange(verseEntry.VersePointer.SubVerses.NotFoundVerses);
+                    paragraphContextEditor.ParseResult.NotFoundVerses.AddRange(notFoundVerses);
                 }
 
                 var prevIndex = index;

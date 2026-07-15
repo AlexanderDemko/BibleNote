@@ -1,6 +1,6 @@
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
+import { defaultBibleNoteDir } from './paths.js';
 
 export type RuntimeLoggingSettings = {
   verboseLogging: boolean;
@@ -9,8 +9,8 @@ export type RuntimeLoggingSettings = {
 };
 
 const sensitiveKeyPattern = /token|secret|password|authorization|clientid|client_id|cache/i;
-let settingsPath = path.join(os.homedir(), '.codex-onenote-mcp', 'runtime-settings.json');
-let logPath = path.join(os.homedir(), '.codex-onenote-mcp', 'extended.log');
+let settingsPath = path.join(defaultBibleNoteDir, 'runtime-settings.json');
+let logPath = path.join(defaultBibleNoteDir, 'extended.log');
 let verboseLogging = false;
 
 function readSettingsFile(): void {

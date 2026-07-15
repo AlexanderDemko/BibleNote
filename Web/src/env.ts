@@ -1,13 +1,14 @@
 import { config } from 'dotenv';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { defaultBibleNoteDir, migrateLegacyBibleNoteDirSync } from './paths.js';
 
 function existingEnvPaths(): string[] {
+  migrateLegacyBibleNoteDirSync();
   const paths = [
     process.env.ONENOTE_ENV_FILE,
-    path.join(os.homedir(), '.codex-onenote-mcp', '.env'),
+    path.join(defaultBibleNoteDir, '.env'),
     process.env.PORTABLE_EXECUTABLE_DIR ? path.join(process.env.PORTABLE_EXECUTABLE_DIR, '.env') : undefined,
     process.execPath ? path.join(path.dirname(process.execPath), '.env') : undefined,
     path.join(process.cwd(), '.env'),

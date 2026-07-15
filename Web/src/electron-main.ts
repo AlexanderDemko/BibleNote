@@ -1,5 +1,5 @@
 import './env.js';
-import { app, BrowserWindow, dialog } from 'electron';
+import { app, BrowserWindow, dialog, Menu, MenuItem } from 'electron';
 import { spawn, type ChildProcess } from 'node:child_process';
 import fs from 'node:fs';
 import http from 'node:http';
@@ -25,6 +25,12 @@ let uiProcessExit: { code: number | null; signal: NodeJS.Signals | null } | unde
 let startupStartedAt = Date.now();
 let startupLogPath = '';
 let pendingBibleLink = findBibleProtocolArg(process.argv);
+let rendererRecoveryPromise: Promise<void> | undefined;
+let rendererUnresponsiveTimer: NodeJS.Timeout | undefined;
+let rendererHealthTimer: NodeJS.Timeout | undefined;
+let rendererHealthFailures = 0;
+let rendererRecoveryAttempts: number[] = [];
+let isQuitting = false;
 
 function logStartup(message: string): void {
   const line = `[electron startup +${Date.now() - startupStartedAt}ms] ${message}`;
@@ -319,20 +325,34 @@ function loadingHtml(): string {
 </html>`;
 }
 
-async function createWindow(): Promise<void> {
-  startupStartedAt = Date.now();
-  startupLogPath = path.join(app.getPath('userData'), 'startup.log');
-  try {
-    fs.mkdirSync(path.dirname(startupLogPath), { recursive: true });
-    fs.writeFileSync(startupLogPath, `${new Date().toISOString()} startup log\n`, 'utf8');
-  } catch {
-    startupLogPath = '';
-  }
-  logStartup('createWindow start');
-  process.env.BIBLENOTE_API_URL = bibleNoteUrl;
-  startControlServer();
+function installApplicationMenu(): void {
+  const menu = Menu.getApplicationMenu();
+  if (!menu || menu.items.some(item => item.id === 'biblenote-help')) return;
 
-  mainWindow = new BrowserWindow({
+  menu.append(new MenuItem({
+    id: 'biblenote-help',
+    label: 'Help',
+    submenu: [
+      {
+        id: 'biblenote-about',
+        label: 'About BibleNote',
+        click: () => {
+          void dialog.showMessageBox({
+            type: 'info',
+            title: 'About BibleNote',
+            message: `BibleNote ${app.getVersion()}`,
+            detail: 'Desktop and OneNote cache application.',
+            buttons: ['OK']
+          });
+        }
+      }
+    ]
+  }));
+  Menu.setApplicationMenu(menu);
+}
+
+function createBrowserWindow(): BrowserWindow {
+  const window = new BrowserWindow({
     width: 1320,
     height: 860,
     minWidth: 980,
@@ -345,9 +365,139 @@ async function createWindow(): Promise<void> {
       sandbox: true
     }
   });
+
+  window.webContents.on('render-process-gone', (_event, details) => {
+    logStartup(`renderer process gone reason=${details.reason} exitCode=${details.exitCode}`);
+    if (mainWindow === window) void recoverRenderer(`renderer-${details.reason}`);
+  });
+  window.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedUrl, isMainFrame) => {
+    if (!isMainFrame || errorCode === -3) return;
+    logStartup(`main ui load failed code=${errorCode} description=${errorDescription} url=${validatedUrl}`);
+    if (mainWindow === window) void recoverRenderer(`load-failed-${errorCode}`);
+  });
+  window.on('unresponsive', () => {
+    logStartup('renderer became unresponsive');
+    if (mainWindow !== window) return;
+    if (rendererUnresponsiveTimer) clearTimeout(rendererUnresponsiveTimer);
+    rendererUnresponsiveTimer = setTimeout(() => {
+      rendererUnresponsiveTimer = undefined;
+      if (mainWindow === window) void recoverRenderer('unresponsive-timeout');
+    }, 10_000);
+  });
+  window.on('responsive', () => {
+    logStartup('renderer became responsive');
+    if (rendererUnresponsiveTimer) {
+      clearTimeout(rendererUnresponsiveTimer);
+      rendererUnresponsiveTimer = undefined;
+    }
+  });
+  window.on('closed', () => {
+    if (mainWindow === window) mainWindow = undefined;
+  });
+
+  return window;
+}
+
+async function showLoadingPage(window: BrowserWindow): Promise<void> {
+  await window.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(loadingHtml())}`);
+}
+
+function startRendererHealthMonitor(): void {
+  if (rendererHealthTimer) return;
+  rendererHealthTimer = setInterval(() => {
+    void (async () => {
+      const window = mainWindow;
+      if (isQuitting || rendererRecoveryPromise || !window || window.isDestroyed()) return;
+      if (!window.webContents.getURL().startsWith(uiUrl('/'))) return;
+
+      try {
+        const healthy = await Promise.race([
+          window.webContents.executeJavaScript(
+            `document.readyState === 'complete' && Boolean(document.getElementById('syncState'))`,
+            true
+          ),
+          new Promise<boolean>((_resolve, reject) => {
+            setTimeout(() => reject(new Error('renderer health check timed out')), 5_000);
+          })
+        ]);
+        if (!healthy) throw new Error('renderer UI marker is missing');
+        rendererHealthFailures = 0;
+      } catch (error) {
+        if (window !== mainWindow || isQuitting) return;
+        rendererHealthFailures++;
+        const message = error instanceof Error ? error.message : String(error);
+        logStartup(`renderer health check failed count=${rendererHealthFailures}: ${message}`);
+        if (rendererHealthFailures >= 2) void recoverRenderer('health-check');
+      }
+    })();
+  }, 15_000);
+}
+
+async function recoverRenderer(reason: string): Promise<void> {
+  if (isQuitting) return;
+  if (rendererRecoveryPromise) return rendererRecoveryPromise;
+
+  const now = Date.now();
+  rendererRecoveryAttempts = rendererRecoveryAttempts.filter(attempt => now - attempt < 60_000);
+  if (rendererRecoveryAttempts.length >= 3) {
+    logStartup(`renderer recovery suppressed after ${rendererRecoveryAttempts.length} attempts in 60s reason=${reason}`);
+    dialog.showErrorBox(
+      'BibleNote could not restore its window',
+      'The interface failed repeatedly. The background cache process is still running; open http://127.0.0.1:4312/ in a browser.'
+    );
+    return;
+  }
+  rendererRecoveryAttempts.push(now);
+
+  rendererRecoveryPromise = (async () => {
+    const oldWindow = mainWindow;
+    const previousUrl = oldWindow && !oldWindow.isDestroyed()
+      ? oldWindow.webContents.getURL()
+      : '';
+    const targetUrl = previousUrl.startsWith(uiUrl('/')) ? previousUrl : uiUrl('/');
+    logStartup(`renderer recovery start reason=${reason} target=${targetUrl}`);
+
+    const replacement = createBrowserWindow();
+    mainWindow = replacement;
+    await showLoadingPage(replacement);
+    await waitForCacheUi(15_000);
+    await replacement.loadURL(targetUrl);
+    rendererHealthFailures = 0;
+    logStartup('renderer recovery complete');
+
+    if (oldWindow && oldWindow !== replacement && !oldWindow.isDestroyed()) {
+      oldWindow.destroy();
+    }
+  })().catch(error => {
+    const message = error instanceof Error ? error.stack ?? error.message : String(error);
+    logStartup(`renderer recovery failed: ${message}`);
+    dialog.showErrorBox('BibleNote failed to restore its window', message);
+  }).finally(() => {
+    rendererRecoveryPromise = undefined;
+  });
+
+  return rendererRecoveryPromise;
+}
+
+async function createWindow(): Promise<void> {
+  startupStartedAt = Date.now();
+  startupLogPath = path.join(app.getPath('userData'), 'startup.log');
+  try {
+    fs.mkdirSync(path.dirname(startupLogPath), { recursive: true });
+    fs.writeFileSync(startupLogPath, `${new Date().toISOString()} startup log\n`, 'utf8');
+  } catch {
+    startupLogPath = '';
+  }
+  logStartup('createWindow start');
+  process.env.BIBLENOTE_API_URL = bibleNoteUrl;
+  installApplicationMenu();
+  startControlServer();
+
+  mainWindow = createBrowserWindow();
+  startRendererHealthMonitor();
   logStartup('browser window created');
 
-  await mainWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(loadingHtml())}`);
+  await showLoadingPage(mainWindow);
   logStartup('loading page shown');
 
   startCacheUiProcess();
@@ -368,12 +518,28 @@ app.on('window-all-closed', () => {
 });
 
 app.on('before-quit', () => {
+  isQuitting = true;
+  if (rendererUnresponsiveTimer) {
+    clearTimeout(rendererUnresponsiveTimer);
+    rendererUnresponsiveTimer = undefined;
+  }
+  if (rendererHealthTimer) {
+    clearInterval(rendererHealthTimer);
+    rendererHealthTimer = undefined;
+  }
   controlServer?.close();
   if (uiProcess && !uiProcess.killed) {
     uiProcess.kill();
   }
   if (bibleNoteProcess && !bibleNoteProcess.killed) {
     bibleNoteProcess.kill();
+  }
+});
+
+app.on('child-process-gone', (_event, details) => {
+  logStartup(`electron child process gone type=${details.type} reason=${details.reason} exitCode=${details.exitCode}`);
+  if (!isQuitting && mainWindow && details.type === 'GPU' && details.reason !== 'clean-exit') {
+    void recoverRenderer(`gpu-${details.reason}`);
   }
 });
 

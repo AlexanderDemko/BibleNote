@@ -1,9 +1,9 @@
 import './env.js';
 import { promises as fs } from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { oneNoteAuthConfig } from './auth.js';
 import { resetGraphAccessToken } from './graph.js';
+import { defaultBibleNoteDir } from './paths.js';
 
 const managedKeys = [
   'ONENOTE_CLIENT_ID',
@@ -24,7 +24,7 @@ export type OneNoteAccessSettings = {
 
 export function oneNoteSettingsEnvPath(): string {
   return process.env.ONENOTE_ENV_FILE
-    || path.join(os.homedir(), '.codex-onenote-mcp', '.env');
+    || path.join(defaultBibleNoteDir, '.env');
 }
 
 export function readOneNoteAccessSettings(): OneNoteAccessSettings {

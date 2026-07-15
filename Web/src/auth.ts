@@ -1,8 +1,8 @@
 import './env.js';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
-import os from 'node:os';
 import { PublicClientApplication, Configuration, AuthenticationResult } from '@azure/msal-node';
+import { defaultBibleNoteDir } from './paths.js';
 
 export type OneNoteAuthConfig = {
   clientId: string | undefined;
@@ -19,7 +19,7 @@ export function oneNoteAuthConfig(): OneNoteAuthConfig {
       .split(/\s+/)
       .filter(Boolean),
     cachePath: process.env.ONENOTE_TOKEN_CACHE
-      ?? path.join(os.homedir(), '.codex-onenote-mcp', 'msal-cache.json')
+      ?? path.join(defaultBibleNoteDir, 'msal-cache.json')
   };
 }
 
@@ -29,7 +29,7 @@ export const cachePath = oneNoteAuthConfig().cachePath;
 export function createMsalClient(): PublicClientApplication {
   const { clientId, tenantId } = oneNoteAuthConfig();
   if (!clientId || clientId === '00000000-0000-0000-0000-000000000000') {
-    throw new Error('ONENOTE_CLIENT_ID is not set. Copy .env.example to .env or %USERPROFILE%\\.codex-onenote-mcp\\.env and fill your Azure app client ID.');
+    throw new Error('ONENOTE_CLIENT_ID is not set. Copy .env.example to .env or %USERPROFILE%\\BibleNote\\.env and fill your Azure app client ID.');
   }
 
   const config: Configuration = {

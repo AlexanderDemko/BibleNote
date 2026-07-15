@@ -6,7 +6,7 @@ import path from 'node:path';
 import { pathToFileURL, URL } from 'node:url';
 import * as z from 'zod/v4';
 import { bibleParseConfigFromEnv, getVerseTextWithBibleNote, parsePageWithBibleNote } from './bible.js';
-import { cacheStatus, defaultDbPath, findParallelBibleReferenceNotes, findParallelBibleReferences, getCachedPage, getSyncState, openCacheDb, readCachedPage, searchCache, updatePageHtml } from './cache.js';
+import { cacheStatus, defaultDbPath, findParallelBibleReferenceNotes, findParallelBibleReferences, getCachedPage, getSyncState, markPageOpened, openCacheDb, readCachedPage, searchCache, updatePageHtml } from './cache.js';
 import { visibleBibleRefSql, visibleBibleScopeSql } from './cache-sql.js';
 import { oneNoteImage } from './image-proxy.js';
 import { readOneNoteAccessSettings, saveOneNoteAccessSettings } from './onenote-settings.js';
@@ -38,6 +38,7 @@ const syncRequestSchema = z.object({
   pageId: z.string().min(1).optional(),
   bibleModule: z.string().min(1).optional(),
   metadataOnly: z.boolean().optional(),
+  replaceAll: z.boolean().optional(),
   forceContent: z.boolean().optional(),
   includeHtml: z.boolean().optional(),
   parseBibleRefs: z.boolean().optional(),
@@ -333,6 +334,7 @@ const pageHtml = String.raw`<!doctype html>
     .page-text { white-space:pre-wrap; font:16px/1.72 var(--reader-font); word-break:break-word; }
     .html-frame { display:none; width:100%; height:calc(100vh - 220px); min-height:520px; border:1px solid var(--line); border-radius:10px; background:white; }
     .error-box { margin:18px 0; padding:12px 14px; border-left:3px solid var(--danger); background:color-mix(in srgb, var(--danger) 13%, var(--panel)); color:var(--danger); }
+    .pending-box { margin:18px 0; padding:12px 14px; border-left:3px solid var(--pending); background:color-mix(in srgb, var(--pending) 12%, var(--panel)); color:var(--ink); }
     .search-heading { padding:7px 10px 9px; color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.08em; }
     .activity-toast { position:fixed; z-index:20; top:18px; right:20px; max-width:min(430px, calc(100vw - 40px)); padding:11px 14px; border:1px solid var(--input-line); border-radius:10px; background:var(--panel); color:var(--selected-ink); box-shadow:0 10px 30px rgba(20,16,26,.24); font-size:13px; line-height:1.35; opacity:0; transform:translateY(-8px); pointer-events:none; transition:opacity .18s, transform .18s; }
     .activity-toast.show { opacity:1; transform:translateY(0); }
@@ -657,14 +659,15 @@ const pageHtml = String.raw`<!doctype html>
           <p id="syncSettingsNote" class="settings-note">Применяются к полной синхронизации и ко всем кнопкам ↻ в дереве.</p>
           <div class="sync-grid">
             <label class="field">Максимум страниц<input id="syncMaxPages" type="number" min="1" placeholder="Все"></label>
-            <label class="field">Параллельность<select id="syncConcurrency"><option>1</option><option selected>2</option><option>3</option></select></label>
+            <label class="field">Параллельность<select id="syncConcurrency"><option selected>1</option><option>2</option><option>3</option></select></label>
             <label class="field">Обновить старше, ч.<input id="syncRefreshHours" type="number" min="0" placeholder="Не обновлять"></label>
           </div>
           <label class="check"><input id="syncMetadataOnly" type="checkbox">Только метаданные</label>
+          <label class="check"><input id="syncReplaceAll" type="checkbox">Перезаписать данные полностью</label>
           <label class="check"><input id="syncForceContent" type="checkbox">Перезагрузить весь контент</label>
           <label class="check"><input id="syncIncludeHtml" type="checkbox" checked>Сохранять HTML</label>
           <label class="check"><input id="syncParseBibleRefs" type="checkbox" checked>Распознать библейские ссылки</label>
-          <label class="check"><input id="syncForceBibleParse" type="checkbox" checked>Перепарсить библейские ссылки</label>
+          <label class="check"><input id="syncForceBibleParse" type="checkbox">Перепарсить библейские ссылки</label>
         </div>
       </details>
       <details class="sync-panel">
@@ -808,6 +811,7 @@ const pageHtml = String.raw`<!doctype html>
     let logOffset = 0;
     const logLimit = 100;
     let selectedPageId = null;
+    let pendingPageRefreshToken = 0;
     let searchTimer;
     let searchHistoryTimer;
 
@@ -3066,6 +3070,7 @@ const pageHtml = String.raw`<!doctype html>
 
     async function openPage(id, options = {}) {
       uiLog('ui.openPage', { id, options });
+      const pageRefreshToken = ++pendingPageRefreshToken;
       selectedPageId = id;
       const optionParagraphIndexes = Array.isArray(options.paragraphIndexes)
         ? options.paragraphIndexes.filter(Number.isInteger)
@@ -3134,6 +3139,50 @@ const pageHtml = String.raw`<!doctype html>
       actions.append(revealPageButton, syncPageButton);
       meta.append(actions);
       article.append(crumbs, heading, meta);
+      if (!page.hasContent && !page.fetchError) {
+        const belongsToActiveSync = !activeSyncContext
+          || activeSyncContext.pageId === page.id
+          || activeSyncContext.sectionId === page.parentSection?.id
+          || (Array.isArray(activeSyncContext.notebookIds)
+            && activeSyncContext.notebookIds.includes(page.parentNotebook?.id));
+        const willLoadInCurrentSync = syncRunning && belongsToActiveSync;
+        const pending = document.createElement('div');
+        pending.className = 'pending-box';
+        pending.textContent = willLoadInCurrentSync
+          ? 'Страница поставлена в начало фоновой очереди. Содержимое появится здесь после загрузки.'
+          : syncRunning
+            ? 'Эта страница не входит в текущую синхронизацию. После её завершения нажмите ↻ для загрузки.'
+          : 'Содержимое страницы ещё не загружено. Запустите синхронизацию или нажмите ↻.';
+        article.append(pending);
+
+        if (willLoadInCurrentSync) {
+          const pollPendingPage = async () => {
+            if (pageRefreshToken !== pendingPageRefreshToken || selectedPageId !== id || !syncRunning) return;
+            try {
+              const status = await api('/api/page-status?id=' + encodeURIComponent(id), { timeoutMs:10000 });
+              if (status.hasContent) {
+                await openPage(id, {
+                  updateUrl:false,
+                  rememberHistory:false,
+                  paragraphIndex:targetParagraphIndex,
+                  paragraphIndexes:currentTargetParagraphIndexes
+                });
+                return;
+              }
+              if (status.fetchError) {
+                await openPage(id, { updateUrl:false, rememberHistory:false });
+                return;
+              }
+            } catch (error) {
+              console.warn(error);
+            }
+            if (pageRefreshToken === pendingPageRefreshToken && selectedPageId === id && syncRunning) {
+              setTimeout(pollPendingPage, 3000);
+            }
+          };
+          setTimeout(pollPendingPage, 3000);
+        }
+      }
       if (page.fetchError) {
         const error = document.createElement('div');
         error.className = 'error-box';
@@ -4040,12 +4089,15 @@ const pageHtml = String.raw`<!doctype html>
     function currentSyncSettings() {
       const maxPagesValue = document.getElementById('syncMaxPages').value;
       const refreshValue = document.getElementById('syncRefreshHours').value;
+      const metadataOnly = document.getElementById('syncMetadataOnly').checked;
+      const replaceAll = !metadataOnly && document.getElementById('syncReplaceAll').checked;
       return {
-        maxPages: maxPagesValue ? Number(maxPagesValue) : undefined,
+        maxPages: !replaceAll && maxPagesValue ? Number(maxPagesValue) : undefined,
         concurrency: Number(document.getElementById('syncConcurrency').value),
-        refreshOlderThanHours: refreshValue ? Number(refreshValue) : undefined,
-        metadataOnly: document.getElementById('syncMetadataOnly').checked,
-        forceContent: document.getElementById('syncForceContent').checked,
+        refreshOlderThanHours: !replaceAll && refreshValue ? Number(refreshValue) : undefined,
+        metadataOnly,
+        replaceAll,
+        forceContent: !replaceAll && document.getElementById('syncForceContent').checked,
         includeHtml: document.getElementById('syncIncludeHtml').checked,
         parseBibleRefs: document.getElementById('syncParseBibleRefs').checked,
         forceBibleParse: document.getElementById('syncForceBibleParse').checked,
@@ -4055,15 +4107,20 @@ const pageHtml = String.raw`<!doctype html>
 
     function updateSyncSettingsPresentation() {
       const settings = currentSyncSettings();
-      for (const id of ['syncMaxPages', 'syncConcurrency', 'syncRefreshHours', 'syncMetadataOnly']) {
+      for (const id of ['syncConcurrency', 'syncMetadataOnly']) {
         document.getElementById(id).disabled = syncRunning;
       }
-      document.getElementById('syncForceContent').disabled = syncRunning || settings.metadataOnly;
+      document.getElementById('syncMaxPages').disabled = syncRunning || settings.replaceAll;
+      document.getElementById('syncRefreshHours').disabled = syncRunning || settings.replaceAll;
+      document.getElementById('syncReplaceAll').disabled = syncRunning || settings.metadataOnly;
+      document.getElementById('syncForceContent').disabled = syncRunning || settings.metadataOnly || settings.replaceAll;
       document.getElementById('syncIncludeHtml').disabled = syncRunning || settings.metadataOnly;
       document.getElementById('syncParseBibleRefs').disabled = syncRunning || settings.metadataOnly;
       document.getElementById('syncForceBibleParse').disabled = syncRunning || settings.metadataOnly || !settings.parseBibleRefs;
       syncSettingsSummaryEl.textContent = settings.metadataOnly
         ? 'Параметры синхронизации · только метаданные'
+        : settings.replaceAll
+          ? 'Параметры синхронизации · полная перезапись'
         : settings.parseBibleRefs
           ? 'Параметры синхронизации'
           : settings.includeHtml
@@ -4071,6 +4128,8 @@ const pageHtml = String.raw`<!doctype html>
             : 'Параметры синхронизации';
       syncSettingsNoteEl.textContent = settings.metadataOnly
         ? 'Контент и HTML не скачиваются. Настройка применяется ко всем вариантам синхронизации.'
+        : settings.replaceAll
+          ? 'Перед полной синхронизацией все таблицы локального кэша будут удалены и созданы заново. Точечные кнопки ↻ эту настройку не используют.'
         : settings.includeHtml
           ? 'HTML будет сохранён при полной и точечной синхронизации. На странице появится кнопка «Показать HTML».'
           : 'Применяются к полной синхронизации и ко всем кнопкам ↻ в дереве.';
@@ -4088,17 +4147,26 @@ const pageHtml = String.raw`<!doctype html>
         if (!localStorage.getItem('onenote.syncSettings.defaultBibleParse')) {
           settings.includeHtml = true;
           settings.parseBibleRefs = true;
-          settings.forceBibleParse = true;
+          settings.forceBibleParse = false;
           localStorage.setItem('onenote.syncSettings.defaultBibleParse', 'true');
+        }
+        if (!localStorage.getItem('onenote.syncSettings.incrementalBibleParseDefault')) {
+          settings.forceBibleParse = false;
+          localStorage.setItem('onenote.syncSettings.incrementalBibleParseDefault', 'true');
+        }
+        if (!localStorage.getItem('onenote.syncSettings.defaultConcurrency1')) {
+          settings.concurrency = 1;
+          localStorage.setItem('onenote.syncSettings.defaultConcurrency1', 'true');
         }
         if (Number.isInteger(settings.maxPages) && settings.maxPages > 0) document.getElementById('syncMaxPages').value = String(settings.maxPages);
         if ([1, 2, 3].includes(settings.concurrency)) document.getElementById('syncConcurrency').value = String(settings.concurrency);
         if (Number.isInteger(settings.refreshOlderThanHours) && settings.refreshOlderThanHours >= 0) document.getElementById('syncRefreshHours').value = String(settings.refreshOlderThanHours);
         document.getElementById('syncMetadataOnly').checked = settings.metadataOnly === true;
+        document.getElementById('syncReplaceAll').checked = settings.replaceAll === true;
         document.getElementById('syncForceContent').checked = settings.forceContent === true;
         document.getElementById('syncIncludeHtml').checked = settings.includeHtml !== false;
         document.getElementById('syncParseBibleRefs').checked = settings.parseBibleRefs !== false;
-        document.getElementById('syncForceBibleParse').checked = settings.forceBibleParse !== false;
+        document.getElementById('syncForceBibleParse').checked = settings.forceBibleParse === true;
         if (typeof settings.bibleModule === 'string' && settings.bibleModule.trim()) bibleModuleNameInput.value = settings.bibleModule.trim();
       } catch {
         localStorage.removeItem('onenote.syncSettings');
@@ -4106,7 +4174,7 @@ const pageHtml = String.raw`<!doctype html>
       updateSyncSettingsPresentation();
     }
 
-    for (const id of ['syncMaxPages', 'syncConcurrency', 'syncRefreshHours', 'syncMetadataOnly', 'syncForceContent', 'syncIncludeHtml', 'syncParseBibleRefs', 'syncForceBibleParse']) {
+    for (const id of ['syncMaxPages', 'syncConcurrency', 'syncRefreshHours', 'syncMetadataOnly', 'syncReplaceAll', 'syncForceContent', 'syncIncludeHtml', 'syncParseBibleRefs', 'syncForceBibleParse']) {
       document.getElementById(id).addEventListener('change', saveSyncSettings);
     }
 
@@ -4157,6 +4225,7 @@ const pageHtml = String.raw`<!doctype html>
 
     function startTargetedSync(scope, label) {
       const payload = { ...currentSyncSettings(), ...scope };
+      delete payload.replaceAll;
       if (scope.pageId) {
         delete payload.maxPages;
         if (!payload.metadataOnly) payload.forceContent = true;
@@ -4170,7 +4239,15 @@ const pageHtml = String.raw`<!doctype html>
         syncStateEl.textContent = 'Выберите хотя бы один блокнот';
         return;
       }
-      await submitSync({ ...currentSyncSettings(), notebookIds }, 'выбранные блокноты', { notebookIds });
+      const settings = currentSyncSettings();
+      if (settings.replaceAll && !window.confirm(
+        'Все таблицы локального кэша, история синхронизации, результаты разбора и локальные названия блокнотов будут удалены. Продолжить?'
+      )) return;
+      if (settings.replaceAll) {
+        document.getElementById('syncReplaceAll').checked = false;
+        saveSyncSettings();
+      }
+      await submitSync({ ...settings, notebookIds }, 'выбранные блокноты', { notebookIds });
     });
 
     async function refreshSyncState() {
@@ -4183,7 +4260,7 @@ const pageHtml = String.raw`<!doctype html>
         const progress = state.progress || {};
         const parts = [progress.message || progress.phase || 'Подготовка'];
         if (progress.sectionGroups != null) parts.push('групп разделов: ' + progress.sectionGroups);
-        if (progress.sections != null) parts.push('разделов: ' + progress.sections);
+        if (progress.sections != null) parts.push('разделов: ' + (progress.sectionTotal ? progress.sections + '/' + progress.sectionTotal : progress.sections));
         if (progress.pages != null) parts.push('страниц: ' + progress.pages);
         if (progress.contentDone != null && progress.contentTotal != null) parts.push('контент: ' + progress.contentDone + '/' + progress.contentTotal);
         if (progress.bibleParseDone != null && progress.bibleParseTotal != null) parts.push('BibleNote: ' + progress.bibleParseDone + '/' + progress.bibleParseTotal);
@@ -4191,11 +4268,11 @@ const pageHtml = String.raw`<!doctype html>
         if (progress.errors) parts.push('ошибок: ' + progress.errors);
         syncStateEl.textContent = parts.join(' · ');
         showActivity(parts.join(' · '), 'running', true);
-        if (Date.now() - lastSyncLogRefreshAt > 5000) {
+        if (Date.now() - lastSyncLogRefreshAt > 15000) {
           lastSyncLogRefreshAt = Date.now();
           loadDownloadLog(false).catch(error => console.warn(error));
         }
-        syncPollTimer = setTimeout(() => refreshSyncState().catch(handleSyncPollError), 700);
+        syncPollTimer = setTimeout(() => refreshSyncState().catch(handleSyncPollError), 3000);
       } else if (state.status === 'success') {
         const result = state.result;
         const completedContext = activeSyncContext;
@@ -4774,7 +4851,7 @@ export function startCacheUi(options: UiOptions): http.Server {
         if (syncState.status === 'running') return json(response, 409, { error: 'Synchronization is already running.' });
         const body = syncRequestSchema.parse(await readJsonBody(request));
         const maxPages = body.maxPages;
-        const concurrency = body.concurrency ?? 2;
+        const concurrency = body.concurrency ?? 1;
         const refreshOlderThanHours = body.refreshOlderThanHours;
         const notebookIds = body.notebookIds ? [...new Set(body.notebookIds)] : undefined;
         const sectionId = body.sectionId;
@@ -4789,6 +4866,7 @@ export function startCacheUi(options: UiOptions): http.Server {
           concurrency,
           refreshOlderThanHours,
           metadataOnly: body.metadataOnly === true,
+          replaceAll: body.replaceAll === true,
           forceContent: body.forceContent === true,
           includeHtml: body.includeHtml === true,
           parseBibleRefs: body.parseBibleRefs === true,
@@ -4804,6 +4882,7 @@ export function startCacheUi(options: UiOptions): http.Server {
           concurrency,
           refreshOlderThanHours,
           metadataOnly: body.metadataOnly === true,
+          replaceAll: body.replaceAll === true,
           forceContent: body.forceContent === true,
           includeHtml: body.includeHtml === true,
           parseBibleRefs: body.parseBibleRefs === true,
@@ -5197,6 +5276,7 @@ export function startCacheUi(options: UiOptions): http.Server {
             s.pages_scan_complete AS scanComplete,
             s.pages_scanned_at AS scannedAt,
             s.pages_seen_count AS pagesSeenCount,
+            s.pages_scan_error AS scanError,
             s.section_group_path AS groupPath,
             s.parent_section_group_id AS parentGroupId,
             s.order_index AS orderIndex,
@@ -5404,12 +5484,25 @@ export function startCacheUi(options: UiOptions): http.Server {
         return json(response, 200, results);
       }
       if (url.pathname === '/api/page') {
-        const cached = readCachedPage(db, required(url, 'id'), false, 2_000_000);
-        const row = getCachedPage(db, required(url, 'id'));
+        const pageId = required(url, 'id');
+        const cached = readCachedPage(db, pageId, false, 2_000_000);
+        const row = getCachedPage(db, pageId);
+        markPageOpened(db, pageId);
         const text = typeof cached.text === 'string'
           ? cached.text.replace(/[\t ]+\n/g, '\n').replace(/\n{3,}/g, '\n\n')
           : cached.text;
         return json(response, 200, { ...cached, text, hasHtml: Boolean(row?.content_html) });
+      }
+      if (url.pathname === '/api/page-status') {
+        const pageId = required(url, 'id');
+        const row = getCachedPage(db, pageId);
+        if (!row || row.deleted_at) return json(response, 404, { error: 'Page is not in the local cache.' });
+        markPageOpened(db, pageId);
+        return json(response, 200, {
+          hasContent: row.content_text != null,
+          contentSyncedAt: row.content_synced_at,
+          fetchError: row.fetch_error
+        });
       }
       if (url.pathname === '/api/page-html') {
         const pageId = required(url, 'id');
