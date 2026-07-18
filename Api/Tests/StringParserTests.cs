@@ -89,5 +89,24 @@ namespace BibleNote.Tests
             var verseEntry = _stringParser.TryGetVerse(s, 0);
             AssertVerseEntry(verseEntry, 22, 27, VerseEntryType.BookChapterVerse);
         }
+
+        [TestMethod]
+        public void NumberedBookAfterOrdinaryBookNameWordIsRecognizedAsTheClosestBook()
+        {
+            var s = "открыто человеку только через Божье откровение (1Тим. 3:16; см. 1Кор. 2:7)";
+            var expectedReference = "1Тим. 3:16";
+            var startIndex = s.IndexOf(expectedReference);
+
+            var verseEntry = _stringParser.TryGetVerse(s, 0);
+
+            AssertVerseEntry(
+                verseEntry,
+                startIndex,
+                startIndex + expectedReference.Length - 1,
+                VerseEntryType.BookChapterVerse);
+            Assert.AreEqual(expectedReference, s.Substring(verseEntry.StartIndex, expectedReference.Length));
+            Assert.AreEqual(3, verseEntry.VersePointer.Chapter);
+            Assert.AreEqual(16, verseEntry.VersePointer.Verse);
+        }
     }
 }

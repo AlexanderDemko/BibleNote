@@ -6,6 +6,7 @@ using BibleNote.Services.VerseParsing.Contracts;
 using BibleNote.Services.VerseParsing.Contracts.ParseContext;
 using BibleNote.Services.VerseParsing.Models.ParseContext;
 using BibleNote.Services.VerseParsing.Models.ParseResult;
+using BibleNote.Services.VerseProcessing;
 using BibleNote.Tests.Mocks;
 using BibleNote.Tests.TestsBase;
 using Microsoft.Extensions.DependencyInjection;
@@ -56,6 +57,23 @@ namespace BibleNote.Tests
             }
 
             CheckParseResults(docParseResult, new string[] { "Мк 5:6-7" });
+        }
+
+        [TestMethod]
+        public void RelationsAreCalculatedAfterDocumentParserIsDisposed()
+        {
+            var node = GetNode("Ин 3:16 и Рим 5:8");
+            DocumentParseResult docParseResult;
+            using (var docParser = this.documentParserFactory.Create(this.documentProvider, this.mockDocumentId))
+            {
+                docParser.ParseParagraph(node);
+                docParseResult = docParser.DocumentParseResult;
+            }
+
+            var relations = VerseRelationsCalculator.Calculate(docParseResult);
+
+            Assert.AreEqual(1, relations.Relations.Count);
+            Assert.IsFalse(relations.Capped);
         }
 
         [TestMethod]

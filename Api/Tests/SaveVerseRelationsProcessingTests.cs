@@ -6,6 +6,7 @@ using BibleNote.Providers.Html;
 using BibleNote.Providers.Html.Contracts;
 using BibleNote.Services.Contracts;
 using BibleNote.Services.VerseProcessing.Contracts;
+using BibleNote.Services.VerseProcessing;
 using BibleNote.Tests.TestsBase;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
@@ -44,6 +45,7 @@ namespace BibleNote.Tests
         public async Task Test1()
         {
             var parseResult = await this.documentProvider.ParseDocumentAsync(new FileDocumentId(0, ResolveTestDataFilePath("Html_CheckFullPage.html"), true));
+            var calculatedRelations = VerseRelationsCalculator.Calculate(parseResult);
             await this.documentParseResultProcessings.First().ProcessAsync(this.document.Id, parseResult);
             await this.documentParseResultProcessings.Skip(1).First().ProcessAsync(this.document.Id, parseResult);
 
@@ -58,6 +60,12 @@ namespace BibleNote.Tests
                 .Count()
                 .Should()
                 .Be(11);
+
+            this.DbContext.VerseRelationRepository
+                .Where(v => v.DocumentParagraph.DocumentId == this.document.Id)
+                .Count()
+                .Should()
+                .Be(calculatedRelations.Relations.Count);
         }
     }
 }

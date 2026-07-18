@@ -64,6 +64,9 @@ namespace BibleNote.Services.VerseParsing
 
         private bool EntryIsLikeVerse(string text, int indexOfDigit, bool useCommaDelimiter)
         {
+            if (DigitStartsNumberedBookName(text, indexOfDigit))
+                return false;
+
             var prevChar = StringUtils.GetChar(text, indexOfDigit - 1);
             var nextChar = StringUtils.GetCharAfterNumber(text, indexOfDigit, out int indexOfChar);
 
@@ -71,6 +74,18 @@ namespace BibleNote.Services.VerseParsing
                  && (nextChar == default(char) || !char.IsDigit(nextChar));
 
             return result;
+        }
+
+        private bool DigitStartsNumberedBookName(string text, int indexOfDigit)
+        {
+            var nextIndexOfDigit = StringUtils.GetNextIndexOfDigit(text, indexOfDigit + 1);
+            if (nextIndexOfDigit == -1)
+                return false;
+
+            // The first digit in "1Тим. 3:16" belongs to the book name. It must not be
+            // parsed as a chapter of a preceding ordinary word such as "откровение".
+            var bookEntry = TryGetBookName(text, indexOfDigit, nextIndexOfDigit);
+            return bookEntry != null && bookEntry.StartIndex == indexOfDigit;
         }
 
         private VerseEntry TryGetVerseEntry(string text, int startIndex, int indexOfDigit, bool useCommaDelimiter)

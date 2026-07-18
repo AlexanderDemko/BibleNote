@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BibleNote</title>
+  <script>
+    try {
+      const savedTheme = localStorage.getItem('onenote.theme');
+      document.documentElement.dataset.theme = ['a', 'b', 'c'].includes(savedTheme) ? savedTheme : 'a';
+    } catch { document.documentElement.dataset.theme = 'a'; }
+  </script>
+  <link rel="stylesheet" href="/ui/styles.css">
+</head>
+<body>
+  <div id="activityToast" class="activity-toast" role="status" aria-live="polite"></div>
+  <div id="pageFocusToolbar" class="page-focus-toolbar" hidden>
+    <div class="page-focus-location">
+      <span class="page-focus-note-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24"><path d="M3 5.5A3.5 3.5 0 0 1 6.5 4H11v16H6.5A3.5 3.5 0 0 0 3 21.5zM21 5.5A3.5 3.5 0 0 0 17.5 4H13v16h4.5a3.5 3.5 0 0 1 3.5 1.5z"/></svg>
+      </span>
+      <button id="pageFocusMenuButton" class="page-focus-menu-button" type="button" aria-haspopup="menu" aria-expanded="false" title="Выбрать заметку">
+        <span id="pageFocusLabel" class="page-focus-label">
+          <span id="pageFocusTitle" class="page-focus-title"></span>
+          <span id="pageFocusPath" class="page-focus-path"></span>
+        </span>
+        <svg class="page-focus-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 9 5 5 5-5"/></svg>
+      </button>
+      <div id="pageFocusMenu" class="page-focus-menu" role="menu" hidden></div>
+    </div>
+    <div class="page-focus-navigation" aria-label="Переход между заметками">
+      <button id="pageFocusPrevious" class="page-focus-tool" type="button" title="Предыдущая заметка (Ctrl+Page Up)" aria-label="Предыдущая заметка">‹</button>
+      <button id="pageFocusNext" class="page-focus-tool" type="button" title="Следующая заметка (Ctrl+Page Down)" aria-label="Следующая заметка">›</button>
+      <button id="pageFocusExit" class="page-focus-tool page-focus-exit" type="button" title="Вернуть обычный вид (Esc)" aria-label="Вернуть обычный вид">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4H4v5M15 4h5v5M9 20H4v-5M15 20h5v-5"/><path d="m4 9 6-6M20 9l-6-6M4 15l6 6M20 15l-6 6"/></svg>
+      </button>
+    </div>
+  </div>
+  <dialog id="notebookNameDialog" class="name-dialog">
+    <div class="name-dialog-body">
+      <h2>Отображаемое имя</h2>
+      <p id="notebookNameOriginal" class="name-dialog-original"></p>
+      <label>Имя в локальном обозревателе
+        <input id="notebookNameInput" type="text" maxlength="120" autocomplete="off">
+      </label>
+      <div class="name-dialog-actions">
+        <button id="resetNotebookName" class="dialog-button reset-name" type="button">Вернуть исходное</button>
+        <button id="cancelNotebookName" class="dialog-button" type="button">Отмена</button>
+        <button id="saveNotebookName" class="dialog-button primary" type="button">Сохранить</button>
+      </div>
+    </div>
+  </dialog>
+  <dialog id="bibleTextDialog" class="bible-text-dialog">
+    <div class="bible-text-body">
+      <div class="bible-text-header">
+        <h2 id="bibleTextTitle">Библейская ссылка</h2>
+        <div class="bible-text-nav" aria-label="История библейских ссылок">
+          <button id="bibleTextBack" class="bible-text-nav-button" type="button" title="Назад" aria-label="Назад">‹</button>
+          <button id="bibleTextForward" class="bible-text-nav-button" type="button" title="Вперед" aria-label="Вперед">›</button>
+        </div>
+      </div>
+      <div id="bibleTextMeta" class="bible-text-meta"></div>
+      <div id="bibleTextContent" class="bible-text-content"></div>
+      <div id="bibleTextParallelPanel"></div>
+      <div class="bible-text-footer">
+        <div class="bible-text-actions" aria-label="Действия с библейской ссылкой">
+          <button id="showBibleTextContext" class="bible-text-action" type="button" title="Показать в контексте" aria-label="Показать в контексте">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 10h10M4 14h16M4 18h10"/><path d="M17 9v6M14 12h6"/></svg>
+          </button>
+          <button id="showBibleTextParallel" class="bible-text-action" type="button" title="Показать параллельные ссылки" aria-label="Показать параллельные ссылки">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h11l-3-3M18 7l-3 3M17 17H6l3-3M6 17l3 3"/></svg>
+          </button>
+          <button id="showBibleTextNotes" class="bible-text-action" type="button" title="Показать заметки" aria-label="Показать заметки">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M15 3v5h4M9 12h6M9 16h6"/></svg>
+          </button>
+          <button id="showBibleTextInReader" class="bible-text-action" type="button" title="Открыть в Библии" aria-label="Открыть в Библии">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5.5A3.5 3.5 0 0 1 6.5 4H11v16H6.5A3.5 3.5 0 0 0 3 21.5zM21 5.5A3.5 3.5 0 0 0 17.5 4H13v16h4.5a3.5 3.5 0 0 1 3.5 1.5z"/></svg>
+          </button>
+        </div>
+        <button id="closeBibleText" class="dialog-button primary" type="button">Закрыть</button>
+      </div>
+    </div>
+  </dialog>
+  <dialog id="settingsDialog" class="settings-dialog">
+    <div class="settings-dialog-body">
+      <header class="settings-dialog-header">
+        <h2>Параметры</h2>
+        <p>Записные книжки, синхронизация, модули и обработка внешних библейских ссылок.</p>
+      </header>
+      <div id="settingsDialogContent" class="settings-dialog-content">
+        <details class="settings-module-section onenote-settings">
+          <summary>Доступ к OneNote</summary>
+          <div class="settings-module-body">
+            <div id="oneNoteAccessStatus" class="settings-status">Параметры доступа еще не загружены.</div>
+            <label class="field">Azure Client ID
+              <input id="oneNoteClientId" type="text" autocomplete="off" spellcheck="false">
+            </label>
+            <input id="oneNoteTenantId" type="hidden" value="common">
+            <input id="oneNoteScopes" type="hidden" value="Notes.Read User.Read offline_access">
+            <input id="oneNoteTokenCache" type="hidden">
+          </div>
+        </details>
+        <details class="settings-module-section biblenote-settings">
+          <summary>Модули</summary>
+          <div class="settings-module-body">
+            <div id="bibleNoteStatus" class="settings-status">Статус BibleNote пока не проверен.</div>
+            <label class="field">Основной модуль
+              <select id="bibleModuleName"></select>
+            </label>
+            <div class="settings-row">
+              <input id="bibleModuleFile" class="settings-file" type="file" accept=".bnm,.zip" multiple>
+              <button id="uploadBibleModule" class="small-button" type="button" disabled>Загрузить модули</button>
+            </div>
+            <div id="bibleModulesList" class="settings-module-list"></div>
+            <div id="bibleModuleStatus" class="settings-status"></div>
+          </div>
+        </details>
+        <details class="settings-module-section protocol-settings">
+          <summary>Обработка ссылок на Библию</summary>
+          <div class="settings-module-body">
+            <div id="protocolStatus" class="settings-status">Статус обработчика ссылок пока не проверен.</div>
+            <div class="settings-row">
+              <button id="registerBibleProtocol" class="small-button" type="button">Зарегистрировать обработчик</button>
+            </div>
+          </div>
+        </details>
+        <details class="settings-module-section view-settings">
+          <summary>Просмотр заметок</summary>
+          <div class="settings-module-body">
+            <label class="field">Тема интерфейса
+              <select id="themeSelect">
+                <option value="a">A · Тёплая</option>
+                <option value="b">B · Светлая</option>
+                <option value="c">C · Тёмная</option>
+              </select>
+            </label>
+            <label class="field">Открывать страницу
+              <select id="pageViewMode">
+                <option value="text">Текст</option>
+                <option value="html" selected>HTML, если загружен</option>
+              </select>
+            </label>
+            <label class="field">Масштаб HTML по умолчанию
+              <input id="defaultHtmlZoom" type="number" min="50" max="200" step="10" value="100">
+            </label>
+            <label class="check"><input id="showAuxBibleRefs" type="checkbox">Показывать ссылки в [] и {}</label>
+          </div>
+        </details>
+        <details class="settings-module-section diagnostic-settings">
+          <summary>Диагностика</summary>
+          <div class="settings-module-body">
+            <label class="check"><input id="verboseLogging" type="checkbox">Расширенное логирование</label>
+            <div id="verboseLoggingStatus" class="settings-status">Расширенное логирование выключено.</div>
+          </div>
+        </details>
+        <div id="settingsMovedPanels"></div>
+      </div>
+      <footer class="settings-dialog-footer">
+        <div class="name-dialog-actions">
+          <button id="closeSettings" class="dialog-button primary" type="button">Закрыть</button>
+        </div>
+      </footer>
+    </div>
+  </dialog>
+  <dialog id="setupWizardDialog" class="setup-wizard-dialog">
+    <div class="setup-wizard-body">
+      <header class="setup-wizard-header">
+        <h2>Первичная настройка</h2>
+        <p>Настройте обязательные параметры, чтобы BibleNote мог читать OneNote и показывать тексты библейских ссылок.</p>
+      </header>
+      <div class="setup-wizard-content">
+        <div class="setup-wizard-progress" aria-hidden="true">
+          <span class="setup-wizard-dot active"></span>
+          <span class="setup-wizard-dot"></span>
+          <span class="setup-wizard-dot"></span>
+        </div>
+        <section class="setup-wizard-step" data-setup-step="0">
+          <h3>Доступ к OneNote</h3>
+          <label class="field">Azure Client ID
+            <input id="setupOneNoteClientId" type="text" autocomplete="off" spellcheck="false">
+          </label>
+          <p class="settings-note">Это идентификатор приложения Azure, через которое BibleNote получает доступ к Microsoft Graph. Остальные параметры используются со стандартными значениями.</p>
+        </section>
+        <section class="setup-wizard-step" data-setup-step="1" hidden>
+          <h3>Модуль BibleNote</h3>
+          <label class="field">Основной модуль
+            <select id="setupBibleModule"></select>
+          </label>
+          <div class="settings-row">
+            <input id="setupBibleModuleFile" class="settings-file" type="file" accept=".bnm,.zip" multiple>
+            <button id="setupUploadBibleModule" class="small-button" type="button" disabled>Загрузить модули</button>
+          </div>
+          <div id="setupBibleModuleStatus" class="settings-status"></div>
+          <p class="settings-note">Если не менять значение, будет использоваться модуль rst. Можно сразу загрузить модуль .bnm или .zip.</p>
+        </section>
+        <section class="setup-wizard-step" data-setup-step="2" hidden>
+          <h3>Готово к работе</h3>
+          <div id="setupWizardSummary" class="settings-status"></div>
+        </section>
+        <div id="setupWizardStatus" class="setup-wizard-status"></div>
+      </div>
+      <footer class="setup-wizard-footer">
+        <button id="setupWizardBack" class="dialog-button" type="button">Назад</button>
+        <button id="setupWizardNext" class="dialog-button primary" type="button">Далее</button>
+      </footer>
+    </div>
+  </dialog>
+  <dialog id="downloadLogDialog" class="log-dialog">
+    <div class="log-dialog-body">
+      <header class="log-dialog-header">
+        <h2>Журнал загрузки</h2>
+      </header>
+      <div id="downloadLogDialogContent" class="log-dialog-content"></div>
+      <footer class="log-dialog-footer">
+        <div class="name-dialog-actions">
+          <button id="closeDownloadLog" class="dialog-button primary" type="button">Закрыть</button>
+        </div>
+      </footer>
+    </div>
+  </dialog>
+  <div id="app" class="app">
+    <button id="sidebarToggle" class="sidebar-toggle" type="button" aria-label="Скрыть левую панель" aria-expanded="true" title="Скрыть левую панель">‹</button>
+    <aside id="sidebar" class="sidebar">
+      <header class="brand">
+        <div class="brand-line">
+          <div class="search-wrap">
+            <div class="search-control">
+              <input id="search" class="search" type="search" placeholder="Поиск по заголовкам, тексту и ссылкам..." autocomplete="off">
+              <button id="searchHistory" class="search-option" type="button" aria-label="История поиска" aria-expanded="false" title="История поиска (↑/↓)">▾</button>
+              <button id="searchCase" class="search-option" type="button" aria-label="Учитывать регистр" aria-pressed="false" title="Учитывать регистр (Aa)">Aa</button>
+              <button id="searchPhrase" class="search-option" type="button" aria-label="Искать всю фразу" aria-pressed="false" title="Искать всю фразу">“ ”</button>
+              <button id="searchRegex" class="search-option" type="button" aria-label="Использовать регулярное выражение" aria-pressed="false" title="Использовать регулярное выражение (.*)">.*</button>
+            </div>
+            <div id="searchHistoryMenu" class="search-history-menu hidden" role="listbox" aria-label="История поиска"></div>
+          </div>
+          <div class="brand-actions">
+            <button id="quickSync" class="settings-button quick-sync-button" type="button" aria-label="Быстрая синхронизация выбранных блокнотов" title="Загрузить только новые и изменённые страницы">↻</button>
+            <button id="openSettings" class="settings-button" type="button" aria-label="Параметры" title="Параметры">⚙</button>
+          </div>
+        </div>
+      </header>
+      <details class="notebook-panel">
+        <summary id="notebookSummary">Записные книжки</summary>
+        <div class="notebook-controls">
+          <div class="notebook-actions">
+            <button id="selectAllNotebooks" class="small-button" type="button">Выбрать все</button>
+            <button id="clearAllNotebooks" class="small-button" type="button">Снять все</button>
+          </div>
+          <div id="notebookList" class="notebook-list"></div>
+        </div>
+      </details>
+      <details class="bible-reader-panel">
+        <summary id="bibleReaderSummary">Библия</summary>
+        <div class="bible-reader-controls">
+          <select id="bibleReaderModule" class="bible-reader-select" title="Модуль"></select>
+          <select id="bibleReaderBook" class="bible-reader-select book" title="Книга"></select>
+          <div class="bible-reader-row">
+            <button id="bibleReaderPrev" class="small-button" type="button" title="Предыдущая глава">←</button>
+            <select id="bibleReaderChapter" class="bible-reader-select chapter" title="Глава"></select>
+            <button id="bibleReaderNext" class="small-button" type="button" title="Следующая глава">→</button>
+            <form id="bibleReaderReferenceForm" class="bible-reader-reference">
+              <input id="bibleReaderReference" type="text" placeholder="Например, Ин 3:16" aria-label="Библейский отрывок" autocomplete="off" spellcheck="false">
+              <button id="bibleReaderReferenceSubmit" class="small-button" type="submit">Перейти</button>
+            </form>
+          </div>
+          <div id="bibleReaderStatus" class="sync-state"></div>
+        </div>
+      </details>
+      <details class="settings-panel">
+        <summary id="syncSettingsSummary">Параметры синхронизации</summary>
+        <div class="sync-settings">
+          <p id="syncSettingsNote" class="settings-note">Применяются к полной синхронизации и ко всем кнопкам ↻ в дереве.</p>
+          <div class="sync-grid">
+            <label class="field">Максимум страниц<input id="syncMaxPages" type="number" min="1" placeholder="Все"></label>
+            <label class="field">Параллельность<select id="syncConcurrency"><option selected>1</option><option>2</option><option>3</option></select></label>
+            <label class="field">Обновить старше, ч.<input id="syncRefreshHours" type="number" min="0" placeholder="Не обновлять"></label>
+          </div>
+          <label class="check"><input id="syncMetadataOnly" type="checkbox">Только метаданные</label>
+          <label class="check"><input id="syncReplaceAll" type="checkbox">Перезаписать данные полностью</label>
+          <label class="check"><input id="syncForceContent" type="checkbox">Перезагрузить весь контент</label>
+          <label class="check"><input id="syncIncludeHtml" type="checkbox" checked>Сохранять HTML</label>
+          <label class="check"><input id="syncParseBibleRefs" type="checkbox" checked>Распознать библейские ссылки</label>
+          <label class="check"><input id="syncForceBibleParse" type="checkbox">Перепарсить ссылки после синхронизации</label>
+        </div>
+      </details>
+      <details class="sync-panel">
+        <summary>Синхронизация и перерасчёт ссылок</summary>
+        <div class="sync-form">
+          <div id="syncNotebookSelection" class="sync-state"></div>
+          <button id="reparseBibleCacheButton" class="sync-button" type="button">Перепарсить локальный кэш ссылок</button>
+          <div class="settings-note">Использует сохранённый текст страниц и BibleNote API без обращения к Microsoft Graph.</div>
+          <button id="syncButton" class="sync-button" type="button">Запустить синхронизацию</button>
+          <div id="syncState" class="sync-state">Синхронизация не запущена</div>
+        </div>
+      </details>
+      <details class="log-panel">
+        <summary id="logSummary">Журнал загрузки</summary>
+        <div class="log-controls">
+          <select id="logFilter" class="log-filter">
+            <option value="downloaded-last-sync">Загружены в последней синхронизации</option>
+            <option value="downloaded">Все загруженные</option>
+            <option value="missing">Не загруженные</option>
+            <option value="errors">Ошибки</option>
+            <option value="all">Все страницы</option>
+          </select>
+          <button id="refreshLog" class="small-button" type="button">Обновить</button>
+        </div>
+        <div id="logList" class="log-list"></div>
+        <div class="log-pager">
+          <button id="logPrev" class="small-button" type="button">Назад</button>
+          <span id="logPage">—</span>
+          <button id="logNext" class="small-button" type="button">Далее</button>
+        </div>
+      </details>
+      <details class="notes-panel" open>
+        <summary id="notesSummary">Заметки</summary>
+        <div class="tree-shell">
+        <nav id="tree" class="tree" aria-label="Структура OneNote"></nav>
+        <div id="treeScrollbar" class="custom-scrollbar" role="scrollbar" aria-label="Прокрутка дерева OneNote" aria-controls="tree" tabindex="0"><div class="custom-scrollbar-thumb"></div></div>
+        </div>
+      </details>
+      <button id="status" class="sidebar-footer" type="button">Загрузка статуса…</button>
+    </aside>
+    <div id="sidebarResizer" class="sidebar-resizer" role="separator" aria-label="Изменить ширину левой панели" aria-orientation="vertical" tabindex="0"></div>
+    <div class="content-shell">
+      <div id="pageFindWidget" class="page-find-widget hidden" role="search" aria-label="Поиск по текущей странице">
+        <input id="pageFindInput" class="page-find-input" type="search" placeholder="Найти" autocomplete="off" spellcheck="false" aria-label="Найти на странице">
+        <span id="pageFindCount" class="page-find-count" aria-live="polite">0 / 0</span>
+        <button id="pageFindPrevious" class="page-find-button" type="button" title="Предыдущее совпадение (Shift+Enter)" aria-label="Предыдущее совпадение">↑</button>
+        <button id="pageFindNext" class="page-find-button" type="button" title="Следующее совпадение (Enter)" aria-label="Следующее совпадение">↓</button>
+        <button id="pageFindClose" class="page-find-button page-find-close" type="button" title="Закрыть (Esc)" aria-label="Закрыть поиск">×</button>
+      </div>
+      <main id="content" class="content"><div class="empty-state"><div><span class="empty-mark"></span>Выберите страницу слева</div></div></main>
+      <div id="contentScrollbar" class="custom-scrollbar" role="scrollbar" aria-label="Прокрутка страницы" aria-controls="content" tabindex="0"><div class="custom-scrollbar-thumb"></div></div>
+    </div>
+  </div>
+  <script src="/ui/bootstrap.js"></script>
+  <script src="/ui/navigation-search.js"></script>
+  <script src="/ui/layout.js"></script>
+  <script src="/ui/settings.js"></script>
+  <script src="/ui/api-page-view.js"></script>
+  <script src="/ui/notebooks-log.js"></script>
+  <script src="/ui/bible-reader.js"></script>
+  <script src="/ui/tree-pages.js"></script>
+  <script src="/ui/bible-references.js"></script>
+  <script src="/ui/sync.js"></script>
+</body>
+</html>

@@ -81,7 +81,14 @@ namespace BibleNote.Tests
                 HtmlComparison.NormalizeAttributeQuotes(expectedOutput),
                 HtmlComparison.NormalizeAttributeQuotes(htmlDoc.InnerXml),
                 "The output html is wrong.");
-            Assert.AreEqual(new HtmlToTextConverter().SimpleConvert(input).Replace("&nbsp;", " "), result.Text, "Text parts do not contain the full input string.");
+            Assert.AreEqual(
+                new HtmlToTextConverter().SimpleConvert(input)
+                    .Replace("&nbsp;", " ")
+                    .Replace("&#160;", " ")
+                    .Replace("&#xA0;", " ")
+                    .Replace("&#xa0;", " "),
+                result.Text,
+                "Text parts do not contain the full input string.");
 
             if (notFoundVerses != null)
             {   
@@ -473,6 +480,12 @@ namespace BibleNote.Tests
         }
 
         [TestMethod]
+        public void NumberedBookWithSpaceAfterOrdinaryBookNameWordProducesOneReference()
+        {
+            CheckVerses("через Божье откровение (1 Тим. 3:16)", null, null, "1Тим 3:16");
+        }
+
+        [TestMethod]
         public void Test33()
         {
             CheckVerses("Римлянам 1-3:20, Второе послание к Тимофею 3:16-17", null, null, "Рим 1-3:20", "2Тим 3:16-17");
@@ -544,6 +557,15 @@ style='font-weight:bold;color:#333333' lang=en-US>12:3</span><span
 style='color:#444444' lang=ru>&nbsp;</span>";
             var expected = "<span style='color:#444444' lang=\"ru\">2&nbsp;</span><span style='font-weight:bold;color:#333333' lang=\"ru\"><a href='bnVerse:Римлянам 12:3'>Рим 12:3</a></span><span style='font-weight:bold;color:#333333' lang=\"en-US\"></span><span style='color:#444444' lang=\"ru\">&nbsp;</span>";
             CheckVerses(input, expected, null, "Рим 12:3");
+        }
+
+        [TestMethod]
+        public void NumericNonBreakingSpacesSeparateNumberedBooks()
+        {
+            var input = "2 Иоан 9;&#160;1 Иоан. 2:23;&#160;1 Кор. 3:16;&#160;Рим. 8:9.";
+            var expected = "<a href='bnVerse:2Иоанна 1:9'>2 Иоан 9</a>; <a href='bnVerse:1Иоанна 2:23'>1 Иоан. 2:23</a>; <a href='bnVerse:1Коринфянам 3:16'>1 Кор. 3:16</a>; <a href='bnVerse:Римлянам 8:9'>Рим. 8:9</a>.";
+
+            CheckVerses(input, expected, null, "2Иоан 1:9", "1Иоан 2:23", "1Кор 3:16", "Рим 8:9");
         }
 
         [TestMethod]

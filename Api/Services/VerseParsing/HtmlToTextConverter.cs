@@ -140,7 +140,7 @@ namespace BibleNote.Services.VerseParsing
                 if (string.IsNullOrEmpty(textNode.InnerXml))
                     continue;
 
-                var nodeText = textNode.InnerXml.Replace(HtmlTags.Nbsp, " ");
+                var nodeText = NormalizeNonBreakingSpaces(textNode.InnerXml);
                 result.NodesInfo.Add(new TextNodeEntry()
                 {
                     Node = textNode,
@@ -153,6 +153,15 @@ namespace BibleNote.Services.VerseParsing
 
             result.Value = sb.ToString();
             return result;
+        }
+
+        private static string NormalizeNonBreakingSpaces(string value)
+        {
+            return value
+                .Replace(HtmlTags.Nbsp, " ")
+                .Replace("&#160;", " ")
+                .Replace("&#xA0;", " ")
+                .Replace("&#xa0;", " ");
         }
     }
 }

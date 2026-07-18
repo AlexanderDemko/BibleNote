@@ -5,12 +5,13 @@ import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { listenOnLoopbackWithFallback } from './loopback-server.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const uiPort = Number(process.env.ONENOTE_CACHE_UI_PORT ?? '4312');
-const electronControlPort = Number(process.env.ONENOTE_ELECTRON_CONTROL_PORT ?? String(uiPort + 1));
+let electronControlPort = Number(process.env.ONENOTE_ELECTRON_CONTROL_PORT ?? String(uiPort + 1));
 const bibleNotePort = Number(process.env.BIBLENOTE_API_PORT ?? '5000');
 const bibleNoteUrl = process.env.BIBLENOTE_API_URL ?? `http://127.0.0.1:${bibleNotePort}`;
 const bibleProtocol = 'isbtbibleverse';
@@ -19,6 +20,7 @@ let bibleNoteProcess: ChildProcess | undefined;
 let uiProcess: ChildProcess | undefined;
 let controlServer: http.Server | undefined;
 let mainWindow: BrowserWindow | undefined;
+let biblePopupWindow: BrowserWindow | undefined;
 let bibleNoteEnsurePromise: Promise<void> | undefined;
 let uiProcessLog = '';
 let uiProcessExit: { code: number | null; signal: NodeJS.Signals | null } | undefined;
@@ -73,6 +75,10 @@ function uiBibleLinkUrl(link: string): string {
   return uiUrl(`/?openBibleRef=${encodeURIComponent(link)}`);
 }
 
+function uiBiblePopupUrl(link: string): string {
+  return uiUrl(`/?bibleVersePopup=1&openBibleRef=${encodeURIComponent(link)}`);
+}
+
 function registerBibleProtocolHandler(): boolean {
   if (process.defaultApp) {
     return app.setAsDefaultProtocolClient(bibleProtocol, process.execPath, [path.resolve(process.argv[1] ?? '')]);
@@ -89,17 +95,35 @@ function bibleProtocolStatus(): { available: boolean; registered: boolean; proto
 }
 
 async function openBibleLink(link: string): Promise<void> {
+  logStartup('bible link received');
   pendingBibleLink = link;
-  if (!mainWindow) return;
-  if (mainWindow.isMinimized()) mainWindow.restore();
-  mainWindow.focus();
   await waitForCacheUi(45000);
   const nextLink = pendingBibleLink;
   pendingBibleLink = undefined;
-  if (nextLink) await mainWindow.loadURL(uiBibleLinkUrl(nextLink));
+  if (!nextLink) return;
+  let popup = biblePopupWindow;
+  if (!popup || popup.isDestroyed()) {
+    popup = createBiblePopupWindow();
+    biblePopupWindow = popup;
+  } else if (popup.webContents.getURL().startsWith(uiUrl('/'))) {
+    const script = `typeof window.bibleNoteOpenBibleRef === 'function' ? Promise.resolve(window.bibleNoteOpenBibleRef(${JSON.stringify(nextLink)})).then(() => true) : false`;
+    const handled = await popup.webContents.executeJavaScript(script, true);
+    if (handled) {
+      if (popup.isMinimized()) popup.restore();
+      popup.show();
+      popup.focus();
+      logStartup('bible link opened in existing popup');
+      return;
+    }
+  }
+  logStartup('bible link requires popup navigation');
+  await popup.loadURL(uiBiblePopupUrl(nextLink));
+  if (popup.isDestroyed()) return;
+  popup.show();
+  popup.focus();
 }
 
-function startControlServer(): void {
+async function startControlServer(): Promise<void> {
   if (controlServer) return;
   controlServer = http.createServer((request, response) => {
     const url = new URL(request.url ?? '/', `http://${request.headers.host ?? `127.0.0.1:${electronControlPort}`}`);
@@ -129,11 +153,57 @@ function startControlServer(): void {
       });
       return;
     }
+    if (url.pathname === '/main/bible-action' && request.method === 'POST') {
+      const action = url.searchParams.get('action');
+      const rawRef = url.searchParams.get('ref');
+      let ref: unknown;
+      try {
+        ref = rawRef ? JSON.parse(rawRef) : undefined;
+      } catch {
+        send(400, { error:'Invalid Bible reference.' });
+        return;
+      }
+      if ((action !== 'reader' && action !== 'notes') || !ref || typeof ref !== 'object' || Array.isArray(ref)) {
+        send(400, { error:'A valid Bible action and reference are required.' });
+        return;
+      }
+      const target = mainWindow;
+      if (!target || target.isDestroyed()) {
+        send(503, { error:'The main BibleNote window is not available.' });
+        return;
+      }
+      const serializedRef = JSON.stringify(ref);
+      const script = action === 'reader'
+        ? `Promise.resolve(openBibleTextInReader(${serializedRef})).then(() => true)`
+        : `Promise.resolve((bibleTextDialog.open && bibleTextDialog.close(), showBibleReaderVerseNotes(${serializedRef}))).then(() => true)`;
+      if (target.isMinimized()) target.restore();
+      target.show();
+      target.focus();
+      target.webContents.executeJavaScript(script, true).then(() => {
+        send(200, { opened:true, action });
+      }).catch(error => {
+        send(500, { error:error instanceof Error ? error.message : String(error) });
+      });
+      return;
+    }
     send(404, { error:'Not found.' });
   });
-  controlServer.listen(electronControlPort, '127.0.0.1', () => {
-    logStartup(`electron control listening port=${electronControlPort}`);
-  });
+  const preferredPort = electronControlPort;
+  try {
+    const result = await listenOnLoopbackWithFallback(controlServer, preferredPort);
+    electronControlPort = result.port;
+    if (result.usedFallback) {
+      logStartup(`electron control port ${preferredPort} already in use; using port=${electronControlPort}`);
+    } else {
+      logStartup(`electron control listening port=${electronControlPort}`);
+    }
+    controlServer.on('error', error => {
+      logStartup(`electron control server error: ${error.message}`);
+    });
+  } catch (error) {
+    controlServer = undefined;
+    throw error;
+  }
 }
 
 async function waitForHttp(url: string, timeoutMs: number): Promise<void> {
@@ -355,8 +425,8 @@ function createBrowserWindow(): BrowserWindow {
   const window = new BrowserWindow({
     width: 1320,
     height: 860,
-    minWidth: 980,
-    minHeight: 640,
+    minWidth: 720,
+    minHeight: 480,
     title: 'BibleNote',
     icon: appIconPath(),
     webPreferences: {
@@ -395,6 +465,31 @@ function createBrowserWindow(): BrowserWindow {
     if (mainWindow === window) mainWindow = undefined;
   });
 
+  return window;
+}
+
+function createBiblePopupWindow(): BrowserWindow {
+  const window = new BrowserWindow({
+    width:720,
+    height:520,
+    minWidth:440,
+    minHeight:300,
+    show:false,
+    autoHideMenuBar:true,
+    title:'Библейский текст',
+    icon:appIconPath(),
+    backgroundColor:'#18171c',
+    webPreferences: {
+      contextIsolation:true,
+      nodeIntegration:false,
+      sandbox:true
+    }
+  });
+
+  window.webContents.setWindowOpenHandler(() => ({ action:'deny' }));
+  window.on('closed', () => {
+    if (biblePopupWindow === window) biblePopupWindow = undefined;
+  });
   return window;
 }
 
@@ -490,8 +585,10 @@ async function createWindow(): Promise<void> {
   }
   logStartup('createWindow start');
   process.env.BIBLENOTE_API_URL = bibleNoteUrl;
+  const protocolRegistered = registerBibleProtocolHandler();
+  logStartup(`bible protocol registration requested result=${protocolRegistered} registered=${app.isDefaultProtocolClient(bibleProtocol)}`);
   installApplicationMenu();
-  startControlServer();
+  await startControlServer();
 
   mainWindow = createBrowserWindow();
   startRendererHealthMonitor();

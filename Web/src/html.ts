@@ -11,3 +11,15 @@ export function htmlToText(html: string): string {
     .replace(/\n{3,}/g, '\n\n')
     .trim();
 }
+
+export function hasRenderableHtmlBody(html: string): boolean {
+  const $ = cheerio.load(html);
+  const body = $('body').first();
+  if (!body.length) return false;
+  if (body.find('img,svg,canvas,video,audio,object,embed,iframe,table,input,textarea,select,button').length > 0) {
+    return true;
+  }
+  const bodyClone = body.clone();
+  bodyClone.find('script,style,noscript').remove();
+  return Boolean(bodyClone.text().replace(/\s+/g, ' ').trim());
+}

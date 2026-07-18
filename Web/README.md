@@ -78,6 +78,7 @@ Useful options:
 
 ```bash
 npm run sync -- --metadata-only
+npm run sync -- --incremental-metadata
 npm run sync -- --replace-all
 npm run sync -- --force-content
 npm run sync -- --refresh-older-than-hours 720
@@ -190,7 +191,7 @@ npm.cmd run sync -- --notebook-id <first-id> --notebook-id <second-id>
 Optional parameters:
 
 ```powershell
-npm.cmd run cache:ui -- --port 4313
+npm.cmd run cache:ui -- --port 4320
 npm.cmd run cache:ui -- --db C:\path\to\onenote-cache.sqlite
 ```
 
@@ -291,3 +292,10 @@ Direct Graph tools, useful for quick checks:
 - Retry/backoff is implemented for common transient Graph errors and throttling responses.
 - The cache marks missing pages as deleted only during a full, uncapped sync. It does not mark deletions when you use `--max-pages` or `--section-id`.
 - The server is read-only by default. Add write operations only after you are comfortable with the read-only flow.
+
+## Source layout
+
+- `src/cache.ts` is the stable cache facade and contains cache writes and Bible-reference indexing.
+- `src/cache-schema.ts`, `src/cache-search.ts`, and `src/cache-types.ts` isolate SQLite schema, read queries, and data contracts.
+- `src/cache-ui.ts` owns the local HTTP routes; `src/biblenote-gateway.ts` owns communication with the BibleNote API/process.
+- `ui/` contains the browser application, split by feature area. Keep browser-only code out of the Node server modules.

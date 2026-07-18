@@ -43,6 +43,10 @@ namespace BibleNote.Application.Controllers
         public string Html { get; set; }
 
         public List<ParseParagraphResponse> Paragraphs { get; set; }
+
+        public List<VerseRelationResponse> Relations { get; set; }
+
+        public bool RelationsCapped { get; set; }
     }
 
     public class ParseParagraphResponse
@@ -106,6 +110,23 @@ namespace BibleNote.Application.Controllers
         public int TopVerse { get; set; }
 
         public bool IsChapter { get; set; }
+    }
+
+    public class VerseRelationResponse
+    {
+        public int ParagraphIndex { get; set; }
+
+        public int ReferenceIndex { get; set; }
+
+        public long VerseId { get; set; }
+
+        public int RelativeParagraphIndex { get; set; }
+
+        public int RelativeReferenceIndex { get; set; }
+
+        public long RelativeVerseId { get; set; }
+
+        public decimal RelationWeight { get; set; }
     }
 
     public class VerseParsingHealthResponse

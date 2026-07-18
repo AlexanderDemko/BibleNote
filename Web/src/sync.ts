@@ -11,9 +11,14 @@ import {
   clearSyncState,
   defaultDbPath,
   getCachedPage,
+  listCachedPagesForBibleParse,
+  listCachedPagesWithFetchErrors,
+  listCachedSections,
   listPageAccess,
   listRecentlyOpenedPageIds,
   markMissingPagesDeleted,
+  markMissingSectionPagesDeleted,
+  markPageHtmlParsed,
   markSectionPagesScanFailed,
   markSectionPagesScanned,
   nowIso,
@@ -31,6 +36,7 @@ import {
   upsertSection,
   upsertSectionGroup
 } from './cache.js';
+import type { PageRow, SectionRow } from './cache.js';
 import { graphJson, graphListAll, graphText, setGraphRetryObserver } from './graph.js';
 
 export type Notebook = {
@@ -80,6 +86,8 @@ export type Page = {
   links?: any;
   order?: number;
   orderIndex?: number;
+  level?: number;
+  pageLevel?: number;
 };
 
 export type SyncOptions = {
@@ -96,6 +104,8 @@ export type SyncOptions = {
   notebookIds?: string[];
   parseBibleRefs?: boolean;
   forceBibleParse?: boolean;
+  localBibleReparse?: boolean;
+  incrementalMetadata?: boolean;
   bibleNoteApiUrl?: string;
   bibleModule?: string;
   onProgress?: (event: SyncProgressEvent) => void;
@@ -164,14 +174,165 @@ async function mapWithConcurrency<T>(
   await Promise.all(Array.from({ length: safeConcurrency }, () => worker()));
 }
 
-function shouldRefreshContent(
+export async function reparseCachedBibleReferences(options: SyncOptions = {}): Promise<SyncResult> {
+  const startedAt = nowIso();
+  const db = openCacheDb(options.dbPath ?? defaultDbPath);
+  const concurrency = options.concurrency ?? Number(process.env.ONENOTE_SYNC_CONCURRENCY ?? '1');
+  if (!Number.isInteger(concurrency) || concurrency < 1 || concurrency > 3) {
+    db.close();
+    throw new Error('Bible reparse concurrency must be an integer from 1 to 3.');
+  }
+
+  setSyncState(db, 'last_sync_started_at', startedAt);
+  setSyncState(db, 'last_sync_status', 'running');
+  clearSyncState(db, 'last_sync_error');
+
+  let bibleRefsPagesParsed = 0;
+  let bibleRefsParseErrors = 0;
+  let bibleRefsRecognized = 0;
+
+  try {
+    const bibleConfig = bibleParseConfigFromEnv({
+      enabled: true,
+      apiUrl: options.bibleNoteApiUrl ?? undefined,
+      module: options.bibleModule ?? undefined
+    });
+    const pages = listCachedPagesForBibleParse(db, { limit: options.maxPages });
+
+    runtimeLog('sync-core', 'Local Bible cache reparse started', {
+      pages: pages.length,
+      concurrency,
+      module: bibleConfig.module,
+      dbPath: db.name
+    });
+    options.onProgress?.({
+      phase: 'bible-parse-local',
+      bibleParseDone: 0,
+      bibleParseTotal: pages.length,
+      bibleParseSkipped: 0,
+      bibleRefsRecognized: 0,
+      message: 'Локальный перерасчёт библейских ссылок'
+    });
+
+    await mapWithConcurrency(pages, Math.min(concurrency, 2), async page => {
+      try {
+        const result = await parsePageWithBibleNote({
+          apiUrl: bibleConfig.apiUrl,
+          pageId: page.id,
+          title: page.title,
+          html: null,
+          text: page.content_text,
+          module: bibleConfig.module,
+          useCommaDelimiter: bibleConfig.useCommaDelimiter,
+          timeoutMs: bibleConfig.timeoutMs,
+          updateHtml: false
+        });
+        const parsedAt = nowIso();
+        upsertBibleParseResult(db, page.id, page.content_hash!, result, bibleParserVersion, parsedAt);
+        bibleRefsRecognized += countBibleReferences(result);
+        bibleRefsPagesParsed += 1;
+      } catch (error: any) {
+        bibleRefsParseErrors += 1;
+        setBibleParseError(
+          db,
+          page.id,
+          page.content_hash,
+          bibleConfig.module,
+          bibleParserVersion,
+          error?.message ?? String(error)
+        );
+        runtimeLog('sync-core', 'Local Bible cache page reparse failed', {
+          pageId: page.id,
+          title: page.title,
+          error: error?.stack ?? error?.message ?? String(error)
+        });
+      }
+
+      const done = bibleRefsPagesParsed + bibleRefsParseErrors;
+      if (done > 0 && done % 100 === 0) checkpointCacheDb(db);
+      if (done % 25 === 0 || done === pages.length) {
+        options.onProgress?.({
+          phase: 'bible-parse-local',
+          bibleParseDone: done,
+          bibleParseTotal: pages.length,
+          bibleParseSkipped: 0,
+          bibleRefsRecognized,
+          errors: bibleRefsParseErrors,
+          message: 'Локальный перерасчёт библейских ссылок'
+        });
+      }
+    });
+
+    const finishedAt = nowIso();
+    setSyncState(db, 'last_sync_finished_at', finishedAt);
+    setSyncState(db, 'last_sync_page_count', String(pages.length));
+    setSyncState(db, 'last_sync_content_downloaded', '0');
+    setSyncState(db, 'last_sync_content_errors', '0');
+    setSyncState(db, 'last_sync_section_scan_errors', '0');
+    setSyncState(db, 'last_sync_bible_refs_pages_parsed', String(bibleRefsPagesParsed));
+    setSyncState(db, 'last_sync_bible_refs_recognized', String(bibleRefsRecognized));
+    setSyncState(db, 'last_sync_bible_refs_parse_errors', String(bibleRefsParseErrors));
+    setSyncState(db, 'last_sync_status', bibleRefsParseErrors === 0 ? 'success' : 'completed_with_errors');
+    checkpointCacheDb(db, 'TRUNCATE');
+
+    const result: SyncResult = {
+      dbPath: db.name,
+      cacheReset: false,
+      notebooks: 0,
+      sections: 0,
+      sectionGroups: 0,
+      pages: pages.length,
+      contentDownloaded: 0,
+      contentSkipped: pages.length,
+      contentErrors: 0,
+      sectionScanErrors: 0,
+      bibleRefsPagesParsed,
+      bibleRefsParseSkipped: 0,
+      bibleRefsParseErrors,
+      bibleRefsRecognized,
+      deletedPagesMarked: 0,
+      startedAt,
+      finishedAt,
+      status: cacheStatus(db)
+    };
+    runtimeLog('sync-core', 'Local Bible cache reparse completed', result);
+    return result;
+  } catch (error: any) {
+    try {
+      setSyncState(db, 'last_sync_status', 'failed');
+      setSyncState(db, 'last_sync_error', (error?.message ?? String(error)).slice(0, 4000));
+    } catch {
+      // Preserve the original failure if the status cannot be persisted.
+    }
+    runtimeLog('sync-core', 'Local Bible cache reparse failed', {
+      error: error?.stack ?? error?.message ?? String(error)
+    });
+    throw error;
+  } finally {
+    checkpointCacheDb(db);
+    db.close();
+  }
+}
+
+export function shouldRefreshContent(
   cached: ReturnType<typeof getCachedPage>,
   page: Page,
-  options: SyncOptions
+  options: SyncOptions,
+  nowMs = Date.now()
 ): boolean {
   if (options.forceContent) return true;
-  if (!cached?.content_text) return true;
-  if (cached.fetch_error) return true;
+  if (!cached) return true;
+  if (cached.fetch_error) {
+    const currentModified = page.lastModifiedDateTime ?? null;
+    const errorModified = cached.fetch_error_source_modified_date_time ?? null;
+    const pageChangedSinceError = currentModified !== errorModified;
+    if (!pageChangedSinceError) {
+      if (cached.fetch_error_terminal === 1) return false;
+      if (cached.fetch_retry_after && new Date(cached.fetch_retry_after).getTime() > nowMs) return false;
+      return true;
+    }
+  }
+  if (!cached.content_synced_at) return true;
   if (options.includeHtml && !cached.content_html) return true;
   if ((cached.content_source_modified_date_time ?? null) !== (page.lastModifiedDateTime ?? null)) return true;
 
@@ -182,6 +343,103 @@ function shouldRefreshContent(
   }
 
   return false;
+}
+
+export function shouldScanSectionPages(
+  cached: SectionRow | undefined,
+  section: Section,
+  incrementalMetadata: boolean
+): boolean {
+  if (!incrementalMetadata) return true;
+  if (!cached) return true;
+  if (cached.pages_scan_complete !== 1 || cached.pages_scan_error || !cached.pages_scanned_at) return true;
+  const currentModified = section.lastModifiedDateTime ?? null;
+  if (!currentModified || !cached.last_modified_date_time) return true;
+  return cached.last_modified_date_time !== currentModified;
+}
+
+export function isTerminalPageFetchError(error: unknown): boolean {
+  const message = (error instanceof Error ? error.message : String(error)).toLowerCase();
+  return message.includes('404 not found')
+    || message.includes('returned 404')
+    || message.includes('"code":"20102"');
+}
+
+function retryAfterForPageFetchError(page: PageRow | undefined, failedAt: string): string {
+  const previousErrors = Math.max(0, page?.fetch_error_count ?? 0);
+  const delayHours = Math.min(24 * 7, 2 ** Math.min(previousErrors, 8));
+  return new Date(new Date(failedAt).getTime() + delayHours * 60 * 60 * 1000).toISOString();
+}
+
+function shouldRetryCachedFetchError(page: PageRow, nowMs = Date.now()): boolean {
+  if (!page.fetch_error || page.fetch_error_terminal === 1) return false;
+  if (!page.fetch_retry_after) return true;
+  return new Date(page.fetch_retry_after).getTime() <= nowMs;
+}
+
+function cachedRowToPage(page: PageRow): Page {
+  return {
+    id: page.id,
+    title: page.title ?? undefined,
+    createdDateTime: page.created_date_time ?? undefined,
+    lastModifiedDateTime: page.last_modified_date_time ?? undefined,
+    contentUrl: page.content_url ?? undefined,
+    parentSection: page.parent_section_id
+      ? { id: page.parent_section_id, displayName: page.parent_section_name ?? undefined }
+      : undefined,
+    parentNotebook: page.parent_notebook_id
+      ? { id: page.parent_notebook_id, displayName: page.parent_notebook_name ?? undefined }
+      : undefined,
+    links: page.links_json ? JSON.parse(page.links_json) : undefined,
+    orderIndex: page.order_index ?? undefined
+  };
+}
+
+export function assignOneNotePageOrder(pages: Page[]): void {
+  const distinctOrders = new Set(
+    pages
+      .map(page => page.order)
+      .filter((order): order is number => Number.isFinite(order))
+  );
+  const hasUsableGraphOrder = distinctOrders.size > 1;
+  for (const [pageIndex, page] of pages.entries()) {
+    const graphOrder = Number(page.order);
+    page.orderIndex = hasUsableGraphOrder ? graphOrder : pageIndex;
+  }
+}
+
+export async function loadOneNoteSectionPages(
+  sectionId: string,
+  options: {
+    maxItems?: number;
+    fetchPage?: (path: string) => Promise<{ value?: Page[] }>;
+  } = {}
+): Promise<{ pages: Page[]; complete: boolean }> {
+  const fetchPage = options.fetchPage ?? (path => graphJson<{ value?: Page[] }>(path));
+  const pages: Page[] = [];
+  const seenIds = new Set<string>();
+  let skip = 0;
+
+  while (true) {
+    const remaining = options.maxItems ? options.maxItems - pages.length : 100;
+    if (remaining <= 0) return { pages, complete:false };
+    const pageSize = Math.min(100, remaining);
+    const query = `pagelevel=true&$top=${pageSize}&$skip=${skip}`
+      + '&$select=id,title,createdDateTime,lastModifiedDateTime,contentUrl,links,order,level'
+      + '&$expand=parentSection,parentNotebook';
+    const data = await fetchPage(
+      `/me/onenote/sections/${encodeURIComponent(sectionId)}/pages?${query}`
+    );
+    const items = Array.isArray(data.value) ? data.value : [];
+    for (const page of items) {
+      if (!seenIds.has(page.id)) {
+        seenIds.add(page.id);
+        pages.push(page);
+      }
+    }
+    if (items.length < pageSize) return { pages, complete:true };
+    skip += items.length;
+  }
 }
 
 export async function loadNotebookSectionsRecursively(
@@ -273,6 +531,7 @@ export async function loadNotebookSectionsRecursively(
 }
 
 export async function syncOneNoteCache(options: SyncOptions = {}): Promise<SyncResult> {
+  if (options.localBibleReparse) return reparseCachedBibleReferences(options);
   const startedAt = nowIso();
   runtimeLog('sync-core', 'syncOneNoteCache start', {
     maxPages: options.maxPages,
@@ -283,13 +542,15 @@ export async function syncOneNoteCache(options: SyncOptions = {}): Promise<SyncR
     includeHtml: options.includeHtml,
     parseBibleRefs: options.parseBibleRefs,
     forceBibleParse: options.forceBibleParse,
+    localBibleReparse: options.localBibleReparse,
+    incrementalMetadata: options.incrementalMetadata,
     notebookIds: options.notebookIds,
     sectionId: options.sectionId,
     pageId: options.pageId,
     bibleModule: options.bibleModule
   });
   const db = openCacheDb(options.dbPath ?? defaultDbPath);
-  if (options.replaceAll && (options.pageId || options.sectionId || options.maxPages || options.metadataOnly)) {
+  if (options.replaceAll && (options.pageId || options.sectionId || options.maxPages || options.metadataOnly || options.incrementalMetadata)) {
     db.close();
     throw new Error('replaceAll requires a full content sync; pageId, sectionId, maxPages, and metadataOnly are not allowed.');
   }
@@ -370,7 +631,7 @@ export async function syncOneNoteCache(options: SyncOptions = {}): Promise<SyncR
   let targetedPage: Page | undefined;
   if (options.pageId) {
     targetedPage = await graphJson<Page>(
-      `/me/onenote/pages/${encodeURIComponent(options.pageId)}?$select=id,title,createdDateTime,lastModifiedDateTime,contentUrl,links,order&$expand=parentSection,parentNotebook`
+      `/me/onenote/pages/${encodeURIComponent(options.pageId)}?pagelevel=true&$select=id,title,createdDateTime,lastModifiedDateTime,contentUrl,links,order,level&$expand=parentSection,parentNotebook`
     );
     effectiveSections = targetedPage.parentSection?.id
       ? [await graphJson<Section>(
@@ -381,6 +642,20 @@ export async function syncOneNoteCache(options: SyncOptions = {}): Promise<SyncR
     effectiveSections = [await graphJson<Section>(
       `/me/onenote/sections/${encodeURIComponent(options.sectionId)}?$select=id,displayName,lastModifiedDateTime,pagesUrl,links&$expand=parentNotebook`
     )];
+  } else if (options.incrementalMetadata) {
+    const selectedNotebookIdSet = selectedNotebookIds ? new Set(selectedNotebookIds) : undefined;
+    effectiveSections = await graphListAll<Section>(
+      `/me/onenote/sections?$top=${top}&$select=id,displayName,lastModifiedDateTime,pagesUrl,links&$expand=parentNotebook,parentSectionGroup`
+    );
+    if (selectedNotebookIdSet) {
+      effectiveSections = effectiveSections.filter(section =>
+        Boolean(section.parentNotebook?.id && selectedNotebookIdSet.has(section.parentNotebook.id))
+      );
+    }
+    for (const section of effectiveSections) {
+      section.sectionGroupInfoKnown = false;
+      section.sectionGroupPath ??= section.parentSectionGroup?.displayName;
+    }
   } else if (selectedNotebookIds) {
     effectiveSections = [];
     for (const notebookId of selectedNotebookIds) {
@@ -414,6 +689,26 @@ export async function syncOneNoteCache(options: SyncOptions = {}): Promise<SyncR
     }
   }
 
+  const cachedSectionsById = new Map(listCachedSections(db).map(section => [section.id, section]));
+  const sectionsMissingPageHierarchy = new Set(
+    (db.prepare(`
+      SELECT DISTINCT parent_section_id AS sectionId
+      FROM pages
+      WHERE deleted_at IS NULL AND page_level IS NULL AND parent_section_id IS NOT NULL
+    `).all() as Array<{ sectionId: string }>).map(row => row.sectionId)
+  );
+  const sectionsToScan = effectiveSections.filter(section =>
+    sectionsMissingPageHierarchy.has(section.id)
+    || shouldScanSectionPages(cachedSectionsById.get(section.id), section, options.incrementalMetadata === true)
+  );
+  runtimeLog('sync-core', 'Section page scan candidates', {
+    sections: effectiveSections.length,
+    sectionsToScan: sectionsToScan.length,
+    sectionsSkipped: effectiveSections.length - sectionsToScan.length,
+    sectionsMissingPageHierarchy: sectionsMissingPageHierarchy.size,
+    incrementalMetadata: options.incrementalMetadata === true
+  });
+
   const upsertSectionsTx = db.transaction((items: Section[]) => {
     for (const section of items) upsertSection(db, section, syncedAt);
   });
@@ -424,10 +719,14 @@ export async function syncOneNoteCache(options: SyncOptions = {}): Promise<SyncR
   upsertSectionGroupsTx(effectiveSectionGroups);
   options.onProgress?.({ phase: 'sections', sections: effectiveSections.length, sectionGroups: sectionGroupsFound });
 
-  options.onProgress?.({ phase: 'pages', message: 'Scanning sections', sectionTotal: effectiveSections.length });
+  options.onProgress?.({ phase: 'pages', message: 'Scanning changed sections', sectionTotal: sectionsToScan.length });
   const pages: Page[] = [];
+  let deletedPagesMarked = 0;
 
   if (targetedPage) {
+    const cachedTargetPage = getCachedPage(db, targetedPage.id);
+    targetedPage.orderIndex = cachedTargetPage?.order_index
+      ?? (Number.isFinite(targetedPage.order) ? Number(targetedPage.order) : undefined);
     seenPageIds.add(targetedPage.id);
     if (shouldRefreshContent(getCachedPage(db, targetedPage.id), targetedPage, { ...options, includeHtml })) {
       pagesNeedingContent.add(targetedPage.id);
@@ -435,21 +734,15 @@ export async function syncOneNoteCache(options: SyncOptions = {}): Promise<SyncR
     upsertPageMetadata(db, targetedPage, syncedAt);
     pages.push(targetedPage);
     options.onProgress?.({ phase: 'pages', pages: 1, message: 'Target page metadata loaded' });
-  } else for (const [sectionIndex, section] of effectiveSections.entries()) {
+  } else for (const [sectionIndex, section] of sectionsToScan.entries()) {
     if (maxPages && pages.length >= maxPages) break;
     const remaining = maxPages ? maxPages - pages.length : undefined;
     let sectionScanComplete = false;
     let sectionPages: Page[] = [];
     try {
-      sectionPages = await graphListAll<Page>(
-        `/me/onenote/sections/${encodeURIComponent(section.id)}/pages?$top=${top}&$select=id,title,createdDateTime,lastModifiedDateTime,contentUrl,links,order&$expand=parentSection,parentNotebook`,
-        {
-          maxItems: remaining,
-          onFinished: complete => {
-            sectionScanComplete = complete;
-          }
-        }
-      );
+      const result = await loadOneNoteSectionPages(section.id, { maxItems:remaining });
+      sectionPages = result.pages;
+      sectionScanComplete = result.complete;
     } catch (error: any) {
       sectionScanErrors++;
       const message = error?.message ?? String(error);
@@ -464,7 +757,7 @@ export async function syncOneNoteCache(options: SyncOptions = {}): Promise<SyncR
       options.onProgress?.({
         phase: 'pages',
         sections: sectionIndex + 1,
-        sectionTotal: effectiveSections.length,
+        sectionTotal: sectionsToScan.length,
         pages: pages.length,
         errors: sectionScanErrors,
         message: 'Scanning sections'
@@ -473,8 +766,8 @@ export async function syncOneNoteCache(options: SyncOptions = {}): Promise<SyncR
     }
 
     const tx = db.transaction((items: Page[]) => {
-      for (const [pageIndex, page] of items.entries()) {
-        page.orderIndex = page.order ?? pageIndex;
+      assignOneNotePageOrder(items);
+      for (const page of items) {
         seenPageIds.add(page.id);
         if (shouldRefreshContent(getCachedPage(db, page.id), page, { ...options, includeHtml })) {
           pagesNeedingContent.add(page.id);
@@ -484,25 +777,44 @@ export async function syncOneNoteCache(options: SyncOptions = {}): Promise<SyncR
     });
     tx(sectionPages);
     markSectionPagesScanned(db, section.id, sectionScanComplete, sectionPages.length, syncedAt);
+    if (sectionScanComplete && !maxPages) {
+      deletedPagesMarked += markMissingSectionPagesDeleted(
+        db,
+        section.id,
+        new Set(sectionPages.map(page => page.id)),
+        syncedAt
+      );
+    }
     pages.push(...sectionPages);
 
     options.onProgress?.({
       phase: 'pages',
       sections: sectionIndex + 1,
-      sectionTotal: effectiveSections.length,
+      sectionTotal: sectionsToScan.length,
       pages: pages.length,
       errors: sectionScanErrors,
       message: 'Scanning sections'
     });
   }
 
-  let deletedPagesMarked = 0;
-  if (!options.pageId && !options.sectionId && !maxPages && sectionScanErrors === 0) {
-    deletedPagesMarked = markMissingPagesDeleted(db, seenPageIds, syncedAt, selectedNotebookIds);
+  if (!options.incrementalMetadata && !options.pageId && !options.sectionId && !maxPages && sectionScanErrors === 0) {
+    deletedPagesMarked += markMissingPagesDeleted(db, seenPageIds, syncedAt, selectedNotebookIds);
   } else if (sectionScanErrors > 0) {
-    runtimeLog('sync-core', 'Skipping missing page deletion because section scans failed', {
+    runtimeLog('sync-core', 'Skipping cross-section missing page deletion because section scans failed', {
       sectionScanErrors
     });
+  }
+
+  if (options.incrementalMetadata && !options.metadataOnly) {
+    const pageIds = new Set(pages.map(page => page.id));
+    const retryCandidates = listCachedPagesWithFetchErrors(db, selectedNotebookIds);
+    for (const cachedPage of retryCandidates) {
+      if (pageIds.has(cachedPage.id) || !shouldRetryCachedFetchError(cachedPage)) continue;
+      if (maxPages && pages.length >= maxPages) break;
+      pages.push(cachedRowToPage(cachedPage));
+      pageIds.add(cachedPage.id);
+      pagesNeedingContent.add(cachedPage.id);
+    }
   }
 
   if (!options.metadataOnly) {
@@ -548,8 +860,23 @@ export async function syncOneNoteCache(options: SyncOptions = {}): Promise<SyncR
         runtimeLog('sync-core', 'Downloaded page content', { pageId: page.id, title: page.title, htmlBytes: html.length, textChars: text.length });
       } catch (error: any) {
         contentErrors += 1;
-        setPageFetchError(db, page.id, error?.message ?? String(error));
-        runtimeLog('sync-core', 'Page content download failed', { pageId: page.id, title: page.title, error: error?.stack ?? error?.message ?? String(error) });
+        const failedAt = nowIso();
+        const terminal = isTerminalPageFetchError(error);
+        const cachedPage = getCachedPage(db, page.id);
+        const retryAfter = terminal ? null : retryAfterForPageFetchError(cachedPage, failedAt);
+        setPageFetchError(db, page.id, error?.message ?? String(error), {
+          failedAt,
+          retryAfter,
+          terminal,
+          sourceModifiedDateTime: page.lastModifiedDateTime ?? null
+        });
+        runtimeLog('sync-core', 'Page content download failed', {
+          pageId: page.id,
+          title: page.title,
+          terminal,
+          retryAfter,
+          error: error?.stack ?? error?.message ?? String(error)
+        });
       }
 
       if ((contentDownloaded + contentErrors) % 25 === 0 || contentDownloaded + contentErrors === pagesToFetch.length) {
@@ -616,15 +943,17 @@ export async function syncOneNoteCache(options: SyncOptions = {}): Promise<SyncR
             timeoutMs: bibleConfig.timeoutMs,
             updateHtml: Boolean(htmlForBibleNote)
           });
+          const parsedAt = nowIso();
           if (result.html && htmlForBibleNote) {
-            updatePageHtml(db, page.id, result.html, nowIso());
+            updatePageHtml(db, page.id, result.html, parsedAt);
+            markPageHtmlParsed(db, page.id, result.html, result.module || bibleConfig.module, bibleParserVersion, parsedAt);
             runtimeLog('sync-core', 'Updated cached page HTML with BibleNote links', {
               pageId: page.id,
               title: page.title,
               htmlBytes: result.html.length
             });
           }
-          upsertBibleParseResult(db, page.id, page.content_hash!, result, bibleParserVersion, nowIso());
+          upsertBibleParseResult(db, page.id, page.content_hash!, result, bibleParserVersion, parsedAt);
           const refsCount = countBibleReferences(result);
           bibleRefsRecognized += refsCount;
           bibleRefsPagesParsed += 1;
@@ -787,6 +1116,12 @@ function parseArgs(argv: string[]): SyncOptions & { statusOnly?: boolean } {
       case '--force-bible-parse':
         result.forceBibleParse = true;
         break;
+      case '--reparse-bible-cache':
+        result.localBibleReparse = true;
+        break;
+      case '--incremental-metadata':
+        result.incrementalMetadata = true;
+        break;
       case '--biblenote-api-url':
         result.bibleNoteApiUrl = optionValue(arg, next);
         i += 1;
@@ -800,7 +1135,7 @@ function parseArgs(argv: string[]): SyncOptions & { statusOnly?: boolean } {
         break;
       default:
         if (arg === '--help' || arg === '-h') {
-          console.log(`Usage: npm run sync -- [options]\n\nOptions:\n  --status                         Print cache status only\n  --db <path>                      SQLite cache path\n  --replace-all                    Recreate all cache tables before a full content sync\n  --force-content                  Re-download content even if lastModifiedDateTime is unchanged\n  --metadata-only                  Sync notebooks/sections/page metadata only\n  --include-html                   Store raw page HTML as well as plain text\n  --max-pages <n>                  Limit page count for testing\n  --concurrency <n>                Graph concurrency for metadata (1..3), default 1; content downloads are serialized\n  --refresh-older-than-hours <n>   Re-download content older than n hours\n  --section-id <id>                Sync one section only\n  --page-id <id>                   Sync one page only\n  --notebook-id <id>               Sync one notebook; repeat for multiple notebooks\n  --parse-bible-refs               Parse cached page content with the local BibleNote API\n  --force-bible-parse              Re-parse Bible references even if parser state is current\n  --biblenote-api-url <url>        BibleNote API base URL, default http://127.0.0.1:5000\n  --bible-module <name>            BibleNote module, default rst\n`);
+          console.log(`Usage: npm run sync -- [options]\n\nOptions:\n  --status                         Print cache status only\n  --db <path>                      SQLite cache path\n  --replace-all                    Recreate all cache tables before a full content sync\n  --force-content                  Re-download content even if lastModifiedDateTime is unchanged\n  --metadata-only                  Sync notebooks/sections/page metadata only\n  --incremental-metadata           Scan pages only in new or changed sections\n  --include-html                   Store raw page HTML as well as plain text\n  --max-pages <n>                  Limit page count for testing\n  --concurrency <n>                Graph concurrency for metadata (1..3), default 1; content downloads are serialized\n  --refresh-older-than-hours <n>   Re-download content older than n hours\n  --section-id <id>                Sync one section only\n  --page-id <id>                   Sync one page only\n  --notebook-id <id>               Sync one notebook; repeat for multiple notebooks\n  --parse-bible-refs               Parse cached page content with the local BibleNote API\n  --force-bible-parse              Re-parse Bible references even if parser state is current\n  --reparse-bible-cache            Re-parse all locally cached pages without Microsoft Graph\n  --biblenote-api-url <url>        BibleNote API base URL, default http://127.0.0.1:5000\n  --bible-module <name>            BibleNote module, default rst\n`);
           process.exit(0);
         }
         throw new Error(`Unknown argument: ${arg}`);

@@ -1,6 +1,6 @@
 import { runtimeLog } from './runtime-logging.js';
 
-export const bibleParserVersion = 'biblenote-http-v1';
+export const bibleParserVersion = 'biblenote-http-v4';
 
 export type BibleReference = {
   originalText?: string;
@@ -38,12 +38,24 @@ export type BibleParsedParagraph = {
   notFound?: BibleNotFoundReference[];
 };
 
+export type BibleRelation = {
+  paragraphIndex: number;
+  referenceIndex: number;
+  verseId: number;
+  relativeParagraphIndex: number;
+  relativeReferenceIndex: number;
+  relativeVerseId: number;
+  relationWeight: number;
+};
+
 export type BibleParseResult = {
   pageId?: string;
   module?: string;
   useCommaDelimiter?: boolean;
   html?: string | null;
   paragraphs?: BibleParsedParagraph[];
+  relations?: BibleRelation[];
+  relationsCapped?: boolean;
 };
 
 export type BibleParseConfig = {
@@ -156,6 +168,8 @@ export async function parsePageWithBibleNote(options: {
       durationMs: Date.now() - startedAt,
       paragraphs: parsed.paragraphs?.length ?? 0,
       references: (parsed.paragraphs ?? []).reduce((sum, paragraph) => sum + (paragraph.references?.length ?? 0), 0),
+      relations: parsed.relations?.length ?? 0,
+      relationsCapped: parsed.relationsCapped === true,
       hasHtml: Boolean(parsed.html)
     });
     return parsed;
@@ -191,6 +205,7 @@ export async function getVerseTextWithBibleNote(options: {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), options.timeoutMs);
   const startedAt = Date.now();
+  const maxAttempts = 3;
   try {
     const params = new URLSearchParams({
       module: options.module,
@@ -218,23 +233,49 @@ export async function getVerseTextWithBibleNote(options: {
       contextVerses: options.contextVerses,
       timeoutMs: options.timeoutMs
     });
-    const response = await fetch(target, {
-      signal: controller.signal
-    });
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        const response = await fetch(target, { signal: controller.signal });
+        const responseText = await response.text();
+        if (!response.ok) {
+          const responseError = new Error(`BibleNote API returned ${response.status}: ${responseText.slice(0, 2000)}`) as Error & { status?: number };
+          responseError.status = response.status;
+          throw responseError;
+        }
 
-    const responseText = await response.text();
-    if (!response.ok) {
-      throw new Error(`BibleNote API returned ${response.status}: ${responseText.slice(0, 2000)}`);
+        const parsed = responseText ? JSON.parse(responseText) as BibleVerseText : {};
+        runtimeLog('biblenote-api', 'VerseText response', {
+          status: response.status,
+          attempt,
+          durationMs: Date.now() - startedAt,
+          reference: parsed.reference,
+          verses: parsed.verses?.length ?? 0
+        });
+        return parsed;
+      } catch (error: any) {
+        if (error?.name === 'AbortError') throw error;
+        const status = Number(error?.status);
+        const retryable = !Number.isInteger(status)
+          || status === 404
+          || status === 408
+          || status === 429
+          || status >= 500;
+        if (!retryable || attempt >= maxAttempts) throw error;
+        const retryDelayMs = attempt === 1 ? 150 : 450;
+        runtimeLog('biblenote-api', 'VerseText retry scheduled', {
+          attempt,
+          nextAttempt:attempt + 1,
+          retryDelayMs,
+          status:Number.isInteger(status) ? status : undefined,
+          bookIndex:options.bookIndex,
+          chapter:options.chapter,
+          verse:options.verse,
+          error:error?.message ?? String(error)
+        });
+        await new Promise(resolve => setTimeout(resolve, retryDelayMs));
+      }
     }
-
-    const parsed = responseText ? JSON.parse(responseText) as BibleVerseText : {};
-    runtimeLog('biblenote-api', 'VerseText response', {
-      status: response.status,
-      durationMs: Date.now() - startedAt,
-      reference: parsed.reference,
-      verses: parsed.verses?.length ?? 0
-    });
-    return parsed;
+    throw new Error('BibleNote API verse text retry loop ended unexpectedly.');
   } catch (error: any) {
     runtimeLog('biblenote-api', 'VerseText failed', {
       durationMs: Date.now() - startedAt,

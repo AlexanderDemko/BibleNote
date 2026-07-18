@@ -16,6 +16,8 @@ using BibleNote.Services.VerseParsing.Contracts;
 using BibleNote.Services.VerseParsing.Contracts.ParseContext;
 using BibleNote.Services.VerseParsing.Models;
 using BibleNote.Services.VerseParsing.Models.ParseResult;
+using BibleNote.Services.VerseProcessing;
+using BibleNote.Services.VerseProcessing.Models;
 using HtmlAgilityPack;
 using Microsoft.AspNetCore.Mvc;
 
@@ -23,6 +25,8 @@ namespace BibleNote.Application.Controllers
 {
     public class VerseParsingController : BaseController
     {
+        private const int MaxParsePageRelations = 50000;
+
         private readonly IDocumentParserFactory documentParserFactory;
         private readonly IVerseLinkService verseLinkService;
         private readonly IConfigurationManager configurationManager;
@@ -163,6 +167,7 @@ namespace BibleNote.Application.Controllers
                 var documentId = new ParserDocumentId(0, !updateHtml);
                 var provider = new ReadOnlyDocumentProviderInfo(verseLinkService, !updateHtml);
                 var paragraphs = new List<ParagraphParseResult>();
+                DocumentParseResult documentParseResult;
                 string updatedHtml = null;
 
                 using (var parser = documentParserFactory.Create(provider, documentId))
@@ -202,7 +207,16 @@ namespace BibleNote.Application.Controllers
                             return BadRequest("Specify html, text, or paragraphs.");
                         }
                     }
+
+                    documentParseResult = parser.DocumentParseResult;
                 }
+
+                // The document's outer hierarchy is finalized when the parser is disposed.
+                // Calculating inside the using block sees no root hierarchy and silently
+                // returns an empty relation set even though references were recognized.
+                var relationCalculation = VerseRelationsCalculator.Calculate(
+                    documentParseResult,
+                    MaxParsePageRelations);
 
                 return new ParsePageResponse
                 {
@@ -210,7 +224,9 @@ namespace BibleNote.Application.Controllers
                     Module = applicationManager.CurrentModuleInfo.ShortName,
                     UseCommaDelimiter = configurationManager.UseCommaDelimiter,
                     Html = updateHtml ? updatedHtml : null,
-                    Paragraphs = paragraphs.Select(ToParagraphResponse).ToList()
+                    Paragraphs = paragraphs.Select(ToParagraphResponse).ToList(),
+                    Relations = relationCalculation.Relations.Select(ToRelationResponse).ToList(),
+                    RelationsCapped = relationCalculation.Capped
                 };
             }
         }
@@ -607,6 +623,20 @@ namespace BibleNote.Application.Controllers
                 EndIndex = entry.EndIndex,
                 EntryType = entry.EntryType.ToString(),
                 EntryOptions = entry.EntryOptions.ToString()
+            };
+        }
+
+        private static VerseRelationResponse ToRelationResponse(CalculatedVerseRelation relation)
+        {
+            return new VerseRelationResponse
+            {
+                ParagraphIndex = relation.Paragraph.ParagraphIndex,
+                ReferenceIndex = relation.ReferenceIndex,
+                VerseId = relation.VerseId,
+                RelativeParagraphIndex = relation.RelativeParagraph.ParagraphIndex,
+                RelativeReferenceIndex = relation.RelativeReferenceIndex,
+                RelativeVerseId = relation.RelativeVerseId,
+                RelationWeight = relation.RelationWeight
             };
         }
 
