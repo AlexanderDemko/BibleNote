@@ -261,7 +261,8 @@ pageFindNextButton.addEventListener('click', () => movePageFind(1));
 pageFindCloseButton.addEventListener('click', closePageFind);
 document.addEventListener('keydown', event => {
   const key = event.key.toLocaleLowerCase();
-  if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && key === 'f') {
+  const findKey = event.code === 'KeyF' || key === 'f';
+  if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && findKey) {
     event.preventDefault();
     openPageFind();
     return;
@@ -427,7 +428,7 @@ function looksLikeBibleReferenceSearch(query) {
   if (!query) return false;
   const request = searchRequest(query);
   if (request.mode === 'regex') return false;
-  return /(?:bnVerse:|isbtBibleVerse:|\d+\s*:\s*\d+)/i.test(request.query)
+  return /(?:bnVerse:|isbtBibleVerse:|\d+\s*[:,]\s*\d+)/i.test(request.query)
     && /[\p{L}]/u.test(request.query);
 }
 
@@ -441,15 +442,10 @@ function pageHighlightQuery(options = {}) {
 function rerunSearch() {
   const query = searchInput.value.trim();
   activeSearchQuery = query;
-  if (query) renderSearch(query).catch(showError); else renderTree().catch(showError);
-  if (selectedPageId) {
-    openPage(selectedPageId, {
-      updateUrl:false,
-      rememberHistory:false,
-      paragraphIndex:currentTargetParagraphIndex,
-      paragraphIndexes:currentTargetParagraphIndexes,
-      highlightQuery:query
-    }).catch(showError);
+  if (query) renderSearch(query).catch(showError);
+  else {
+    renderTree().catch(showError);
+    updateOpenPageSearchMatches(null, '');
   }
 }
 

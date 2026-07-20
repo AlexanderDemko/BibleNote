@@ -61,14 +61,10 @@
       </div>
       <div id="bibleTextMeta" class="bible-text-meta"></div>
       <div id="bibleTextContent" class="bible-text-content"></div>
-      <div id="bibleTextParallelPanel"></div>
       <div class="bible-text-footer">
         <div class="bible-text-actions" aria-label="Действия с библейской ссылкой">
           <button id="showBibleTextContext" class="bible-text-action" type="button" title="Показать в контексте" aria-label="Показать в контексте">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 10h10M4 14h16M4 18h10"/><path d="M17 9v6M14 12h6"/></svg>
-          </button>
-          <button id="showBibleTextParallel" class="bible-text-action" type="button" title="Показать параллельные ссылки" aria-label="Показать параллельные ссылки">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h11l-3-3M18 7l-3 3M17 17H6l3-3M6 17l3 3"/></svg>
           </button>
           <button id="showBibleTextNotes" class="bible-text-action" type="button" title="Показать заметки" aria-label="Показать заметки">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M15 3v5h4M9 12h6M9 16h6"/></svg>
@@ -81,6 +77,17 @@
       </div>
     </div>
   </dialog>
+  <aside id="bibleParallelDrawer" class="bible-parallel-drawer" hidden aria-label="Параллельные ссылки">
+    <div class="bible-parallel-drawer-header">
+      <div class="bible-parallel-drawer-heading">
+        <div class="bible-parallel-drawer-kicker">Параллельные ссылки</div>
+        <h3 id="bibleParallelDrawerTitle"></h3>
+        <div id="bibleParallelDrawerSource" class="bible-parallel-drawer-source"></div>
+      </div>
+      <button id="closeBibleParallelDrawer" class="bible-parallel-drawer-close" type="button" title="Закрыть панель" aria-label="Закрыть панель">×</button>
+    </div>
+    <div id="bibleTextParallelPanel" class="bible-parallel-drawer-content"></div>
+  </aside>
   <dialog id="settingsDialog" class="settings-dialog">
     <div class="settings-dialog-body">
       <header class="settings-dialog-header">
@@ -258,10 +265,6 @@
             <button id="bibleReaderPrev" class="small-button" type="button" title="Предыдущая глава">←</button>
             <select id="bibleReaderChapter" class="bible-reader-select chapter" title="Глава"></select>
             <button id="bibleReaderNext" class="small-button" type="button" title="Следующая глава">→</button>
-            <form id="bibleReaderReferenceForm" class="bible-reader-reference">
-              <input id="bibleReaderReference" type="text" placeholder="Например, Ин 3:16" aria-label="Библейский отрывок" autocomplete="off" spellcheck="false">
-              <button id="bibleReaderReferenceSubmit" class="small-button" type="submit">Перейти</button>
-            </form>
           </div>
           <div id="bibleReaderStatus" class="sync-state"></div>
         </div>

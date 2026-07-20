@@ -307,7 +307,6 @@ async function initializeApp() {
       bibleTextMeta.textContent = 'BibleNote';
       bibleTextContent.textContent = 'Загрузка...';
       showBibleTextContextButton.disabled = true;
-      showBibleTextParallelButton.disabled = true;
       if (!bibleTextDialog.open) bibleTextDialog.showModal();
       try {
         await openExternalBibleRefFromUrl();

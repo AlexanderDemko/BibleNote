@@ -99,12 +99,23 @@ history, and local notebook aliases. It cannot be combined with `--max-pages`, `
 Recommended routine:
 
 ```bash
-# frequent incremental sync, downloads only missing/changed pages
-npm run sync
+# frequent incremental sync with section-level and rolling safety checks
+npm run sync -- --incremental-metadata
 
 # occasional safety refresh because OneNote lastModifiedDateTime can be imperfect in practice
 npm run sync -- --refresh-older-than-hours 720
 ```
+
+OneNote Graph can leave a page's `lastModifiedDateTime` equal to its creation time after body
+edits. Incremental sync therefore treats the page timestamp only as a hint. It recursively checks
+the selected notebooks' sections and, when a section timestamp changes, downloads every page body
+in that section and compares the resulting cached content. The section version stored with each
+download makes this work resumable after cancellation or a transient Graph failure.
+
+Each incremental run also refreshes up to 25 recently opened pages whose actual Graph download is
+older than 24 hours, plus up to 25 of the oldest cached pages as a rolling safety sweep. Local HTML
+link processing does not change `content_synced_at`; that field records only a successful Graph
+content download.
 
 ## BibleNote reference parsing
 
@@ -128,7 +139,7 @@ ONENOTE_BIBLE_PARSE_ENABLED=false
 BIBLENOTE_API_URL=http://127.0.0.1:5000
 BIBLENOTE_MODULE=rst
 BIBLENOTE_USE_COMMA_DELIMITER=true
-BIBLENOTE_API_TIMEOUT_MS=30000
+BIBLENOTE_API_TIMEOUT_MS=120000
 ```
 
 Parsed references are stored per page and paragraph. The cache also stores BibleNote-style weighted relations between references in the same paragraph and following paragraphs, so parallel reference search can rank related verses by proximity and note structure. MCP tools added for this data:

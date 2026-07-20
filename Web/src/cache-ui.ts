@@ -218,7 +218,7 @@ export function startCacheUi(options: UiOptions): http.Server {
       const parsedAt = new Date().toISOString();
       const finalHtml = parsed.html || sourceHtml;
       if (finalHtml !== sourceHtml) {
-        updatePageHtml(db, pageId, finalHtml, parsedAt);
+        updatePageHtml(db, pageId, finalHtml);
         runtimeLog('http', 'Updated cached page HTML in background', {
           pageId,
           module,
@@ -854,17 +854,33 @@ export function startCacheUi(options: UiOptions): http.Server {
         if (!['and', 'phrase', 'regex'].includes(mode)) throw new Error(`Unknown search mode: ${mode}`);
         if (!['structure', 'weight'].includes(searchView)) throw new Error(`Unknown search view: ${searchView}`);
         let parsedSearchRef: Awaited<ReturnType<typeof parseExternalBibleRef>> | null = null;
+        let parsedParallelSearchRefs: Array<Awaited<ReturnType<typeof parseExternalBibleRef>>> | null = null;
         if (mode !== 'regex' && /(?:\d|:|bnVerse:|isbtBibleVerse:)/i.test(query)) {
+          const pairQueries = query.split(';').map(part => part.trim()).filter(Boolean);
           try {
-            const parsed = await parseExternalBibleRef(query, url.searchParams.get('module')?.trim() || undefined);
-            if (Number.isInteger(Number(parsed.bookIndex)) && Number.isInteger(Number(parsed.chapter))) {
-              parsedSearchRef = parsed;
+            if (pairQueries.length === 2) {
+              const parsedPair = await Promise.all(pairQueries.map(part =>
+                parseExternalBibleRef(part, url.searchParams.get('module')?.trim() || undefined)
+              ));
+              if (parsedPair.every(parsed =>
+                Number.isInteger(Number(parsed.bookIndex))
+                && Number.isInteger(Number(parsed.chapter))
+                && Number.isInteger(Number(parsed.verse))
+              )) {
+                parsedParallelSearchRefs = parsedPair;
+              }
+            } else {
+              const parsed = await parseExternalBibleRef(query, url.searchParams.get('module')?.trim() || undefined);
+              if (Number.isInteger(Number(parsed.bookIndex)) && Number.isInteger(Number(parsed.chapter))) {
+                parsedSearchRef = parsed;
+              }
             }
           } catch {
             parsedSearchRef = null;
+            parsedParallelSearchRefs = null;
           }
         }
-        const rawResults = parsedSearchRef
+        const rawResults = parsedSearchRef || parsedParallelSearchRefs
           ? []
           : mode === 'and' && !caseSensitive
           ? searchCache(db, query, {
@@ -919,6 +935,54 @@ export function startCacheUi(options: UiOptions): http.Server {
           });
         };
         rawResults.forEach((item: any) => addResult(item));
+
+        if (parsedParallelSearchRefs) {
+          const [targetRef, relatedRef] = parsedParallelSearchRefs;
+          const parallelRows = findParallelBibleReferenceNotes(db, {
+            bookIndex:Number(targetRef.bookIndex),
+            chapter:Number(targetRef.chapter),
+            verse:Number(targetRef.verse),
+            relatedBookIndex:Number(relatedRef.bookIndex),
+            relatedChapter:Number(relatedRef.chapter),
+            relatedVerse:Number(relatedRef.verse),
+            notebookIds,
+            limit:200,
+            includeAuxiliaryRefs:includeAuxiliaryBibleRefs(url)
+          });
+          const pages = new Map<string, Record<string, any>>();
+          for (const row of parallelRows as Array<Record<string, any>>) {
+            const pageId = String(row.pageId);
+            const page = pages.get(pageId) ?? {
+              id:pageId,
+              title:row.pageTitle,
+              parent_notebook_id:row.parentNotebookId,
+              parent_notebook_name:row.notebook,
+              parent_section_name:row.section,
+              paragraphIndexes:[],
+              snippet:null,
+              snippetIndex:Number.POSITIVE_INFINITY,
+              bibleRef:query,
+              bibleMatchScore:0,
+              bibleWeight:0
+            };
+            const paragraphIndexes = String(row.pairParagraphIndexes || '')
+              .split(',')
+              .concat([row.targetParagraphIndex, row.relatedParagraphIndex])
+              .map(Number)
+              .filter(Number.isInteger);
+            page.paragraphIndexes.push(...paragraphIndexes);
+            const firstIndex = Math.min(...paragraphIndexes);
+            if (firstIndex < page.snippetIndex) {
+              page.snippetIndex = firstIndex;
+              page.snippet = firstIndex === Number(row.targetParagraphIndex)
+                ? row.targetParagraphText
+                : row.relatedParagraphText;
+            }
+            page.bibleWeight += Number(row.relationWeight || 0);
+            pages.set(pageId, page);
+          }
+          pages.forEach(page => addResult(page));
+        }
 
         if (parsedSearchRef) {
           try {

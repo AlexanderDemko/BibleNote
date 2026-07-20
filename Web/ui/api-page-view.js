@@ -63,7 +63,7 @@ function normalizeParagraphText(value) {
   return decodeHtmlText(value).replace(/\s+/g, ' ').trim();
 }
 
-function pageHtmlFrameSrcdoc(rawHtml, targetParagraphs) {
+function pageHtmlFrameSrcdoc(rawHtml, bibleParagraphs, targetParagraphIndexes = []) {
   const normalizeBibleHref = href => String(href || '').trim()
     .replace(/^https?:\/\/isbtBibleVerse:/i, 'isbtBibleVerse:')
     .replace(/^https?:\/\/bnVerse:/i, 'bnVerse:');
@@ -106,25 +106,33 @@ function pageHtmlFrameSrcdoc(rawHtml, targetParagraphs) {
     image.setAttribute('decoding', 'async');
     image.removeAttribute('srcset');
   }
-  const targetItems = (Array.isArray(targetParagraphs) ? targetParagraphs : [targetParagraphs])
+  const paragraphItems = (Array.isArray(bibleParagraphs) ? bibleParagraphs : [bibleParagraphs])
     .map(item => {
-      if (typeof item === 'string') return { text:normalizeParagraphText(item), references:[] };
+      if (typeof item === 'string') return { index:undefined, text:normalizeParagraphText(item), references:[] };
       return {
+        index:Number.isInteger(Number(item?.index)) ? Number(item.index) : undefined,
         text:normalizeParagraphText(item?.text || ''),
         references:Array.isArray(item?.references) ? item.references : []
       };
     })
     .filter(item => item.text || item.references.length > 0);
-  if (targetItems.length > 0) {
+  if (paragraphItems.length > 0) {
     const style = doc.createElement('style');
     style.textContent = '[data-onenote-target-paragraph="true"]{background:rgba(116,84,166,.16)!important;box-shadow:inset 4px 0 0 #7454a6!important;outline:1px solid rgba(116,84,166,.35)!important;scroll-margin:80px!important;}[data-onenote-target-paragraph-current="true"]{background:rgba(116,84,166,.26)!important;outline:2px solid #7454a6!important;}';
     doc.head.append(style);
     const used = new Set();
-    const markTargetElement = (element, targetIndex) => {
+    const activeTargetIndexByParagraph = new Map(
+      targetParagraphIndexes.filter(Number.isInteger).map((paragraphIndex, targetIndex) => [paragraphIndex, targetIndex])
+    );
+    const markParagraphElement = (element, paragraphIndex) => {
       used.add(element);
-      element.setAttribute('data-onenote-target-paragraph', 'true');
-      element.setAttribute('data-onenote-target-paragraph-index', String(targetIndex));
-      if (targetIndex === 0) element.setAttribute('data-onenote-target-paragraph-current', 'true');
+      if (Number.isInteger(paragraphIndex)) element.setAttribute('data-onenote-paragraph-index', String(paragraphIndex));
+      const targetIndex = activeTargetIndexByParagraph.get(paragraphIndex);
+      if (Number.isInteger(targetIndex)) {
+        element.setAttribute('data-onenote-target-paragraph', 'true');
+        element.setAttribute('data-onenote-target-paragraph-index', String(targetIndex));
+        if (targetIndex === 0) element.setAttribute('data-onenote-target-paragraph-current', 'true');
+      }
     };
     const refMatchesTarget = (link, references) => {
       const linkText = normalizeParagraphText(link.textContent);
@@ -142,27 +150,89 @@ function pageHtmlFrameSrcdoc(rawHtml, targetParagraphs) {
           || href.includes('/' + bookIndex + '%20' + chapter + ':' + verse);
       });
     };
-    for (let targetIndex = 0; targetIndex < targetItems.length; targetIndex += 1) {
-      const targetText = targetItems[targetIndex].text;
+    const directNestedLists = element => element.matches('li')
+      ? [...element.children].filter(child => child.matches('ol,ul'))
+      : [];
+    const targetCandidateText = element => {
+      if (directNestedLists(element).length === 0) return normalizeParagraphText(element.textContent);
+      return normalizeParagraphText([...element.childNodes]
+        .filter(node => node.nodeType !== Node.ELEMENT_NODE || !node.matches('ol,ul'))
+        .map(node => node.textContent || '')
+        .join(' '));
+    };
+    const targetHighlightElement = (element, targetText, references) => {
+      const paragraphBlockSelector = 'p,li,blockquote,h1,h2,h3,h4,h5,h6';
+      const allNestedParagraphBlocks = element.matches(paragraphBlockSelector)
+        ? []
+        : [...element.querySelectorAll(paragraphBlockSelector)];
+      const nestedParagraphBlocks = allNestedParagraphBlocks.filter(block => !used.has(block));
+      const matchingParagraphBlock = nestedParagraphBlocks
+        .map(block => ({ block, text:targetCandidateText(block) }))
+        .filter(item => item.text && targetText && item.text.includes(targetText))
+        .sort((left, right) => left.text.length - right.text.length)[0]?.block;
+      if (matchingParagraphBlock) return matchingParagraphBlock;
+      const referenceParagraphBlock = nestedParagraphBlocks.find(block =>
+        [...block.querySelectorAll('a[href],a[data-onenote-bible-href]')]
+          .some(link => refMatchesTarget(link, references))
+      );
+      if (referenceParagraphBlock) return referenceParagraphBlock;
+      if (element.matches('td,th') && allNestedParagraphBlocks.length > 0) return null;
+      const nestedLists = directNestedLists(element);
+      if (nestedLists.length === 0) return element;
+      const directBlocks = [...element.children]
+        .filter(child => !child.matches('ol,ul'));
+      const matchingBlock = directBlocks
+        .map(block => ({ block, text:targetCandidateText(block) }))
+        .filter(item => item.text && (!targetText || item.text.includes(targetText)))
+        .sort((left, right) => left.text.length - right.text.length)[0]?.block;
+      if (matchingBlock) return matchingBlock;
+      const referenceBlock = directBlocks.find(block =>
+        [...block.querySelectorAll('a[href],a[data-onenote-bible-href]')]
+          .some(link => refMatchesTarget(link, references))
+      );
+      if (referenceBlock) return referenceBlock;
+      const ownNodes = [...element.childNodes]
+        .filter(node => node.nodeType !== Node.ELEMENT_NODE || !node.matches('ol,ul'));
+      if (ownNodes.length === 0) return element;
+      const wrapper = doc.createElement('span');
+      wrapper.style.display = 'block';
+      element.insertBefore(wrapper, nestedLists[0]);
+      ownNodes.forEach(node => wrapper.append(node));
+      return wrapper;
+    };
+    const candidateRows = [...doc.body.querySelectorAll('p,div,li,td,th,blockquote,h1,h2,h3,h4,h5,h6')]
+      .map(element => ({ element, text:targetCandidateText(element) }))
+      .filter(candidate => candidate.text);
+    const exactCandidatesByText = new Map();
+    for (const candidate of candidateRows) {
+      const exactCandidates = exactCandidatesByText.get(candidate.text) || [];
+      exactCandidates.push(candidate.element);
+      exactCandidatesByText.set(candidate.text, exactCandidates);
+    }
+    const bibleLinks = [...doc.body.querySelectorAll('a[href],a[data-onenote-bible-href]')];
+    for (const paragraphItem of paragraphItems) {
+      const targetText = paragraphItem.text;
       let best = null;
       if (targetText) {
-        for (const element of doc.body.querySelectorAll('p,div,li,td,th,blockquote,h1,h2,h3,h4,h5,h6')) {
-          if (used.has(element)) continue;
-          const text = normalizeParagraphText(element.textContent);
-          if (!text) continue;
-          if (!text.includes(targetText)) continue;
-          if (!best || text.length < best.text.length) best = { element, text };
+        const exactElement = (exactCandidatesByText.get(targetText) || []).find(element => !used.has(element));
+        if (exactElement) {
+          best = { element:exactElement, text:targetText };
+        } else for (const candidate of candidateRows) {
+          if (used.has(candidate.element)) continue;
+          if (!candidate.text.includes(targetText)) continue;
+          if (!best || candidate.text.length < best.text.length) best = candidate;
         }
       }
       if (best?.element) {
-        markTargetElement(best.element, targetIndex);
+        const highlightElement = targetHighlightElement(best.element, targetText, paragraphItem.references);
+        if (highlightElement) markParagraphElement(highlightElement, paragraphItem.index);
         continue;
       }
-      const links = [...doc.body.querySelectorAll('a[href],a[data-onenote-bible-href]')];
-      const link = links.find(item => refMatchesTarget(item, targetItems[targetIndex].references));
+      const link = bibleLinks.find(item => refMatchesTarget(item, paragraphItem.references));
       const target = link?.closest('li,p,td,th,blockquote,div') || link;
       if (target && !used.has(target)) {
-        markTargetElement(target, targetIndex);
+        const highlightElement = targetHighlightElement(target, targetText, paragraphItem.references);
+        if (highlightElement) markParagraphElement(highlightElement, paragraphItem.index);
       }
     }
   }
@@ -180,12 +250,18 @@ function pageHtmlFrameSrcdoc(rawHtml, targetParagraphs) {
     'var href=link.getAttribute("data-onenote-bible-href")||link.getAttribute("href")||"";',
     'if(isBibleHref(href)){event.preventDefault();event.stopPropagation();sendBibleLink(href);}',
     '},true);',
+    'document.addEventListener("keydown",function(event){',
+    'var key=String(event.key||"").toLocaleLowerCase();',
+    'var findKey=event.code==="KeyF"||key==="f";',
+    'if((event.ctrlKey||event.metaKey)&&!event.altKey&&!event.shiftKey&&findKey){event.preventDefault();event.stopPropagation();parent.postMessage({type:"onenote-page-find-open"},"*");}',
+    '},true);',
     'var pageFindMarks=[];var pageFindIndex=-1;var pageFindQuery="";',
     'function sendPageFindResult(){parent.postMessage({type:"onenote-page-find-result",query:pageFindQuery,count:pageFindMarks.length,index:pageFindIndex},"*");}',
     'function clearPageFind(){document.querySelectorAll("[data-onenote-page-find]").forEach(function(mark){var parentNode=mark.parentNode;mark.replaceWith(document.createTextNode(mark.textContent||""));if(parentNode)parentNode.normalize();});pageFindMarks=[];pageFindIndex=-1;}',
     'function selectPageFind(index,scroll){pageFindMarks.forEach(function(mark){mark.removeAttribute("data-onenote-page-find-current");});if(!pageFindMarks.length){pageFindIndex=-1;sendPageFindResult();return;}pageFindIndex=(index+pageFindMarks.length)%pageFindMarks.length;var mark=pageFindMarks[pageFindIndex];mark.setAttribute("data-onenote-page-find-current","true");if(scroll!==false)mark.scrollIntoView({block:"center",behavior:"smooth"});sendPageFindResult();}',
     'function runPageFind(query){clearPageFind();pageFindQuery=String(query||"");if(!pageFindQuery){sendPageFindResult();return;}var nodes=[];var walker=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT,{acceptNode:function(node){var parentNode=node.parentElement;if(!node.nodeValue||!parentNode||parentNode.closest("script,style,noscript,textarea,[data-onenote-page-find]"))return NodeFilter.FILTER_REJECT;return NodeFilter.FILTER_ACCEPT;}});while(walker.nextNode())nodes.push(walker.currentNode);var needle=pageFindQuery.toLocaleLowerCase();nodes.forEach(function(node){var text=node.nodeValue||"";var folded=text.toLocaleLowerCase();var cursor=0;var index=folded.indexOf(needle);if(index<0)return;var fragment=document.createDocumentFragment();while(index>=0){if(index>cursor)fragment.append(document.createTextNode(text.slice(cursor,index)));var mark=document.createElement("mark");mark.setAttribute("data-onenote-page-find","true");mark.textContent=text.slice(index,index+pageFindQuery.length);fragment.append(mark);pageFindMarks.push(mark);cursor=index+pageFindQuery.length;index=folded.indexOf(needle,cursor);}if(cursor<text.length)fragment.append(document.createTextNode(text.slice(cursor)));node.replaceWith(fragment);});selectPageFind(0,true);}',
     'function clearTargetParagraphs(){document.querySelectorAll("[data-onenote-target-paragraph]").forEach(function(item){item.removeAttribute("data-onenote-target-paragraph");item.removeAttribute("data-onenote-target-paragraph-index");item.removeAttribute("data-onenote-target-paragraph-current");});}',
+    'function setTargetParagraphs(indexes){clearTargetParagraphs();(Array.isArray(indexes)?indexes:[]).forEach(function(paragraphIndex,targetIndex){var target=document.querySelector("[data-onenote-paragraph-index=\\\""+paragraphIndex+"\\\"]");if(!target)return;target.setAttribute("data-onenote-target-paragraph","true");target.setAttribute("data-onenote-target-paragraph-index",String(targetIndex));if(targetIndex===0)target.setAttribute("data-onenote-target-paragraph-current","true");});}',
     'function scrollTargetParagraph(index){var selector="[data-onenote-target-paragraph=true]";var target=Number.isInteger(index)?document.querySelector("[data-onenote-target-paragraph-index=\\"" + index + "\\"]"):document.querySelector(selector);document.querySelectorAll(selector).forEach(function(item){item.removeAttribute("data-onenote-target-paragraph-current");});if(target){target.setAttribute("data-onenote-target-paragraph-current","true");target.scrollIntoView({block:"center"});}}',
     'window.addEventListener("message",function(event){',
     'var data=event.data||{};',
@@ -194,6 +270,7 @@ function pageHtmlFrameSrcdoc(rawHtml, targetParagraphs) {
     'if(data.type==="onenote-page-find"){runPageFind(data.query);}',
     'if(data.type==="onenote-page-find-next"&&String(data.query||"")===pageFindQuery){selectPageFind(pageFindIndex+(Number(data.delta)<0?-1:1),true);}',
     'if(data.type==="onenote-page-find-clear"){clearPageFind();pageFindQuery="";}',
+    'if(data.type==="onenote-set-target-paragraphs"){setTargetParagraphs(data.paragraphIndexes);}',
     'if(data.type==="onenote-clear-target-paragraphs"){clearTargetParagraphs();}',
     '});',
     'parent.postMessage({type:"onenote-html-ready"},"*");',
@@ -281,6 +358,12 @@ window.bibleNoteOpenBibleRef = openBibleRef;
 
 window.addEventListener('message', event => {
   const data = event.data || {};
+  if (data.type === 'onenote-page-find-open') {
+    const frame = visiblePageHtmlFrame();
+    if (!frame || event.source !== frame.contentWindow) return;
+    openPageFind();
+    return;
+  }
   if (data.type === 'onenote-page-find-result') {
     const frame = visiblePageHtmlFrame();
     if (!frame || event.source !== frame.contentWindow || pageFindWidget.classList.contains('hidden')) return;

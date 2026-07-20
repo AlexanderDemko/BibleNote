@@ -77,6 +77,78 @@ namespace BibleNote.Tests
         }
 
         [TestMethod]
+        public void WithinParagraphRelationsArePrioritizedWhenRelationLimitIsReached()
+        {
+            DocumentParseResult docParseResult;
+            using (var docParser = this.documentParserFactory.Create(this.documentProvider, this.mockDocumentId))
+            {
+                docParser.ParseParagraph(GetNode("Ин 3:16 и Рим 5:8"));
+                docParser.ParseParagraph(GetNode("Деян 23:1 и 2 Кор 1:12"));
+                docParseResult = docParser.DocumentParseResult;
+            }
+
+            var relations = VerseRelationsCalculator.Calculate(docParseResult, 2);
+
+            Assert.AreEqual(2, relations.Relations.Count);
+            Assert.IsTrue(relations.Capped);
+            Assert.IsTrue(relations.Relations.All(relation => relation.Paragraph == relation.RelativeParagraph));
+        }
+
+        [TestMethod]
+        public void InterParagraphRelationWeightsPreserveDistanceDecay()
+        {
+            DocumentParseResult docParseResult;
+            using (var docParser = this.documentParserFactory.Create(this.documentProvider, this.mockDocumentId))
+            {
+                for (var verse = 1; verse <= 8; verse++)
+                    docParser.ParseParagraph(GetNode($"Ин 1:{verse}"));
+
+                docParseResult = docParser.DocumentParseResult;
+            }
+
+            var paragraphs = docParseResult.GetAllParagraphParseResults().ToList();
+            var relations = VerseRelationsCalculator.Calculate(docParseResult).Relations;
+            var expectedWeights = new[] { 0.5M, 0.25M, 0.125M, 0.0625M, 0.0312M, 0.0156M, 0.01M };
+
+            for (var targetIndex = 1; targetIndex < paragraphs.Count; targetIndex++)
+            {
+                var relation = relations.Single(item =>
+                    item.Paragraph == paragraphs[0]
+                    && item.RelativeParagraph == paragraphs[targetIndex]);
+                Assert.AreEqual(expectedWeights[targetIndex - 1], relation.RelationWeight);
+            }
+        }
+
+        [TestMethod]
+        public void InterParagraphRelationWeightFallsToMinimumAcrossLowerHierarchy()
+        {
+            DocumentParseResult docParseResult;
+            using (var docParser = this.documentParserFactory.Create(this.documentProvider, this.mockDocumentId))
+            {
+                using (docParser.ParseHierarchyElement(ElementType.List))
+                {
+                    using (docParser.ParseHierarchyElement(ElementType.ListElement))
+                    {
+                        using (docParser.ParseHierarchyElement(ElementType.List))
+                        {
+                            using (docParser.ParseHierarchyElement(ElementType.ListElement))
+                                docParser.ParseParagraph(GetNode("Ин 1:1"));
+                        }
+                    }
+
+                    using (docParser.ParseHierarchyElement(ElementType.ListElement))
+                        docParser.ParseParagraph(GetNode("Рим 1:1"));
+                }
+
+                docParseResult = docParser.DocumentParseResult;
+            }
+
+            var relation = VerseRelationsCalculator.Calculate(docParseResult).Relations.Single();
+
+            Assert.AreEqual(0.01M, relation.RelationWeight);
+        }
+
+        [TestMethod]
         public void Test2()
         {
             var node1 = GetNode("Мк 5:6");

@@ -136,3 +136,52 @@ test('adds the independently penalized weights of repeated Bible references in o
     db.close();
   }
 });
+
+test('counts duplicate stored title paragraphs as one Bible-reference occurrence', () => {
+  const db = openCacheDb(':memory:');
+  try {
+    db.prepare(`
+      INSERT INTO pages(
+        id, title, last_modified_date_time,
+        parent_notebook_id, parent_notebook_name, parent_section_name
+      ) VALUES ('duplicate-title', 'Title (Рим 1:1)', '2026-07-16T03:00:00Z', 'notebook-1', 'Notebook', 'Section')
+    `).run();
+    const insertParagraph = db.prepare(`
+      INSERT INTO page_paragraphs(
+        page_id, paragraph_index, paragraph_path, text,
+        parsed_at, parser_version, module
+      ) VALUES ('duplicate-title', ?, ?, ?, '2026-07-16T00:00:00Z', 'test', 'test')
+    `);
+    insertParagraph.run(0, '0', 'Title (Рим 1:1)');
+    insertParagraph.run(1, '1', 'Title (Рим 1:1)');
+    insertParagraph.run(2, '2', 'Body Рим 1:1');
+
+    const insertRef = db.prepare(`
+      INSERT INTO paragraph_verse_refs(
+        page_id, paragraph_index, original_text, normalized_ref,
+        verse_id, top_verse_id, book_index, book_name,
+        chapter, verse, top_chapter, top_verse,
+        module, parser_version, parsed_at
+      ) VALUES ('duplicate-title', ?, 'Рим 1:1', 'Римлянам 1:1',
+        45001001, 45001001, 45, 'Римлянам', 1, 1, 1, 1,
+        'test', 'test', '2026-07-16T00:00:00Z')
+    `);
+    insertRef.run(0);
+    insertRef.run(1);
+    insertRef.run(2);
+
+    const rows = searchBibleReferenceNotesByWeight(db, {
+      bookIndex:45,
+      chapter:1,
+      verse:1,
+      notebookIds:['notebook-1'],
+      includeAuxiliaryRefs:true,
+      orderByWeight:true
+    });
+
+    assert.equal(rows[0]?.bibleWeight, 2);
+    assert.deepEqual(rows[0]?.paragraphIndexes, [0, 2]);
+  } finally {
+    db.close();
+  }
+});

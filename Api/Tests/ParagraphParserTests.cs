@@ -105,6 +105,23 @@ namespace BibleNote.Tests
             return CheckVerses(input, expectedOutput, initDocParseContext, null, verses);
         }
 
+        [TestMethod]
+        public void PlainTextNodePreservesTextAndRecognizesReferencesWithoutHtmlParsing()
+        {
+            const string input = "Текст <без HTML> — Ин 3:16 и Рим 5:8 & продолжение";
+            ParagraphParseResult result;
+
+            using (var docParser = this.documentParserFactory.Create(documentProvider, new FileDocumentId(0, null, true)))
+                result = docParser.ParseParagraph(new PlainTextNodeWrapper(input));
+
+            Assert.AreEqual(input, result.Text);
+            Assert.AreEqual(2, result.VerseEntries.Count);
+            Assert.IsTrue(result.VerseEntries.Select(entry => entry.VersePointer)
+                .Contains(this.versePointerFactory.CreateVersePointer("Ин 3:16")));
+            Assert.IsTrue(result.VerseEntries.Select(entry => entry.VersePointer)
+                .Contains(this.versePointerFactory.CreateVersePointer("Рим 5:8")));
+        }
+
 
         [TestMethod]
         public void Test1()

@@ -50,6 +50,7 @@ export function migrateCacheSchema(
       content_html TEXT,
       content_hash TEXT,
       content_source_modified_date_time TEXT,
+      content_source_section_modified_date_time TEXT,
       content_chars INTEGER,
       content_bytes INTEGER,
       content_synced_at TEXT,
@@ -224,6 +225,20 @@ export function migrateCacheSchema(
   if (!pageColumns.some(column => column.name === 'content_source_modified_date_time')) {
     db.exec('ALTER TABLE pages ADD COLUMN content_source_modified_date_time TEXT');
   }
+  if (!pageColumns.some(column => column.name === 'content_source_section_modified_date_time')) {
+    db.exec('ALTER TABLE pages ADD COLUMN content_source_section_modified_date_time TEXT');
+    // Establish a baseline for existing content. Future section timestamp changes
+    // can then leave a durable, resumable queue of pages whose bodies need checking.
+    db.exec(`
+      UPDATE pages
+      SET content_source_section_modified_date_time = (
+        SELECT sections.last_modified_date_time
+        FROM sections
+        WHERE sections.id = pages.parent_section_id
+      )
+      WHERE content_synced_at IS NOT NULL
+    `);
+  }
   if (!pageColumns.some(column => column.name === 'order_index')) {
     db.exec('ALTER TABLE pages ADD COLUMN order_index INTEGER');
   }
@@ -297,6 +312,31 @@ export function migrateCacheSchema(
   }
   db.exec('CREATE INDEX IF NOT EXISTS idx_bible_refs_verse_id ON paragraph_verse_refs(verse_id)');
   logStartupTiming('migrate schema incremental complete');
+
+  const relationPriorityMigrationKey = 'bible_relation_priority_local_first_v1';
+  const relationPriorityMigration = db.prepare('SELECT value FROM sync_state WHERE key = ?')
+    .get(relationPriorityMigrationKey) as { value: string } | undefined;
+  if (!relationPriorityMigration) {
+    const migration = db.transaction(() => {
+      const invalidated = db.prepare(`
+        DELETE FROM page_bible_parse_state
+        WHERE page_id IN (
+          SELECT page_id
+          FROM paragraph_verse_relations
+          GROUP BY page_id
+          HAVING COUNT(*) >= 50000
+        )
+      `).run();
+      db.prepare(`
+        INSERT INTO sync_state(key, value, updated_at)
+        VALUES (?, ?, ?)
+      `).run(relationPriorityMigrationKey, String(invalidated.changes), new Date().toISOString());
+      return invalidated.changes;
+    });
+    const invalidatedPages = migration();
+    logStartupTiming(`migrate local-first Bible relations invalidated=${invalidatedPages}`);
+  }
+
   const bibleRefsCount = (db.prepare('SELECT COUNT(*) AS value FROM paragraph_verse_refs').get() as { value: number }).value;
   const bibleRelationsCount = (db.prepare('SELECT COUNT(*) AS value FROM paragraph_verse_relations').get() as { value: number }).value;
   logStartupTiming(`migrate relation counts refs=${bibleRefsCount} relations=${bibleRelationsCount}`);

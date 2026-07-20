@@ -182,7 +182,7 @@ namespace BibleNote.Application.Controllers
                         {
                             using (parser.ParseHierarchyElement(ElementType.Title))
                             {
-                                ParseParagraph(parser, HtmlFromText(request.Title), paragraphs);
+                                ParseTextParagraph(parser, request.Title, paragraphs);
                             }
                         }
 
@@ -191,16 +191,16 @@ namespace BibleNote.Application.Controllers
                         {
                             foreach (var paragraph in requestParagraphs)
                             {
-                                var paragraphHtml = !string.IsNullOrEmpty(paragraph.Html)
-                                    ? paragraph.Html
-                                    : HtmlFromText(paragraph.Text ?? string.Empty);
-                                ParseParagraph(parser, paragraphHtml, paragraphs);
+                                if (!string.IsNullOrEmpty(paragraph.Html))
+                                    ParseParagraph(parser, paragraph.Html, paragraphs);
+                                else
+                                    ParseTextParagraph(parser, paragraph.Text ?? string.Empty, paragraphs);
                             }
                         }
                         else if (!string.IsNullOrWhiteSpace(request.Text))
                         {
                             foreach (var paragraph in SplitTextParagraphs(request.Text))
-                                ParseParagraph(parser, HtmlFromText(paragraph), paragraphs);
+                                ParseTextParagraph(parser, paragraph, paragraphs);
                         }
                         else
                         {
@@ -489,11 +489,6 @@ namespace BibleNote.Application.Controllers
                 .Where(p => p.Length > 0);
         }
 
-        private static string HtmlFromText(string text)
-        {
-            return $"<p>{WebUtility.HtmlEncode(text)}</p>";
-        }
-
         private static string ParseHtml(IDocumentParser parser, string html, List<ParagraphParseResult> paragraphs, bool updateHtml)
         {
             var htmlDocument = new HtmlDocument
@@ -536,12 +531,17 @@ namespace BibleNote.Application.Controllers
             ParseParagraph(parser, new HtmlNodeWrapper(html), false, paragraphs);
         }
 
+        private static void ParseTextParagraph(IDocumentParser parser, string text, List<ParagraphParseResult> paragraphs)
+        {
+            ParseParagraph(parser, new PlainTextNodeWrapper(text), true, paragraphs);
+        }
+
         private static void ParseParagraph(IDocumentParser parser, HtmlNode node, bool isReadonly, List<ParagraphParseResult> paragraphs)
         {
             ParseParagraph(parser, new HtmlNodeWrapper(node, isReadonly), isReadonly, paragraphs);
         }
 
-        private static void ParseParagraph(IDocumentParser parser, HtmlNodeWrapper nodeWrapper, bool isReadonly, List<ParagraphParseResult> paragraphs)
+        private static void ParseParagraph(IDocumentParser parser, IXmlNode nodeWrapper, bool isReadonly, List<ParagraphParseResult> paragraphs)
         {
             if (nodeWrapper.HasChildNodes() || nodeWrapper.IsValuableTextNode(IXmlTextNodeMode.Exact))
             {

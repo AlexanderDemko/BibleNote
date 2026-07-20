@@ -18,7 +18,10 @@ export {
   findParallelBibleReferences,
   getCachedPage,
   listCachedPagesForBibleParse,
+  listCachedPagesNeedingBibleParse,
+  listCachedPagesWithStaleSectionContent,
   listCachedPagesWithFetchErrors,
+  listOldestCachedPagesForContentRefresh,
   listCachedNotebooks,
   listCachedSections,
   readCachedPage,
@@ -361,7 +364,8 @@ export function updatePageContent(
   text: string,
   html: string | null,
   sourceModifiedDateTime: string | null = null,
-  fetchedAt = nowIso()
+  fetchedAt = nowIso(),
+  sourceSectionModifiedDateTime: string | null = null
 ): void {
   const page = getCachedPage(db, pageId);
   const hash = sha256(text);
@@ -374,6 +378,7 @@ export function updatePageContent(
         content_html = @content_html,
         content_hash = @content_hash,
         content_source_modified_date_time = @content_source_modified_date_time,
+        content_source_section_modified_date_time = @content_source_section_modified_date_time,
         content_chars = @content_chars,
         content_bytes = @content_bytes,
         content_synced_at = @content_synced_at,
@@ -390,6 +395,7 @@ export function updatePageContent(
       content_html: html,
       content_hash: hash,
       content_source_modified_date_time: sourceModifiedDateTime,
+      content_source_section_modified_date_time: sourceSectionModifiedDateTime,
       content_chars: text.length,
       content_bytes: byteLength,
       content_synced_at: fetchedAt
@@ -411,13 +417,12 @@ export function updatePageContent(
   tx();
 }
 
-export function updatePageHtml(db: Database.Database, pageId: string, html: string, updatedAt = nowIso()): void {
+export function updatePageHtml(db: Database.Database, pageId: string, html: string): void {
   db.prepare(`
     UPDATE pages SET
-      content_html = ?,
-      content_synced_at = ?
+      content_html = ?
     WHERE id = ?
-  `).run(html, updatedAt, pageId);
+  `).run(html, pageId);
 }
 
 export function setPageFetchError(

@@ -42,6 +42,7 @@ export type PageRow = {
   content_html: string | null;
   content_hash: string | null;
   content_source_modified_date_time: string | null;
+  content_source_section_modified_date_time: string | null;
   content_chars: number | null;
   content_bytes: number | null;
   content_synced_at: string | null;

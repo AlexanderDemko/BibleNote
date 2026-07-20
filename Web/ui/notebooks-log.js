@@ -126,9 +126,6 @@ showBibleTextInReaderButton.addEventListener('click', () => {
   action.catch(showError);
 });
 showBibleTextContextButton.addEventListener('click', () => showBibleTextContext().catch(showError));
-showBibleTextParallelButton.addEventListener('click', () => {
-  if (currentBibleTextRef) loadParallelRefs(currentBibleTextRef, bibleTextParallelPanel).catch(showError);
-});
 showBibleTextNotesButton.addEventListener('click', () => {
   if (!currentBibleTextRef) return;
   if (bibleVersePopupMode) {

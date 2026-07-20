@@ -91,13 +91,13 @@ export type BibleVerseText = {
 };
 
 export function bibleParseConfigFromEnv(overrides: Partial<BibleParseConfig> = {}): BibleParseConfig {
-  const timeoutMs = Number(process.env.BIBLENOTE_API_TIMEOUT_MS ?? '30000');
+  const timeoutMs = Number(process.env.BIBLENOTE_API_TIMEOUT_MS ?? '120000');
   const config = {
     enabled: process.env.ONENOTE_BIBLE_PARSE_ENABLED === 'true',
     apiUrl: process.env.BIBLENOTE_API_URL ?? 'http://127.0.0.1:5000',
     module: process.env.BIBLENOTE_MODULE ?? 'rst',
     useCommaDelimiter: process.env.BIBLENOTE_USE_COMMA_DELIMITER !== 'false',
-    timeoutMs: Number.isFinite(timeoutMs) && timeoutMs > 0 ? Math.min(timeoutMs, 300000) : 30000
+    timeoutMs: Number.isFinite(timeoutMs) && timeoutMs > 0 ? Math.min(timeoutMs, 300000) : 120000
   };
   return Object.assign(
     config,

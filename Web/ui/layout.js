@@ -134,7 +134,12 @@ function setupCustomScrollbar(scroller, rail) {
   scroller.addEventListener('scroll', update, { passive:true });
   new ResizeObserver(update).observe(scroller);
   new ResizeObserver(update).observe(rail);
-  new MutationObserver(update).observe(scroller, { childList:true, subtree:true });
+  new MutationObserver(update).observe(scroller, {
+    childList:true,
+    subtree:true,
+    attributes:true,
+    attributeFilter:['open', 'hidden']
+  });
   requestAnimationFrame(update);
   return update;
 }

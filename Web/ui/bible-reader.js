@@ -232,7 +232,7 @@ function renderBibleReaderChapter(result, highlightRef) {
     parallelButton.setAttribute('aria-label', 'Показать параллельные ссылки для ' + (ref.normalizedRef || ref.originalText));
     parallelButton.addEventListener('click', event => {
       event.stopPropagation();
-      loadParallelRefs(ref, block).catch(showError);
+      openBibleParallelPanel(ref).catch(showError);
     });
     actions.append(notesButton, parallelButton);
     row.append(number, text, actions);
@@ -376,30 +376,19 @@ bibleReaderChapterEl.addEventListener('change', () => {
 });
 bibleReaderPrevButton.addEventListener('click', () => stepBibleReaderChapter(-1).catch(showError));
 bibleReaderNextButton.addEventListener('click', () => stepBibleReaderChapter(1).catch(showError));
-bibleReaderReferenceInput.addEventListener('input', () => {
-  bibleReaderReferenceInput.removeAttribute('aria-invalid');
-  if (bibleReaderStatusEl.dataset.referenceError === 'true') {
-    bibleReaderStatusEl.textContent = '';
-    delete bibleReaderStatusEl.dataset.referenceError;
-  }
-});
-bibleReaderReferenceForm.addEventListener('submit', async event => {
-  event.preventDefault();
-  const rawRef = bibleReaderReferenceInput.value.trim();
-  if (!rawRef || bibleReaderLoading || bibleReaderReferenceSubmitButton.disabled) return;
-  bibleReaderReferenceInput.removeAttribute('aria-invalid');
-  delete bibleReaderStatusEl.dataset.referenceError;
-  bibleReaderReferenceSubmitButton.disabled = true;
-  bibleReaderStatusEl.textContent = 'Распознавание отрывка...';
+
+async function tryOpenBibleReaderReference(rawRef) {
+  const value = String(rawRef || '').trim();
+  if (!value || bibleReaderLoading) return false;
   try {
     const params = new URLSearchParams({
-      ref:rawRef,
+      ref:value,
       module:bibleReaderModuleEl.value || currentBibleModule()
     });
     const result = await api('/api/bible/parse-link?' + params.toString());
     const ref = result.reference;
     if (!ref || !Number.isInteger(Number(ref.bookIndex)) || !Number.isInteger(Number(ref.chapter))) {
-      throw new Error('Не удалось распознать библейский отрывок.');
+      return false;
     }
     await openBibleReaderLocation({
       ...ref,
@@ -410,12 +399,8 @@ bibleReaderReferenceForm.addEventListener('submit', async event => {
       topChapter:ref.topChapter == null ? undefined : Number(ref.topChapter),
       topVerse:ref.topVerse == null ? undefined : Number(ref.topVerse)
     });
-    bibleReaderStatusEl.textContent = '';
-  } catch (error) {
-    bibleReaderReferenceInput.setAttribute('aria-invalid', 'true');
-    bibleReaderStatusEl.dataset.referenceError = 'true';
-    bibleReaderStatusEl.textContent = error?.message || String(error);
-  } finally {
-    bibleReaderReferenceSubmitButton.disabled = false;
+    return true;
+  } catch {
+    return false;
   }
-});
+}

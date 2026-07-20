@@ -6,7 +6,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { once } from 'node:events';
 import { fileURLToPath } from 'node:url';
-import { markPageHtmlParsed, openCacheDb, shouldParsePageHtml } from '../src/cache.js';
+import { markPageHtmlParsed, openCacheDb, shouldParsePageHtml, updatePageHtml } from '../src/cache.js';
 import { startCacheUi } from '../src/cache-ui.js';
 
 test('page HTML parse state is keyed by HTML, module, and parser version', () => {
@@ -23,6 +23,25 @@ test('page HTML parse state is keyed by HTML, module, and parser version', () =>
     assert.equal(shouldParsePageHtml(db, 'page-1', '<html>changed</html>', 'rst', 'parser-v1'), true);
     assert.equal(shouldParsePageHtml(db, 'page-1', '<html>first</html>', 'kjv', 'parser-v1'), true);
     assert.equal(shouldParsePageHtml(db, 'page-1', '<html>first</html>', 'rst', 'parser-v2'), true);
+  } finally {
+    db.close();
+  }
+});
+
+test('local HTML processing does not pretend that Graph content was downloaded again', () => {
+  const db = openCacheDb(':memory:');
+  try {
+    db.prepare(`
+      INSERT INTO pages(id, content_html, content_synced_at, metadata_synced_at)
+      VALUES (?, ?, ?, ?)
+    `).run('page-1', '<html>source</html>', '2026-07-18T10:00:00Z', '2026-07-18T09:00:00Z');
+
+    updatePageHtml(db, 'page-1', '<html>locally processed</html>');
+    const row = db.prepare('SELECT content_html, content_synced_at FROM pages WHERE id = ?').get('page-1') as any;
+    assert.deepEqual(row, {
+      content_html:'<html>locally processed</html>',
+      content_synced_at:'2026-07-18T10:00:00Z'
+    });
   } finally {
     db.close();
   }

@@ -15,10 +15,15 @@ namespace BibleNote.Services.VerseProcessing
                 return result;
 
             var linearResult = LinearParseResult.FromHierarchyParseResult(documentResult.RootHierarchyResult);
-            var paragraphNode = linearResult.Paragraphs.First;
-            while (paragraphNode != null)
+            var paragraphs = new List<ParagraphParseResultExt>(linearResult.Paragraphs);
+            var referencedParagraphIndexes = GetReferencedParagraphIndexes(paragraphs);
+            var nextLowerParagraphIndexes = GetNextLowerParagraphIndexes(paragraphs);
+
+            // Preserve the strongest local evidence across the whole document before
+            // lower-priority cross-paragraph combinations can exhaust maxRelations.
+            foreach (var paragraphIndex in referencedParagraphIndexes)
             {
-                var paragraph = paragraphNode.Value.ParagraphResult;
+                var paragraph = paragraphs[paragraphIndex].ParagraphResult;
                 for (var referenceIndex = 0; referenceIndex < paragraph.VerseEntries.Count; referenceIndex++)
                 {
                     var source = paragraph.VerseEntries[referenceIndex];
@@ -40,12 +45,29 @@ namespace BibleNote.Services.VerseProcessing
                             maxRelations))
                             return result;
                     }
+                }
+            }
 
-                    var relativeParagraphNode = paragraphNode.Next;
-                    while (relativeParagraphNode != null)
+            for (var sourceParagraphListIndex = 0;
+                sourceParagraphListIndex < referencedParagraphIndexes.Count;
+                sourceParagraphListIndex++)
+            {
+                var paragraphIndex = referencedParagraphIndexes[sourceParagraphListIndex];
+                var paragraph = paragraphs[paragraphIndex].ParagraphResult;
+                for (var referenceIndex = 0; referenceIndex < paragraph.VerseEntries.Count; referenceIndex++)
+                {
+                    var source = paragraph.VerseEntries[referenceIndex];
+
+                    for (var relativeParagraphListIndex = sourceParagraphListIndex + 1;
+                        relativeParagraphListIndex < referencedParagraphIndexes.Count;
+                        relativeParagraphListIndex++)
                     {
-                        var relativeParagraph = relativeParagraphNode.Value.ParagraphResult;
-                        var relationWeight = GetParagraphsWeight(paragraphNode, relativeParagraphNode);
+                        var relativeParagraphIndex = referencedParagraphIndexes[relativeParagraphListIndex];
+                        var relativeParagraph = paragraphs[relativeParagraphIndex].ParagraphResult;
+                        var relationWeight = GetParagraphsWeight(
+                            paragraphIndex,
+                            relativeParagraphIndex,
+                            nextLowerParagraphIndexes);
                         for (var relativeReferenceIndex = 0;
                             relativeReferenceIndex < relativeParagraph.VerseEntries.Count;
                             relativeReferenceIndex++)
@@ -62,12 +84,37 @@ namespace BibleNote.Services.VerseProcessing
                                 maxRelations))
                                 return result;
                         }
-
-                        relativeParagraphNode = relativeParagraphNode.Next;
                     }
                 }
+            }
 
-                paragraphNode = paragraphNode.Next;
+            return result;
+        }
+
+        private static List<int> GetReferencedParagraphIndexes(IReadOnlyList<ParagraphParseResultExt> paragraphs)
+        {
+            var result = new List<int>();
+            for (var index = 0; index < paragraphs.Count; index++)
+            {
+                if (paragraphs[index].ParagraphResult.VerseEntries.Count > 0)
+                    result.Add(index);
+            }
+
+            return result;
+        }
+
+        private static int[] GetNextLowerParagraphIndexes(IReadOnlyList<ParagraphParseResultExt> paragraphs)
+        {
+            var result = new int[paragraphs.Count];
+            var candidates = new Stack<int>();
+
+            for (var index = paragraphs.Count - 1; index >= 0; index--)
+            {
+                while (candidates.Count > 0 && paragraphs[candidates.Peek()].Depth >= paragraphs[index].Depth)
+                    candidates.Pop();
+
+                result[index] = candidates.Count > 0 ? candidates.Peek() : paragraphs.Count;
+                candidates.Push(index);
             }
 
             return result;
@@ -111,29 +158,19 @@ namespace BibleNote.Services.VerseProcessing
         }
 
         private static decimal GetParagraphsWeight(
-            LinkedListNode<ParagraphParseResultExt> node,
-            LinkedListNode<ParagraphParseResultExt> relationNode)
+            int paragraphIndex,
+            int relativeParagraphIndex,
+            IReadOnlyList<int> nextLowerParagraphIndexes)
         {
             const decimal minWeight = 0.01M;
-            if (relationNode.Value.Depth < node.Value.Depth)
+            if (nextLowerParagraphIndexes[paragraphIndex] <= relativeParagraphIndex)
                 return minWeight;
 
-            var result = 0.5M;
-            var nextNode = node.Next;
-            while (nextNode != relationNode && result > minWeight)
-            {
-                if (nextNode.Value.Depth >= node.Value.Depth)
-                    result /= 2;
-                else
-                {
-                    result = minWeight;
-                    break;
-                }
+            var intermediateParagraphs = relativeParagraphIndex - paragraphIndex - 1;
+            if (intermediateParagraphs >= 6)
+                return minWeight;
 
-                nextNode = nextNode.Next;
-            }
-
-            return Math.Max(result, minWeight);
+            return 0.5M / (1 << intermediateParagraphs);
         }
 
         private static decimal GetWithinParagraphRelationWeight(VerseEntry source, VerseEntry target)
