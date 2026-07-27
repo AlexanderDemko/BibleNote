@@ -68,6 +68,7 @@ function setupCustomScrollbar(scroller, rail) {
   let dragging = false;
   let dragStartY = 0;
   let dragStartScrollTop = 0;
+  const contentResizeObserver = new ResizeObserver(update);
 
   function measurements() {
     const railHeight = rail.clientHeight;
@@ -90,6 +91,12 @@ function setupCustomScrollbar(scroller, rail) {
     rail.setAttribute('aria-valuemin', '0');
     rail.setAttribute('aria-valuemax', String(Math.round(value.scrollRange)));
     rail.setAttribute('aria-valuenow', String(Math.round(scroller.scrollTop)));
+  }
+
+  function observeContentSize() {
+    contentResizeObserver.disconnect();
+    for (const child of scroller.children) contentResizeObserver.observe(child);
+    update();
   }
 
   thumb.addEventListener('pointerdown', event => {
@@ -134,13 +141,15 @@ function setupCustomScrollbar(scroller, rail) {
   scroller.addEventListener('scroll', update, { passive:true });
   new ResizeObserver(update).observe(scroller);
   new ResizeObserver(update).observe(rail);
-  new MutationObserver(update).observe(scroller, {
+  new MutationObserver(observeContentSize).observe(scroller, {
     childList:true,
     subtree:true,
     attributes:true,
-    attributeFilter:['open', 'hidden']
+    characterData:true,
+    attributeFilter:['open', 'hidden', 'class', 'style']
   });
-  requestAnimationFrame(update);
+  observeContentSize();
+  requestAnimationFrame(observeContentSize);
   return update;
 }
 

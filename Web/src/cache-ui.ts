@@ -5,16 +5,19 @@ import path from 'node:path';
 import { pathToFileURL, URL } from 'node:url';
 import * as z from 'zod/v4';
 import { bibleParseConfigFromEnv, bibleParserVersion, getVerseTextWithBibleNote, parsePageWithBibleNote, type BibleVerseText } from './bible.js';
-import { bibleNoteBooks, bibleNoteHealth, bibleNoteModules, electronControl, ensureBibleNoteAvailable, parseExternalBibleRef, uploadBibleNoteModule } from './biblenote-gateway.js';
+import { bibleNoteBooks, bibleNoteCurrentOneNotePage, bibleNoteHealth, bibleNoteModules, bibleNoteParallelVerseText, bibleNoteQuickAnalyzeCurrentPage, bibleNoteSearchText, electronControl, ensureBibleNoteAvailable, parseExternalBibleRef, uploadBibleNoteModule, type OneNoteCurrentPage } from './biblenote-gateway.js';
 import { cacheUiPageHtml, serveCacheUiAsset } from './cache-ui-assets.js';
-import { cacheStatus, defaultDbPath, findParallelBibleReferenceNotes, findParallelBibleReferences, getBibleParseState, getCachedPage, getSyncState, markPageHtmlParsed, markPageOpened, openCacheDb, readCachedPage, searchBibleReferenceNotesByWeight, searchCache, searchCacheAdvanced, shouldParseBibleRefs, shouldParsePageHtml, updatePageHtml, upsertBibleParseResult } from './cache.js';
+import { cacheStatus, defaultDbPath, findCachedGraphSectionIdByOneNoteGuid, findCachedPageByOneNoteGuid, findParallelBibleReferenceNotes, findParallelBibleReferences, getBibleParseState, getCachedPage, getSyncState, markPageHtmlParsed, markPageOpened, openCacheDb, readCachedPage, searchBibleReferenceNotesByWeight, searchCacheAdvanced, searchCacheRelaxed, shouldParseBibleRefs, shouldParsePageHtml, updatePageHtml, upsertBibleParseResult } from './cache.js';
 import { visibleBibleRefSql, visibleBibleScopeSql } from './cache-sql.js';
 import { hasRenderableHtmlBody } from './html.js';
 import { oneNoteImage } from './image-proxy.js';
+import { graphListAll } from './graph.js';
+import { acquireTokenByDeviceCode, signedInMicrosoftAccount, type MicrosoftAccountSummary } from './auth.js';
 import { readOneNoteAccessSettings, saveOneNoteAccessSettings } from './onenote-settings.js';
+import { extractOneNotePageGuid, extractOneNotePageTitle, extractOneNoteSectionGuid, findGraphPageForOneNoteClientPage, findGraphSectionForOneNoteClientPage, type OneNoteLinkedSection } from './onenote-page-link.js';
 import { configureRuntimeLogging, readRuntimeLoggingSettings, runtimeLog, saveRuntimeLoggingSettings } from './runtime-logging.js';
 import { SingleFlight } from './single-flight.js';
-import { syncOneNoteCache, type SyncProgressEvent, type SyncResult } from './sync.js';
+import { loadOneNoteSectionPages, syncOneNoteCache, type SyncProgressEvent, type SyncResult } from './sync.js';
 
 type UiOptions = {
   dbPath: string;
@@ -31,6 +34,27 @@ type SyncUiState = {
 };
 
 type CacheDb = ReturnType<typeof openCacheDb>;
+
+type MicrosoftLoginState = {
+  status: 'idle' | 'starting' | 'waiting' | 'success' | 'failed';
+  userCode?: string;
+  verificationUri?: string;
+  expiresAt?: string;
+  account?: MicrosoftAccountSummary;
+  error?: string;
+};
+
+type ResolvedOneNotePage = {
+  id: string;
+  title?: string;
+  clientUrl: string;
+};
+
+type RibbonCurrentPageResult = {
+  currentPage: ResolvedOneNotePage;
+  sync: SyncResult;
+  comAnalysis: Record<string, unknown>;
+};
 
 const syncRequestSchema = z.object({
   maxPages: z.number().int().min(1).max(1_000_000).optional(),
@@ -153,8 +177,11 @@ export function startCacheUi(options: UiOptions): http.Server {
   let dbInitStarted = false;
   let dbInitError: Error | undefined;
   let syncState: SyncUiState = { status: 'idle' };
+  let microsoftLoginState: MicrosoftLoginState = { status: 'idle' };
+  let microsoftLoginPromise: Promise<void> | undefined;
   const pageHtmlRefreshes = new SingleFlight<void>(1);
   const verseTextRequests = new SingleFlight<BibleVerseText>(1);
+  const ribbonCurrentPageOperations = new SingleFlight<RibbonCurrentPageResult>(1);
 
   function startDbInit(): void {
     if (cacheDb || dbInitStarted) return;
@@ -182,6 +209,165 @@ export function startCacheUi(options: UiOptions): http.Server {
     const error = new Error('Local cache is starting. Try again in a moment.') as Error & { statusCode?: number };
     error.statusCode = 503;
     throw error;
+  }
+
+  function currentOneNotePageKey(currentPage: OneNoteCurrentPage): string {
+    return extractOneNotePageGuid(currentPage.clientUrl)
+      ?? extractOneNotePageGuid(currentPage.pageId)
+      ?? currentPage.clientUrl
+      ?? currentPage.pageId;
+  }
+
+  function cachedCurrentOneNotePage(currentPage: OneNoteCurrentPage): ResolvedOneNotePage | undefined {
+    const currentPageGuid = extractOneNotePageGuid(currentPage.clientUrl)
+      ?? extractOneNotePageGuid(currentPage.pageId);
+    const cachedPage = currentPageGuid
+      ? findCachedPageByOneNoteGuid(requireDb(), currentPageGuid)
+      : undefined;
+    return cachedPage
+      ? { id:cachedPage.id, title:cachedPage.title ?? undefined, clientUrl:currentPage.clientUrl }
+      : undefined;
+  }
+
+  async function resolveCurrentOneNotePage(
+    searchGraph: boolean,
+    currentPage?: OneNoteCurrentPage
+  ): Promise<ResolvedOneNotePage> {
+    currentPage ??= await bibleNoteCurrentOneNotePage();
+    const cachedPage = cachedCurrentOneNotePage(currentPage);
+    if (cachedPage) return cachedPage;
+
+    if (!searchGraph) {
+      const error = new Error(
+        'Текущая страница OneNote ещё не синхронизирована с BibleNote.'
+      ) as Error & { statusCode?: number };
+      error.statusCode = 404;
+      throw error;
+    }
+
+    const searchedSectionIds = new Set<string>();
+    const currentSectionGuid = extractOneNoteSectionGuid(currentPage.clientUrl);
+    const cachedGraphSectionId = currentSectionGuid
+      ? findCachedGraphSectionIdByOneNoteGuid(requireDb(), currentSectionGuid)
+      : undefined;
+    if (cachedGraphSectionId) {
+      searchedSectionIds.add(cachedGraphSectionId);
+      const graphPages = (await loadOneNoteSectionPages(cachedGraphSectionId)).pages;
+      const graphPage = findGraphPageForOneNoteClientPage(
+        graphPages,
+        currentPage.pageId,
+        currentPage.clientUrl
+      );
+      if (graphPage) {
+        return {
+          id:graphPage.id,
+          title:graphPage.title,
+          clientUrl:currentPage.clientUrl
+        };
+      }
+    }
+
+    const graphSections = await graphListAll<OneNoteLinkedSection>(
+      '/me/onenote/sections?$select=id,links&$top=100'
+    );
+    const preferredSection = findGraphSectionForOneNoteClientPage(
+      graphSections,
+      currentPage.clientUrl
+    );
+    const sectionsToSearch = preferredSection
+      ? [preferredSection, ...graphSections.filter(section => section.id !== preferredSection.id)]
+      : graphSections;
+
+    for (const section of sectionsToSearch) {
+      if (searchedSectionIds.has(section.id)) continue;
+      const graphPages = (await loadOneNoteSectionPages(section.id)).pages;
+      const graphPage = findGraphPageForOneNoteClientPage(
+        graphPages,
+        currentPage.pageId,
+        currentPage.clientUrl
+      );
+      if (graphPage) {
+        return {
+          id:graphPage.id,
+          title:graphPage.title,
+          clientUrl:currentPage.clientUrl
+        };
+      }
+    }
+
+    const error = new Error(
+      'Текущая COM-страница не найдена в Microsoft Graph. Проверьте, что она синхронизирована с OneDrive.'
+    ) as Error & { statusCode?: number };
+    error.statusCode = 404;
+    throw error;
+  }
+
+  async function waitForActiveSync(timeoutMs = 180_000): Promise<void> {
+    if (syncState.status !== 'running') return;
+    const deadline = Date.now() + timeoutMs;
+    while (syncState.status === 'running' && Date.now() < deadline) {
+      await new Promise(resolve => setTimeout(resolve, 150));
+    }
+    if (syncState.status === 'running') {
+      const error = new Error('Синхронизация OneNote выполняется слишком долго.') as Error & { statusCode?: number };
+      error.statusCode = 504;
+      throw error;
+    }
+    if (syncState.status === 'failed') {
+      const error = new Error(syncState.error || 'Не удалось синхронизировать OneNote.') as Error & { statusCode?: number };
+      error.statusCode = 500;
+      throw error;
+    }
+  }
+
+  async function syncCurrentOneNotePage(currentPage: OneNoteCurrentPage): Promise<RibbonCurrentPageResult> {
+    const resolvedPage = await resolveCurrentOneNotePage(true, currentPage);
+    await waitForActiveSync();
+
+    const startedAt = new Date().toISOString();
+    syncState = { status:'running', startedAt, progress:{ phase:'starting', message:'Подготовка' } };
+    runtimeLog('sync', 'Ribbon current page sync started', { pageId:resolvedPage.id });
+
+    let syncResult: SyncResult;
+    try {
+      syncResult = await syncOneNoteCache({
+        dbPath:options.dbPath,
+        concurrency:1,
+        pageId:resolvedPage.id,
+        forceContent:true,
+        includeHtml:true,
+        parseBibleRefs:true,
+        forceBibleParse:true,
+        onProgress:progress => {
+          runtimeLog('sync-progress', progress.phase || 'progress', progress);
+          syncState = { ...syncState, progress };
+        }
+      });
+      runtimeLog('sync', 'Ribbon current page sync completed', syncResult);
+      syncState = {
+        status:'success',
+        startedAt,
+        finishedAt:new Date().toISOString(),
+        result:syncResult
+      };
+    } catch (error: any) {
+      const message = (error?.message ?? String(error)).slice(0, 4000);
+      runtimeLog('sync', 'Ribbon current page sync failed', { pageId:resolvedPage.id, error:error?.stack ?? message });
+      syncState = {
+        status:'failed',
+        startedAt,
+        finishedAt:new Date().toISOString(),
+        error:message
+      };
+      throw error;
+    }
+
+    const comAnalysis = await bibleNoteQuickAnalyzeCurrentPage();
+    return {
+      currentPage:cachedCurrentOneNotePage(currentPage) ?? resolvedPage,
+      sync:syncResult,
+      comAnalysis
+    };
   }
 
   function startPageHtmlRefresh(pageId: string, module: string): boolean {
@@ -307,6 +493,82 @@ export function startCacheUi(options: UiOptions): http.Server {
         }
         return json(response, 200, await saveOneNoteAccessSettings(await readJsonBody(request)));
       }
+      if (url.pathname === '/api/onenote/login/status' && request.method === 'GET') {
+        if (!microsoftLoginPromise && microsoftLoginState.status !== 'failed') {
+          try {
+            const account = await signedInMicrosoftAccount();
+            microsoftLoginState = account
+              ? { status:'success', account }
+              : { status:'idle' };
+          } catch {
+            microsoftLoginState = { status:'idle' };
+          }
+        }
+        return json(response, 200, microsoftLoginState);
+      }
+      if (url.pathname === '/api/onenote/login/start' && request.method === 'POST') {
+        const ownOrigin = `http://${request.headers.host ?? `127.0.0.1:${options.port}`}`;
+        if (request.headers.origin && request.headers.origin !== ownOrigin) {
+          return json(response, 403, { error: 'Cross-origin Microsoft login requests are not allowed.' });
+        }
+        if (!microsoftLoginPromise) {
+          microsoftLoginState = { status:'starting' };
+          microsoftLoginPromise = acquireTokenByDeviceCode(deviceCode => {
+            microsoftLoginState = {
+              status:'waiting',
+              userCode:deviceCode.userCode,
+              verificationUri:deviceCode.verificationUri,
+              expiresAt:new Date(Date.now() + deviceCode.expiresIn * 1000).toISOString()
+            };
+          }).then(result => {
+            microsoftLoginState = {
+              status:'success',
+              account:result.account ? {
+                username:result.account.username,
+                name:result.account.name
+              } : undefined
+            };
+          }).catch((error: any) => {
+            microsoftLoginState = {
+              status:'failed',
+              error:error?.message ?? String(error)
+            };
+          }).finally(() => {
+            microsoftLoginPromise = undefined;
+          });
+        }
+        return json(response, 202, microsoftLoginState);
+      }
+      if (url.pathname === '/api/onenote/remote-notebooks' && request.method === 'GET') {
+        type RemoteNotebook = {
+          id: string;
+          displayName?: string;
+          lastModifiedDateTime?: string;
+        };
+        const notebooks = await graphListAll<RemoteNotebook>(
+          '/me/onenote/notebooks?$select=id,displayName,lastModifiedDateTime&$top=100'
+        );
+        return json(response, 200, {
+          notebooks:notebooks.map(notebook => ({
+            id:notebook.id,
+            displayName:notebook.displayName || 'Без названия',
+            lastModifiedDateTime:notebook.lastModifiedDateTime
+          }))
+        });
+      }
+      if (url.pathname === '/api/system/open-external' && request.method === 'POST') {
+        const ownOrigin = `http://${request.headers.host ?? `127.0.0.1:${options.port}`}`;
+        if (request.headers.origin && request.headers.origin !== ownOrigin) {
+          return json(response, 403, { error: 'Cross-origin external navigation requests are not allowed.' });
+        }
+        const body = await readJsonBody(request);
+        const target = typeof body.url === 'string' ? body.url : '';
+        const parsed = new URL(target);
+        if (parsed.protocol !== 'https:' || !/(\.|^)microsoft\.com$/i.test(parsed.hostname)) {
+          return json(response, 400, { error: 'Only Microsoft sign-in pages can be opened here.' });
+        }
+        return json(response, 200, await electronControl(`/open-external?url=${encodeURIComponent(parsed.toString())}`, 'POST'));
+      }
       if (url.pathname === '/api/biblenote/health' && request.method === 'GET') {
         try {
           const health = await bibleNoteHealth();
@@ -332,6 +594,72 @@ export function startCacheUi(options: UiOptions): http.Server {
           return json(response, 403, { error: 'Cross-origin protocol requests are not allowed.' });
         }
         return json(response, 200, await electronControl('/protocol/register', 'POST'));
+      }
+      if (url.pathname === '/api/system/onenote-integration' && request.method === 'GET') {
+        return json(response, 200, await electronControl('/onenote-integration/status'));
+      }
+      if (
+        (url.pathname === '/api/system/onenote-integration/enable'
+          || url.pathname === '/api/system/onenote-integration/disable')
+        && request.method === 'POST'
+      ) {
+        const ownOrigin = `http://${request.headers.host ?? `127.0.0.1:${options.port}`}`;
+        if (request.headers.origin && request.headers.origin !== ownOrigin) {
+          return json(response, 403, { error: 'Cross-origin OneNote integration requests are not allowed.' });
+        }
+        const action = url.pathname.endsWith('/enable') ? 'install' : 'uninstall';
+        return json(response, 200, await electronControl(`/onenote-integration/${action}`, 'POST'));
+      }
+      if (url.pathname === '/api/ribbon/quick-analyze' && request.method === 'POST') {
+        const ownOrigin = `http://${request.headers.host ?? `127.0.0.1:${options.port}`}`;
+        if (request.headers.origin && request.headers.origin !== ownOrigin) {
+          return json(response, 403, { error: 'Cross-origin Ribbon requests are not allowed.' });
+        }
+        return json(response, 200, await bibleNoteQuickAnalyzeCurrentPage());
+      }
+      if (url.pathname === '/api/ribbon/current-page' && request.method === 'POST') {
+        const ownOrigin = `http://${request.headers.host ?? `127.0.0.1:${options.port}`}`;
+        if (request.headers.origin && request.headers.origin !== ownOrigin) {
+          return json(response, 403, { error: 'Cross-origin Ribbon requests are not allowed.' });
+        }
+        const currentPage = await bibleNoteCurrentOneNotePage();
+        return json(response, 200, {
+          currentPage:{
+            ...currentPage,
+            title:extractOneNotePageTitle(currentPage.clientUrl)
+          }
+        });
+      }
+      if (url.pathname === '/api/ribbon/open-current' && request.method === 'POST') {
+        const ownOrigin = `http://${request.headers.host ?? `127.0.0.1:${options.port}`}`;
+        if (request.headers.origin && request.headers.origin !== ownOrigin) {
+          return json(response, 403, { error: 'Cross-origin Ribbon requests are not allowed.' });
+        }
+        const currentOneNotePage = await bibleNoteCurrentOneNotePage();
+        const operationKey = currentOneNotePageKey(currentOneNotePage);
+        const cachedPage = cachedCurrentOneNotePage(currentOneNotePage);
+        if (cachedPage) {
+          return json(response, 200, { currentPage:cachedPage });
+        }
+
+        const operation = ribbonCurrentPageOperations.run(
+          operationKey,
+          () => syncCurrentOneNotePage(currentOneNotePage)
+        );
+        const result = await operation.promise;
+        return json(response, 200, result);
+      }
+      if (url.pathname === '/api/ribbon/analyze-current' && request.method === 'POST') {
+        const ownOrigin = `http://${request.headers.host ?? `127.0.0.1:${options.port}`}`;
+        if (request.headers.origin && request.headers.origin !== ownOrigin) {
+          return json(response, 403, { error: 'Cross-origin Ribbon requests are not allowed.' });
+        }
+        const currentOneNotePage = await bibleNoteCurrentOneNotePage();
+        const operation = ribbonCurrentPageOperations.run(
+          currentOneNotePageKey(currentOneNotePage),
+          () => syncCurrentOneNotePage(currentOneNotePage)
+        );
+        return json(response, 200, await operation.promise);
       }
       if (url.pathname === '/api/system/main-bible-action' && request.method === 'POST') {
         const ownOrigin = `http://${request.headers.host ?? `127.0.0.1:${options.port}`}`;
@@ -480,6 +808,21 @@ export function startCacheUi(options: UiOptions): http.Server {
         await ensureBibleNoteAvailable();
         return json(response, 200, { module, books:await bibleNoteBooks(module) });
       }
+      if (url.pathname === '/api/bible/text-search') {
+        const query = required(url, 'q').trim();
+        const mode = url.searchParams.get('mode') ?? 'and';
+        if (!['and', 'phrase', 'regex'].includes(mode)) throw new Error(`Unknown search mode: ${mode}`);
+        const bibleConfig = bibleParseConfigFromEnv();
+        const module = url.searchParams.get('module')?.trim() || bibleConfig.module;
+        await ensureBibleNoteAvailable();
+        return json(response, 200, await bibleNoteSearchText({
+          module,
+          query,
+          mode:mode as 'and' | 'phrase' | 'regex',
+          caseSensitive:url.searchParams.get('caseSensitive') === 'true',
+          limit:Math.max(1, Math.min(Number(url.searchParams.get('limit') ?? '80') || 80, 200))
+        }));
+      }
       if (url.pathname === '/api/bible/text') {
         const bookIndex = Number(required(url, 'bookIndex'));
         const chapter = Number(required(url, 'chapter'));
@@ -518,6 +861,22 @@ export function startCacheUi(options: UiOptions): http.Server {
           timeoutMs: bibleConfig.timeoutMs
         }));
         return json(response, 200, await verseText.promise);
+      }
+      if (url.pathname === '/api/bible/parallel-text') {
+        const baseModule = required(url, 'baseModule').trim();
+        const module = required(url, 'module').trim();
+        const bookIndex = Number(required(url, 'bookIndex'));
+        const chapter = Number(required(url, 'chapter'));
+        if (!baseModule || !module || !Number.isInteger(bookIndex) || !Number.isInteger(chapter)) {
+          throw new Error('baseModule, module, bookIndex, and chapter are required.');
+        }
+        await ensureBibleNoteAvailable();
+        return json(response, 200, await bibleNoteParallelVerseText({
+          baseModule,
+          module,
+          bookIndex,
+          chapter
+        }));
       }
       if (url.pathname === '/api/bible/page') {
         const pageId = required(url, 'id');
@@ -841,6 +1200,46 @@ export function startCacheUi(options: UiOptions): http.Server {
         `).all(required(url, 'sectionId')) as Array<{ title: string | null }>;
         return json(response, 200, rows);
       }
+      if (url.pathname === '/api/recent-pages') {
+        const notebookIds = [...new Set(url.searchParams.getAll('notebookId').filter(Boolean))];
+        const requestedLimit = Number(url.searchParams.get('limit') ?? 100);
+        if (!Number.isInteger(requestedLimit) || requestedLimit < 1 || requestedLimit > 200) {
+          throw new Error('limit must be an integer from 1 to 200.');
+        }
+        if (notebookIds.length === 0) return json(response, 200, []);
+        const notebookPlaceholders = notebookIds.map(() => '?').join(',');
+        const rows = db.prepare(`
+          WITH page_activity AS (
+            SELECT
+            p.id,
+            p.title,
+            p.parent_notebook_id AS notebookId,
+            COALESCE(n.custom_display_name, p.parent_notebook_name) AS notebook,
+            p.parent_section_name AS section,
+            s.section_group_path AS sectionGroupPath,
+            COALESCE(p.last_modified_date_time, p.created_date_time, p.metadata_synced_at) AS modifiedAt,
+            pa.last_opened_at AS openedAt,
+            p.content_text IS NOT NULL AS hasContent,
+            p.fetch_error AS fetchError
+            FROM pages p
+            LEFT JOIN notebooks n ON n.id = p.parent_notebook_id
+            LEFT JOIN sections s ON s.id = p.parent_section_id
+            LEFT JOIN page_access pa ON pa.page_id = p.id
+            WHERE p.deleted_at IS NULL
+              AND p.fetch_error IS NULL
+              AND p.parent_notebook_id IN (${notebookPlaceholders})
+          )
+          SELECT *,
+            CASE WHEN openedAt IS NOT NULL AND (modifiedAt IS NULL OR openedAt > modifiedAt)
+              THEN openedAt ELSE modifiedAt END AS recentAt,
+            CASE WHEN openedAt IS NOT NULL AND (modifiedAt IS NULL OR openedAt > modifiedAt)
+              THEN 'opened' ELSE 'modified' END AS recentReason
+          FROM page_activity
+          ORDER BY recentAt DESC, title COLLATE NOCASE
+          LIMIT ?
+        `).all(...notebookIds, requestedLimit);
+        return json(response, 200, rows);
+      }
       if (url.pathname === '/api/search') {
         const notebookIds = url.searchParams.getAll('notebookId').filter(Boolean);
         let query = required(url, 'q');
@@ -882,10 +1281,10 @@ export function startCacheUi(options: UiOptions): http.Server {
         }
         const rawResults = parsedSearchRef || parsedParallelSearchRefs
           ? []
-          : mode === 'and' && !caseSensitive
-          ? searchCache(db, query, {
+          : mode === 'and'
+          ? searchCacheRelaxed(db, query, {
               limit:100,
-              mode:'and',
+              caseSensitive,
               notebookIds:notebookIds.length > 0 ? notebookIds : undefined
             })
           : searchCacheAdvanced(db, query, {
@@ -897,6 +1296,9 @@ export function startCacheUi(options: UiOptions): http.Server {
         const resultsById = new Map<string, Record<string, unknown>>();
         const addResult = (item: Record<string, any>) => {
           const id = String(item.id);
+          const incomingBibleOccurrences = Array.isArray(item.bibleOccurrences)
+            ? item.bibleOccurrences.filter((occurrence: any) => Number.isInteger(occurrence?.paragraphIndex))
+            : [];
           const incomingParagraphIndexes = Array.isArray(item.paragraphIndexes)
             ? item.paragraphIndexes.filter(Number.isInteger)
             : (Number.isInteger(item.paragraphIndex) ? [item.paragraphIndex] : []);
@@ -911,12 +1313,29 @@ export function startCacheUi(options: UiOptions): http.Server {
               }
               existing.paragraphIndexes = paragraphIndexes;
             }
+            if (incomingBibleOccurrences.length > 0) {
+              const bibleOccurrences = Array.isArray(existing.bibleOccurrences) ? existing.bibleOccurrences : [];
+              for (const occurrence of incomingBibleOccurrences) {
+                const duplicate = bibleOccurrences.some((current: any) =>
+                  current.paragraphIndex === occurrence.paragraphIndex
+                  && current.startIndex === occurrence.startIndex
+                  && current.endIndex === occurrence.endIndex
+                );
+                if (!duplicate) bibleOccurrences.push(occurrence);
+              }
+              existing.bibleOccurrences = bibleOccurrences;
+            }
             if (!existing.snippet && item.snippet) existing.snippet = item.snippet;
             if (!existing.bibleRef && item.bibleRef) existing.bibleRef = item.bibleRef;
             if (item.bibleMatchScore != null) {
               const currentScore = Number(existing.bibleMatchScore ?? Number.POSITIVE_INFINITY);
               const nextScore = Number(item.bibleMatchScore);
               if (Number.isFinite(nextScore) && nextScore < currentScore) existing.bibleMatchScore = nextScore;
+            }
+            if (item.search_weight != null || item.searchWeight != null) {
+              const nextWeight = Number(item.search_weight ?? item.searchWeight);
+              const currentWeight = Number(existing.searchWeight ?? Number.NEGATIVE_INFINITY);
+              if (Number.isFinite(nextWeight) && nextWeight > currentWeight) existing.searchWeight = nextWeight;
             }
             return;
           }
@@ -929,9 +1348,11 @@ export function startCacheUi(options: UiOptions): http.Server {
             snippet:item.snippet,
             paragraphIndex,
             paragraphIndexes:incomingParagraphIndexes,
+            bibleOccurrences:incomingBibleOccurrences,
             bibleRef:item.bibleRef,
             bibleMatchScore:item.bibleMatchScore,
-            bibleWeight:item.bibleWeight
+            bibleWeight:item.bibleWeight,
+            searchWeight:item.search_weight ?? item.searchWeight
           });
         };
         rawResults.forEach((item: any) => addResult(item));
@@ -1073,6 +1494,13 @@ export function startCacheUi(options: UiOptions): http.Server {
               .sort((left, right) => left - right);
             result.paragraphIndexes = sortedParagraphIndexes;
             result.paragraphIndex = sortedParagraphIndexes[0] ?? result.paragraphIndex;
+          }
+          if (Array.isArray(result.bibleOccurrences)) {
+            result.bibleOccurrences.sort((left: any, right: any) =>
+              left.paragraphIndex - right.paragraphIndex
+              || Number(left.startIndex ?? -1) - Number(right.startIndex ?? -1)
+              || Number(left.endIndex ?? -1) - Number(right.endIndex ?? -1)
+            );
           }
         }
         const results = [...resultsById.values()]

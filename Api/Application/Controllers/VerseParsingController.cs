@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Text.RegularExpressions;
 using BibleNote.Domain.Enums;
 using BibleNote.Providers.Html;
 using BibleNote.Services.Configuration.Contracts;
@@ -11,6 +12,7 @@ using BibleNote.Services.ModulesManager.Contracts;
 using BibleNote.Services.ModulesManager.Models;
 using BibleNote.Services.ModulesManager.Scheme.Module;
 using BibleNote.Services.ModulesManager.Scheme.ZefaniaXml;
+using BibleNote.Services.ParallelVerses.Contracts;
 using BibleNote.Services.VerseParsing;
 using BibleNote.Services.VerseParsing.Contracts;
 using BibleNote.Services.VerseParsing.Contracts.ParseContext;
@@ -32,19 +34,22 @@ namespace BibleNote.Application.Controllers
         private readonly IConfigurationManager configurationManager;
         private readonly IApplicationManager applicationManager;
         private readonly IModulesManager modulesManager;
+        private readonly IBibleParallelTranslationConnectorManager parallelTranslationConnector;
 
         public VerseParsingController(
             IDocumentParserFactory documentParserFactory,
             IVerseLinkService verseLinkService,
             IConfigurationManager configurationManager,
             IApplicationManager applicationManager,
-            IModulesManager modulesManager)
+            IModulesManager modulesManager,
+            IBibleParallelTranslationConnectorManager parallelTranslationConnector)
         {
             this.documentParserFactory = documentParserFactory;
             this.verseLinkService = verseLinkService;
             this.configurationManager = configurationManager;
             this.applicationManager = applicationManager;
             this.modulesManager = modulesManager;
+            this.parallelTranslationConnector = parallelTranslationConnector;
         }
 
         [HttpGet]
@@ -108,6 +113,151 @@ namespace BibleNote.Application.Controllers
                     };
                 })
                 .ToList();
+        }
+
+        [HttpGet]
+        public ActionResult<List<BibleTextSearchResponse>> SearchText([FromQuery] BibleTextSearchRequest request)
+        {
+            if (request == null || string.IsNullOrWhiteSpace(request.Query))
+                return BadRequest("query is required.");
+
+            var mode = string.IsNullOrWhiteSpace(request.Mode) ? "and" : request.Mode.Trim().ToLowerInvariant();
+            if (mode != "and" && mode != "phrase" && mode != "regex")
+                return BadRequest("mode must be 'and', 'phrase', or 'regex'.");
+
+            var module = string.IsNullOrWhiteSpace(request.Module)
+                ? configurationManager.ModuleShortName
+                : request.Module.Trim();
+            if (string.IsNullOrWhiteSpace(module))
+                module = "rst";
+
+            var limit = Math.Max(1, Math.Min(request.Limit > 0 ? request.Limit : 80, 200));
+            var query = WebUtility.HtmlDecode(request.Query.Trim());
+            var comparison = request.CaseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
+            var terms = query
+                .Split((char[])null, StringSplitOptions.RemoveEmptyEntries)
+                .Where(term => term.Length > 1)
+                .Distinct(request.CaseSensitive ? StringComparer.Ordinal : StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+            Regex regex = null;
+            if (mode == "regex")
+            {
+                try
+                {
+                    regex = new Regex(
+                        query,
+                        RegexOptions.CultureInvariant | (request.CaseSensitive ? RegexOptions.None : RegexOptions.IgnoreCase),
+                        TimeSpan.FromMilliseconds(100));
+                }
+                catch (ArgumentException error)
+                {
+                    return BadRequest($"Invalid regular expression: {error.Message}");
+                }
+            }
+
+            var bible = applicationManager.GetBibleContent(module);
+            var moduleInfo = modulesManager.GetModuleInfo(module);
+            var results = new List<BibleTextSearchResponse>();
+            try
+            {
+                foreach (var book in bible.Books.OrderBy(item => item.Index))
+                {
+                    var bookInfo = moduleInfo.BibleStructure.BibleBooks.FirstOrDefault(item => item.Index == book.Index);
+                    var bookName = bookInfo?.Name ?? book.bname;
+                    var bookShortName = bookInfo?.FriendlyShortName ?? book.bsname ?? bookName;
+                    foreach (var chapter in book.Chapters.OrderBy(item => item.Index))
+                    {
+                        foreach (var verse in chapter.Verses.OrderBy(item => item.Index))
+                        {
+                            var text = WebUtility.HtmlDecode(verse.Value ?? string.Empty)
+                                .Replace("|", string.Empty)
+                                .Trim();
+                            if (text.Length == 0)
+                                continue;
+
+                            var score = BibleTextSearchScore(text, query, terms, mode, comparison, regex);
+                            if (score < 0)
+                                continue;
+
+                            results.Add(new BibleTextSearchResponse
+                            {
+                                Module = module,
+                                ModuleName = moduleInfo.DisplayName,
+                                BookIndex = book.Index,
+                                BookName = bookName,
+                                BookShortName = bookShortName,
+                                Chapter = chapter.Index,
+                                Verse = verse.Index,
+                                TopVerse = verse.TopIndex,
+                                Reference = $"{bookShortName} {chapter.Index}:{verse.Index}",
+                                Text = text,
+                                Score = score,
+                                Weight = BibleTextSearchWeight(score)
+                            });
+                        }
+                    }
+                }
+            }
+            catch (RegexMatchTimeoutException)
+            {
+                return BadRequest("The regular expression took too long to evaluate.");
+            }
+
+            return results
+                .OrderByDescending(item => item.Score)
+                .ThenBy(item => item.BookIndex)
+                .ThenBy(item => item.Chapter)
+                .ThenBy(item => item.Verse)
+                .Take(limit)
+                .ToList();
+        }
+
+        private static int BibleTextSearchScore(
+            string text,
+            string query,
+            string[] terms,
+            string mode,
+            StringComparison comparison,
+            Regex regex)
+        {
+            if (mode == "regex")
+                return regex.IsMatch(text) ? 1000 : -1;
+
+            var phraseIndex = text.IndexOf(query, comparison);
+            if (mode == "phrase")
+                return phraseIndex >= 0 ? 2000 - Math.Min(phraseIndex, 1000) : -1;
+            if (phraseIndex >= 0)
+                return 3000 - Math.Min(phraseIndex, 1000);
+            if (terms.Length == 0)
+                return -1;
+
+            var termPositions = terms.Select(term => text.IndexOf(term, comparison)).ToArray();
+            var matchedTerms = termPositions.Count(position => position >= 0);
+            var requiredTerms = terms.Length <= 2 ? terms.Length : (int)Math.Ceiling(terms.Length * 0.6);
+            if (matchedTerms < requiredTerms)
+                return -1;
+
+            var orderedPairs = 0;
+            for (var index = 1; index < termPositions.Length; index++)
+            {
+                if (termPositions[index - 1] >= 0 && termPositions[index] > termPositions[index - 1])
+                    orderedPairs++;
+            }
+            var matchedPositions = termPositions.Where(position => position >= 0).ToArray();
+            var span = matchedPositions.Length > 1 ? matchedPositions.Max() - matchedPositions.Min() : 200;
+            var coverage = (double)matchedTerms / terms.Length;
+            var order = terms.Length > 1 ? (double)orderedPairs / (terms.Length - 1) : 1;
+            var proximity = Math.Max(0, 1 - Math.Min(span, 200) / 200.0);
+            var weight = Math.Min(0.99, coverage * 0.7 + order * 0.2 + proximity * 0.1);
+            return (int)Math.Round(weight * 1800);
+        }
+
+        private static double BibleTextSearchWeight(int score)
+        {
+            if (score >= 2000)
+                return 1;
+
+            return Math.Min(0.99, Math.Round(score / 1800.0, 4));
         }
 
         [HttpPost]
@@ -273,6 +423,136 @@ namespace BibleNote.Application.Controllers
                 Text = string.Join(Environment.NewLine, verses.Select(item => $"{item.Reference} {item.Text}")),
                 Verses = verses
             };
+        }
+
+        [HttpGet]
+        public ActionResult<ParallelVerseTextResponse> ParallelVerseText([FromQuery] ParallelVerseTextRequest request)
+        {
+            if (request == null)
+                return BadRequest("Request query is required.");
+
+            if (request.BookIndex < 1 || request.Chapter < 1)
+                return BadRequest("bookIndex and chapter must be positive integers.");
+
+            var baseModule = string.IsNullOrWhiteSpace(request.BaseModule)
+                ? configurationManager.ModuleShortName
+                : request.BaseModule.Trim();
+            var module = string.IsNullOrWhiteSpace(request.Module)
+                ? configurationManager.ModuleShortName
+                : request.Module.Trim();
+            if (string.IsNullOrWhiteSpace(baseModule))
+                baseModule = "rst";
+            if (string.IsNullOrWhiteSpace(module))
+                module = "rst";
+
+            var baseBible = applicationManager.GetBibleContent(baseModule);
+            if (!baseBible.BooksDictionary.TryGetValue(request.BookIndex, out var baseBook))
+                return NotFound($"Book {request.BookIndex} was not found in module '{baseModule}'.");
+
+            var baseChapter = baseBook.Chapters.FirstOrDefault(item => item.Index == request.Chapter);
+            if (baseChapter == null)
+                return NotFound($"Chapter {request.Chapter} was not found in module '{baseModule}'.");
+
+            var targetBible = applicationManager.GetBibleContent(module);
+            var targetModuleInfo = modulesManager.GetModuleInfo(module);
+            var parallelInfo = parallelTranslationConnector.GetParallelBibleInfo(baseModule, module);
+            parallelInfo.TryGetValue(request.BookIndex, out var comparisonTable);
+
+            var rows = new List<ParallelVerseTextRowResponse>();
+            foreach (var baseVerse in baseChapter.Verses)
+            {
+                var basePointer = new ModuleVersePointer(request.BookIndex, request.Chapter, baseVerse.Index);
+                var targetPointers = comparisonTable != null
+                    && comparisonTable.TryGetValue(basePointer, out var mappedPointers)
+                        ? mappedPointers
+                        : new List<ModuleVersePointer> { (ModuleVersePointer)basePointer.Clone() };
+                var targetVerses = new List<VerseTextItemResponse>();
+
+                foreach (var targetPointer in targetPointers)
+                {
+                    if (targetPointer.IsEmpty)
+                    {
+                        targetVerses.Add(new VerseTextItemResponse
+                        {
+                            Chapter = targetPointer.Chapter,
+                            Verse = targetPointer.Verse,
+                            TopVerse = targetPointer.TopVerse,
+                            Reference = FormatPointerReference(targetPointer),
+                            PartIndex = targetPointer.PartIndex,
+                            IsEmpty = true,
+                            IsPartOfBigVerse = targetPointer.IsPartOfBigVerse,
+                            HasValueEvenIfEmpty = targetPointer.HasValueEvenIfEmpty
+                        });
+                        continue;
+                    }
+
+                    if (!targetBible.BooksDictionary.TryGetValue(targetPointer.BookIndex, out var targetBook))
+                        continue;
+
+                    var item = GetParallelVerseText(targetBook, module, targetPointer);
+                    if (item != null)
+                        targetVerses.Add(item);
+                }
+
+                rows.Add(new ParallelVerseTextRowResponse
+                {
+                    BaseChapter = request.Chapter,
+                    BaseVerse = baseVerse.Index,
+                    Verses = targetVerses
+                });
+            }
+
+            return new ParallelVerseTextResponse
+            {
+                BaseModule = baseModule,
+                Module = module,
+                ModuleName = targetModuleInfo.DisplayName,
+                Rows = rows
+            };
+        }
+
+        private static VerseTextItemResponse GetParallelVerseText(BIBLEBOOK book, string module, ModuleVersePointer pointer)
+        {
+            try
+            {
+                var text = book.GetVerseContent(
+                    pointer,
+                    module,
+                    string.Empty,
+                    true,
+                    out var verseIndex,
+                    out var isEmpty,
+                    out var isFullVerse,
+                    out var isPartOfBigVerse,
+                    out var hasValueEvenIfEmpty);
+
+                return new VerseTextItemResponse
+                {
+                    Chapter = pointer.Chapter,
+                    Verse = verseIndex.Index,
+                    TopVerse = verseIndex.TopIndex,
+                    Reference = verseIndex.TopIndex.HasValue
+                        ? $"{pointer.Chapter}:{verseIndex.Index}-{verseIndex.TopIndex.Value}"
+                        : $"{pointer.Chapter}:{verseIndex.Index}",
+                    Text = WebUtility.HtmlDecode(text),
+                    IsFullVerse = isFullVerse,
+                    IsPartOfBigVerse = isPartOfBigVerse || pointer.IsPartOfBigVerse,
+                    HasValueEvenIfEmpty = hasValueEvenIfEmpty || pointer.HasValueEvenIfEmpty,
+                    PartIndex = pointer.PartIndex,
+                    IsEmpty = isEmpty
+                };
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private static string FormatPointerReference(ModuleVersePointer pointer)
+        {
+            return pointer.TopVerse.HasValue
+                ? $"{pointer.Chapter}:{pointer.Verse}-{pointer.TopVerse.Value}"
+                : $"{pointer.Chapter}:{pointer.Verse}";
         }
 
         private static bool TryResolveVerseTextBook(XMLBIBLE bible, ModuleInfo moduleInfo, VerseTextRequest request, out BIBLEBOOK book, out BibleBookInfo bookInfo)
@@ -452,7 +732,7 @@ namespace BibleNote.Application.Controllers
                     Reference = verseIndex.TopIndex.HasValue
                         ? $"{chapter}:{verseIndex.Index}-{verseIndex.TopIndex.Value}"
                         : $"{chapter}:{verseIndex.Index}",
-                    Text = text,
+                    Text = WebUtility.HtmlDecode(text),
                     IsFullVerse = isFullVerse,
                     IsPartOfBigVerse = isPartOfBigVerse,
                     HasValueEvenIfEmpty = hasValueEvenIfEmpty

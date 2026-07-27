@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { openCacheDb, searchBibleReferenceNotesByWeight } from '../src/cache.js';
 
-test('penalizes a Bible reference when it is surrounded by more strongly related references', () => {
+test('keeps single-verse excerpt weight independent of inter-reference relation strength', () => {
   const db = openCacheDb(':memory:');
   try {
     const insertPage = db.prepare(`
@@ -66,9 +66,9 @@ test('penalizes a Bible reference when it is surrounded by more strongly related
     });
 
     assert.deepEqual(rows.map(row => ({ id:row.id, weight:row.bibleWeight })), [
+      { id:'heavy', weight:1 },
       { id:'zero', weight:1 },
-      { id:'light', weight:0.8333 },
-      { id:'heavy', weight:0.5556 }
+      { id:'light', weight:1 }
     ]);
     assert.deepEqual(rows.map(row => row.paragraphIndexes), [[0], [0], [0]]);
   } finally {
@@ -76,7 +76,7 @@ test('penalizes a Bible reference when it is surrounded by more strongly related
   }
 });
 
-test('adds the independently penalized weights of repeated Bible references in one note', () => {
+test('adds repeated excerpt weights with a paragraph-density penalty', () => {
   const db = openCacheDb(':memory:');
   try {
     db.prepare(`
@@ -129,9 +129,51 @@ test('adds the independently penalized weights of repeated Bible references in o
       orderByWeight:true
     });
 
-    // First occurrence: 1 / (1 + 1.0) = 0.5.
-    // Second occurrence: 1 / (1 + 1.5) = 0.4.
-    assert.equal(rows[0]?.bibleWeight, 0.9);
+    assert.equal(rows[0]?.bibleWeight, 1.6667);
+  } finally {
+    db.close();
+  }
+});
+
+test('heavily discounts each reference in a paragraph containing 22 references', () => {
+  const db = openCacheDb(':memory:');
+  try {
+    db.prepare(`
+      INSERT INTO pages(
+        id, title, last_modified_date_time,
+        parent_notebook_id, parent_notebook_name, parent_section_name
+      ) VALUES ('crowded', 'Crowded', '2026-07-26T00:00:00Z', 'notebook-1', 'Notebook', 'Section')
+    `).run();
+    db.prepare(`
+      INSERT INTO page_paragraphs(
+        page_id, paragraph_index, paragraph_path, text,
+        parsed_at, parser_version, module
+      ) VALUES ('crowded', 0, '0', 'Twenty-two references', '2026-07-26T00:00:00Z', 'test', 'test')
+    `).run();
+    const insertRef = db.prepare(`
+      INSERT INTO paragraph_verse_refs(
+        page_id, paragraph_index, original_text, normalized_ref,
+        verse_id, top_verse_id, book_index, book_name,
+        chapter, verse, top_chapter, top_verse,
+        module, parser_version, parsed_at
+      ) VALUES ('crowded', 0, ?, ?, ?, ?, 19, 'Psalms', 119, ?, 119, ?,
+        'test', 'test', '2026-07-26T00:00:00Z')
+    `);
+    for (let verse = 1; verse <= 22; verse += 1) {
+      const verseId = 190119000 + verse;
+      insertRef.run(`Psalm 119:${verse}`, `Psalms 119:${verse}`, verseId, verseId, verse, verse);
+    }
+
+    const rows = searchBibleReferenceNotesByWeight(db, {
+      bookIndex:19,
+      chapter:119,
+      verse:1,
+      notebookIds:['notebook-1'],
+      includeAuxiliaryRefs:true,
+      orderByWeight:true
+    });
+
+    assert.equal(rows[0]?.bibleWeight, 0.087);
   } finally {
     db.close();
   }
@@ -181,6 +223,58 @@ test('counts duplicate stored title paragraphs as one Bible-reference occurrence
 
     assert.equal(rows[0]?.bibleWeight, 2);
     assert.deepEqual(rows[0]?.paragraphIndexes, [0, 2]);
+  } finally {
+    db.close();
+  }
+});
+
+test('counts a containing range and repeated exact references as separate verse occurrences', () => {
+  const db = openCacheDb(':memory:');
+  try {
+    db.prepare(`
+      INSERT INTO pages(
+        id, title, last_modified_date_time,
+        parent_notebook_id, parent_notebook_name, parent_section_name
+      ) VALUES ('ranges', 'Ranges', '2026-07-26T00:00:00Z', 'notebook-1', 'Notebook', 'Section')
+    `).run();
+    const insertParagraph = db.prepare(`
+      INSERT INTO page_paragraphs(
+        page_id, paragraph_index, paragraph_path, text,
+        parsed_at, parser_version, module
+      ) VALUES ('ranges', ?, ?, ?, '2026-07-26T00:00:00Z', 'test', 'test')
+    `);
+    insertParagraph.run(0, '0', ':3-8 (comparison in :5)');
+    insertParagraph.run(1, '1', ':5');
+
+    const insertRef = db.prepare(`
+      INSERT INTO paragraph_verse_refs(
+        page_id, paragraph_index, original_text, normalized_ref,
+        verse_id, top_verse_id, book_index, book_name,
+        chapter, verse, top_chapter, top_verse,
+        start_index, end_index, module, parser_version, parsed_at
+      ) VALUES ('ranges', ?, ?, ?, ?, ?, 50, 'Philippians', 2, ?, 2, ?, ?, ?,
+        'test', 'test', '2026-07-26T00:00:00Z')
+    `);
+    insertRef.run(0, ':3-8', 'Philippians 2:3-8', 50002003, 50002008, 3, 8, 0, 3);
+    insertRef.run(0, ':5', 'Philippians 2:5', 50002005, 50002005, 5, 5, 18, 19);
+    insertRef.run(1, ':5', 'Philippians 2:5', 50002005, 50002005, 5, 5, 0, 1);
+
+    const rows = searchBibleReferenceNotesByWeight(db, {
+      bookIndex:50,
+      chapter:2,
+      verse:5,
+      notebookIds:['notebook-1'],
+      includeAuxiliaryRefs:true,
+      orderByWeight:true
+    });
+
+    assert.equal(rows[0]?.bibleWeight, 1.7778);
+    assert.deepEqual(rows[0]?.paragraphIndexes, [0, 1]);
+    assert.deepEqual(rows[0]?.bibleOccurrences, [
+      { paragraphIndex:0, startIndex:0, endIndex:3 },
+      { paragraphIndex:0, startIndex:18, endIndex:19 },
+      { paragraphIndex:1, startIndex:0, endIndex:1 }
+    ]);
   } finally {
     db.close();
   }

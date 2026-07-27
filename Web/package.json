@@ -1,6 +1,6 @@
 {
   "name": "biblenote",
-  "version": "4.0.41",
+  "version": "4.0.47",
   "description": "BibleNote desktop and OneNote cache application.",
   "type": "module",
   "engines": {
@@ -15,13 +15,17 @@
     "test": "tsx --test tests/*.test.ts",
     "biblenote:stage": "powershell -ExecutionPolicy Bypass -File scripts/stage-biblenote.ps1",
     "node:stage": "powershell -ExecutionPolicy Bypass -File scripts/stage-node.ps1",
+    "onenote-ribbon:stage": "powershell -ExecutionPolicy Bypass -File scripts/stage-onenote-ribbon.ps1",
     "node:rebuild": "npm rebuild better-sqlite3",
     "electron:dev": "npm run node:rebuild && npm run build && electron dist/electron-main.js",
     "electron:rebuild": "electron-builder install-app-deps",
     "version:bump": "node scripts/bump-version.mjs",
-    "dist:portable": "npm run version:bump && npm run node:rebuild && npm run node:stage && npm run biblenote:stage && npm run build && electron-builder --win portable",
-    "dist:installer": "npm run version:bump && npm run node:rebuild && npm run node:stage && npm run biblenote:stage && npm run build && electron-builder --win nsis",
-    "dist:win": "npm run version:bump && npm run node:rebuild && npm run node:stage && npm run biblenote:stage && npm run build && electron-builder --win nsis portable",
+    "dist:portable": "npm run version:bump && npm run node:rebuild && npm run node:stage && npm run biblenote:stage && npm run onenote-ribbon:stage && npm run build && electron-builder --win portable",
+    "dist:installer": "npm run version:bump && npm run node:rebuild && npm run node:stage && npm run biblenote:stage && npm run onenote-ribbon:stage && npm run build && electron-builder --win nsis",
+    "dist:win": "npm run version:bump && npm run node:rebuild && npm run node:stage && npm run biblenote:stage && npm run onenote-ribbon:stage && npm run build && electron-builder --win nsis portable",
+    "stage:mac:arm64": "node scripts/stage-mac-arm64.mjs",
+    "dist:mac:arm64": "npm run stage:mac:arm64 && npm run build && python scripts/package-mac-arm64.py",
+    "dist:mac:arm64:native": "npm run stage:mac:arm64 && npm run build && electron-builder --config electron-builder.mac-arm64.cjs --mac --arm64",
     "login": "tsx src/login.ts",
     "dev": "tsx src/server.ts",
     "start": "node dist/server.js",
@@ -81,6 +85,15 @@
     ],
     "win": {
       "icon": "assets/biblenote.ico",
+      "extraResources": [
+        {
+          "from": "vendor/OneNoteRibbon",
+          "to": "OneNoteRibbon",
+          "filter": [
+            "**/*"
+          ]
+        }
+      ],
       "target": [
         "nsis",
         "portable"

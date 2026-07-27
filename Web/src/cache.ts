@@ -14,6 +14,8 @@ import { runtimeLog } from './runtime-logging.js';
 export type * from './cache-types.js';
 export {
   buildFtsQuery,
+  findCachedGraphSectionIdByOneNoteGuid,
+  findCachedPageByOneNoteGuid,
   findParallelBibleReferenceNotes,
   findParallelBibleReferences,
   getCachedPage,
@@ -28,7 +30,8 @@ export {
   searchBibleReferenceNotesByWeight,
   searchBibleReferences,
   searchCache,
-  searchCacheAdvanced
+  searchCacheAdvanced,
+  searchCacheRelaxed
 } from './cache-search.js';
 
 export const defaultCacheDir = defaultBibleNoteDir;

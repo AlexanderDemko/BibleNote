@@ -307,7 +307,9 @@ namespace BibleNote.Services.ModulesManager
 
         private static string GetProgramDirectory()
         {
-            string directoryPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), SystemConstants.ToolsName);
+            string directoryPath = Environment.GetEnvironmentVariable("BIBLENOTE_DATA_DIR");
+            if (string.IsNullOrWhiteSpace(directoryPath))
+                directoryPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), SystemConstants.ToolsName);
 
             if (!Directory.Exists(directoryPath))
                 Directory.CreateDirectory(directoryPath);

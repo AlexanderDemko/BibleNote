@@ -80,7 +80,32 @@ export async function acquireTokenSilent(forceRefresh = false): Promise<Authenti
   return result;
 }
 
-export async function acquireTokenByDeviceCode(): Promise<AuthenticationResult> {
+export type MicrosoftAccountSummary = {
+  username: string;
+  name?: string;
+};
+
+export type MicrosoftDeviceCode = {
+  userCode: string;
+  verificationUri: string;
+  expiresIn: number;
+  message: string;
+};
+
+export async function signedInMicrosoftAccount(): Promise<MicrosoftAccountSummary | undefined> {
+  const pca = createMsalClient();
+  await loadCache(pca);
+  const account = (await pca.getTokenCache().getAllAccounts())[0];
+  if (!account) return undefined;
+  return {
+    username: account.username,
+    name: account.name
+  };
+}
+
+export async function acquireTokenByDeviceCode(
+  onDeviceCode?: (response: MicrosoftDeviceCode) => void
+): Promise<AuthenticationResult> {
   const { scopes } = oneNoteAuthConfig();
   const pca = createMsalClient();
   await loadCache(pca);
@@ -88,7 +113,16 @@ export async function acquireTokenByDeviceCode(): Promise<AuthenticationResult> 
   const result = await pca.acquireTokenByDeviceCode({
     scopes,
     deviceCodeCallback: response => {
-      console.log(response.message);
+      if (onDeviceCode) {
+        onDeviceCode({
+          userCode: response.userCode,
+          verificationUri: response.verificationUri,
+          expiresIn: response.expiresIn,
+          message: response.message
+        });
+      } else {
+        console.log(response.message);
+      }
     }
   });
 

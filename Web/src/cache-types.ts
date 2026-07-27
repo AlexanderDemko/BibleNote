@@ -80,6 +80,7 @@ export type CacheSearchResult = {
   content_synced_at: string | null;
   snippet: string | null;
   score: number;
+  search_weight?: number;
 };
 
 export type BibleParseStateRow = {
@@ -124,6 +125,11 @@ export type WeightedBibleReferenceNote = {
   parent_section_name: string | null;
   paragraphIndex: number;
   paragraphIndexes: number[];
+  bibleOccurrences: Array<{
+    paragraphIndex: number;
+    startIndex: number | null;
+    endIndex: number | null;
+  }>;
   snippet: string | null;
   bibleRef: string | null;
   bibleMatchScore: number;

@@ -20,6 +20,7 @@ function saveNotebookSelection() {
     : 'Выберите хотя бы один блокнот';
   syncButton.disabled = syncRunning || selected.length === 0;
   quickSyncButton.disabled = syncRunning || selected.length === 0;
+  if (typeof updateSyncSettingsPresentation === 'function') updateSyncSettingsPresentation();
 }
 
 async function loadNotebookSelector() {
@@ -37,7 +38,7 @@ async function loadNotebookSelector() {
     checkbox.addEventListener('change', () => {
       if (checkbox.checked) hiddenNotebookIds.delete(notebook.id); else hiddenNotebookIds.add(notebook.id);
       saveNotebookSelection();
-      if (activeSearchQuery) renderSearch(activeSearchQuery).catch(showError); else renderTree().catch(showError);
+      renderNotesList().catch(showError);
       loadDownloadLog(true).catch(showError);
     });
     const text = document.createElement('span');
@@ -83,8 +84,7 @@ async function saveNotebookDisplayName(displayName) {
     await loadNotebookSelector();
     await loadDownloadLog(true);
     if (selectedPageId) await openPage(selectedPageId);
-    else if (activeSearchQuery) await renderSearch(activeSearchQuery);
-    else await renderTree();
+    await renderNotesList();
     showActivity('Отображаемое имя сохранено: ' + result.displayName, 'success');
   } catch (error) {
     showActivity('Не удалось сохранить имя: ' + error.message, 'error');
@@ -102,6 +102,18 @@ cancelNotebookNameButton.addEventListener('click', () => {
 });
 notebookNameDialog.addEventListener('cancel', () => { editingNotebookId = null; });
 closeBibleTextButton.addEventListener('click', () => {
+  if (bibleVersePopupMode) window.close(); else bibleTextDialog.close();
+});
+function bibleTextDialogClickIsOutside(event) {
+  if (event.target !== bibleTextDialog) return false;
+  const rect = bibleTextDialog.getBoundingClientRect();
+  return event.clientX < rect.left
+    || event.clientX > rect.right
+    || event.clientY < rect.top
+    || event.clientY > rect.bottom;
+}
+bibleTextDialog.addEventListener('click', event => {
+  if (!bibleTextDialogClickIsOutside(event)) return;
   if (bibleVersePopupMode) window.close(); else bibleTextDialog.close();
 });
 bibleTextDialog.addEventListener('cancel', event => {
@@ -145,7 +157,7 @@ notebookNameInput.addEventListener('keydown', event => {
 selectAllNotebooksButton.addEventListener('click', () => {
   hiddenNotebookIds.clear();
   loadNotebookSelector().then(async () => {
-    await (activeSearchQuery ? renderSearch(activeSearchQuery) : renderTree());
+    await renderNotesList();
     await loadDownloadLog(true);
   }).catch(showError);
 });
@@ -153,7 +165,7 @@ selectAllNotebooksButton.addEventListener('click', () => {
 clearAllNotebooksButton.addEventListener('click', () => {
   for (const notebook of notebooksCache) hiddenNotebookIds.add(notebook.id);
   loadNotebookSelector().then(async () => {
-    await (activeSearchQuery ? renderSearch(activeSearchQuery) : renderTree());
+    await renderNotesList();
     await loadDownloadLog(true);
   }).catch(showError);
 });

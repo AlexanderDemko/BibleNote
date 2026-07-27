@@ -17,10 +17,10 @@ function updateSyncControls(running) {
   quickSyncButton.textContent = running ? '…' : '↻';
   quickSyncButton.setAttribute('aria-label', running
     ? 'Синхронизация выполняется'
-    : 'Быстрая синхронизация выбранных блокнотов');
+    : 'Обновить изменения в выбранных блокнотах');
   quickSyncButton.title = running
     ? 'Синхронизация выполняется'
-    : 'Быстрая синхронизация: загрузить только новые и изменённые страницы';
+    : 'Проверить изменённые разделы и загрузить новые или изменённые страницы';
   updateSyncSettingsPresentation();
   document.querySelectorAll('.tree-sync').forEach(control => control.setAttribute('aria-disabled', String(running)));
   document.querySelectorAll('.title-sync').forEach(control => {
@@ -29,57 +29,85 @@ function updateSyncControls(running) {
   });
 }
 
+const syncModeLabels = {
+  quick:'Обновить изменения',
+  full:'Проверить все разделы',
+  rebuild:'Пересоздать локальный кэш'
+};
+let lastFullContentPolicy = 'changed';
+let lastSyncProgressPhase = 'starting';
+const safeSyncConcurrency = 1;
+
+function currentSyncMode() {
+  return syncModeInputs.find(input => input.checked)?.value || 'quick';
+}
+
+function currentContentPolicy(mode = currentSyncMode()) {
+  if (mode === 'quick') return 'changed';
+  if (mode === 'rebuild') return 'all';
+  return syncContentPolicyEl.value;
+}
+
 function currentSyncSettings() {
-  const maxPagesValue = document.getElementById('syncMaxPages').value;
-  const refreshValue = document.getElementById('syncRefreshHours').value;
-  const metadataOnly = document.getElementById('syncMetadataOnly').checked;
-  const replaceAll = !metadataOnly && document.getElementById('syncReplaceAll').checked;
+  const mode = currentSyncMode();
+  const contentPolicy = currentContentPolicy(mode);
+  const metadataOnly = false;
+  const replaceAll = mode === 'rebuild';
   return {
-    maxPages: !replaceAll && maxPagesValue ? Number(maxPagesValue) : undefined,
-    concurrency: Number(document.getElementById('syncConcurrency').value),
-    refreshOlderThanHours: !replaceAll && refreshValue ? Number(refreshValue) : undefined,
+    concurrency: safeSyncConcurrency,
     metadataOnly,
     replaceAll,
-    forceContent: !replaceAll && document.getElementById('syncForceContent').checked,
+    forceContent: mode === 'full' && contentPolicy === 'all',
     includeHtml: document.getElementById('syncIncludeHtml').checked,
-    parseBibleRefs: document.getElementById('syncParseBibleRefs').checked,
-    forceBibleParse: document.getElementById('syncForceBibleParse').checked,
+    parseBibleRefs: true,
+    incrementalMetadata: mode === 'quick',
     bibleModule: currentBibleModule()
   };
 }
 
-function updateSyncSettingsPresentation() {
-  const settings = currentSyncSettings();
-  for (const id of ['syncConcurrency', 'syncMetadataOnly']) {
-    document.getElementById(id).disabled = syncRunning;
+function renderSyncPlan(settings, mode) {
+  const selectedCount = selectedNotebookIds().length;
+  const contentPolicy = currentContentPolicy(mode);
+  const lines = [
+    `${selectedCount} ${pluralRu(selectedCount, 'блокнот', 'блокнота', 'блокнотов')}`,
+    mode === 'quick' ? 'Только изменённые разделы' : 'Все разделы',
+    contentPolicy === 'all'
+        ? 'Содержимое всех найденных страниц'
+        : 'Только новое и изменённое содержимое',
+    mode === 'rebuild' ? 'Локальный кэш будет удалён' : 'Локальный кэш будет сохранён',
+    'Библейские ссылки будут обработаны автоматически'
+  ];
+  syncPlanSummaryEl.replaceChildren();
+  for (const line of lines) {
+    const item = document.createElement('span');
+    item.textContent = line;
+    syncPlanSummaryEl.append(item);
   }
-  document.getElementById('syncMaxPages').disabled = syncRunning || settings.replaceAll;
-  document.getElementById('syncRefreshHours').disabled = syncRunning || settings.replaceAll;
-  document.getElementById('syncReplaceAll').disabled = syncRunning || settings.metadataOnly;
-  document.getElementById('syncForceContent').disabled = syncRunning || settings.metadataOnly || settings.replaceAll;
+}
+
+function updateSyncSettingsPresentation() {
+  const mode = currentSyncMode();
+  if (mode === 'full') {
+    syncContentPolicyEl.value = lastFullContentPolicy;
+  } else {
+    syncContentPolicyEl.value = mode === 'rebuild' ? 'all' : 'changed';
+  }
+  const settings = currentSyncSettings();
+  for (const input of syncModeInputs) input.disabled = syncRunning;
+  syncContentPolicyEl.disabled = syncRunning || mode !== 'full';
   document.getElementById('syncIncludeHtml').disabled = syncRunning || settings.metadataOnly;
-  document.getElementById('syncParseBibleRefs').disabled = syncRunning || settings.metadataOnly;
-  document.getElementById('syncForceBibleParse').disabled = syncRunning || settings.metadataOnly || !settings.parseBibleRefs;
-  syncSettingsSummaryEl.textContent = settings.metadataOnly
-    ? 'Параметры синхронизации · только метаданные'
-    : settings.replaceAll
-      ? 'Параметры синхронизации · полная перезапись'
-    : settings.parseBibleRefs
-      ? 'Параметры синхронизации'
-      : settings.includeHtml
-        ? 'Параметры синхронизации · с HTML'
-        : 'Параметры синхронизации';
-  syncSettingsNoteEl.textContent = settings.metadataOnly
-    ? 'Контент и HTML не скачиваются. Настройка применяется ко всем вариантам синхронизации.'
-    : settings.replaceAll
-      ? 'Перед полной синхронизацией все таблицы локального кэша будут удалены и созданы заново. Точечные кнопки ↻ эту настройку не используют.'
-    : settings.includeHtml
-      ? 'HTML будет сохранён при полной и точечной синхронизации. На странице появится кнопка «Показать HTML».'
-      : 'Применяются к полной синхронизации и ко всем кнопкам ↻ в дереве.';
+  if (!syncRunning) syncButton.textContent = syncModeLabels[mode];
+  renderSyncPlan(settings, mode);
 }
 
 function saveSyncSettings() {
-  localStorage.setItem('onenote.syncSettings', JSON.stringify(currentSyncSettings()));
+  const mode = currentSyncMode();
+  if (mode === 'full') lastFullContentPolicy = syncContentPolicyEl.value;
+  localStorage.setItem('onenote.syncSettings', JSON.stringify({
+    ...currentSyncSettings(),
+    syncMode:mode === 'rebuild' ? 'full' : mode,
+    contentPolicy:lastFullContentPolicy
+  }));
   updateSyncSettingsPresentation();
 }
 
@@ -87,29 +115,25 @@ function loadSyncSettings() {
   try {
     const rawSettings = localStorage.getItem('onenote.syncSettings');
     const settings = JSON.parse(rawSettings || '{}');
+    const mode = ['quick', 'full', 'rebuild'].includes(settings.syncMode)
+      ? settings.syncMode
+      : rawSettings
+        ? settings.replaceAll === true ? 'rebuild' : 'full'
+        : 'quick';
+    const contentPolicy = ['changed', 'all'].includes(settings.contentPolicy)
+      ? settings.contentPolicy
+      : settings.forceContent === true
+          ? 'all'
+          : 'changed';
+    lastFullContentPolicy = contentPolicy;
+    const modeInput = syncModeInputs.find(input => input.value === mode);
+    if (modeInput) modeInput.checked = true;
+    syncContentPolicyEl.value = mode === 'full' ? contentPolicy : mode === 'rebuild' ? 'all' : 'changed';
     if (!localStorage.getItem('onenote.syncSettings.defaultBibleParse')) {
       settings.includeHtml = true;
-      settings.parseBibleRefs = true;
-      settings.forceBibleParse = false;
       localStorage.setItem('onenote.syncSettings.defaultBibleParse', 'true');
     }
-    if (!localStorage.getItem('onenote.syncSettings.incrementalBibleParseDefault')) {
-      settings.forceBibleParse = false;
-      localStorage.setItem('onenote.syncSettings.incrementalBibleParseDefault', 'true');
-    }
-    if (!localStorage.getItem('onenote.syncSettings.defaultConcurrency1')) {
-      settings.concurrency = 1;
-      localStorage.setItem('onenote.syncSettings.defaultConcurrency1', 'true');
-    }
-    if (Number.isInteger(settings.maxPages) && settings.maxPages > 0) document.getElementById('syncMaxPages').value = String(settings.maxPages);
-    if ([1, 2, 3].includes(settings.concurrency)) document.getElementById('syncConcurrency').value = String(settings.concurrency);
-    if (Number.isInteger(settings.refreshOlderThanHours) && settings.refreshOlderThanHours >= 0) document.getElementById('syncRefreshHours').value = String(settings.refreshOlderThanHours);
-    document.getElementById('syncMetadataOnly').checked = settings.metadataOnly === true;
-    document.getElementById('syncReplaceAll').checked = settings.replaceAll === true;
-    document.getElementById('syncForceContent').checked = settings.forceContent === true;
     document.getElementById('syncIncludeHtml').checked = settings.includeHtml !== false;
-    document.getElementById('syncParseBibleRefs').checked = settings.parseBibleRefs !== false;
-    document.getElementById('syncForceBibleParse').checked = settings.forceBibleParse === true;
     if (typeof settings.bibleModule === 'string' && settings.bibleModule.trim()) bibleModuleNameInput.value = settings.bibleModule.trim();
   } catch {
     localStorage.removeItem('onenote.syncSettings');
@@ -117,9 +141,10 @@ function loadSyncSettings() {
   updateSyncSettingsPresentation();
 }
 
-for (const id of ['syncMaxPages', 'syncConcurrency', 'syncRefreshHours', 'syncMetadataOnly', 'syncReplaceAll', 'syncForceContent', 'syncIncludeHtml', 'syncParseBibleRefs', 'syncForceBibleParse']) {
+for (const id of ['syncContentPolicy', 'syncIncludeHtml']) {
   document.getElementById(id).addEventListener('change', saveSyncSettings);
 }
+for (const input of syncModeInputs) input.addEventListener('change', saveSyncSettings);
 
 function errorMessage(error) {
   return error?.message || String(error);
@@ -146,8 +171,10 @@ function handleSyncPollError(error) {
 async function submitSync(payload, label, context = {}) {
   if (syncRunning) return;
   uiLog('ui.submitSync', { label, context, payload });
-  activeSyncContext = { ...context, label };
+  activeSyncContext = { ...context, label, payload };
+  lastSyncProgressPhase = payload.localBibleReparse ? 'bible-parse-local' : 'starting';
   updateSyncControls(true);
+  syncStateEl.classList.remove('has-result', 'warning', 'success');
   syncStateEl.textContent = 'Запуск: ' + label;
   showActivity('Синхронизация: ' + label + '…', 'running', true);
   let started = false;
@@ -169,6 +196,7 @@ async function submitSync(payload, label, context = {}) {
 function startTargetedSync(scope, label) {
   const payload = { ...currentSyncSettings(), ...scope };
   delete payload.replaceAll;
+  delete payload.incrementalMetadata;
   if (scope.pageId) {
     delete payload.maxPages;
     if (!payload.metadataOnly) payload.forceContent = true;
@@ -194,7 +222,7 @@ quickSyncButton.addEventListener('click', async () => {
     bibleModule: settings.bibleModule,
     notebookIds
   };
-  await submitSync(payload, 'выбранные блокноты · только изменения', { notebookIds, quick:true });
+  await submitSync(payload, 'обновление изменений', { notebookIds, syncMode:'quick', quick:true });
 });
 
 reparseBibleCacheButton.addEventListener('click', async () => {
@@ -212,35 +240,160 @@ syncButton.addEventListener('click', async () => {
     syncStateEl.textContent = 'Выберите хотя бы один блокнот';
     return;
   }
+  const mode = currentSyncMode();
   const settings = currentSyncSettings();
   if (settings.replaceAll && !window.confirm(
-    'Все таблицы локального кэша, история синхронизации, результаты разбора и локальные названия блокнотов будут удалены. Продолжить?'
+    'Локальный кэш, история синхронизации, результаты разбора и локальные названия блокнотов будут удалены. Все выбранные страницы придётся скачать заново. Продолжить?'
   )) return;
-  if (settings.replaceAll) {
-    document.getElementById('syncReplaceAll').checked = false;
+  await submitSync({ ...settings, notebookIds }, syncModeLabels[mode].toLowerCase(), { notebookIds, syncMode:mode });
+  if (mode === 'rebuild') {
+    const fullModeInput = syncModeInputs.find(input => input.value === 'full');
+    if (fullModeInput) fullModeInput.checked = true;
     saveSyncSettings();
   }
-  await submitSync({ ...settings, notebookIds }, 'выбранные блокноты', { notebookIds });
 });
+
+function syncProgressStages(payload = {}) {
+  if (payload.localBibleReparse) return [{ phase:'bible-parse-local', title:'Пересчёт библейских ссылок' }];
+  const stages = [{ phase:'structure', title:payload.replaceAll ? 'Пересоздание кэша и проверка структуры' : 'Проверка структуры' }];
+  if (!payload.metadataOnly) stages.push({ phase:'content', title:'Загрузка содержимого' });
+  if (!payload.metadataOnly && payload.parseBibleRefs !== false) stages.push({ phase:'bible-parse', title:'Обработка библейских ссылок' });
+  return stages;
+}
+
+function normalizedSyncProgressPhase(phase) {
+  if (phase === 'graph-retry') return lastSyncProgressPhase;
+  if (phase === 'content') return 'content';
+  if (phase === 'bible-parse' || phase === 'bible-parse-local') return phase;
+  return 'structure';
+}
+
+function localizedSyncProgressMessage(progress) {
+  const mode = activeSyncContext?.syncMode;
+  switch (progress.phase) {
+    case 'starting': return 'Подготовка';
+    case 'reset-cache': return 'Пересоздание таблиц локального кэша';
+    case 'notebooks': return 'Загрузка списка блокнотов';
+    case 'sections': return 'Загрузка списка разделов';
+    case 'section-groups': return 'Загрузка структуры групп разделов';
+    case 'pages': return mode === 'quick' ? 'Проверка изменённых разделов' : 'Проверка всех разделов';
+    case 'content': return 'Загрузка нового и изменённого содержимого';
+    case 'bible-parse': return 'Обработка библейских ссылок с помощью BibleNote';
+    case 'bible-parse-local': return 'Пересчёт ссылок по сохранённому тексту';
+    case 'graph-retry': return progress.message?.replace('Microsoft Graph throttling: retry in', 'Microsoft Graph ограничил запросы; повтор через')
+      .replace('Microsoft Graph temporary error', 'Временная ошибка Microsoft Graph') || 'Повтор запроса к Microsoft Graph';
+    default: return progress.message || 'Синхронизация';
+  }
+}
+
+function syncProgressDetails(progress) {
+  const parts = [localizedSyncProgressMessage(progress)];
+  if (progress.sectionGroups != null) parts.push('групп разделов: ' + progress.sectionGroups);
+  if (progress.sections != null) parts.push('разделов: ' + (progress.sectionTotal ? progress.sections + '/' + progress.sectionTotal : progress.sections));
+  if (progress.pages != null) parts.push('страниц: ' + progress.pages);
+  if (progress.contentDone != null && progress.contentTotal != null) parts.push('содержимое: ' + progress.contentDone + '/' + progress.contentTotal);
+  if (progress.contentSkipped != null) parts.push('без изменений: ' + progress.contentSkipped);
+  if (progress.bibleParseDone != null && progress.bibleParseTotal != null) parts.push('BibleNote: ' + progress.bibleParseDone + '/' + progress.bibleParseTotal);
+  if (progress.bibleParseSkipped != null) parts.push('актуальны: ' + progress.bibleParseSkipped);
+  if (progress.bibleRefsRecognized != null) parts.push('ссылок: ' + progress.bibleRefsRecognized);
+  if (progress.errors) parts.push('ошибок: ' + progress.errors);
+  return parts;
+}
+
+function renderSyncProgress(progress) {
+  if (progress.phase !== 'graph-retry') lastSyncProgressPhase = progress.phase || lastSyncProgressPhase;
+  const stages = syncProgressStages(activeSyncContext?.payload);
+  const phase = normalizedSyncProgressPhase(progress.phase);
+  const stageIndex = Math.max(0, stages.findIndex(stage => stage.phase === phase));
+  const stage = stages[stageIndex] || stages[0];
+  const kicker = `Этап ${stageIndex + 1} из ${stages.length}`;
+  const details = syncProgressDetails(progress);
+
+  const box = document.createElement('div');
+  box.className = 'sync-progress-box';
+  const heading = document.createElement('div');
+  heading.className = 'sync-progress-heading';
+  const kickerEl = document.createElement('span');
+  kickerEl.className = 'sync-progress-kicker';
+  kickerEl.textContent = kicker;
+  const title = document.createElement('strong');
+  title.textContent = progress.phase === 'graph-retry' ? stage.title + ' · ожидание Microsoft Graph' : stage.title;
+  heading.append(kickerEl, title);
+
+  const track = document.createElement('div');
+  track.className = 'sync-progress-track';
+  track.setAttribute('aria-label', `${kicker}: ${stage.title}`);
+  stages.forEach((item, index) => {
+    const marker = document.createElement('span');
+    marker.className = index < stageIndex ? 'done' : index === stageIndex ? 'current' : '';
+    marker.title = item.title;
+    track.append(marker);
+  });
+
+  const detail = document.createElement('div');
+  detail.className = 'sync-progress-detail';
+  detail.textContent = details.join(' · ') || 'Подготовка';
+  box.append(heading, track, detail);
+  syncStateEl.classList.remove('has-result', 'warning', 'success');
+  syncStateEl.replaceChildren(box);
+  return `${kicker} · ${stage.title}${details.length ? ' · ' + details.join(' · ') : ''}`;
+}
+
+function appendSyncResultMetric(container, label, value) {
+  const item = document.createElement('span');
+  const number = document.createElement('strong');
+  number.textContent = String(value ?? 0);
+  const caption = document.createElement('small');
+  caption.textContent = label;
+  item.append(number, caption);
+  container.append(item);
+}
+
+function renderSyncResult(result, context) {
+  const errorCount = (result.contentErrors || 0) + (result.sectionScanErrors || 0) + (result.bibleRefsParseErrors || 0);
+  const box = document.createElement('div');
+  box.className = 'sync-result-box';
+  const title = document.createElement('strong');
+  title.className = 'sync-result-title';
+  title.textContent = errorCount ? 'Завершено с ошибками' : 'Синхронизация завершена';
+  const metrics = document.createElement('div');
+  metrics.className = 'sync-result-metrics';
+  if (context?.localBibleReparse) {
+    appendSyncResultMetric(metrics, 'обработано страниц', result.bibleRefsPagesParsed);
+    appendSyncResultMetric(metrics, 'распознано ссылок', result.bibleRefsRecognized);
+    appendSyncResultMetric(metrics, 'ошибок', result.bibleRefsParseErrors);
+  } else {
+    appendSyncResultMetric(metrics, 'проверено страниц', result.pages);
+    appendSyncResultMetric(metrics, 'загружено', result.contentDownloaded);
+    appendSyncResultMetric(metrics, 'без изменений', result.contentSkipped);
+    appendSyncResultMetric(metrics, 'ошибок загрузки', result.contentErrors);
+    appendSyncResultMetric(metrics, 'ошибок разделов', result.sectionScanErrors);
+    appendSyncResultMetric(metrics, 'ошибок BibleNote', result.bibleRefsParseErrors);
+  }
+  box.append(title, metrics);
+  if (errorCount && typeof openDownloadLogDialog === 'function') {
+    const openLog = document.createElement('button');
+    openLog.className = 'small-button sync-result-action';
+    openLog.type = 'button';
+    openLog.textContent = 'Открыть журнал загрузки';
+    openLog.addEventListener('click', openDownloadLogDialog);
+    box.append(openLog);
+  }
+  syncStateEl.classList.add('has-result', errorCount ? 'warning' : 'success');
+  syncStateEl.replaceChildren(box);
+  return { errorCount, title:title.textContent };
+}
 
 async function refreshSyncState() {
   clearTimeout(syncPollTimer);
   const state = await api('/api/sync', { timeoutMs:120000 });
   const running = state.status === 'running';
   updateSyncControls(running);
-  syncButton.textContent = running ? 'Синхронизация выполняется…' : 'Запустить синхронизацию';
+  if (running) syncButton.textContent = 'Синхронизация выполняется…';
   if (running) {
     const progress = state.progress || {};
-    const parts = [progress.message || progress.phase || 'Подготовка'];
-    if (progress.sectionGroups != null) parts.push('групп разделов: ' + progress.sectionGroups);
-    if (progress.sections != null) parts.push('разделов: ' + (progress.sectionTotal ? progress.sections + '/' + progress.sectionTotal : progress.sections));
-    if (progress.pages != null) parts.push('страниц: ' + progress.pages);
-    if (progress.contentDone != null && progress.contentTotal != null) parts.push('контент: ' + progress.contentDone + '/' + progress.contentTotal);
-    if (progress.bibleParseDone != null && progress.bibleParseTotal != null) parts.push('BibleNote: ' + progress.bibleParseDone + '/' + progress.bibleParseTotal);
-    if (progress.bibleRefsRecognized != null) parts.push('ссылок: ' + progress.bibleRefsRecognized);
-    if (progress.errors) parts.push('ошибок: ' + progress.errors);
-    syncStateEl.textContent = parts.join(' · ');
-    showActivity(parts.join(' · '), 'running', true);
+    const progressText = renderSyncProgress(progress);
+    showActivity(progressText, 'running', true);
     if (Date.now() - lastSyncLogRefreshAt > 15000) {
       lastSyncLogRefreshAt = Date.now();
       loadDownloadLog(false).catch(error => console.warn(error));
@@ -249,33 +402,32 @@ async function refreshSyncState() {
   } else if (state.status === 'success') {
     const result = state.result;
     const completedContext = activeSyncContext;
-    const successMessage = completedContext?.localBibleReparse
-      ? 'Готово: локально перепарсено ' + result.bibleRefsPagesParsed + ' из ' + result.pages + ' ' + pluralRu(result.pages, 'страницы', 'страниц', 'страниц') + ', распознано ссылок ' + (result.bibleRefsRecognized || 0) + ', ошибок ' + (result.bibleRefsParseErrors || 0)
-      : 'Готово: групп разделов ' + (result.sectionGroups || 0) + ', разделов ' + result.sections + ', ' + result.pages + ' ' + pluralRu(result.pages, 'страница', 'страницы', 'страниц') + ', загружено ' + result.contentDownloaded + ', пропущено ' + result.contentSkipped + ', распознано ссылок ' + (result.bibleRefsRecognized || 0) + ', ошибок ' + result.contentErrors;
-    syncStateEl.textContent = successMessage;
-    showActivity(successMessage, 'success');
+    const renderedResult = renderSyncResult(result, completedContext);
+    const resultSummary = completedContext?.localBibleReparse
+      ? `${renderedResult.title}: обработано ${result.bibleRefsPagesParsed || 0}, ошибок ${renderedResult.errorCount}`
+      : `${renderedResult.title}: проверено ${result.pages || 0}, загружено ${result.contentDownloaded || 0}, ошибок ${renderedResult.errorCount}`;
+    showActivity(resultSummary, renderedResult.errorCount ? 'warning' : 'success');
     const status = await api('/api/status');
     statusEl.textContent = cacheStatusText(status);
     if (completedContext?.pageId && selectedPageId === completedContext.pageId) {
       loadDownloadLog(false).catch(error => console.warn(error));
       await openPage(completedContext.pageId, { updateUrl:false, paragraphIndex:currentTargetParagraphIndex });
-    } else if (activeSearchQuery) {
-      await loadNotebookSelector();
-      await loadDownloadLog(true);
-      await renderSearch(activeSearchQuery);
+      await renderNotesList();
     } else {
       await loadNotebookSelector();
       await loadDownloadLog(true);
-      await renderTree();
+      await renderNotesList();
     }
     activeSyncContext = null;
     updateSyncControls(false);
   } else if (state.status === 'failed') {
+    syncStateEl.classList.remove('has-result', 'warning', 'success');
     syncStateEl.textContent = 'Ошибка: ' + state.error;
     showActivity('Ошибка синхронизации: ' + state.error, 'error');
     activeSyncContext = null;
     updateSyncControls(false);
   } else {
+    syncStateEl.classList.remove('has-result', 'warning', 'success');
     syncStateEl.textContent = 'Синхронизация не запущена';
   }
 }
@@ -327,14 +479,13 @@ async function initializeApp() {
     const initialPageId = pageIdFromUrl();
     if (initialPageId) {
       await openPage(initialPageId, { replaceUrl:true });
-      if (activeSearchQuery) await renderSearch(activeSearchQuery);
-      else await renderTree();
+      await renderNotesList();
     } else if (initialBibleLocation) {
       await openBibleReaderLocation(initialBibleLocation, { replaceUrl:true, rememberHistory:false });
-      await renderTree();
+      await renderNotesList();
     } else {
       renderEmptyPage();
-      await renderTree();
+      await renderNotesList();
     }
     loadDownloadLog(true).catch(error => console.warn(error));
     await openExternalBibleRefFromUrl();
@@ -355,4 +506,4 @@ searchHistory = loadSearchHistory();
 updateSearchOptionButtons();
 updateBibleTextHistoryButtons();
 loadSyncSettings();
-initializeApp().catch(showError);
+const bibleNoteInitialization = initializeApp().catch(showError);

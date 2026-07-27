@@ -76,7 +76,7 @@ test('stores only Bible relations calculated and returned by the API', () => {
       includeAuxiliaryRefs:true,
       orderByWeight:true
     });
-    assert.equal(weighted[0]?.bibleWeight, 0.8);
+    assert.equal(weighted[0]?.bibleWeight, 0.6667);
   } finally {
     db.close();
   }

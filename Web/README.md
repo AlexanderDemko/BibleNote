@@ -234,7 +234,9 @@ Build only the portable executable:
 npm.cmd run dist:portable
 ```
 
-The build command stages the neighboring `..\BibleNote\Application` project into `vendor\BibleNote`, stages the local `node.exe` into `vendor\node`, compiles this TypeScript project, and creates Windows artifacts under `release\`. BibleNote is staged as a self-contained `win-x64` .NET build, so the bundled API does not require a separately installed .NET runtime. The cache UI runs in the bundled Node process while Electron hosts the desktop window; this avoids native SQLite ABI mismatches inside Electron.
+The build command stages the neighboring `..\BibleNote\Application` project into `vendor\BibleNote`, stages the local `node.exe` into `vendor\node`, builds the Windows OneNote Ribbon add-ins, compiles this TypeScript project, and creates Windows artifacts under `release\`. BibleNote is staged as a self-contained `win-x64` .NET build, so the bundled API does not require a separately installed .NET runtime. The cache UI runs in the bundled Node process while Electron hosts the desktop window; this avoids native SQLite ABI mismatches inside Electron.
+
+On Windows, Parameters → OneNote Integration lists detected classic desktop OneNote installations. Enabling the checkbox registers the matching Office 2010, 2013, or 2016-compatible add-in for the current user. Restart OneNote after changing the setting. The Ribbon tab provides full current-page synchronization, quick COM-based link analysis, and an Open BibleNote command. The integration section and add-in binaries are not included in macOS builds.
 
 Use the installer for normal local use. The portable executable is convenient for copying one file, but it extracts the application on every launch, which is much slower than starting the installed app or `release\win-unpacked\OneNote Bible Explorer.exe`.
 

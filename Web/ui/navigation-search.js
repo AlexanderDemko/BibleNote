@@ -444,7 +444,7 @@ function rerunSearch() {
   activeSearchQuery = query;
   if (query) renderSearch(query).catch(showError);
   else {
-    renderTree().catch(showError);
+    renderNotesList().catch(showError);
     updateOpenPageSearchMatches(null, '');
   }
 }

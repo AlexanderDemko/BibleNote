@@ -7,6 +7,36 @@ export function getCachedPage(db: Database.Database, pageId: string): PageRow | 
   return db.prepare('SELECT * FROM pages WHERE id = ?').get(pageId) as PageRow | undefined;
 }
 
+export function findCachedPageByOneNoteGuid(
+  db: Database.Database,
+  pageGuid: string
+): PageRow | undefined {
+  return db.prepare(`
+    SELECT *
+    FROM pages
+    WHERE deleted_at IS NULL
+      AND links_json IS NOT NULL
+      AND instr(lower(links_json), lower(?)) > 0
+    LIMIT 1
+  `).get(pageGuid) as PageRow | undefined;
+}
+
+export function findCachedGraphSectionIdByOneNoteGuid(
+  db: Database.Database,
+  sectionGuid: string
+): string | undefined {
+  const row = db.prepare(`
+    SELECT parent_section_id AS id
+    FROM pages
+    WHERE deleted_at IS NULL
+      AND parent_section_id IS NOT NULL
+      AND links_json IS NOT NULL
+      AND instr(lower(links_json), lower(?)) > 0
+    LIMIT 1
+  `).get(sectionGuid) as { id: string } | undefined;
+  return row?.id;
+}
+
 export function listCachedPagesForBibleParse(
   db: Database.Database,
   options: { limit?: number } = {}
@@ -208,6 +238,135 @@ export function searchCache(
   return db.prepare(sql).all(params) as CacheSearchResult[];
 }
 
+export function relaxedSearchTextScore(
+  text: string,
+  query: string,
+  caseSensitive: boolean
+): { score: number; weight: number; matchIndex: number } | undefined {
+  const comparableText = caseSensitive ? text : text.toLocaleLowerCase();
+  const comparableQuery = caseSensitive ? query : query.toLocaleLowerCase();
+  const phraseIndex = comparableText.indexOf(comparableQuery);
+  if (phraseIndex >= 0) return {
+    score:3000 - Math.min(phraseIndex, 1000),
+    weight:1,
+    matchIndex:phraseIndex
+  };
+
+  const rawTerms = query.match(/[\p{L}\p{N}_-]+/gu) ?? [];
+  const terms = [...new Set(rawTerms
+    .filter(term => term.length > 1)
+    .map(term => caseSensitive ? term : term.toLocaleLowerCase()))];
+  if (terms.length === 0) return undefined;
+
+  const termPositions = terms.map(term => comparableText.indexOf(term));
+  const matchedPositions = termPositions.filter(position => position >= 0);
+  const requiredTerms = terms.length <= 2 ? terms.length : Math.ceil(terms.length * 0.6);
+  if (matchedPositions.length < requiredTerms) return undefined;
+
+  let orderedPairs = 0;
+  for (let index = 1; index < termPositions.length; index++) {
+    if (termPositions[index - 1] >= 0 && termPositions[index] > termPositions[index - 1]) {
+      orderedPairs += 1;
+    }
+  }
+  const span = matchedPositions.length > 1
+    ? Math.max(...matchedPositions) - Math.min(...matchedPositions)
+    : 200;
+  const coverage = matchedPositions.length / terms.length;
+  const order = terms.length > 1 ? orderedPairs / (terms.length - 1) : 1;
+  const proximity = Math.max(0, 1 - Math.min(span, 200) / 200);
+  const weight = Math.min(0.99, Math.round((coverage * 0.7 + order * 0.2 + proximity * 0.1) * 10000) / 10000);
+  return {
+    score:Math.round(weight * 1800),
+    weight,
+    matchIndex:Math.min(...matchedPositions)
+  };
+}
+
+export function searchCacheRelaxed(
+  db: Database.Database,
+  query: string,
+  options: {
+    limit?: number;
+    caseSensitive?: boolean;
+    notebookIds?: string[];
+  } = {}
+): CacheSearchResult[] {
+  const trimmed = query.trim();
+  if (!trimmed) throw new Error('Search query is empty.');
+  const caseSensitive = options.caseSensitive === true;
+  const terms = [...new Set((trimmed.match(/[\p{L}\p{N}_-]+/gu) ?? [])
+    .filter(term => term.length > 1)
+    .map(term => caseSensitive ? term : term.toLocaleLowerCase()))];
+  if (terms.length === 0) return [];
+
+  const limit = Math.max(1, Math.min(options.limit ?? 20, 100));
+  const candidateLimit = Math.max(200, Math.min(limit * 20, 2000));
+  const filters: string[] = ['p.deleted_at IS NULL'];
+  const params: Record<string, unknown> = {
+    ftsQuery:buildFtsQuery(terms.join(' '), 'or'),
+    candidateLimit
+  };
+  if (options.notebookIds) {
+    const notebookIds = [...new Set(options.notebookIds)];
+    if (notebookIds.length === 0) return [];
+    const placeholders = notebookIds.map((_, index) => `@notebookId${index}`);
+    filters.push(`p.parent_notebook_id IN (${placeholders.join(', ')})`);
+    notebookIds.forEach((id, index) => { params[`notebookId${index}`] = id; });
+  }
+
+  const candidates = db.prepare(`
+    SELECT
+      p.id,
+      p.title,
+      pages_fts.content AS contentText,
+      p.parent_notebook_id,
+      COALESCE(n.custom_display_name, p.parent_notebook_name) AS parent_notebook_name,
+      p.parent_section_name,
+      p.last_modified_date_time,
+      p.content_synced_at,
+      bm25(pages_fts) AS ftsScore
+    FROM pages_fts
+    JOIN pages p ON p.id = pages_fts.page_id
+    LEFT JOIN notebooks n ON n.id = p.parent_notebook_id
+    WHERE pages_fts MATCH @ftsQuery
+      AND ${filters.join(' AND ')}
+    ORDER BY ftsScore ASC
+    LIMIT @candidateLimit
+  `).all(params) as Array<Record<string, any>>;
+
+  type RankedCacheSearchResult = CacheSearchResult & { ftsScore: number };
+  return candidates
+    .map((candidate): RankedCacheSearchResult | undefined => {
+      const haystack = `${candidate.title ?? ''}\n${candidate.contentText ?? ''}`;
+      const relevance = relaxedSearchTextScore(haystack, trimmed, caseSensitive);
+      if (!relevance) return undefined;
+      const start = Math.max(0, relevance.matchIndex - 45);
+      const end = Math.min(haystack.length, relevance.matchIndex + Math.max(trimmed.length, 12) + 75);
+      return {
+        id:candidate.id,
+        title:candidate.title,
+        parent_notebook_id:candidate.parent_notebook_id,
+        parent_notebook_name:candidate.parent_notebook_name,
+        parent_section_name:candidate.parent_section_name,
+        last_modified_date_time:candidate.last_modified_date_time,
+        content_synced_at:candidate.content_synced_at,
+        snippet:(start > 0 ? '…' : '') + haystack.slice(start, end).replace(/\s+/g, ' ') + (end < haystack.length ? '…' : ''),
+        score:relevance.score,
+        search_weight:relevance.weight,
+        ftsScore:Number(candidate.ftsScore ?? 0)
+      };
+    })
+    .filter((result): result is RankedCacheSearchResult => result !== undefined)
+    .sort((left, right) =>
+      right.score - left.score
+      || left.ftsScore - right.ftsScore
+      || String(right.last_modified_date_time ?? '').localeCompare(String(left.last_modified_date_time ?? ''))
+    )
+    .slice(0, limit)
+    .map(({ ftsScore:_, ...result }) => result);
+}
+
 export function listCachedNotebooks(db: Database.Database): NotebookRow[] {
   return db.prepare('SELECT * FROM notebooks ORDER BY COALESCE(custom_display_name, display_name) COLLATE NOCASE').all() as NotebookRow[];
 }
@@ -343,10 +502,13 @@ export function searchBibleReferenceNotesByWeight(
   const filters = [
     'p.deleted_at IS NULL',
     'r.book_index = @bookIndex',
-    'r.chapter = @chapter',
-    'COALESCE(r.verse, 0) = @verse',
-    'COALESCE(r.top_chapter, r.chapter) = @topChapter',
-    'COALESCE(r.top_verse, r.verse, 0) = @topVerse'
+    `(
+      (r.chapter < @chapter OR (r.chapter = @chapter AND COALESCE(r.verse, 0) <= @verse))
+      AND
+      (COALESCE(r.top_chapter, r.chapter) > @topChapter
+        OR (COALESCE(r.top_chapter, r.chapter) = @topChapter
+          AND COALESCE(r.top_verse, r.verse, 999) >= @topVerse))
+    )`
   ];
   if (!options.includeAuxiliaryRefs) {
     filters.push(visibleBibleRefSql('r', 'pp'));
@@ -359,7 +521,6 @@ export function searchBibleReferenceNotesByWeight(
     verse: options.verse,
     topChapter,
     topVerse,
-    targetVerseId,
     limit
   };
   const notebookIds = [...new Set(options.notebookIds?.filter(Boolean) ?? [])];
@@ -375,12 +536,21 @@ export function searchBibleReferenceNotesByWeight(
   const orderBy = options.orderByWeight
     ? 'bibleWeight DESC, p.last_modified_date_time DESC, p.title COLLATE NOCASE'
     : 'p.last_modified_date_time DESC, p.title COLLATE NOCASE';
+  const paragraphRefCountFilter = options.includeAuxiliaryRefs
+    ? '1'
+    : visibleBibleRefSql('all_ref', 'all_pp');
   const rows = db.prepare(`
     WITH candidate_refs AS (
       SELECT
         r.id,
         r.page_id,
         r.paragraph_index,
+        r.start_index,
+        r.end_index,
+        r.chapter,
+        r.verse,
+        COALESCE(r.top_chapter, r.chapter) AS top_chapter,
+        COALESCE(r.top_verse, r.verse) AS top_verse,
         r.normalized_ref,
         r.original_text,
         pp.text AS paragraph_text,
@@ -391,7 +561,10 @@ export function searchBibleReferenceNotesByWeight(
       JOIN page_paragraphs pp ON pp.page_id = r.page_id AND pp.paragraph_index = r.paragraph_index
       WHERE ${filters.join(' AND ')}
     ), matching_refs AS (
-      SELECT id, page_id, paragraph_index, normalized_ref, original_text
+      SELECT
+        id, page_id, paragraph_index, start_index, end_index,
+        chapter, verse, top_chapter, top_verse,
+        normalized_ref, original_text
       FROM (
         SELECT
           candidate_refs.*,
@@ -406,23 +579,34 @@ export function searchBibleReferenceNotesByWeight(
         FROM candidate_refs
       )
       WHERE occurrence_rank = 1
-    ), relation_weights AS (
-      SELECT rel.verse_ref_id AS ref_id, SUM(rel.relation_weight) AS relation_weight
+    ), matching_paragraphs AS (
+      SELECT DISTINCT page_id, paragraph_index
+      FROM matching_refs
+    ), paragraph_ref_counts AS (
+      SELECT
+        all_ref.page_id,
+        all_ref.paragraph_index,
+        COUNT(*) AS reference_count
+      FROM paragraph_verse_refs all_ref
+      JOIN matching_paragraphs mp
+        ON mp.page_id = all_ref.page_id
+        AND mp.paragraph_index = all_ref.paragraph_index
+      JOIN page_paragraphs all_pp
+        ON all_pp.page_id = all_ref.page_id
+        AND all_pp.paragraph_index = all_ref.paragraph_index
+      WHERE ${paragraphRefCountFilter}
+      GROUP BY all_ref.page_id, all_ref.paragraph_index
+    ), relation_ref_verses AS (
+      SELECT rel.verse_ref_id AS ref_id, rel.verse_id
       FROM paragraph_verse_relations rel
       JOIN matching_refs mr ON mr.id = rel.verse_ref_id
-      WHERE rel.verse_id = @targetVerseId
-      GROUP BY rel.verse_ref_id
-
-      UNION ALL
-
-      SELECT rel.relative_verse_ref_id AS ref_id, SUM(rel.relation_weight) AS relation_weight
+      UNION
+      SELECT rel.relative_verse_ref_id AS ref_id, rel.relative_verse_id AS verse_id
       FROM paragraph_verse_relations rel
       JOIN matching_refs mr ON mr.id = rel.relative_verse_ref_id
-      WHERE rel.relative_verse_id = @targetVerseId
-      GROUP BY rel.relative_verse_ref_id
-    ), combined_weights AS (
-      SELECT ref_id, SUM(relation_weight) AS relation_weight
-      FROM relation_weights
+    ), relation_ref_verse_counts AS (
+      SELECT ref_id, COUNT(DISTINCT verse_id) AS verse_count
+      FROM relation_ref_verses
       GROUP BY ref_id
     )
     SELECT
@@ -433,19 +617,38 @@ export function searchBibleReferenceNotesByWeight(
       p.parent_section_name,
       MIN(mr.paragraph_index) AS paragraphIndex,
       GROUP_CONCAT(DISTINCT mr.paragraph_index) AS paragraphIndexes,
+      GROUP_CONCAT(
+        mr.paragraph_index || ':' || COALESCE(mr.start_index, -1) || ':' || COALESCE(mr.end_index, -1),
+        char(31)
+      ) AS bibleOccurrences,
       MIN(pp.text) AS snippet,
       MIN(COALESCE(mr.normalized_ref, mr.original_text)) AS bibleRef,
       0 AS bibleMatchScore,
-      ROUND(SUM(1.0 / (1.0 + COALESCE(cw.relation_weight, 0))), 4) AS bibleWeight
+      ROUND(SUM(
+        (2.0 / (COALESCE(prc.reference_count, 1) + 1))
+        / CASE
+          WHEN mr.top_chapter = mr.chapter
+            AND mr.verse IS NOT NULL
+            AND mr.top_verse >= mr.verse
+            THEN mr.top_verse - mr.verse + 1
+          ELSE MAX(1, COALESCE(rvc.verse_count, 1))
+        END
+      ), 4) AS bibleWeight
     FROM matching_refs mr
     JOIN pages p ON p.id = mr.page_id
     LEFT JOIN notebooks n ON n.id = p.parent_notebook_id
     JOIN page_paragraphs pp ON pp.page_id = mr.page_id AND pp.paragraph_index = mr.paragraph_index
-    LEFT JOIN combined_weights cw ON cw.ref_id = mr.id
+    LEFT JOIN paragraph_ref_counts prc
+      ON prc.page_id = mr.page_id
+      AND prc.paragraph_index = mr.paragraph_index
+    LEFT JOIN relation_ref_verse_counts rvc ON rvc.ref_id = mr.id
     GROUP BY mr.page_id
     ORDER BY ${orderBy}
     LIMIT @limit
-  `).all(params) as Array<Omit<WeightedBibleReferenceNote, 'paragraphIndexes'> & { paragraphIndexes: string | null }>;
+  `).all(params) as Array<
+    Omit<WeightedBibleReferenceNote, 'paragraphIndexes' | 'bibleOccurrences'>
+    & { paragraphIndexes: string | null; bibleOccurrences: string | null }
+  >;
 
   return rows.map(row => ({
     ...row,
@@ -453,7 +656,19 @@ export function searchBibleReferenceNotesByWeight(
       .split(',')
       .map(value => Number(value))
       .filter(Number.isInteger)
-      .sort((left, right) => left - right)
+      .sort((left, right) => left - right),
+    bibleOccurrences: String(row.bibleOccurrences ?? '')
+      .split(String.fromCharCode(31))
+      .map(value => value.split(':').map(Number))
+      .filter(parts => parts.length === 3 && parts.every(Number.isInteger))
+      .map(([paragraphIndex, startIndex, endIndex]) => ({
+        paragraphIndex,
+        startIndex:startIndex >= 0 ? startIndex : null,
+        endIndex:endIndex >= 0 ? endIndex : null
+      }))
+      .sort((left, right) => left.paragraphIndex - right.paragraphIndex
+        || Number(left.startIndex ?? -1) - Number(right.startIndex ?? -1)
+        || Number(left.endIndex ?? -1) - Number(right.endIndex ?? -1))
   }));
 }
 
@@ -915,7 +1130,8 @@ export function searchCacheAdvanced(
       last_modified_date_time:row.lastModifiedDateTime,
       content_synced_at:row.contentSyncedAt,
       snippet:(start > 0 ? '…' : '') + haystack.slice(start, end).replace(/\s+/g, ' ') + (end < haystack.length ? '…' : ''),
-      score:matchIndex
+      score:matchIndex,
+      search_weight:1
     });
     if (results.length >= options.limit) break;
   }

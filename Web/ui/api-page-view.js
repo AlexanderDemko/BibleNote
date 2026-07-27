@@ -63,7 +63,7 @@ function normalizeParagraphText(value) {
   return decodeHtmlText(value).replace(/\s+/g, ' ').trim();
 }
 
-function pageHtmlFrameSrcdoc(rawHtml, bibleParagraphs, targetParagraphIndexes = []) {
+function pageHtmlFrameSrcdoc(rawHtml, bibleParagraphs, targetParagraphIndexes = [], targetBibleOccurrences = []) {
   const normalizeBibleHref = href => String(href || '').trim()
     .replace(/^https?:\/\/isbtBibleVerse:/i, 'isbtBibleVerse:')
     .replace(/^https?:\/\/bnVerse:/i, 'bnVerse:');
@@ -87,7 +87,7 @@ function pageHtmlFrameSrcdoc(rawHtml, bibleParagraphs, targetParagraphIndexes = 
   const parser = new DOMParser();
   const doc = parser.parseFromString(rawHtml || '', 'text/html');
   const pageFindStyle = doc.createElement('style');
-  pageFindStyle.textContent = '[data-onenote-page-find]{padding:0;background:#f5d76e;color:inherit;border-radius:2px;}[data-onenote-page-find-current]{background:#c99cff;outline:2px solid #7454a6;outline-offset:1px;}';
+  pageFindStyle.textContent = '[data-onenote-page-find],[data-onenote-main-search]{padding:0;background:#f5d76e;color:inherit;border-radius:2px;}[data-onenote-page-find-current],[data-onenote-main-search-current]{background:#c99cff;outline:2px solid #7454a6;outline-offset:1px;}';
   doc.head.append(pageFindStyle);
   for (const link of doc.querySelectorAll('a[href]')) {
     const href = link.getAttribute('href') || '';
@@ -118,7 +118,7 @@ function pageHtmlFrameSrcdoc(rawHtml, bibleParagraphs, targetParagraphIndexes = 
     .filter(item => item.text || item.references.length > 0);
   if (paragraphItems.length > 0) {
     const style = doc.createElement('style');
-    style.textContent = '[data-onenote-target-paragraph="true"]{background:rgba(116,84,166,.16)!important;box-shadow:inset 4px 0 0 #7454a6!important;outline:1px solid rgba(116,84,166,.35)!important;scroll-margin:80px!important;}[data-onenote-target-paragraph-current="true"]{background:rgba(116,84,166,.26)!important;outline:2px solid #7454a6!important;}';
+    style.textContent = '[data-onenote-target-paragraph="true"]{background:rgba(116,84,166,.16)!important;box-shadow:inset 4px 0 0 #7454a6!important;outline:1px solid rgba(116,84,166,.35)!important;scroll-margin:80px!important;}[data-onenote-target-paragraph-current="true"],[data-onenote-target-match-current="true"]{background:rgba(116,84,166,.26)!important;outline:2px solid #7454a6!important;outline-offset:1px!important;}[data-onenote-target-match="true"]{scroll-margin:80px!important;}';
     doc.head.append(style);
     const used = new Set();
     const activeTargetIndexByParagraph = new Map(
@@ -149,6 +149,23 @@ function pageHtmlFrameSrcdoc(rawHtml, bibleParagraphs, targetParagraphIndexes = 
         return href.includes('/' + bookIndex + ' ' + chapter + ':' + verse)
           || href.includes('/' + bookIndex + '%20' + chapter + ':' + verse);
       });
+    };
+    const markReferenceLinks = (element, paragraphItem) => {
+      if (!element) return;
+      const links = [...element.querySelectorAll('a[href],a[data-onenote-bible-href]')];
+      const usedLinks = new Set();
+      for (const ref of paragraphItem.references) {
+        const key = bibleOccurrenceKey({
+          paragraphIndex:paragraphItem.index,
+          startIndex:ref?.startIndex,
+          endIndex:ref?.endIndex
+        });
+        if (!key) continue;
+        const link = links.find(item => !usedLinks.has(item) && refMatchesTarget(item, [ref]));
+        if (!link) continue;
+        usedLinks.add(link);
+        link.setAttribute('data-onenote-bible-occurrence', key);
+      }
     };
     const directNestedLists = element => element.matches('li')
       ? [...element.children].filter(child => child.matches('ol,ul'))
@@ -224,6 +241,7 @@ function pageHtmlFrameSrcdoc(rawHtml, bibleParagraphs, targetParagraphIndexes = 
         }
       }
       if (best?.element) {
+        markReferenceLinks(best.element, paragraphItem);
         const highlightElement = targetHighlightElement(best.element, targetText, paragraphItem.references);
         if (highlightElement) markParagraphElement(highlightElement, paragraphItem.index);
         continue;
@@ -231,9 +249,19 @@ function pageHtmlFrameSrcdoc(rawHtml, bibleParagraphs, targetParagraphIndexes = 
       const link = bibleLinks.find(item => refMatchesTarget(item, paragraphItem.references));
       const target = link?.closest('li,p,td,th,blockquote,div') || link;
       if (target && !used.has(target)) {
+        markReferenceLinks(target, paragraphItem);
         const highlightElement = targetHighlightElement(target, targetText, paragraphItem.references);
         if (highlightElement) markParagraphElement(highlightElement, paragraphItem.index);
       }
+    }
+    for (const [targetIndex, occurrence] of (Array.isArray(targetBibleOccurrences) ? targetBibleOccurrences : []).entries()) {
+      const key = bibleOccurrenceKey(occurrence);
+      if (!key) continue;
+      const target = doc.querySelector('[data-onenote-bible-occurrence="' + CSS.escape(key) + '"]');
+      if (!target) continue;
+      target.setAttribute('data-onenote-target-match', 'true');
+      target.setAttribute('data-onenote-target-match-index', String(targetIndex));
+      if (targetIndex === 0) target.setAttribute('data-onenote-target-match-current', 'true');
     }
   }
   const bridgeScript = [
@@ -255,22 +283,31 @@ function pageHtmlFrameSrcdoc(rawHtml, bibleParagraphs, targetParagraphIndexes = 
     'var findKey=event.code==="KeyF"||key==="f";',
     'if((event.ctrlKey||event.metaKey)&&!event.altKey&&!event.shiftKey&&findKey){event.preventDefault();event.stopPropagation();parent.postMessage({type:"onenote-page-find-open"},"*");}',
     '},true);',
+    'var mainSearchMarks=[];var mainSearchIndex=-1;var mainSearchSource="";var mainSearchFlags="";',
+    'function sendMainSearchResult(){parent.postMessage({type:"onenote-main-search-result",source:mainSearchSource,flags:mainSearchFlags,count:mainSearchMarks.length,index:mainSearchIndex},"*");}',
+    'function clearMainSearch(){document.querySelectorAll("[data-onenote-main-search]").forEach(function(mark){var parentNode=mark.parentNode;mark.replaceWith(document.createTextNode(mark.textContent||""));if(parentNode)parentNode.normalize();});mainSearchMarks=[];mainSearchIndex=-1;}',
+    'function selectMainSearch(index,scroll){mainSearchMarks.forEach(function(mark){mark.removeAttribute("data-onenote-main-search-current");});if(!mainSearchMarks.length){mainSearchIndex=-1;sendMainSearchResult();return;}mainSearchIndex=(Number(index)||0);mainSearchIndex=(mainSearchIndex+mainSearchMarks.length)%mainSearchMarks.length;var mark=mainSearchMarks[mainSearchIndex];mark.setAttribute("data-onenote-main-search-current","true");if(scroll!==false)mark.scrollIntoView({block:"center",behavior:"smooth"});sendMainSearchResult();}',
+    'function runMainSearch(source,flags,index,scroll){clearMainSearch();mainSearchSource=String(source||"");mainSearchFlags=String(flags||"gui");if(!mainSearchSource)return;var regex;try{regex=new RegExp(mainSearchSource,mainSearchFlags);}catch(error){return;}var nodes=[];var walker=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT,{acceptNode:function(node){var parentNode=node.parentElement;if(!node.nodeValue||!parentNode||parentNode.closest("script,style,noscript,textarea,[data-onenote-page-find],[data-onenote-main-search]"))return NodeFilter.FILTER_REJECT;return NodeFilter.FILTER_ACCEPT;}});while(walker.nextNode())nodes.push(walker.currentNode);nodes.forEach(function(node){var text=node.nodeValue||"";var cursor=0;var fragment=document.createDocumentFragment();var found=false;for(var match of text.matchAll(regex)){var matchText=match[0]||"";if(!matchText.length)continue;var matchIndex=Number(match.index)||0;if(matchIndex<cursor)continue;if(matchIndex>cursor)fragment.append(document.createTextNode(text.slice(cursor,matchIndex)));var mark=document.createElement("mark");mark.setAttribute("data-onenote-main-search","true");mark.textContent=matchText;fragment.append(mark);mainSearchMarks.push(mark);cursor=matchIndex+matchText.length;found=true;}if(!found)return;if(cursor<text.length)fragment.append(document.createTextNode(text.slice(cursor)));node.replaceWith(fragment);});selectMainSearch(index,scroll);}',
     'var pageFindMarks=[];var pageFindIndex=-1;var pageFindQuery="";',
     'function sendPageFindResult(){parent.postMessage({type:"onenote-page-find-result",query:pageFindQuery,count:pageFindMarks.length,index:pageFindIndex},"*");}',
     'function clearPageFind(){document.querySelectorAll("[data-onenote-page-find]").forEach(function(mark){var parentNode=mark.parentNode;mark.replaceWith(document.createTextNode(mark.textContent||""));if(parentNode)parentNode.normalize();});pageFindMarks=[];pageFindIndex=-1;}',
     'function selectPageFind(index,scroll){pageFindMarks.forEach(function(mark){mark.removeAttribute("data-onenote-page-find-current");});if(!pageFindMarks.length){pageFindIndex=-1;sendPageFindResult();return;}pageFindIndex=(index+pageFindMarks.length)%pageFindMarks.length;var mark=pageFindMarks[pageFindIndex];mark.setAttribute("data-onenote-page-find-current","true");if(scroll!==false)mark.scrollIntoView({block:"center",behavior:"smooth"});sendPageFindResult();}',
     'function runPageFind(query){clearPageFind();pageFindQuery=String(query||"");if(!pageFindQuery){sendPageFindResult();return;}var nodes=[];var walker=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT,{acceptNode:function(node){var parentNode=node.parentElement;if(!node.nodeValue||!parentNode||parentNode.closest("script,style,noscript,textarea,[data-onenote-page-find]"))return NodeFilter.FILTER_REJECT;return NodeFilter.FILTER_ACCEPT;}});while(walker.nextNode())nodes.push(walker.currentNode);var needle=pageFindQuery.toLocaleLowerCase();nodes.forEach(function(node){var text=node.nodeValue||"";var folded=text.toLocaleLowerCase();var cursor=0;var index=folded.indexOf(needle);if(index<0)return;var fragment=document.createDocumentFragment();while(index>=0){if(index>cursor)fragment.append(document.createTextNode(text.slice(cursor,index)));var mark=document.createElement("mark");mark.setAttribute("data-onenote-page-find","true");mark.textContent=text.slice(index,index+pageFindQuery.length);fragment.append(mark);pageFindMarks.push(mark);cursor=index+pageFindQuery.length;index=folded.indexOf(needle,cursor);}if(cursor<text.length)fragment.append(document.createTextNode(text.slice(cursor)));node.replaceWith(fragment);});selectPageFind(0,true);}',
-    'function clearTargetParagraphs(){document.querySelectorAll("[data-onenote-target-paragraph]").forEach(function(item){item.removeAttribute("data-onenote-target-paragraph");item.removeAttribute("data-onenote-target-paragraph-index");item.removeAttribute("data-onenote-target-paragraph-current");});}',
-    'function setTargetParagraphs(indexes){clearTargetParagraphs();(Array.isArray(indexes)?indexes:[]).forEach(function(paragraphIndex,targetIndex){var target=document.querySelector("[data-onenote-paragraph-index=\\\""+paragraphIndex+"\\\"]");if(!target)return;target.setAttribute("data-onenote-target-paragraph","true");target.setAttribute("data-onenote-target-paragraph-index",String(targetIndex));if(targetIndex===0)target.setAttribute("data-onenote-target-paragraph-current","true");});}',
-    'function scrollTargetParagraph(index){var selector="[data-onenote-target-paragraph=true]";var target=Number.isInteger(index)?document.querySelector("[data-onenote-target-paragraph-index=\\"" + index + "\\"]"):document.querySelector(selector);document.querySelectorAll(selector).forEach(function(item){item.removeAttribute("data-onenote-target-paragraph-current");});if(target){target.setAttribute("data-onenote-target-paragraph-current","true");target.scrollIntoView({block:"center"});}}',
+    'function occurrenceKey(value){var paragraphIndex=value&&value.paragraphIndex;var startIndex=value&&value.startIndex;var endIndex=value&&value.endIndex;return Number.isInteger(paragraphIndex)&&Number.isInteger(startIndex)&&Number.isInteger(endIndex)?paragraphIndex+":"+startIndex+":"+endIndex:"";}',
+    'var targetScrollTimers=[];',
+    'function clearTargetScrollTimers(){targetScrollTimers.forEach(function(timer){clearTimeout(timer);});targetScrollTimers=[];}',
+    'function clearTargetParagraphs(){clearTargetScrollTimers();document.querySelectorAll("[data-onenote-target-paragraph],[data-onenote-target-paragraph-current]").forEach(function(item){item.removeAttribute("data-onenote-target-paragraph");item.removeAttribute("data-onenote-target-paragraph-index");item.removeAttribute("data-onenote-target-paragraph-current");});document.querySelectorAll("[data-onenote-target-match],[data-onenote-target-match-current]").forEach(function(item){item.removeAttribute("data-onenote-target-match");item.removeAttribute("data-onenote-target-match-index");item.removeAttribute("data-onenote-target-match-current");});}',
+    'function setTargetParagraphs(indexes,occurrences){clearTargetParagraphs();(Array.isArray(indexes)?indexes:[]).forEach(function(paragraphIndex,targetIndex){var target=document.querySelector("[data-onenote-paragraph-index=\\\""+paragraphIndex+"\\\"]");if(!target)return;target.setAttribute("data-onenote-target-paragraph","true");target.setAttribute("data-onenote-target-paragraph-index",String(targetIndex));if(targetIndex===0)target.setAttribute("data-onenote-target-paragraph-current","true");});(Array.isArray(occurrences)?occurrences:[]).forEach(function(occurrence,targetIndex){var key=occurrenceKey(occurrence);var target=key?document.querySelector("[data-onenote-bible-occurrence=\\\""+key+"\\\"]"):null;if(!target)return;target.setAttribute("data-onenote-target-match","true");target.setAttribute("data-onenote-target-match-index",String(targetIndex));if(targetIndex===0)target.setAttribute("data-onenote-target-match-current","true");});}',
+    'function scrollTargetParagraph(index,paragraphIndex){var matchSelector="[data-onenote-target-match=true]";var paragraphSelector="[data-onenote-target-paragraph=true]";var target=Number.isInteger(index)?document.querySelector("[data-onenote-target-match-index=\\"" + index + "\\"]")||document.querySelector("[data-onenote-target-paragraph-index=\\"" + index + "\\"]"):document.querySelector(matchSelector)||document.querySelector(paragraphSelector);if(!target&&Number.isInteger(paragraphIndex))target=document.querySelector("[data-onenote-paragraph-index=\\"" + paragraphIndex + "\\"]");document.querySelectorAll(matchSelector).forEach(function(item){item.removeAttribute("data-onenote-target-match-current");});document.querySelectorAll(paragraphSelector).forEach(function(item){item.removeAttribute("data-onenote-target-paragraph-current");});if(target){if(target.hasAttribute("data-onenote-target-match"))target.setAttribute("data-onenote-target-match-current","true");else target.setAttribute("data-onenote-target-paragraph-current","true");target.scrollIntoView({block:"center"});}}',
     'window.addEventListener("message",function(event){',
     'var data=event.data||{};',
     'if(data.type==="onenote-html-zoom"){document.documentElement.style.zoom=String(data.zoom||1);}',
-    'if(data.type==="onenote-scroll-target-paragraph"){var index=Number.isInteger(data.targetIndex)?data.targetIndex:undefined;scrollTargetParagraph(index);setTimeout(function(){scrollTargetParagraph(index);},80);setTimeout(function(){scrollTargetParagraph(index);},240);}',
+    'if(data.type==="onenote-scroll-target-paragraph"){var index=Number.isInteger(data.targetIndex)?data.targetIndex:undefined;var paragraphIndex=Number.isInteger(data.paragraphIndex)?data.paragraphIndex:undefined;clearTargetScrollTimers();scrollTargetParagraph(index,paragraphIndex);targetScrollTimers=[setTimeout(function(){scrollTargetParagraph(index,paragraphIndex);},80),setTimeout(function(){scrollTargetParagraph(index,paragraphIndex);},240)];}',
     'if(data.type==="onenote-page-find"){runPageFind(data.query);}',
     'if(data.type==="onenote-page-find-next"&&String(data.query||"")===pageFindQuery){selectPageFind(pageFindIndex+(Number(data.delta)<0?-1:1),true);}',
     'if(data.type==="onenote-page-find-clear"){clearPageFind();pageFindQuery="";}',
-    'if(data.type==="onenote-set-target-paragraphs"){setTargetParagraphs(data.paragraphIndexes);}',
+    'if(data.type==="onenote-main-search"){var source=String(data.source||"");var flags=String(data.flags||"");if(source===mainSearchSource&&flags===mainSearchFlags)selectMainSearch(data.index,data.scroll);else runMainSearch(source,flags,data.index,data.scroll);}',
+    'if(data.type==="onenote-set-target-paragraphs"){setTargetParagraphs(data.paragraphIndexes,data.bibleOccurrences);}',
     'if(data.type==="onenote-clear-target-paragraphs"){clearTargetParagraphs();}',
     '});',
     'parent.postMessage({type:"onenote-html-ready"},"*");',

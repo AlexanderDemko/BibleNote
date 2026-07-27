@@ -44,6 +44,44 @@ export async function bibleNoteBooks(module: string): Promise<Array<Record<strin
   return fetchJson(`${bibleConfig.apiUrl.replace(/\/+$/, '')}/api/VerseParsing/Books?${params.toString()}`) as Promise<Array<Record<string, unknown>>>;
 }
 
+export async function bibleNoteSearchText(options: {
+  module: string;
+  query: string;
+  mode: 'and' | 'phrase' | 'regex';
+  caseSensitive: boolean;
+  limit: number;
+}): Promise<Array<Record<string, unknown>>> {
+  const bibleConfig = bibleParseConfigFromEnv();
+  const params = new URLSearchParams({
+    module:options.module,
+    query:options.query,
+    mode:options.mode,
+    caseSensitive:String(options.caseSensitive),
+    limit:String(options.limit)
+  });
+  return fetchJson(
+    `${bibleConfig.apiUrl.replace(/\/+$/, '')}/api/VerseParsing/SearchText?${params.toString()}`
+  ) as Promise<Array<Record<string, unknown>>>;
+}
+
+export async function bibleNoteParallelVerseText(options: {
+  baseModule: string;
+  module: string;
+  bookIndex: number;
+  chapter: number;
+}): Promise<Record<string, unknown>> {
+  const bibleConfig = bibleParseConfigFromEnv();
+  const params = new URLSearchParams({
+    baseModule:options.baseModule,
+    module:options.module,
+    bookIndex:String(options.bookIndex),
+    chapter:String(options.chapter)
+  });
+  return fetchJson(
+    `${bibleConfig.apiUrl.replace(/\/+$/, '')}/api/VerseParsing/ParallelVerseText?${params.toString()}`
+  ) as Promise<Record<string, unknown>>;
+}
+
 let localBibleNoteProcess: ChildProcess | undefined;
 let localBibleNoteEnsurePromise: Promise<void> | undefined;
 let bibleNoteHealthyUntil = 0;
@@ -200,18 +238,40 @@ export async function uploadBibleNoteModule(fileName: string, contentBase64: str
   }
 }
 
-function parseIsbtBibleVerse(rawRef: string): Record<string, unknown> | undefined {
-  const normalizedRawRef = rawRef.trim().replace(/^https?:\/\/isbtBibleVerse:/i, 'isbtBibleVerse:');
-  const payload = normalizedRawRef.replace(/^isbtBibleVerse:/i, '').trim();
+function normalizeBibleProtocol(rawRef: string): string {
+  return rawRef.trim()
+    .replace(/^https?:\/\/isbtBibleVerse:/i, 'isbtBibleVerse:')
+    .replace(/^https?:\/\/bnVerse:/i, 'bnVerse:');
+}
+
+function decodeUriComponent(value: string): string {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
+export function decodeExternalBibleRefText(rawRef: string): string {
+  const payload = normalizeBibleProtocol(rawRef)
+    .replace(/^(?:isbtBibleVerse|bnVerse):/i, '')
+    .trim();
+  return decodeUriComponent(payload).trim();
+}
+
+function parseStructuredBibleVerse(rawRef: string, fallbackModule?: string): Record<string, unknown> | undefined {
+  const payload = normalizeBibleProtocol(rawRef)
+    .replace(/^(?:isbtBibleVerse|bnVerse):/i, '')
+    .trim();
   if (!payload) return undefined;
-  const [machinePart, displayPart] = payload.split(';', 2);
-  const machine = decodeURIComponent(machinePart || '').trim();
-  const display = decodeURIComponent(displayPart || '').trim();
-  const match = machine.match(/^([^/]+)\/(\d+)\s+(\d+)(?::(\d+))?(?:-(?:(\d+):)?(\d+))?$/);
+  const [machinePart, displayPart] = decodeUriComponent(payload).split(';', 2);
+  const machine = (machinePart || '').trim();
+  const display = (displayPart || '').trim().replace(/\/+$/, '');
+  const match = machine.match(/^(?:([^/]+)\/|\/+)(\d+)\s+(\d+)(?::(\d+))?(?:-(?:(\d+):)?(\d+))?$/);
   if (!match) return undefined;
   const [, module, bookIndex, chapter, verse, topChapter, topVerse] = match;
   return {
-    module,
+    module:module || fallbackModule,
     originalText:display || machine,
     normalizedRef:display || machine,
     bookIndex:Number(bookIndex),
@@ -223,13 +283,14 @@ function parseIsbtBibleVerse(rawRef: string): Record<string, unknown> | undefine
 }
 
 export async function parseExternalBibleRef(rawRef: string, module?: string): Promise<Record<string, unknown>> {
-  const normalizedRawRef = rawRef.trim()
-    .replace(/^https?:\/\/isbtBibleVerse:/i, 'isbtBibleVerse:')
-    .replace(/^https?:\/\/bnVerse:/i, 'bnVerse:');
-  const isbtReference = /^isbtBibleVerse:/i.test(normalizedRawRef) ? parseIsbtBibleVerse(normalizedRawRef) : undefined;
-  if (isbtReference) return isbtReference;
+  const normalizedRawRef = normalizeBibleProtocol(rawRef);
+  const structuredReference = parseStructuredBibleVerse(
+    normalizedRawRef,
+    module || bibleParseConfigFromEnv().module
+  );
+  if (structuredReference) return structuredReference;
 
-  const text = normalizedRawRef.replace(/^bnVerse:/i, '').trim();
+  const text = decodeExternalBibleRefText(normalizedRawRef);
   if (!text) throw new Error('Bible reference is empty.');
   await ensureBibleNoteAvailable();
   const bibleConfig = bibleParseConfigFromEnv();
@@ -248,4 +309,26 @@ export async function parseExternalBibleRef(rawRef: string, module?: string): Pr
     normalizedRef:reference.normalized,
     originalText:reference.originalText || text
   };
+}
+
+export type OneNoteCurrentPage = {
+  pageId: string;
+  clientUrl: string;
+};
+
+export async function bibleNoteCurrentOneNotePage(): Promise<OneNoteCurrentPage> {
+  await ensureBibleNoteAvailable();
+  const bibleConfig = bibleParseConfigFromEnv();
+  return fetchJson(
+    `${bibleConfig.apiUrl.replace(/\/+$/, '')}/api/OneNoteIntegration/CurrentPage`
+  ) as Promise<OneNoteCurrentPage>;
+}
+
+export async function bibleNoteQuickAnalyzeCurrentPage(): Promise<Record<string, unknown>> {
+  await ensureBibleNoteAvailable();
+  const bibleConfig = bibleParseConfigFromEnv();
+  return fetchJson(
+    `${bibleConfig.apiUrl.replace(/\/+$/, '')}/api/OneNoteIntegration/QuickAnalyzeCurrentPage`,
+    { method:'POST' }
+  ) as Promise<Record<string, unknown>>;
 }

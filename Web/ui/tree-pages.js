@@ -103,6 +103,125 @@ function compareOneNotePageOrder(left, right) {
   );
 }
 
+function updateNotesListViewControls() {
+  const structureSelected = notesListView === 'structure';
+  notesViewSwitch.hidden = Boolean(activeSearchQuery);
+  notesStructureViewButton.setAttribute('aria-selected', String(structureSelected));
+  notesRecentViewButton.setAttribute('aria-selected', String(!structureSelected));
+  notesStructureViewButton.tabIndex = structureSelected ? 0 : -1;
+  notesRecentViewButton.tabIndex = structureSelected ? -1 : 0;
+  tree.setAttribute('aria-label', structureSelected ? 'Структура OneNote' : 'Последние заметки');
+}
+
+async function activateNotesListView(view) {
+  if (!['structure', 'recent'].includes(view)) return;
+  clearTimeout(searchTimer);
+  notesListView = view;
+  localStorage.setItem('onenote.notesListView', view);
+  hideSearchHistory();
+  searchHistoryIndex = -1;
+  searchInput.value = '';
+  activeSearchQuery = '';
+  updateNotesListViewControls();
+  updateOpenPageSearchMatches(null, '');
+  tree.scrollTop = 0;
+  await renderNotesList();
+}
+
+function recentDateKey(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return [date.getFullYear(), date.getMonth() + 1, date.getDate()].join('-');
+}
+
+function recentGroupLabel(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Без даты';
+  const today = new Date();
+  const yesterday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1);
+  if (recentDateKey(date) === recentDateKey(today)) return 'Сегодня';
+  if (recentDateKey(date) === recentDateKey(yesterday)) return 'Вчера';
+  return date.toLocaleDateString('ru-RU', { day:'numeric', month:'long', year:date.getFullYear() === today.getFullYear() ? undefined : 'numeric' });
+}
+
+function recentTimeLabel(value) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? '' : date.toLocaleTimeString('ru-RU', { hour:'2-digit', minute:'2-digit' });
+}
+
+async function renderRecentPages() {
+  const renderToken = ++treeRenderToken;
+  const savedScrollTop = tree.scrollTop;
+  const selectedIds = selectedNotebookIds();
+  const fragment = document.createDocumentFragment();
+  if (selectedIds.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'recent-empty';
+    empty.textContent = 'Выберите хотя бы одну записную книжку.';
+    fragment.append(empty);
+  } else {
+    const params = new URLSearchParams({ limit:'100' });
+    for (const notebookId of selectedIds) params.append('notebookId', notebookId);
+    const pages = await api('/api/recent-pages?' + params.toString());
+    let currentGroup = null;
+    for (const page of pages) {
+      const group = recentDateKey(page.recentAt);
+      if (group !== currentGroup) {
+        currentGroup = group;
+        const heading = document.createElement('div');
+        heading.className = 'recent-heading';
+        heading.textContent = recentGroupLabel(page.recentAt);
+        fragment.append(heading);
+      }
+      const button = document.createElement('button');
+      button.className = 'tree-row recent-page-row' + (page.id === selectedPageId ? ' selected' : '');
+      button.type = 'button';
+      button.dataset.pageId = page.id;
+      button.title = [page.notebook, page.sectionGroupPath, page.section, page.title].filter(Boolean).join(' / ');
+      button.onclick = async () => {
+        if (page.id === selectedPageId) return;
+        await openPage(page.id);
+        if (!activeSearchQuery && notesListView === 'recent') await renderRecentPages();
+      };
+
+      const status = document.createElement('span');
+      status.className = 'status-dot ' + (page.fetchError ? 'error' : page.hasContent ? 'ok' : 'pending');
+      const main = document.createElement('span');
+      main.className = 'recent-page-main';
+      const title = document.createElement('span');
+      title.className = 'recent-page-title';
+      title.textContent = page.title || '(без названия)';
+      const meta = document.createElement('span');
+      meta.className = 'recent-page-meta';
+      const path = document.createElement('span');
+      path.className = 'recent-page-path';
+      path.textContent = [page.notebook, page.sectionGroupPath, page.section].filter(Boolean).join(' / ');
+      const time = document.createElement('span');
+      time.className = 'recent-page-time';
+      time.textContent = (page.recentReason === 'opened' ? 'открыта здесь ' : 'изменена ') + recentTimeLabel(page.recentAt);
+      meta.append(path, time);
+      main.append(title, meta);
+      button.append(status, main);
+      fragment.append(button);
+    }
+    if (pages.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'recent-empty';
+      empty.textContent = 'В выбранных записных книжках пока нет заметок.';
+      fragment.append(empty);
+    }
+  }
+  if (renderToken !== treeRenderToken) return;
+  tree.replaceChildren(fragment);
+  tree.scrollTop = savedScrollTop;
+}
+
+function renderNotesList() {
+  updateNotesListViewControls();
+  if (activeSearchQuery) return renderSearch(activeSearchQuery);
+  return notesListView === 'recent' ? renderRecentPages() : renderTree();
+}
+
 async function renderTree() {
   const renderToken = ++treeRenderToken;
   const savedScrollTop = tree.scrollTop;
@@ -138,6 +257,9 @@ async function revealPageInTree(page) {
   searchHistoryIndex = -1;
   searchInput.value = '';
   activeSearchQuery = '';
+  notesListView = 'structure';
+  localStorage.setItem('onenote.notesListView', notesListView);
+  updateNotesListViewControls();
   clearPageTargetHighlight(page.id);
 
   const notesPanel = document.querySelector('.notes-panel');
@@ -174,9 +296,28 @@ async function revealPageInTree(page) {
   });
 }
 
+notesStructureViewButton.addEventListener('click', () => activateNotesListView('structure').catch(showError));
+notesRecentViewButton.addEventListener('click', () => activateNotesListView('recent').catch(showError));
+notesStructureViewButton.addEventListener('keydown', event => {
+  if (event.key === 'ArrowRight') {
+    event.preventDefault();
+    notesRecentViewButton.focus();
+    activateNotesListView('recent').catch(showError);
+  }
+});
+notesRecentViewButton.addEventListener('keydown', event => {
+  if (event.key === 'ArrowLeft') {
+    event.preventDefault();
+    notesStructureViewButton.focus();
+    activateNotesListView('structure').catch(showError);
+  }
+});
+updateNotesListViewControls();
+
 function clearPageTargetHighlight(pageId) {
   currentTargetParagraphIndex = undefined;
   currentTargetParagraphIndexes = [];
+  currentTargetBibleOccurrences = [];
   if (viewHistoryIndex >= 0 && viewHistory[viewHistoryIndex]?.type === 'page' && viewHistory[viewHistoryIndex]?.pageId === pageId) {
     viewHistory[viewHistoryIndex] = { type:'page', pageId };
   }
@@ -314,6 +455,12 @@ function searchResultParagraphIndexes(page) {
     : (Number.isInteger(page.paragraphIndex) ? [page.paragraphIndex] : []);
 }
 
+function searchResultBibleOccurrences(page) {
+  return Array.isArray(page?.bibleOccurrences)
+    ? page.bibleOccurrences.filter(occurrence => Number.isInteger(occurrence?.paragraphIndex))
+    : [];
+}
+
 function searchResultCountLabel(value) {
   const count = Number(value) || 0;
   const mod100 = Math.abs(count) % 100;
@@ -324,9 +471,37 @@ function searchResultCountLabel(value) {
   return count + ' ' + noun;
 }
 
+function bibleSearchResultCountLabel(value) {
+  const count = Number(value) || 0;
+  const mod100 = Math.abs(count) % 100;
+  const mod10 = mod100 % 10;
+  const noun = mod100 >= 11 && mod100 <= 19
+    ? 'стихов'
+    : (mod10 === 1 ? 'стих' : (mod10 >= 2 && mod10 <= 4 ? 'стиха' : 'стихов'));
+  return count + ' ' + noun;
+}
+
 function searchWeightLabel(value) {
   const numericWeight = Number(value || 0);
   return 'вес ' + numericWeight.toFixed(4).replace(/\.?0+$/, '');
+}
+
+function searchRelevanceLabel(value) {
+  const percent = Math.max(0, Math.min(100, Math.round(Number(value || 0) * 100)));
+  return 'соответствие ' + percent + '%';
+}
+
+function searchResultWeightValue(result) {
+  const searchWeight = Number(result?.searchWeight ?? result?.weight);
+  if (Number.isFinite(searchWeight)) return searchWeight;
+  const bibleWeight = Number(result?.bibleWeight);
+  return Number.isFinite(bibleWeight) ? bibleWeight : undefined;
+}
+
+function searchResultWeightLabel(result) {
+  const searchWeight = Number(result?.searchWeight ?? result?.weight);
+  if (Number.isFinite(searchWeight)) return searchRelevanceLabel(searchWeight);
+  return result?.bibleWeight != null ? searchWeightLabel(result.bibleWeight) : '';
 }
 
 function highlightExistingSearchText(root, query) {
@@ -385,13 +560,45 @@ function canonicalPageTargetIndexes(paragraphIndexes, titleParagraphIndexes) {
   return canonicalIndexes;
 }
 
-function pageNavigationTargets(paragraphTargets, paragraphIndexes) {
+function canonicalPageBibleOccurrences(occurrences, titleParagraphIndexes) {
+  const titleIndexes = new Set(titleParagraphIndexes);
+  const canonicalTitleIndex = titleParagraphIndexes[0];
+  const result = [];
+  for (const occurrence of Array.isArray(occurrences) ? occurrences : []) {
+    if (!Number.isInteger(occurrence?.paragraphIndex)) continue;
+    const paragraphIndex = titleIndexes.has(occurrence.paragraphIndex)
+      ? canonicalTitleIndex
+      : occurrence.paragraphIndex;
+    const canonical = { ...occurrence, paragraphIndex };
+    const key = bibleOccurrenceKey(canonical);
+    if (!key || result.some(current => bibleOccurrenceKey(current) === key)) continue;
+    result.push(canonical);
+  }
+  return result;
+}
+
+function pageNavigationTargets(paragraphTargets, paragraphIndexes, bibleOccurrences = [], inlineRoot) {
   const targetByParagraphIndex = new Map();
   for (const target of paragraphTargets) {
     const paragraphIndex = Number(target.dataset?.paragraphIndex);
     if (Number.isInteger(paragraphIndex) && !targetByParagraphIndex.has(paragraphIndex)) {
       targetByParagraphIndex.set(paragraphIndex, target);
     }
+  }
+  if (Array.isArray(bibleOccurrences) && bibleOccurrences.length > 0 && inlineRoot) {
+    return bibleOccurrences.map(occurrence => {
+      const key = bibleOccurrenceKey(occurrence);
+      const inlineTarget = key
+        ? inlineRoot.querySelector('[data-bible-occurrence="' + CSS.escape(key) + '"]')
+        : null;
+      if (inlineTarget) return inlineTarget;
+      return targetByParagraphIndex.get(occurrence.paragraphIndex) || (() => {
+        const virtualTarget = document.createElement('span');
+        virtualTarget.className = 'bible-paragraph-target';
+        virtualTarget.dataset.paragraphIndex = String(occurrence.paragraphIndex);
+        return virtualTarget;
+      })();
+    });
   }
   return paragraphIndexes.map(paragraphIndex => {
     const existingTarget = targetByParagraphIndex.get(paragraphIndex);
@@ -409,8 +616,10 @@ function updateOpenPageSearchMatches(result, query) {
   if (!article || typeof article.updateSearchMatches !== 'function') return;
   article.updateSearchMatches({
     paragraphIndexes:result ? searchResultParagraphIndexes(result) : [],
+    bibleOccurrences:result ? searchResultBibleOccurrences(result) : [],
     query,
-    bibleResult:Boolean(result?.bibleRef)
+    bibleResult:Boolean(result?.bibleRef),
+    scrollToFirst:Boolean(query)
   });
 }
 
@@ -444,6 +653,7 @@ function renderWeightedSearchResults(results) {
     button.addEventListener('click', () => openPage(page.id, {
       paragraphIndex:paragraphIndexes[0],
       paragraphIndexes,
+      bibleOccurrences:searchResultBibleOccurrences(page),
       highlightQuery:page.bibleRef ? '' : activeSearchQuery
     }));
 
@@ -465,13 +675,20 @@ function renderWeightedSearchResults(results) {
 
     const weight = document.createElement('span');
     weight.className = 'search-weight-value';
-    weight.textContent = searchWeightLabel(page.bibleWeight);
+    weight.textContent = searchResultWeightLabel(page);
     button.append(main, weight);
     tree.append(button);
   }
 }
 
-function addSearchViewSwitch(heading, query) {
+function compareSearchResultsByWeight(left, right) {
+  const weightCompare = Number(searchResultWeightValue(right) ?? Number.NEGATIVE_INFINITY)
+    - Number(searchResultWeightValue(left) ?? Number.NEGATIVE_INFINITY);
+  if (weightCompare !== 0) return weightCompare;
+  return Number(left.bibleMatchScore ?? 1000) - Number(right.bibleMatchScore ?? 1000);
+}
+
+function addSearchViewSwitch(heading, query, results, bibleResults, hasSelectedNotebooks) {
   heading.classList.add('with-view-switch');
   heading.replaceChildren();
   const label = document.createElement('span');
@@ -479,10 +696,10 @@ function addSearchViewSwitch(heading, query) {
   const controls = document.createElement('span');
   controls.className = 'search-view-switch';
   controls.setAttribute('role', 'group');
-  controls.setAttribute('aria-label', 'Вид результатов поиска по стиху');
+  controls.setAttribute('aria-label', 'Порядок результатов поиска');
   for (const option of [
     { value:'structure', label:'Структура' },
-    { value:'weight', label:'По весам' }
+    { value:'weight', label:'Вес' }
   ]) {
     const button = document.createElement('button');
     button.className = 'search-view-button' + (searchResultsView === option.value ? ' active' : '');
@@ -492,58 +709,105 @@ function addSearchViewSwitch(heading, query) {
     button.addEventListener('click', () => {
       if (searchResultsView === option.value) return;
       searchResultsView = option.value;
-      renderSearch(query).catch(showError);
+      treeRenderToken += 1;
+      renderSearchResults(query, results, bibleResults, hasSelectedNotebooks);
     });
     controls.append(button);
   }
   heading.append(label, controls);
 }
 
-async function renderSearch(query) {
-  const renderToken = ++treeRenderToken;
-  activeSearchQuery = query;
+function bibleTextSearchResultButton(result, level, showWeight) {
+  const label = [result.reference, result.text].filter(Boolean).join(' — ');
+  const button = row(label, level, {
+    search:true,
+    count:showWeight ? searchResultWeightLabel(result) : undefined,
+    title:label
+  });
+  button.classList.add('bible-text-search-row');
+  button.onclick = () => openBibleReaderLocation({
+    module:result.module || currentBibleModule(),
+    bookIndex:Number(result.bookIndex),
+    chapter:Number(result.chapter),
+    verse:Number(result.verse),
+    topChapter:Number(result.chapter),
+    topVerse:Number(result.topVerse || result.verse)
+  });
+  return button;
+}
+
+function renderBibleTextSearchResults(results, byWeight = false) {
+  if (!results.length) return;
+  const first = results[0];
+  const rootRow = row(['Библия', first.moduleName || first.module].filter(Boolean).join(' · '), 0, {
+    expandable:true,
+    open:true,
+    search:true,
+    count:bibleSearchResultCountLabel(results.length),
+    title:'Совпадения в тексте выбранного перевода Библии'
+  });
+  const rootGroup = makeSearchResultGroup(rootRow);
+  if (byWeight) {
+    for (const result of [...results].sort(compareSearchResultsByWeight)) {
+      rootGroup.children.append(bibleTextSearchResultButton(result, 1, true));
+    }
+    tree.append(rootGroup.group);
+    return;
+  }
+  const books = new Map();
+  for (const result of results) {
+    const key = String(result.bookIndex);
+    if (!books.has(key)) books.set(key, {
+      name:result.bookName || result.bookShortName || 'Книга ' + result.bookIndex,
+      results:[]
+    });
+    books.get(key).results.push(result);
+  }
+  for (const book of books.values()) {
+    const bookRow = row(book.name, 1, {
+      expandable:true,
+      open:true,
+      folder:true,
+      search:true,
+      count:bibleSearchResultCountLabel(book.results.length),
+      title:book.name
+    });
+    const bookGroup = makeSearchResultGroup(bookRow);
+    for (const result of book.results) {
+      bookGroup.children.append(bibleTextSearchResultButton(result, 2, false));
+    }
+    rootGroup.children.append(bookGroup.group);
+  }
+  tree.append(rootGroup.group);
+}
+
+function renderSearchResults(query, results, bibleResults = [], hasSelectedNotebooks = true) {
   tree.replaceChildren();
   const heading = document.createElement('div');
   heading.className = 'search-heading';
   heading.textContent = 'Результаты поиска';
   tree.append(heading);
-  const selectedIds = selectedNotebookIds();
-  if (selectedIds.length === 0) {
-    const empty = document.createElement('div');
-    empty.className = 'search-heading';
-    empty.textContent = 'Не выбраны блокноты';
-    tree.append(empty);
-    updateOpenPageSearchMatches(null, query);
-    return;
-  }
-  const request = searchRequest(query);
-  const params = new URLSearchParams({
-    q:request.query,
-    mode:request.mode,
-    caseSensitive:String(request.caseSensitive),
-    view:searchResultsView
-  });
-  addBibleDisplayParams(params);
-  for (const notebookId of selectedIds) params.append('notebookId', notebookId);
-  let results;
-  try {
-    results = await api('/api/search?' + params.toString());
-  } catch (error) {
-    if (renderToken !== treeRenderToken) return;
-    throw error;
-  }
-  if (renderToken !== treeRenderToken) return;
-  if (!results.length) {
+  if (!results.length && !bibleResults.length) {
     const empty = document.createElement('div');
     empty.className = 'search-heading';
     empty.textContent = 'Ничего не найдено';
     tree.append(empty);
   }
-  const weightedAvailable = results.some(page => page.bibleWeight != null && Number.isFinite(Number(page.bibleWeight)));
-  if (weightedAvailable) addSearchViewSwitch(heading, query);
+  if (!hasSelectedNotebooks) {
+    const notesUnavailable = document.createElement('div');
+    notesUnavailable.className = 'search-heading';
+    notesUnavailable.textContent = 'Для поиска по заметкам выберите блокноты';
+    tree.append(notesUnavailable);
+  }
+  const weightedAvailable = results.some(page => searchResultWeightValue(page) != null)
+    || bibleResults.some(result => searchResultWeightValue(result) != null);
+  if (weightedAvailable) addSearchViewSwitch(heading, query, results, bibleResults, hasSelectedNotebooks);
   if (weightedAvailable && searchResultsView === 'weight') {
-    renderWeightedSearchResults(results);
-  } else for (const notebook of groupedSearchResults(results)) {
+    renderBibleTextSearchResults(bibleResults, true);
+    renderWeightedSearchResults([...results].sort(compareSearchResultsByWeight));
+  } else {
+    renderBibleTextSearchResults(bibleResults);
+    for (const notebook of groupedSearchResults(results)) {
     const notebookRow = row(notebook.name, 0, {
       expandable:true,
       open:true,
@@ -566,9 +830,7 @@ async function renderSearch(query) {
         const button = row(page.title, 2, {
           selected:page.id === selectedPageId,
           search:true,
-          count:page.bibleWeight != null && Number.isFinite(Number(page.bibleWeight))
-            ? searchWeightLabel(page.bibleWeight)
-            : undefined,
+          count:searchResultWeightLabel(page) || undefined,
           title:[page.notebook, page.section, page.snippet].filter(Boolean).join(' / ')
         });
         const paragraphIndexes = searchResultParagraphIndexes(page);
@@ -576,6 +838,7 @@ async function renderSearch(query) {
         button.onclick = () => openPage(page.id, {
           paragraphIndex:paragraphIndexes[0],
           paragraphIndexes,
+          bibleOccurrences:searchResultBibleOccurrences(page),
           highlightQuery:page.bibleRef ? '' : activeSearchQuery
         });
         sectionGroup.children.append(button);
@@ -584,12 +847,57 @@ async function renderSearch(query) {
     }
     tree.append(notebookGroup.group);
   }
+  }
   updateOpenPageSearchMatches(results.find(page => page.id === selectedPageId), query);
   updateTreeSelection(selectedPageId);
   requestAnimationFrame(() => {
     updateTreeScrollbar();
     scrollTreeSelectionIntoView('auto');
   });
+}
+
+async function renderSearch(query) {
+  const renderToken = ++treeRenderToken;
+  activeSearchQuery = query;
+  updateNotesListViewControls();
+  tree.replaceChildren();
+  const heading = document.createElement('div');
+  heading.className = 'search-heading';
+  heading.textContent = 'Результаты поиска';
+  tree.append(heading);
+  const selectedIds = selectedNotebookIds();
+  const request = searchRequest(query);
+  const params = new URLSearchParams({
+    q:request.query,
+    mode:request.mode,
+    caseSensitive:String(request.caseSensitive),
+    view:searchResultsView
+  });
+  addBibleDisplayParams(params);
+  for (const notebookId of selectedIds) params.append('notebookId', notebookId);
+  const bibleParams = new URLSearchParams({
+    q:request.query,
+    module:bibleReaderModuleEl.value || currentBibleModule(),
+    mode:request.mode,
+    caseSensitive:String(request.caseSensitive),
+    limit:'80'
+  });
+  let results;
+  let bibleResults;
+  try {
+    [results, bibleResults] = await Promise.all([
+      selectedIds.length > 0 ? api('/api/search?' + params.toString()) : Promise.resolve([]),
+      api('/api/bible/text-search?' + bibleParams.toString(), { timeoutMs:60000 }).catch(error => {
+        console.warn('Bible text search is unavailable:', error);
+        return [];
+      })
+    ]);
+  } catch (error) {
+    if (renderToken !== treeRenderToken) return;
+    throw error;
+  }
+  if (renderToken !== treeRenderToken) return;
+  renderSearchResults(query, results, bibleResults, selectedIds.length > 0);
 }
 
 function scrollToTargetParagraph(paragraphIndex, behavior = 'smooth') {
@@ -625,6 +933,40 @@ function scrollHtmlFrameToTargetParagraph(frame, paragraphIndex, targetIndex) {
     setTimeout(post, 120);
     setTimeout(post, 360);
   });
+}
+
+function pageSearchHighlightPattern(query) {
+  if (!query) return undefined;
+  const request = searchRequest(query);
+  let source;
+  if (request.mode === 'regex') {
+    source = request.query;
+  } else if (request.mode === 'phrase') {
+    source = request.query.replace(/[.*+?^\x24{}()|[\]\\]/g, '\\$&');
+  } else {
+    const terms = searchHighlightTerms(request);
+    if (terms.length === 0) return undefined;
+    source = terms.map(term => term.replace(/[.*+?^\x24{}()|[\]\\]/g, '\\$&')).join('|');
+  }
+  const flags = 'gu' + (request.caseSensitive ? '' : 'i');
+  try {
+    new RegExp(source, flags);
+  } catch {
+    return undefined;
+  }
+  return { source, flags };
+}
+
+function postHtmlFrameMainSearch(frame, query, index = 0, scroll = true) {
+  if (!frame) return;
+  const pattern = pageSearchHighlightPattern(query);
+  frame.contentWindow?.postMessage({
+    type:'onenote-main-search',
+    source:pattern?.source || '',
+    flags:pattern?.flags || '',
+    index,
+    scroll
+  }, '*');
 }
 
 function viewHistoryKey(entry) {
@@ -838,6 +1180,7 @@ async function navigateViewHistory(step) {
       await openPage(entry.pageId, {
         paragraphIndex:entry.paragraphIndex,
         paragraphIndexes:Array.isArray(entry.paragraphIndexes) ? entry.paragraphIndexes : [],
+        bibleOccurrences:Array.isArray(entry.bibleOccurrences) ? entry.bibleOccurrences : [],
         rememberHistory:false
       });
     } else if (entry.type === 'bible') {
@@ -875,6 +1218,9 @@ async function openPage(id, options = {}) {
   const optionParagraphIndexes = !clearTarget && Array.isArray(options.paragraphIndexes)
     ? options.paragraphIndexes.filter(Number.isInteger)
     : [];
+  currentTargetBibleOccurrences = !clearTarget && Array.isArray(options.bibleOccurrences)
+    ? options.bibleOccurrences.filter(occurrence => Number.isInteger(occurrence?.paragraphIndex))
+    : [];
   const urlParagraphIndex = clearTarget ? undefined : paragraphIndexFromUrl();
   const targetParagraphIndex = !clearTarget && Number.isInteger(options.paragraphIndex)
     ? options.paragraphIndex
@@ -899,7 +1245,8 @@ async function openPage(id, options = {}) {
       type:'page',
       pageId:id,
       paragraphIndex:Number.isInteger(targetParagraphIndex) ? targetParagraphIndex : undefined,
-      paragraphIndexes:currentTargetParagraphIndexes
+      paragraphIndexes:currentTargetParagraphIndexes,
+      bibleOccurrences:currentTargetBibleOccurrences
     });
   } else {
     updateViewHistoryButtons();
@@ -912,6 +1259,7 @@ async function openPage(id, options = {}) {
   crumbs.textContent = pagePathLabel(page);
   const title = document.createElement('h2');
   const highlightQuery = pageHighlightQuery(options);
+  let currentInlineSearchQuery = highlightQuery;
   const titleMatches = appendHighlightedText(title, page.title || '(без названия)', highlightQuery);
   const heading = document.createElement('div');
   heading.className = 'page-heading';
@@ -972,7 +1320,8 @@ async function openPage(id, options = {}) {
               updateUrl:false,
               rememberHistory:false,
               paragraphIndex:targetParagraphIndex,
-              paragraphIndexes:currentTargetParagraphIndexes
+              paragraphIndexes:currentTargetParagraphIndexes,
+              bibleOccurrences:currentTargetBibleOccurrences
             });
             return;
           }
@@ -1008,6 +1357,7 @@ async function openPage(id, options = {}) {
   const titleParagraphIndexes = titleBibleParagraphIndexes(bibleRefs.paragraphs, page.title);
   const titleParagraphIndex = titleParagraphIndexes[0];
   currentTargetParagraphIndexes = canonicalPageTargetIndexes(currentTargetParagraphIndexes, titleParagraphIndexes);
+  currentTargetBibleOccurrences = canonicalPageBibleOccurrences(currentTargetBibleOccurrences, titleParagraphIndexes);
   currentTargetParagraphIndex = currentTargetParagraphIndexes[0];
   if (Number.isInteger(titleParagraphIndex)) {
     title.dataset.paragraphIndex = String(titleParagraphIndex);
@@ -1058,26 +1408,60 @@ async function openPage(id, options = {}) {
   ];
   const paragraphNavigationTargets = pageNavigationTargets(
     paragraphTargets,
-    currentTargetParagraphIndexes.filter(Number.isInteger)
+    currentTargetParagraphIndexes.filter(Number.isInteger),
+    currentTargetBibleOccurrences,
+    text
   );
-  let navigationTargets = paragraphNavigationTargets.length > 0
+  let navigationUsesParagraphTargets = paragraphNavigationTargets.length > 0;
+  let navigationTargets = navigationUsesParagraphTargets
     ? paragraphNavigationTargets
     : matches;
   const preferHtmlView = page.hasHtml && defaultPageViewMode() === 'html';
   let htmlFrame;
   let showingHtml = preferHtmlView;
+  let htmlSearchMatchCount = 0;
+  let htmlSearchResultsReady = false;
   let activeMatchIndex = 0;
   let matchCount;
   let matchNav;
+  const handleHtmlMainSearchResult = event => {
+    if (!htmlFrame || event.source !== htmlFrame.contentWindow) return;
+    const data = event.data || {};
+    if (data.type !== 'onenote-main-search-result') return;
+    if (navigationUsesParagraphTargets) return;
+    const pattern = pageSearchHighlightPattern(currentInlineSearchQuery);
+    if (String(data.source || '') !== String(pattern?.source || '')) return;
+    if (String(data.flags || '') !== String(pattern?.flags || '')) return;
+    htmlSearchMatchCount = Math.max(0, Number(data.count) || 0);
+    htmlSearchResultsReady = true;
+    activeMatchIndex = htmlSearchMatchCount > 0
+      ? Math.max(0, Math.min(Number(data.index) || 0, htmlSearchMatchCount - 1))
+      : 0;
+    if (showingHtml && matchCount) {
+      matchCount.textContent = htmlSearchMatchCount > 0
+        ? (activeMatchIndex + 1) + ' / ' + htmlSearchMatchCount
+        : '0 / 0';
+    }
+  };
+  window.addEventListener('message', handleHtmlMainSearchResult);
+  pageAbortController.signal.addEventListener('abort', () => {
+    window.removeEventListener('message', handleHtmlMainSearchResult);
+  }, { once:true });
   const goToMatch = (index, smooth = true, scroll = true) => {
-    if (navigationTargets.length === 0) return;
+    const navigationCount = showingHtml && !navigationUsesParagraphTargets && htmlSearchResultsReady
+      ? htmlSearchMatchCount
+      : navigationTargets.length;
+    if (navigationCount === 0) return;
     navigationTargets[activeMatchIndex]?.classList.remove('current-match');
-    activeMatchIndex = (index + navigationTargets.length) % navigationTargets.length;
+    activeMatchIndex = (index + navigationCount) % navigationCount;
     const match = navigationTargets[activeMatchIndex];
-    match.classList.add('current-match');
+    match?.classList.add('current-match');
     syncPageFocusTitleSearchState(title);
-    matchCount.textContent = (activeMatchIndex + 1) + ' / ' + navigationTargets.length;
-    const paragraphIndex = Number(match.dataset?.paragraphIndex);
+    matchCount.textContent = (activeMatchIndex + 1) + ' / ' + navigationCount;
+    if (showingHtml && !navigationUsesParagraphTargets) {
+      postHtmlFrameMainSearch(htmlFrame, currentInlineSearchQuery, activeMatchIndex, scroll);
+    }
+    const paragraphIndex = Number(match?.dataset?.paragraphIndex);
     if (Number.isInteger(paragraphIndex)) {
       currentTargetParagraphIndex = paragraphIndex;
       history.replaceState(
@@ -1087,9 +1471,9 @@ async function openPage(id, options = {}) {
       );
       if (showingHtml && scroll) scrollHtmlFrameToTargetParagraph(htmlFrame, paragraphIndex, activeMatchIndex);
     }
-    if (!showingHtml && scroll) match.scrollIntoView({ block:'center', behavior:smooth ? 'smooth' : 'auto' });
+    if (!showingHtml && scroll) match?.scrollIntoView({ block:'center', behavior:smooth ? 'smooth' : 'auto' });
   };
-  const renderMatchNavigation = (activateWithoutScrolling = false) => {
+  const renderMatchNavigation = (activateWithoutScrolling = false, scrollActivatedMatch = false) => {
     matchNav?.remove();
     matchNav = undefined;
     matchCount = undefined;
@@ -1099,6 +1483,12 @@ async function openPage(id, options = {}) {
     matchNav.setAttribute('aria-label', 'Совпадения на странице');
     matchCount = document.createElement('span');
     matchCount.className = 'match-count';
+    const initialNavigationCount = showingHtml && !navigationUsesParagraphTargets && htmlSearchResultsReady
+      ? htmlSearchMatchCount
+      : navigationTargets.length;
+    matchCount.textContent = initialNavigationCount > 0
+      ? (Math.min(activeMatchIndex, initialNavigationCount - 1) + 1) + ' / ' + initialNavigationCount
+      : '0 / 0';
     const previousMatch = document.createElement('button');
     previousMatch.className = 'match-button';
     previousMatch.type = 'button';
@@ -1113,15 +1503,27 @@ async function openPage(id, options = {}) {
     nextMatch.title = 'Следующее совпадение';
     nextMatch.setAttribute('aria-label', 'Следующее совпадение');
     nextMatch.addEventListener('click', () => goToMatch(activeMatchIndex + 1));
-    matchNav.append(matchCount, previousMatch, nextMatch);
+    const closeMatchNavigation = document.createElement('button');
+    closeMatchNavigation.className = 'match-button';
+    closeMatchNavigation.type = 'button';
+    closeMatchNavigation.textContent = '×';
+    closeMatchNavigation.title = 'Закрыть навигацию';
+    closeMatchNavigation.setAttribute('aria-label', 'Закрыть навигацию по совпадениям');
+    closeMatchNavigation.addEventListener('click', () => {
+      article.clearSearchMatches?.();
+      history.replaceState({ pageId:id }, '', pageUrl(id));
+    });
+    matchNav.append(matchCount, previousMatch, nextMatch, closeMatchNavigation);
     if (text.parentNode === article) article.insertBefore(matchNav, text);
     else article.append(matchNav);
-    if (activateWithoutScrolling) requestAnimationFrame(() => goToMatch(0, false, false));
+    if (activateWithoutScrolling) requestAnimationFrame(() => goToMatch(0, false, scrollActivatedMatch));
   };
   renderMatchNavigation();
-  article.updateSearchMatches = ({ paragraphIndexes, query, bibleResult }) => {
+  article.updateSearchMatches = ({ paragraphIndexes, bibleOccurrences, query, bibleResult, scrollToFirst = false }) => {
     const nextParagraphIndexes = canonicalPageTargetIndexes(paragraphIndexes, titleParagraphIndexes);
+    const nextBibleOccurrences = canonicalPageBibleOccurrences(bibleOccurrences, titleParagraphIndexes);
     currentTargetParagraphIndexes = nextParagraphIndexes;
+    currentTargetBibleOccurrences = nextBibleOccurrences;
     currentTargetParagraphIndex = nextParagraphIndexes[0];
     const targetSet = new Set(nextParagraphIndexes);
     const titleIsTarget = Number.isInteger(titleParagraphIndex) && targetSet.has(titleParagraphIndex);
@@ -1138,6 +1540,9 @@ async function openPage(id, options = {}) {
       paragraph.classList.remove('current-match');
     }
     const inlineQuery = bibleResult && nextParagraphIndexes.length > 0 ? '' : query;
+    currentInlineSearchQuery = inlineQuery;
+    htmlSearchMatchCount = 0;
+    htmlSearchResultsReady = false;
     const nextMatches = [
       ...highlightExistingSearchText(title, inlineQuery),
       ...highlightExistingSearchText(text, inlineQuery)
@@ -1146,20 +1551,28 @@ async function openPage(id, options = {}) {
       ...(title.classList.contains('bible-paragraph-target') ? [title] : []),
       ...text.querySelectorAll('.bible-paragraph-target')
     ];
-    const nextParagraphNavigationTargets = pageNavigationTargets(nextParagraphTargets, nextParagraphIndexes);
-    navigationTargets = nextParagraphNavigationTargets.length > 0
+    const nextParagraphNavigationTargets = pageNavigationTargets(
+      nextParagraphTargets,
+      nextParagraphIndexes,
+      nextBibleOccurrences,
+      text
+    );
+    navigationUsesParagraphTargets = nextParagraphNavigationTargets.length > 0;
+    navigationTargets = navigationUsesParagraphTargets
       ? nextParagraphNavigationTargets
       : nextMatches;
     activeMatchIndex = 0;
     htmlFrame?.contentWindow?.postMessage({
       type:'onenote-set-target-paragraphs',
-      paragraphIndexes:nextParagraphIndexes
+      paragraphIndexes:nextParagraphIndexes,
+      bibleOccurrences:nextBibleOccurrences
     }, '*');
-    renderMatchNavigation(true);
+    renderMatchNavigation(true, scrollToFirst);
   };
   article.clearSearchMatches = () => {
-    article.updateSearchMatches({ paragraphIndexes:[], query:'', bibleResult:true });
+    article.updateSearchMatches({ paragraphIndexes:[], bibleOccurrences:[], query:'', bibleResult:true });
     htmlFrame?.contentWindow?.postMessage({ type:'onenote-clear-target-paragraphs' }, '*');
+    postHtmlFrameMainSearch(htmlFrame, '', 0, false);
   };
   let openDefaultHtmlView;
   if (page.hasHtml) {
@@ -1226,6 +1639,7 @@ async function openPage(id, options = {}) {
             if (currentTargetParagraphIndexes.length === 0) {
               htmlFrame.contentWindow?.postMessage({ type:'onenote-clear-target-paragraphs' }, '*');
             }
+            postHtmlFrameMainSearch(htmlFrame, currentInlineSearchQuery, activeMatchIndex, true);
             refreshPageFind();
           });
           htmlFrame.srcdoc = pageHtmlFrameSrcdoc(
@@ -1233,7 +1647,8 @@ async function openPage(id, options = {}) {
             bibleRefs.paragraphs.filter(paragraph =>
               !titleParagraphIndexes.includes(Number(paragraph?.index))
             ),
-            currentTargetParagraphIndexes
+            currentTargetParagraphIndexes,
+            currentTargetBibleOccurrences
           );
           text.after(htmlFrame);
           if (result.degraded) {
@@ -1244,12 +1659,15 @@ async function openPage(id, options = {}) {
           }
           await htmlFrameReady;
           if (pageRefreshToken !== pendingPageRefreshToken || selectedPageId !== id) return;
+          postHtmlFrameMainSearch(htmlFrame, currentInlineSearchQuery, activeMatchIndex, true);
           htmlButton.disabled = false;
           htmlButton.removeAttribute('aria-busy');
         }
         htmlFrame.style.display = showingHtml ? 'block' : 'none';
         if (showingHtml) postHtmlFrameZoom(htmlFrame, Number(zoomRange.value));
+        if (showingHtml) postHtmlFrameMainSearch(htmlFrame, currentInlineSearchQuery, activeMatchIndex, true);
         if (showingHtml) scrollHtmlFrameToTargetParagraph(htmlFrame, currentTargetParagraphIndex, activeMatchIndex);
+        if (!showingHtml && navigationTargets.length > 0) goToMatch(activeMatchIndex, false, false);
         htmlButton.textContent = showingHtml ? '¶' : '<>';
         htmlButton.title = showingHtml ? 'Показать текст' : 'Показать HTML';
         htmlButton.setAttribute('aria-label', showingHtml ? 'Показать текст' : 'Показать HTML');

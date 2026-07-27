@@ -188,6 +188,46 @@ namespace BibleNote.Application.Controllers
         public List<int> Chapters { get; set; }
     }
 
+    public class BibleTextSearchRequest
+    {
+        public string Module { get; set; }
+
+        public string Query { get; set; }
+
+        public string Mode { get; set; }
+
+        public bool CaseSensitive { get; set; }
+
+        public int Limit { get; set; }
+    }
+
+    public class BibleTextSearchResponse
+    {
+        public string Module { get; set; }
+
+        public string ModuleName { get; set; }
+
+        public int BookIndex { get; set; }
+
+        public string BookName { get; set; }
+
+        public string BookShortName { get; set; }
+
+        public int Chapter { get; set; }
+
+        public int Verse { get; set; }
+
+        public int? TopVerse { get; set; }
+
+        public string Reference { get; set; }
+
+        public string Text { get; set; }
+
+        public int Score { get; set; }
+
+        public double Weight { get; set; }
+    }
+
     public class VerseTextRequest
     {
         public string Module { get; set; }
@@ -255,5 +295,40 @@ namespace BibleNote.Application.Controllers
         public bool IsPartOfBigVerse { get; set; }
 
         public bool HasValueEvenIfEmpty { get; set; }
+
+        public int? PartIndex { get; set; }
+
+        public bool IsEmpty { get; set; }
+    }
+
+    public class ParallelVerseTextRequest
+    {
+        public string BaseModule { get; set; }
+
+        public string Module { get; set; }
+
+        public int BookIndex { get; set; }
+
+        public int Chapter { get; set; }
+    }
+
+    public class ParallelVerseTextResponse
+    {
+        public string BaseModule { get; set; }
+
+        public string Module { get; set; }
+
+        public string ModuleName { get; set; }
+
+        public List<ParallelVerseTextRowResponse> Rows { get; set; }
+    }
+
+    public class ParallelVerseTextRowResponse
+    {
+        public int BaseChapter { get; set; }
+
+        public int BaseVerse { get; set; }
+
+        public List<VerseTextItemResponse> Verses { get; set; }
     }
 }

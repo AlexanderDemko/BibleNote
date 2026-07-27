@@ -60,6 +60,27 @@ namespace BibleNote.Providers.OneNote.Services
             return currentPageId;
         }
 
+        public async Task<OneNoteCurrentPageInfo> GetCurrentPageInfoAsync()
+        {
+            OneNoteCurrentPageInfo result = null;
+
+            await UseOneNoteAppInSingleThreadAsync(app =>
+            {
+                if (app.Windows.CurrentWindow == null)
+                    throw new OneNoteIsClosedException();
+
+                var pageId = app.Windows.CurrentWindow.CurrentPageId;
+                app.GetHyperlinkToObject(pageId, string.Empty, out var clientUrl);
+                result = new OneNoteCurrentPageInfo
+                {
+                    PageId = pageId,
+                    ClientUrl = clientUrl
+                };
+            });
+
+            return result;
+        }
+
         public async Task<string> GetCurrentSectionIdAsync()
         {
             string currentSectionId = null;

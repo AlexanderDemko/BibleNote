@@ -1,11 +1,12 @@
 import './env.js';
-import { app, BrowserWindow, dialog, Menu, MenuItem } from 'electron';
-import { spawn, type ChildProcess } from 'node:child_process';
+import { app, BrowserWindow, dialog, Menu, MenuItem, shell } from 'electron';
+import { execFile, spawn, type ChildProcess } from 'node:child_process';
 import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { listenOnLoopbackWithFallback } from './loopback-server.js';
+import { ensureOfficeTrustedProtocol, isOfficeTrustedProtocol } from './office-trusted-protocol.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -14,7 +15,9 @@ const uiPort = Number(process.env.ONENOTE_CACHE_UI_PORT ?? '4312');
 let electronControlPort = Number(process.env.ONENOTE_ELECTRON_CONTROL_PORT ?? String(uiPort + 1));
 const bibleNotePort = Number(process.env.BIBLENOTE_API_PORT ?? '5000');
 const bibleNoteUrl = process.env.BIBLENOTE_API_URL ?? `http://127.0.0.1:${bibleNotePort}`;
-const bibleProtocol = 'isbtbibleverse';
+const primaryBibleProtocol = 'bnverse';
+const legacyBibleProtocol = 'isbtbibleverse';
+const bibleProtocols = [primaryBibleProtocol, legacyBibleProtocol] as const;
 
 let bibleNoteProcess: ChildProcess | undefined;
 let uiProcess: ChildProcess | undefined;
@@ -27,6 +30,7 @@ let uiProcessExit: { code: number | null; signal: NodeJS.Signals | null } | unde
 let startupStartedAt = Date.now();
 let startupLogPath = '';
 let pendingBibleLink = findBibleProtocolArg(process.argv);
+let pendingOneNoteRibbonAction = findOneNoteRibbonAction(process.argv);
 let rendererRecoveryPromise: Promise<void> | undefined;
 let rendererUnresponsiveTimer: NodeJS.Timeout | undefined;
 let rendererHealthTimer: NodeJS.Timeout | undefined;
@@ -64,7 +68,18 @@ function request(url: string): Promise<{ statusCode: number; body: string }> {
 }
 
 function findBibleProtocolArg(argv: string[]): string | undefined {
-  return argv.find(arg => /^isbtBibleVerse:/i.test(arg));
+  return argv.find(arg => /^(?:bnVerse|isbtBibleVerse):/i.test(arg));
+}
+
+type OneNoteRibbonAction = 'open-bible' | 'analyze-current' | 'quick-analyze' | 'open';
+
+function findOneNoteRibbonAction(argv: string[]): OneNoteRibbonAction | undefined {
+  const value = argv
+    .find(arg => arg.startsWith('--onenote-ribbon-action='))
+    ?.slice('--onenote-ribbon-action='.length);
+  return value === 'open-bible' || value === 'analyze-current' || value === 'quick-analyze' || value === 'open'
+    ? value
+    : undefined;
 }
 
 function uiUrl(pathname = '/'): string {
@@ -80,17 +95,30 @@ function uiBiblePopupUrl(link: string): string {
 }
 
 function registerBibleProtocolHandler(): boolean {
-  if (process.defaultApp) {
-    return app.setAsDefaultProtocolClient(bibleProtocol, process.execPath, [path.resolve(process.argv[1] ?? '')]);
-  }
-  return app.setAsDefaultProtocolClient(bibleProtocol);
+  const registered = bibleProtocols.map(protocol => process.defaultApp
+    ? app.setAsDefaultProtocolClient(
+        protocol,
+        process.execPath,
+        [path.resolve(process.argv[1] ?? '')]
+      )
+    : app.setAsDefaultProtocolClient(protocol)).every(Boolean);
+  const officeTrusted = bibleProtocols.map(protocol => ensureOfficeTrustedProtocol(protocol)).every(Boolean);
+  return registered && officeTrusted;
 }
 
-function bibleProtocolStatus(): { available: boolean; registered: boolean; protocol: string } {
+function bibleProtocolStatus(): {
+  available: boolean;
+  registered: boolean;
+  protocol: string;
+  legacyProtocols: string[];
+  officeTrusted: boolean;
+} {
   return {
     available:true,
-    registered:app.isDefaultProtocolClient(bibleProtocol),
-    protocol:'isbtBibleVerse'
+    registered:bibleProtocols.every(protocol => app.isDefaultProtocolClient(protocol)),
+    protocol:'bnVerse',
+    legacyProtocols:['isbtBibleVerse'],
+    officeTrusted:bibleProtocols.every(protocol => isOfficeTrustedProtocol(protocol))
   };
 }
 
@@ -123,6 +151,162 @@ async function openBibleLink(link: string): Promise<void> {
   popup.focus();
 }
 
+function oneNoteRibbonRoot(): string | undefined {
+  if (process.platform !== 'win32') return undefined;
+  const packagedRoot = process.resourcesPath
+    ? path.join(process.resourcesPath, 'OneNoteRibbon')
+    : '';
+  const developmentRoot = path.resolve(__dirname, '..', 'vendor', 'OneNoteRibbon');
+  return existingPath(packagedRoot, developmentRoot);
+}
+
+function runOneNoteRibbonRegistrar(action: 'status' | 'install' | 'uninstall' | 'configure'): Promise<Record<string, unknown>> {
+  if (process.platform !== 'win32') {
+    return Promise.resolve({ available:false, platform:process.platform });
+  }
+  const root = oneNoteRibbonRoot();
+  const registrar = root
+    ? path.join(root, 'BibleNote.OneNoteRibbon.Registrar.exe')
+    : undefined;
+  if (!root || !registrar || !fs.existsSync(registrar)) {
+    return Promise.resolve({
+      available:false,
+      platform:process.platform,
+      error:'Компоненты интеграции с OneNote не включены в эту сборку.'
+    });
+  }
+
+  return new Promise((resolve, reject) => {
+    execFile(registrar, [
+      action,
+      '--root', root,
+      '--exe', process.execPath,
+      '--control-url', `http://127.0.0.1:${electronControlPort}`
+    ], {
+      windowsHide:true,
+      encoding:'utf8',
+      maxBuffer:1024 * 1024
+    }, (error, stdout, stderr) => {
+      let result: Record<string, unknown>;
+      try {
+        result = JSON.parse(stdout.trim() || '{}') as Record<string, unknown>;
+      } catch {
+        reject(new Error((stderr || stdout || error?.message || 'Регистратор OneNote вернул некорректный ответ.').trim()));
+        return;
+      }
+      if (error) {
+        reject(new Error(String(result.error || stderr || error.message)));
+        return;
+      }
+      resolve(result);
+    });
+  });
+}
+
+async function showRibbonActivity(
+  message: string,
+  kind: 'info' | 'running' | 'success' | 'error' = 'info',
+  sticky = kind === 'running'
+): Promise<void> {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  await mainWindow.webContents.executeJavaScript(
+    `typeof showActivity === 'function' && showActivity(${JSON.stringify(message)}, ${JSON.stringify(kind)}, ${JSON.stringify(sticky)})`,
+    true
+  ).catch(() => undefined);
+}
+
+async function fetchOneNoteRibbonRoute(route: string): Promise<Response> {
+  const attempts = 40;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    const response = await fetch(uiUrl(`/api/ribbon/${route}`), { method:'POST' });
+    if (response.status !== 503 || attempt === attempts) return response;
+    await response.text().catch(() => undefined);
+    await new Promise(resolve => setTimeout(resolve, 250));
+  }
+  throw new Error('BibleNote cache did not become ready.');
+}
+
+async function handleOneNoteRibbonAction(action: OneNoteRibbonAction): Promise<void> {
+  if (action === 'open-bible' || action === 'open') focusMainWindow(true);
+  if (action === 'analyze-current') {
+    await showRibbonActivity('Определяем текущую страницу OneNote…', 'running');
+  }
+  await waitForCacheUi(45000);
+
+  if (action === 'open-bible') {
+    const target = mainWindow;
+    if (!target || target.isDestroyed()) {
+      throw new Error('Окно BibleNote недоступно.');
+    }
+    await target.webContents.executeJavaScript(
+      'Promise.resolve(openBibleFromRibbon()).then(() => true)',
+      true
+    );
+    focusMainWindow(true);
+    return;
+  }
+
+  let currentPageTitle = '';
+  if (action === 'analyze-current') {
+    const currentPageResponse = await fetchOneNoteRibbonRoute('current-page');
+    const currentPageText = await currentPageResponse.text();
+    let currentPageBody: any = {};
+    try {
+      currentPageBody = currentPageText ? JSON.parse(currentPageText) : {};
+    } catch {
+      currentPageBody = {};
+    }
+    if (!currentPageResponse.ok) {
+      throw new Error(currentPageBody?.error || currentPageText || `HTTP ${currentPageResponse.status}`);
+    }
+    currentPageTitle = typeof currentPageBody?.currentPage?.title === 'string'
+      ? currentPageBody.currentPage.title.trim()
+      : '';
+    await showRibbonActivity(
+      currentPageTitle
+        ? `Синхронизация страницы «${currentPageTitle}»…`
+        : 'Синхронизация текущей страницы OneNote…',
+      'running'
+    );
+  }
+
+  const route = action === 'open' ? 'open-current' : action;
+  const response = await fetchOneNoteRibbonRoute(route);
+  const text = await response.text();
+  let body: any = {};
+  try {
+    body = text ? JSON.parse(text) : {};
+  } catch {
+    body = {};
+  }
+  if (!response.ok) {
+    throw new Error(body?.error || text || `HTTP ${response.status}`);
+  }
+
+  if (action === 'open') {
+    const pageId = typeof body?.currentPage?.id === 'string'
+      ? body.currentPage.id
+      : '';
+    if (!pageId) throw new Error('BibleNote не вернул идентификатор текущей страницы.');
+    const target = mainWindow;
+    if (!target || target.isDestroyed()) {
+      throw new Error('Окно BibleNote недоступно.');
+    }
+    await target.webContents.executeJavaScript(
+      `Promise.resolve(openPage(${JSON.stringify(pageId)})).then(() => true)`,
+      true
+    );
+    focusMainWindow(true);
+  } else if (action === 'analyze-current') {
+    await showRibbonActivity(
+      currentPageTitle
+        ? `Страница «${currentPageTitle}» синхронизирована с BibleNote.`
+        : 'Текущая страница OneNote синхронизирована с BibleNote.',
+      'success'
+    );
+  }
+}
+
 async function startControlServer(): Promise<void> {
   if (controlServer) return;
   controlServer = http.createServer((request, response) => {
@@ -141,8 +325,8 @@ async function startControlServer(): Promise<void> {
       return;
     }
     if (url.pathname === '/protocol/register' && request.method === 'POST') {
-      const ok = registerBibleProtocolHandler();
-      send(200, { ...bibleProtocolStatus(), registered:ok && app.isDefaultProtocolClient(bibleProtocol) });
+      registerBibleProtocolHandler();
+      send(200, bibleProtocolStatus());
       return;
     }
     if (url.pathname === '/biblenote/ensure' && request.method === 'POST') {
@@ -150,6 +334,63 @@ async function startControlServer(): Promise<void> {
         send(200, { available:true, url:bibleNoteUrl });
       }).catch(error => {
         send(500, { available:false, error:error instanceof Error ? error.message : String(error) });
+      });
+      return;
+    }
+    if (url.pathname === '/open-external' && request.method === 'POST') {
+      const target = url.searchParams.get('url') || '';
+      let parsed: URL;
+      try {
+        parsed = new URL(target);
+      } catch {
+        send(400, { error:'Invalid external URL.' });
+        return;
+      }
+      if (parsed.protocol !== 'https:' || !/(\.|^)microsoft\.com$/i.test(parsed.hostname)) {
+        send(400, { error:'Only Microsoft sign-in pages are allowed.' });
+        return;
+      }
+      shell.openExternal(parsed.toString()).then(() => {
+        send(200, { opened:true });
+      }).catch(error => {
+        send(500, { error:error instanceof Error ? error.message : String(error) });
+      });
+      return;
+    }
+    if (url.pathname === '/onenote-integration/status' && request.method === 'GET') {
+      runOneNoteRibbonRegistrar('status').then(result => {
+        send(200, result);
+      }).catch(error => {
+        send(500, { available:true, error:error instanceof Error ? error.message : String(error) });
+      });
+      return;
+    }
+    if (
+      (url.pathname === '/onenote-integration/install'
+        || url.pathname === '/onenote-integration/uninstall')
+      && request.method === 'POST'
+    ) {
+      const action = url.pathname.endsWith('/install') ? 'install' : 'uninstall';
+      runOneNoteRibbonRegistrar(action).then(result => {
+        send(200, result);
+      }).catch(error => {
+        send(500, { available:true, error:error instanceof Error ? error.message : String(error) });
+      });
+      return;
+    }
+    const ribbonMatch = url.pathname.match(/^\/onenote-ribbon\/(open-bible|analyze-current|quick-analyze|open)$/);
+    if (ribbonMatch && request.method === 'POST') {
+      const action = ribbonMatch[1] as OneNoteRibbonAction;
+      send(202, { accepted:true, action });
+      void handleOneNoteRibbonAction(action).catch(error => {
+        const message = error instanceof Error ? error.message : String(error);
+        logStartup(`OneNote Ribbon action ${action} failed: ${message}`);
+        if (action === 'open-bible' || action === 'open') {
+          focusMainWindow(true);
+          void showRibbonActivity(`Команда OneNote не выполнена: ${message}`, 'error');
+        } else if (action === 'analyze-current') {
+          void showRibbonActivity(`Не удалось синхронизировать текущую страницу: ${message}`, 'error');
+        }
       });
       return;
     }
@@ -206,6 +447,26 @@ async function startControlServer(): Promise<void> {
   }
 }
 
+function focusMainWindow(forceForeground = false): void {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  if (mainWindow.isMinimized()) mainWindow.restore();
+  if (forceForeground) mainWindow.setAlwaysOnTop(true);
+  mainWindow.show();
+  if (forceForeground) mainWindow.moveTop();
+  mainWindow.focus();
+  mainWindow.flashFrame(false);
+  if (forceForeground) {
+    const target = mainWindow;
+    setTimeout(() => {
+      if (target.isDestroyed()) return;
+      target.setAlwaysOnTop(false);
+      target.moveTop();
+      target.focus();
+      target.flashFrame(false);
+    }, 250);
+  }
+}
+
 async function waitForHttp(url: string, timeoutMs: number): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   let lastError: unknown;
@@ -239,15 +500,30 @@ function existingPath(...parts: string[]): string | undefined {
 }
 
 function bibleNoteExecutablePath(): string | undefined {
+  const executableName = process.platform === 'win32'
+    ? 'BibleNote.Application.exe'
+    : 'BibleNote.Application';
   const packagedPath = process.resourcesPath
-    ? path.join(process.resourcesPath, 'BibleNote', 'BibleNote.Application.exe')
+    ? path.join(process.resourcesPath, 'BibleNote', executableName)
     : '';
-  const devPath = path.resolve(__dirname, '..', '..', 'BibleNote', 'Application', 'bin', 'Debug', 'net10.0', 'BibleNote.Application.exe');
-  const releasePath = path.resolve(__dirname, '..', '..', 'BibleNote', 'Application', 'bin', 'Release', 'net10.0', 'BibleNote.Application.exe');
-  return existingPath(process.env.BIBLENOTE_EXE_PATH ?? '', packagedPath, releasePath, devPath);
+  const devPath = path.resolve(__dirname, '..', '..', 'Api', 'Application', 'bin', 'Debug', 'net10.0', executableName);
+  const releasePath = path.resolve(__dirname, '..', '..', 'Api', 'Application', 'bin', 'Release', 'net10.0', executableName);
+  const legacyDevPath = path.resolve(__dirname, '..', '..', 'BibleNote', 'Application', 'bin', 'Debug', 'net10.0', executableName);
+  const legacyReleasePath = path.resolve(__dirname, '..', '..', 'BibleNote', 'Application', 'bin', 'Release', 'net10.0', executableName);
+  return existingPath(
+    process.env.BIBLENOTE_EXE_PATH ?? '',
+    packagedPath,
+    releasePath,
+    devPath,
+    legacyReleasePath,
+    legacyDevPath
+  );
 }
 
 function nodeExecutablePath(): string {
+  // On macOS the packaged Electron executable can run ordinary Node scripts.
+  // This avoids shipping a second Node runtime inside the application bundle.
+  if (app.isPackaged && process.platform === 'darwin') return process.execPath;
   const packagedPath = process.resourcesPath
     ? path.join(process.resourcesPath, 'node', 'node.exe')
     : '';
@@ -259,14 +535,36 @@ function cacheUiScriptPath(): string {
 }
 
 function appIconPath(): string {
-  return path.resolve(__dirname, '..', 'assets', 'biblenote.ico');
+  const iconName = process.platform === 'win32' ? 'biblenote.ico' : 'biblenote-icon.png';
+  return path.resolve(__dirname, '..', 'assets', iconName);
+}
+
+function seedBundledBibleModules(): void {
+  if (!app.isPackaged || process.platform !== 'darwin' || !process.resourcesPath) return;
+
+  const sourceRoot = path.join(process.resourcesPath, 'BibleNote', 'Modules');
+  const targetRoot = path.join(app.getPath('userData'), 'Modules');
+  if (!fs.existsSync(sourceRoot)) return;
+
+  fs.mkdirSync(targetRoot, { recursive:true });
+  for (const entry of fs.readdirSync(sourceRoot, { withFileTypes:true })) {
+    if (!entry.isDirectory()) continue;
+    const target = path.join(targetRoot, entry.name);
+    if (fs.existsSync(target)) continue;
+    fs.cpSync(path.join(sourceRoot, entry.name), target, { recursive:true });
+    logStartup(`seeded bundled Bible module ${entry.name}`);
+  }
 }
 
 function startBibleNote(): void {
+  seedBundledBibleModules();
   const env = {
     ...process.env,
     ASPNETCORE_ENVIRONMENT: process.env.ASPNETCORE_ENVIRONMENT ?? 'Development',
-    BIBLENOTE_API_URL: bibleNoteUrl
+    BIBLENOTE_API_URL: bibleNoteUrl,
+    ...(process.platform === 'darwin'
+      ? { BIBLENOTE_DATA_DIR: process.env.BIBLENOTE_DATA_DIR ?? app.getPath('userData') }
+      : {})
   };
   const exe = bibleNoteExecutablePath();
   if (exe) {
@@ -344,7 +642,8 @@ function startCacheUiProcess(): void {
       BIBLENOTE_EXE_PATH: bibleNoteExecutablePath() ?? '',
       ONENOTE_ELECTRON_CONTROL_URL: `http://127.0.0.1:${electronControlPort}`,
       ONENOTE_STARTUP_TIMING: '1',
-      ONENOTE_STARTUP_LOG: startupLogPath
+      ONENOTE_STARTUP_LOG: startupLogPath,
+      ...(app.isPackaged && process.platform === 'darwin' ? { ELECTRON_RUN_AS_NODE: '1' } : {})
     },
     windowsHide: true,
     stdio: ['ignore', 'pipe', 'pipe']
@@ -421,12 +720,13 @@ function installApplicationMenu(): void {
   Menu.setApplicationMenu(menu);
 }
 
-function createBrowserWindow(): BrowserWindow {
+function createBrowserWindow(show = true): BrowserWindow {
   const window = new BrowserWindow({
     width: 1320,
     height: 860,
     minWidth: 720,
     minHeight: 480,
+    show,
     title: 'BibleNote',
     icon: appIconPath(),
     webPreferences: {
@@ -586,11 +886,21 @@ async function createWindow(): Promise<void> {
   logStartup('createWindow start');
   process.env.BIBLENOTE_API_URL = bibleNoteUrl;
   const protocolRegistered = registerBibleProtocolHandler();
-  logStartup(`bible protocol registration requested result=${protocolRegistered} registered=${app.isDefaultProtocolClient(bibleProtocol)}`);
+  logStartup(`bible protocol registration requested result=${protocolRegistered} registered=${bibleProtocols.every(protocol => app.isDefaultProtocolClient(protocol))} officeTrusted=${bibleProtocols.every(protocol => isOfficeTrustedProtocol(protocol))}`);
   installApplicationMenu();
   await startControlServer();
+  void runOneNoteRibbonRegistrar('status').then(status => {
+    if (status.enabled === true) return runOneNoteRibbonRegistrar('configure');
+    return undefined;
+  }).catch(error => {
+    logStartup(`OneNote Ribbon configuration refresh failed: ${error instanceof Error ? error.message : String(error)}`);
+  });
 
-  mainWindow = createBrowserWindow();
+  mainWindow = createBrowserWindow(
+    pendingOneNoteRibbonAction === undefined
+      || pendingOneNoteRibbonAction === 'open-bible'
+      || pendingOneNoteRibbonAction === 'open'
+  );
   startRendererHealthMonitor();
   logStartup('browser window created');
 
@@ -608,6 +918,17 @@ async function createWindow(): Promise<void> {
   pendingBibleLink = undefined;
   await mainWindow.loadURL(firstBibleLink ? uiBibleLinkUrl(firstBibleLink) : uiUrl('/'));
   logStartup('main ui loaded');
+  const firstRibbonAction = pendingOneNoteRibbonAction;
+  pendingOneNoteRibbonAction = undefined;
+  if (firstRibbonAction) {
+    await handleOneNoteRibbonAction(firstRibbonAction).catch(async error => {
+      const message = error instanceof Error ? error.message : String(error);
+      logStartup(`startup OneNote Ribbon action ${firstRibbonAction} failed: ${message}`);
+      if (firstRibbonAction === 'open-bible' || firstRibbonAction === 'open') {
+        await showRibbonActivity(`Команда OneNote не выполнена: ${message}`, 'error');
+      }
+    });
+  }
 }
 
 app.on('window-all-closed', () => {
@@ -646,21 +967,30 @@ if (!singleInstanceLock) {
 } else {
   app.on('second-instance', (_event, argv) => {
     const bibleLink = findBibleProtocolArg(argv);
+    const ribbonAction = findOneNoteRibbonAction(argv);
     if (bibleLink) {
       openBibleLink(bibleLink).catch(error => {
         const message = error instanceof Error ? error.stack ?? error.message : String(error);
         dialog.showErrorBox('BibleNote failed to open Bible link', message);
       });
+    } else if (ribbonAction) {
+      handleOneNoteRibbonAction(ribbonAction).catch(error => {
+        const message = error instanceof Error ? error.message : String(error);
+        logStartup(`second-instance OneNote Ribbon action ${ribbonAction} failed: ${message}`);
+        if (ribbonAction === 'open-bible' || ribbonAction === 'open') {
+          focusMainWindow(true);
+          void showRibbonActivity(`Команда OneNote не выполнена: ${message}`, 'error');
+        }
+      });
     } else if (mainWindow) {
-      if (mainWindow.isMinimized()) mainWindow.restore();
-      mainWindow.focus();
+      focusMainWindow(true);
     }
   });
 }
 
 app.on('open-url', (event, url) => {
   event.preventDefault();
-  if (/^isbtBibleVerse:/i.test(url)) {
+  if (/^(?:bnVerse|isbtBibleVerse):/i.test(url)) {
     openBibleLink(url).catch(error => {
       const message = error instanceof Error ? error.stack ?? error.message : String(error);
       dialog.showErrorBox('BibleNote failed to open Bible link', message);

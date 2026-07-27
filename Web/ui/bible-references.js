@@ -10,12 +10,41 @@ function pagePathLabel(page) {
   return parts.join(' / ');
 }
 
+function biblePageRefKey(ref) {
+  const location = [
+    ref.module || '',
+    ref.bookIndex || ref.bookName || ref.bookShortName || '',
+    ref.chapter || '',
+    ref.verse || '',
+    ref.topChapter || ref.chapter || '',
+    ref.topVerse || ref.verse || ''
+  ].map(value => String(value).trim().toLocaleLowerCase()).join(':');
+  const fallback = String(ref.normalizedRef || ref.originalText || '').trim().toLocaleLowerCase();
+  return location.replace(/:/g, '') ? location : fallback;
+}
+
 function orderedBiblePageRefs(data) {
   const ordered = [];
+  const byKey = new Map();
   let sourceOrder = 0;
   for (const paragraph of data.paragraphs || []) {
     for (const ref of paragraph.references || []) {
-      ordered.push({ ref, sourceOrder:sourceOrder++ });
+      const key = biblePageRefKey(ref);
+      const paragraphIndex = paragraph?.index;
+      const existing = key ? byKey.get(key) : undefined;
+      if (existing) {
+        if (Number.isInteger(paragraphIndex) && !existing.paragraphIndexes.includes(paragraphIndex)) {
+          existing.paragraphIndexes.push(paragraphIndex);
+        }
+        continue;
+      }
+      const item = {
+        ref,
+        sourceOrder:sourceOrder++,
+        paragraphIndexes:Number.isInteger(paragraphIndex) ? [paragraphIndex] : []
+      };
+      ordered.push(item);
+      if (key) byKey.set(key, item);
     }
   }
 
@@ -31,6 +60,24 @@ function orderedBiblePageRefs(data) {
     || modulePosition(a.ref.topVerse, 0) - modulePosition(b.ref.topVerse, 0)
     || a.sourceOrder - b.sourceOrder
   );
+}
+
+function showBiblePageRefUsage(paragraphIndexes) {
+  if (!selectedPageId) return;
+  const uniqueIndexes = [];
+  for (const paragraphIndex of paragraphIndexes || []) {
+    if (Number.isInteger(paragraphIndex) && !uniqueIndexes.includes(paragraphIndex)) uniqueIndexes.push(paragraphIndex);
+  }
+  if (uniqueIndexes.length === 0) return;
+  const article = content.querySelector('.page[data-page-id="' + CSS.escape(selectedPageId) + '"]');
+  if (!article || typeof article.updateSearchMatches !== 'function') return;
+  article.updateSearchMatches({
+    paragraphIndexes:uniqueIndexes,
+    bibleOccurrences:[],
+    query:'',
+    bibleResult:true,
+    scrollToFirst:true
+  });
 }
 
 function createBibleRefAction(label, icon, onClick, options = {}) {
@@ -57,7 +104,7 @@ function renderBiblePageRefs(data) {
     if (section.open) loadBiblePageRefTexts(section).catch(error => console.warn(error));
     requestAnimationFrame(() => updateContentScrollbar?.());
   });
-  for (const { ref } of orderedRefs) {
+  for (const { ref, paragraphIndexes } of orderedRefs) {
     const block = document.createElement('div');
     block.className = 'bible-reference';
     const row = document.createElement('div');
@@ -76,6 +123,15 @@ function renderBiblePageRefs(data) {
     const actions = document.createElement('div');
     actions.className = 'bible-ref-actions';
     const refLabel = ref.normalizedRef || ref.originalText || 'библейской ссылки';
+    const usageButton = createBibleRefAction(
+      'Показать в заметке',
+      '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/><circle cx="12" cy="12" r="8"/></svg>',
+      () => showBiblePageRefUsage(paragraphIndexes),
+      {
+        ariaLabel:'Показать, где в заметке используется ' + refLabel,
+        disabled:paragraphIndexes.length === 0
+      }
+    );
     const contextButton = createBibleRefAction(
       'Показать в контексте',
       '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 10h10M4 14h16M4 18h10"/><path d="M17 9v6M14 12h6"/></svg>',
@@ -112,7 +168,7 @@ function renderBiblePageRefs(data) {
         : showBibleText(ref);
       action.catch(showError);
     });
-    actions.append(contextButton, readerButton, notesButton, parallelButton);
+    actions.append(usageButton, contextButton, readerButton, notesButton, parallelButton);
     row.append(chip, actions);
     const refText = document.createElement('div');
     refText.className = 'bible-ref-text loading';
@@ -373,6 +429,14 @@ async function openExternalBibleRefFromUrl() {
   history.replaceState(null, '', selectedPageId ? pageUrl(selectedPageId, currentTargetParagraphIndex) : '/');
 }
 
+function bibleOccurrenceKey(occurrence) {
+  const paragraphIndex = occurrence?.paragraphIndex;
+  const startIndex = occurrence?.startIndex;
+  const endIndex = occurrence?.endIndex;
+  if (![paragraphIndex, startIndex, endIndex].every(Number.isInteger)) return '';
+  return paragraphIndex + ':' + startIndex + ':' + endIndex;
+}
+
 function appendPageTextWithBibleRefs(container, pageText, query, bibleRefs) {
   const ranges = bibleTextRanges(pageText, bibleRefs);
   const targetParagraphIndexSet = new Set(currentTargetParagraphIndexes.filter(Number.isInteger));
@@ -414,6 +478,11 @@ function appendPageTextWithBibleRefs(container, pageText, query, bibleRefs) {
     if (range) {
       const link = document.createElement('a');
       link.className = 'bible-inline-ref';
+      link.dataset.bibleOccurrence = bibleOccurrenceKey({
+        paragraphIndex:range.paragraphIndex,
+        startIndex:range.ref.startIndex,
+        endIndex:range.ref.endIndex
+      });
       link.href = bibleTextUrl(range.ref);
       link.title = 'Показать текст стиха';
       link.addEventListener('click', event => {
@@ -482,7 +551,7 @@ function bibleTextRanges(pageText, bibleRefs) {
       const start = paragraphStart + decodedStartIndex;
       const end = paragraphStart + decodedEndIndex;
       if (start < paragraphStart || end > paragraphStart + paragraphText.length || start >= end) continue;
-      ranges.push({ start, end, ref });
+      ranges.push({ start, end, ref, paragraphIndex:paragraph.index });
     }
   }
 
@@ -661,19 +730,25 @@ async function openBibleParallelPanel(ref) {
     const notesButton = document.createElement('button');
     notesButton.className = 'bible-parallel-common-notes';
     notesButton.type = 'button';
-    notesButton.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h10v14H5zM9 7h10v13H9M8 9h4M8 12h4"/></svg>';
-    notesButton.title = 'Показать общие заметки';
-    notesButton.setAttribute('aria-label', 'Показать общие заметки для ' + (ref.normalizedRef || ref.originalText) + ' и ' + (relatedRef.normalizedRef || relatedRef.originalText));
-    notesButton.addEventListener('click', () => showParallelPairNotes(ref, relatedRef).catch(showError));
-    const meta = document.createElement('span');
-    meta.className = 'bible-parallel-meta';
     const commonNotes = Number(item.pages || 0);
-    meta.textContent = 'Индекс параллельности: ' + Number(item.relationWeight || 0).toFixed(2)
-      + ' · ' + commonNotes + ' '
+    const commonNotesLabel = commonNotes + ' '
       + pluralRu(commonNotes, 'общая заметка', 'общие заметки', 'общих заметок');
+    notesButton.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h10v14H5zM9 7h10v13H9M8 9h4M8 12h4"/></svg><span>' + commonNotes + '</span>';
+    notesButton.title = 'Общие заметки: ' + commonNotes;
+    notesButton.setAttribute('aria-label', 'Показать ' + commonNotesLabel + ' для ' + (ref.normalizedRef || ref.originalText) + ' и ' + (relatedRef.normalizedRef || relatedRef.originalText));
+    notesButton.addEventListener('click', () => showParallelPairNotes(ref, relatedRef).catch(showError));
+    const metrics = document.createElement('span');
+    metrics.className = 'bible-parallel-metrics';
+    const weight = Number(item.relationWeight || 0).toFixed(2).replace('.', ',');
+    const weightMetric = document.createElement('span');
+    weightMetric.className = 'bible-parallel-metric';
+    weightMetric.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h10M14 4l3 3-3 3M17 17H7M10 14l-3 3 3 3"/></svg><span>' + weight + '</span>';
+    weightMetric.title = 'Индекс параллельности: ' + weight;
+    weightMetric.setAttribute('aria-label', 'Индекс параллельности: ' + weight);
+    metrics.append(weightMetric, notesButton);
     const verseText = document.createElement('div');
     verseText.className = 'bible-parallel-note-text bible-parallel-verse-text loading';
-    head.append(refButton, meta, notesButton);
+    head.append(refButton, metrics);
     row.append(head, verseText);
     list.append(row);
     loadParallelVerseText(relatedRef, verseText).catch(showError);
@@ -706,6 +781,14 @@ function cacheStatusText(status) {
   return status.pages + ' страниц · ' + status.pagesWithContent + ' с текстом · ' + (status.bibleReferences || 0) + ' ссылок · ' + status.pagesWithErrors + ' ' + pluralRu(status.pagesWithErrors, 'ошибка', 'ошибки', 'ошибок');
 }
 
+function searchHighlightTerms(request) {
+  const terms = request.query.match(/[\p{L}\p{N}_-]+/gu) || [];
+  return [...new Set(terms
+    .filter(term => term.length > 1)
+    .map(term => request.caseSensitive ? term : term.toLocaleLowerCase()))]
+    .sort((a, b) => b.length - a.length);
+}
+
 function appendHighlightedText(container, text, query) {
   if (!query) {
     container.textContent = text;
@@ -720,8 +803,7 @@ function appendHighlightedText(container, text, query) {
       const escaped = request.query.replace(/[.*+?^\x24{}()|[\]\\]/g, '\\$&');
       regex = new RegExp(escaped, 'gu' + (request.caseSensitive ? '' : 'i'));
     } else {
-      const terms = request.query.match(/[\p{L}\p{N}_-]+/gu) || [];
-      const unique = [...new Set(terms.map(term => request.caseSensitive ? term : term.toLocaleLowerCase()))].sort((a, b) => b.length - a.length);
+      const unique = searchHighlightTerms(request);
       if (!unique.length) {
         container.textContent = text;
         return [];
