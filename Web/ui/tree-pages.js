@@ -591,7 +591,10 @@ function pageNavigationTargets(paragraphTargets, paragraphIndexes, bibleOccurren
       const inlineTarget = key
         ? inlineRoot.querySelector('[data-bible-occurrence="' + CSS.escape(key) + '"]')
         : null;
-      if (inlineTarget) return inlineTarget;
+      if (inlineTarget) {
+        inlineTarget.dataset.paragraphIndex = String(occurrence.paragraphIndex);
+        return inlineTarget;
+      }
       return targetByParagraphIndex.get(occurrence.paragraphIndex) || (() => {
         const virtualTarget = document.createElement('span');
         virtualTarget.className = 'bible-paragraph-target';
@@ -864,7 +867,17 @@ async function renderSearch(query) {
   const heading = document.createElement('div');
   heading.className = 'search-heading';
   heading.textContent = 'Результаты поиска';
-  tree.append(heading);
+  const loading = document.createElement('div');
+  loading.className = 'search-loading';
+  loading.setAttribute('role', 'status');
+  loading.setAttribute('aria-live', 'polite');
+  const loadingSpinner = document.createElement('span');
+  loadingSpinner.className = 'search-loading-spinner';
+  loadingSpinner.setAttribute('aria-hidden', 'true');
+  const loadingLabel = document.createElement('span');
+  loadingLabel.textContent = 'Идёт поиск…';
+  loading.append(loadingSpinner, loadingLabel);
+  tree.append(heading, loading);
   const selectedIds = selectedNotebookIds();
   const request = searchRequest(query);
   const params = new URLSearchParams({
@@ -894,6 +907,7 @@ async function renderSearch(query) {
     ]);
   } catch (error) {
     if (renderToken !== treeRenderToken) return;
+    loading.remove();
     throw error;
   }
   if (renderToken !== treeRenderToken) return;
@@ -1190,6 +1204,41 @@ async function navigateViewHistory(step) {
     navigatingViewHistory = false;
     updateViewHistoryButtons();
   }
+}
+
+function showRibbonPageLoading(pageTitle = '') {
+  activePageAbortController?.abort();
+  pendingPageRefreshToken += 1;
+  selectedPageId = null;
+  const loading = document.createElement('div');
+  loading.className = 'page-loading';
+  loading.setAttribute('role', 'status');
+  const loadingInner = document.createElement('div');
+  const loadingSpinner = document.createElement('span');
+  loadingSpinner.className = 'page-loading-spinner';
+  loadingSpinner.setAttribute('aria-hidden', 'true');
+  const loadingLabel = document.createElement('span');
+  loadingLabel.textContent = pageTitle
+    ? `Открываем страницу «${pageTitle}»…`
+    : 'Открываем текущую страницу OneNote…';
+  const loadingNote = document.createElement('span');
+  loadingNote.className = 'page-loading-note';
+  loadingNote.textContent = 'Если страницы ещё нет в BibleNote, сначала синхронизируем её.';
+  loadingInner.append(loadingSpinner, loadingLabel, loadingNote);
+  loading.append(loadingInner);
+  content.setAttribute('aria-busy', 'true');
+  content.replaceChildren(loading);
+  content.scrollTop = 0;
+  refreshPageFind();
+}
+
+function showRibbonPageLoadingError(message) {
+  content.removeAttribute('aria-busy');
+  const error = document.createElement('div');
+  error.className = 'error-box';
+  error.textContent = 'Не удалось открыть текущую страницу OneNote: ' + message;
+  content.replaceChildren(error);
+  refreshPageFind();
 }
 
 async function openPage(id, options = {}) {

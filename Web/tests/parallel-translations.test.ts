@@ -76,9 +76,9 @@ test('reader decodes HTML entities in primary and parallel verse text', () => {
   );
 
   assert.equal(context.result, '<To the chief Musician> & Psalm');
-  assert.equal(reader.includes('primaryText.textContent = bibleReaderDisplayText(verse.text)'), true);
+  assert.equal(reader.includes('prepareInductiveTextElement(primaryText, result, verse, bibleReaderDisplayText(verse.text))'), true);
   assert.equal(reader.includes('text.textContent = bibleReaderDisplayText(mappedVerse.text)'), true);
-  assert.equal(reader.includes('text.textContent = bibleReaderDisplayText(verse.text)'), true);
+  assert.equal(reader.includes('prepareInductiveTextElement(text, result, verse, bibleReaderDisplayText(verse.text))'), true);
 
   const controller = fs.readFileSync(
     path.join(root, '..', 'Api', 'Application', 'Controllers', 'VerseParsingController.cs'),
@@ -128,4 +128,36 @@ test('clicking a selected Bible verse clears its selection', () => {
     3,
     'the helper must be used by both reader modes'
   );
+});
+
+test('selecting a verse from chapter observations highlights and scrolls to it', () => {
+  const reader = fs.readFileSync(path.join(root, 'ui', 'bible-reader.js'), 'utf8');
+  const start = reader.indexOf('function selectBibleReaderVerse(');
+  const end = reader.indexOf('function toggleBibleReaderVerseSelection(', start);
+  assert.ok(start >= 0 && end > start, 'explicit verse selection helper is missing');
+
+  const selected = new Set(['other']);
+  const other = {
+    classList:{ remove:(name:string) => { if (name === 'selected') selected.delete('other'); } }
+  };
+  const saved:unknown[] = [];
+  const scrolls:unknown[] = [];
+  const versesEl = { querySelectorAll:() => [other] };
+  const row = {
+    closest:() => versesEl,
+    classList:{ add:(name:string) => { if (name === 'selected') selected.add('current'); } },
+    scrollIntoView:(options:unknown) => scrolls.push(options)
+  };
+  const context = {
+    saveBibleReaderState:(state:unknown) => saved.push(state),
+    row,
+    selected,
+    saved,
+    scrolls
+  };
+  vm.runInNewContext(reader.slice(start, end) + '\nselectBibleReaderVerse(row, 7);', context);
+
+  assert.deepEqual([...selected], ['current']);
+  assert.equal(JSON.stringify(saved), JSON.stringify([{ verse:7 }]));
+  assert.equal(JSON.stringify(scrolls), JSON.stringify([{ block:'center', behavior:'smooth' }]));
 });

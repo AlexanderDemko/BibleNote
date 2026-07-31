@@ -99,12 +99,12 @@
           <summary>Доступ к OneNote</summary>
           <div class="settings-module-body">
             <div id="oneNoteAccessStatus" class="settings-status">Параметры доступа еще не загружены.</div>
-            <label class="field">Azure Client ID
-              <input id="oneNoteClientId" type="text" autocomplete="off" spellcheck="false">
+            <label class="field">Источник заметок
+              <select id="oneNoteDataSource">
+                <option value="graph">Microsoft Graph (облако)</option>
+                <option value="com">Классический OneNote на этом компьютере</option>
+              </select>
             </label>
-            <input id="oneNoteTenantId" type="hidden" value="common">
-            <input id="oneNoteScopes" type="hidden" value="Notes.Read User.Read offline_access">
-            <input id="oneNoteTokenCache" type="hidden">
           </div>
         </details>
         <details id="oneNoteIntegrationSettings" class="settings-module-section onenote-integration-settings" hidden>
@@ -166,6 +166,18 @@
             <p id="showAuxBibleRefsHint" class="settings-note">Включать такие ссылки в поиск, список ссылок страницы и параллельные места.</p>
           </div>
         </details>
+        <details class="settings-module-section inductive-settings">
+          <summary>Индуктивная разметка</summary>
+          <div class="settings-module-body">
+            <p class="settings-note">Экспорт сохраняет стили, отметки и связи открытой главы в JSON. Импорт добавляет данные из такого файла, обновляя совпадающие стили и отметки без дублей.</p>
+            <div class="settings-row settings-actions-right">
+              <input id="importInductiveMarkingsFile" type="file" accept=".json,application/json" hidden>
+              <button id="importInductiveMarkings" class="small-button" type="button">Импортировать разметку</button>
+              <button id="exportInductiveMarkings" class="small-button" type="button" disabled>Экспортировать разметку главы</button>
+            </div>
+            <div id="importInductiveMarkingsStatus" class="settings-status" aria-live="polite"></div>
+          </div>
+        </details>
         <details class="settings-module-section diagnostic-settings">
           <summary>Диагностика</summary>
           <div class="settings-module-body">
@@ -201,17 +213,16 @@
             <span class="setup-wizard-step-number">1</span>
             <div>
               <h3>Подключение к OneNote</h3>
-              <p>Войдите в учётную запись Microsoft, в которой хранятся ваши блокноты.</p>
+              <p id="setupOneNoteSourceDescription">Выберите, откуда BibleNote будет читать ваши блокноты.</p>
             </div>
           </div>
+          <label class="field">Источник заметок
+            <select id="setupOneNoteDataSource">
+              <option value="graph">Microsoft Graph (облако)</option>
+              <option value="com">Классический OneNote на этом компьютере</option>
+            </select>
+          </label>
           <div id="setupMicrosoftConnectionControls" class="setup-connection-controls">
-            <details class="setup-wizard-advanced">
-              <summary>Параметры подключения</summary>
-              <label class="field">Идентификатор приложения Microsoft
-                <input id="setupOneNoteClientId" type="text" autocomplete="off" spellcheck="false">
-              </label>
-              <p class="settings-note">Используется только для безопасного доступа BibleNote к вашим заметкам через Microsoft Graph.</p>
-            </details>
             <button id="setupMicrosoftLogin" class="dialog-button primary setup-wizard-main-action" type="button">Войти в Microsoft</button>
             <div id="setupMicrosoftDeviceCode" class="setup-device-code" hidden>
               <span>Код для входа</span>

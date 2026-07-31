@@ -167,10 +167,7 @@ namespace BibleNote.Services.VerseProcessing
                 return minWeight;
 
             var intermediateParagraphs = relativeParagraphIndex - paragraphIndex - 1;
-            if (intermediateParagraphs >= 6)
-                return minWeight;
-
-            return 0.5M / (1 << intermediateParagraphs);
+            return Math.Max(minWeight, 1M / (intermediateParagraphs + 2));
         }
 
         private static decimal GetWithinParagraphRelationWeight(VerseEntry source, VerseEntry target)

@@ -2,7 +2,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { acquireTokenSilent } from './auth.js';
 import { runtimeLog } from './runtime-logging.js';
 
-const graphRoot = 'https://graph.microsoft.com/v1.0';
+const productionGraphRoot = 'https://graph.microsoft.com/v1.0';
 let tokenResultPromise: ReturnType<typeof acquireTokenSilent> | undefined;
 let graphRequestGate: Promise<void> = Promise.resolve();
 let nextGraphRequestAt = 0;
@@ -27,8 +27,16 @@ export function resetGraphAccessToken(): void {
 }
 
 function configuredMinIntervalMs(): number {
+  if (process.env.BIBLENOTE_E2E === '1') return 0;
   const value = Number(process.env.ONENOTE_GRAPH_MIN_INTERVAL_MS ?? '2000');
   return Number.isFinite(value) && value >= 0 ? Math.max(2_000, Math.min(value, 60_000)) : 2_000;
+}
+
+function configuredGraphRoot(): string {
+  const testRoot = process.env.BIBLENOTE_E2E === '1'
+    ? process.env.BIBLENOTE_E2E_GRAPH_ROOT?.replace(/\/+$/, '')
+    : undefined;
+  return testRoot || productionGraphRoot;
 }
 
 async function waitForGraphRequestSlot(): Promise<void> {
@@ -94,6 +102,9 @@ function retryDelayMs(response: Response, attempt: number): number {
 }
 
 async function accessToken(forceRefresh = false): Promise<string> {
+  if (process.env.BIBLENOTE_E2E === '1' && process.env.BIBLENOTE_E2E_GRAPH_ACCESS_TOKEN) {
+    return process.env.BIBLENOTE_E2E_GRAPH_ACCESS_TOKEN;
+  }
   if (forceRefresh) tokenResultPromise = undefined;
   if (!tokenResultPromise) {
     tokenResultPromise = acquireTokenSilent(forceRefresh).catch(error => {
@@ -119,7 +130,9 @@ export type GraphCollection<T> = {
 };
 
 function graphUrl(pathOrUrl: string): string {
-  return pathOrUrl.startsWith('https://') ? pathOrUrl : `${graphRoot}${pathOrUrl}`;
+  if (pathOrUrl.startsWith('https://')) return pathOrUrl;
+  if (process.env.BIBLENOTE_E2E === '1' && pathOrUrl.startsWith('http://')) return pathOrUrl;
+  return `${configuredGraphRoot()}${pathOrUrl}`;
 }
 
 function errorMessage(error: unknown): string {

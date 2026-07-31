@@ -210,14 +210,16 @@ async function setOneNoteRibbonEnabled(enabled) {
 
 async function refreshOneNoteAccessSettings() {
   const result = await api('/api/onenote/access-settings');
-  oneNoteClientIdInput.value = result.clientId || '';
-  oneNoteTenantIdInput.value = result.tenantId || 'common';
-  oneNoteScopesInput.value = result.scopes || 'Notes.Read User.Read offline_access';
-  oneNoteTokenCacheInput.value = result.tokenCache || '';
-  oneNoteAccessStatusEl.textContent = oneNoteClientIdConfigured(result.clientId)
-    ? 'Доступ к OneNote настроен.'
-    : 'Укажите Azure Client ID для доступа к OneNote.';
+  renderOneNoteDataSource(result.dataSource);
+  oneNoteAccessStatusEl.textContent = result.dataSource === 'com'
+    ? 'Заметки читаются из классического OneNote на этом компьютере.'
+    : 'Для доступа к облачным блокнотам используется вход через Microsoft.';
   return result;
+}
+
+function renderOneNoteDataSource(dataSource) {
+  oneNoteDataSourceValue = dataSource === 'com' ? 'com' : 'graph';
+  oneNoteDataSourceSelect.value = oneNoteDataSourceValue;
 }
 
 async function saveOneNoteAccessSettings() {
@@ -228,30 +230,35 @@ async function saveOneNoteAccessSettings() {
       method:'PUT',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
-        clientId:oneNoteClientIdInput.value,
-        tenantId:oneNoteTenantIdInput.value,
-        scopes:oneNoteScopesInput.value,
-        tokenCache:oneNoteTokenCacheInput.value
+        dataSource:oneNoteDataSourceSelect.value
       })
     });
-    oneNoteClientIdInput.value = result.clientId || '';
-    oneNoteTenantIdInput.value = result.tenantId || 'common';
-    oneNoteScopesInput.value = result.scopes || 'Notes.Read User.Read offline_access';
-    oneNoteTokenCacheInput.value = result.tokenCache || '';
-    oneNoteAccessStatusEl.textContent = 'Доступ к OneNote сохранен.';
+    renderOneNoteDataSource(result.dataSource);
+    oneNoteAccessStatusEl.textContent = result.dataSource === 'com'
+      ? 'Выбран классический OneNote. Если кэш был создан из облака, пересоздайте его при следующей синхронизации.'
+      : 'Выбран Microsoft Graph. Если кэш был создан из локального OneNote, пересоздайте его при следующей синхронизации.';
     return result;
   } finally {
     if (saveOneNoteAccessButton) saveOneNoteAccessButton.disabled = false;
   }
 }
 
-function oneNoteClientIdConfigured(value) {
-  const clientId = String(value || '').trim();
-  return Boolean(clientId) && clientId !== '00000000-0000-0000-0000-000000000000';
-}
-
 function setupWizardCompleted() {
   return localStorage.getItem('biblenote.setupWizardDone') === 'true';
+}
+
+const microsoftScopeVersion = 'notes-read-all-v1';
+
+function setupUsesLocalOneNote() {
+  return setupOneNoteDataSourceSelect.value === 'com';
+}
+
+function renderSetupOneNoteSource() {
+  const local = setupUsesLocalOneNote();
+  setupMicrosoftLoginButton.textContent = local ? 'Проверить классический OneNote' : 'Войти в Microsoft';
+  setupOneNoteSourceDescriptionEl.textContent = local
+    ? 'BibleNote прочитает открытые локальные блокноты через COM. Вход в Microsoft не требуется.'
+    : 'BibleNote загрузит блокноты из вашей учётной записи через Microsoft Graph.';
 }
 
 function setupWizardSteps() {
@@ -385,7 +392,9 @@ function renderSetupMicrosoftLogin(state) {
   setupMicrosoftConnectionControlsEl.hidden = connected;
   setupChangeMicrosoftAccountButton.hidden = !connected;
   setupMicrosoftLoginButton.disabled = waiting;
-  setupMicrosoftLoginButton.textContent = waiting ? 'Ожидание входа…' : 'Войти в Microsoft';
+  setupMicrosoftLoginButton.textContent = waiting
+    ? 'Ожидание входа…'
+    : setupUsesLocalOneNote() ? 'Проверить классический OneNote' : 'Войти в Microsoft';
   if (state?.status === 'waiting' && state.userCode) {
     setupMicrosoftLoginUrl = state.verificationUri || 'https://microsoft.com/devicelogin';
     setupMicrosoftUserCodeEl.textContent = state.userCode;
@@ -400,7 +409,7 @@ function renderSetupMicrosoftLogin(state) {
     const account = state.account?.username || state.account?.name || '';
     setupMicrosoftAccountEl.dataset.account = account;
     setupMicrosoftAccountEl.textContent = account
-      ? 'OneNote подключён: ' + account
+      ? (setupUsesLocalOneNote() ? 'Классический OneNote подключён: ' : 'OneNote подключён: ') + account
       : 'OneNote подключён.';
     setupMicrosoftAccountEl.classList.add('success');
     clearInterval(setupMicrosoftLoginTimer);
@@ -423,8 +432,12 @@ async function verifySetupMicrosoftAccess(loginState) {
     return true;
   } catch (error) {
     setupMicrosoftConnected = false;
+    setupMicrosoftConnectionControlsEl.hidden = false;
+    setupChangeMicrosoftAccountButton.hidden = true;
     setupMicrosoftAccountEl.classList.remove('success');
-    setupMicrosoftAccountEl.textContent = 'Нужно войти в Microsoft, чтобы BibleNote мог прочитать список блокнотов.';
+    setupMicrosoftAccountEl.textContent = setupUsesLocalOneNote()
+      ? 'Не удалось прочитать локальные блокноты. Откройте классический OneNote и повторите проверку.'
+      : 'Нужно войти в Microsoft, чтобы BibleNote мог прочитать список блокнотов.';
     updateSetupWizard();
     return false;
   }
@@ -443,22 +456,24 @@ async function pollSetupMicrosoftLogin() {
 
 async function startSetupMicrosoftLogin() {
   clearSetupWizardStatus();
-  const clientId = setupOneNoteClientIdInput.value.trim();
-  if (!oneNoteClientIdConfigured(clientId)) {
-    showSetupWizardError('Укажите идентификатор приложения Microsoft в параметрах подключения.');
-    setupWizardDialog.querySelector('.setup-wizard-advanced')?.setAttribute('open', '');
-    setupOneNoteClientIdInput.focus();
-    return;
-  }
+  const local = setupUsesLocalOneNote();
   setupMicrosoftLoginButton.disabled = true;
-  setupMicrosoftAccountEl.textContent = 'Подготовка входа…';
+  setupMicrosoftAccountEl.textContent = local ? 'Проверка классического OneNote…' : 'Подготовка входа…';
   try {
     await api('/api/onenote/access-settings', {
       method:'PUT',
       headers:{ 'Content-Type':'application/json' },
-      body:JSON.stringify({ clientId })
+      body:JSON.stringify({ dataSource:local ? 'com' : 'graph' })
     });
-    oneNoteClientIdInput.value = clientId;
+    renderOneNoteDataSource(local ? 'com' : 'graph');
+    if (local) {
+      const verified = await verifySetupMicrosoftAccess({
+        status:'success',
+        account:{ username:'Классический OneNote' }
+      });
+      if (!verified) return;
+      return;
+    }
     const state = await api('/api/onenote/login/start', { method:'POST', timeoutMs:120000 });
     renderSetupMicrosoftLogin(state);
     clearInterval(setupMicrosoftLoginTimer);
@@ -564,6 +579,9 @@ async function loadSetupNotebooks() {
   setupRemoteNotebooks = Array.isArray(result.notebooks) ? result.notebooks : [];
   setupCachedPageCount = Number(cacheStatus.pages) || 0;
   setupCacheHasPages = Number(cacheStatus.notebooks) > 0 && setupCachedPageCount > 0;
+  setupCacheSourceMismatch = setupCacheHasPages
+    && Boolean(cacheStatus.cacheDataSource)
+    && cacheStatus.cacheDataSource !== setupOneNoteDataSourceSelect.value;
   setupNotebookStepTitleEl.textContent = setupCacheHasPages
     ? 'Блокноты и обновление'
     : 'Блокноты и первая загрузка';
@@ -619,7 +637,8 @@ async function runSetupInitialSync() {
         includeHtml:true,
         parseBibleRefs:true,
         forceBibleParse:false,
-        incrementalMetadata:setupCacheHasPages,
+        incrementalMetadata:setupCacheHasPages && !setupCacheSourceMismatch,
+        replaceAll:setupCacheSourceMismatch || undefined,
         bibleModule:currentBibleModule(),
         notebookIds
       }),
@@ -649,7 +668,9 @@ async function runSetupInitialSync() {
 
 async function openSetupWizardIfNeeded() {
   const settings = await api('/api/onenote/access-settings');
-  const shouldOpen = !setupWizardCompleted() || !oneNoteClientIdConfigured(settings.clientId);
+  const requiresMicrosoftScopeUpgrade = settings.dataSource !== 'com'
+    && localStorage.getItem('biblenote.microsoftScopeVersion') !== microsoftScopeVersion;
+  const shouldOpen = !setupWizardCompleted() || requiresMicrosoftScopeUpgrade;
   if (!shouldOpen || setupWizardDialog.open) return;
   if (settingsDialog.open) settingsDialog.close();
   setupWizardCanClose = false;
@@ -658,7 +679,8 @@ async function openSetupWizardIfNeeded() {
   setupCachedPageCount = 0;
   setupInitialSyncFinished = false;
   setupInitialSyncResult = undefined;
-  setupOneNoteClientIdInput.value = settings.clientId || '';
+  setupOneNoteDataSourceSelect.value = settings.dataSource === 'com' ? 'com' : 'graph';
+  renderSetupOneNoteSource();
   await refreshBibleNoteSettings().catch(error => {
     setupBibleModuleStatusEl.textContent = 'Не удалось получить список переводов Библии: ' + (error?.message || String(error));
   });
@@ -678,6 +700,9 @@ async function openSetupWizardIfNeeded() {
 
 async function finishSetupWizard() {
   localStorage.setItem('biblenote.setupWizardDone', 'true');
+  if (!setupUsesLocalOneNote()) {
+    localStorage.setItem('biblenote.microsoftScopeVersion', microsoftScopeVersion);
+  }
   setupWizardCanClose = true;
   setupWizardDialog.close();
   await loadNotebookSelector().catch(error => console.warn(error));
@@ -887,14 +912,11 @@ if (saveOneNoteAccessButton) saveOneNoteAccessButton.addEventListener('click', (
   oneNoteAccessStatusEl.textContent = 'Не удалось сохранить параметры OneNote: ' + error.message;
   saveOneNoteAccessButton.disabled = false;
 }));
-oneNoteClientIdInput.addEventListener('change', () => saveOneNoteAccessSettings().catch(error => {
-  oneNoteAccessStatusEl.textContent = 'Не удалось сохранить параметры OneNote: ' + error.message;
-}));
-oneNoteClientIdInput.addEventListener('keydown', event => {
-  if (event.key === 'Enter') {
-    event.preventDefault();
-    oneNoteClientIdInput.blur();
-  }
+oneNoteDataSourceSelect.addEventListener('change', () => {
+  renderOneNoteDataSource(oneNoteDataSourceSelect.value);
+  saveOneNoteAccessSettings().catch(error => {
+    oneNoteAccessStatusEl.textContent = 'Не удалось сменить источник OneNote: ' + error.message;
+  });
 });
 setupWizardBackButton.addEventListener('click', () => {
   setupWizardStep = Math.max(0, setupWizardStep - 1);
@@ -909,6 +931,16 @@ setupWizardNextButton.addEventListener('click', () => nextSetupWizardStep().catc
 setupMicrosoftLoginButton.addEventListener('click', () => startSetupMicrosoftLogin().catch(error => {
   showSetupWizardError(error?.message || String(error));
 }));
+setupOneNoteDataSourceSelect.addEventListener('change', () => {
+  renderSetupOneNoteSource();
+  setupMicrosoftConnected = false;
+  setupRemoteNotebooks = [];
+  setupMicrosoftConnectionControlsEl.hidden = false;
+  setupChangeMicrosoftAccountButton.hidden = true;
+  setupMicrosoftAccountEl.classList.remove('success');
+  setupMicrosoftAccountEl.textContent = '';
+  updateSetupWizard();
+});
 setupOpenMicrosoftLoginButton.addEventListener('click', () => {
   api('/api/system/open-external', {
     method:'POST',
@@ -923,12 +955,6 @@ setupChangeMicrosoftAccountButton.addEventListener('click', () => {
   setupChangeMicrosoftAccountButton.hidden = true;
   setupMicrosoftAccountEl.classList.remove('success');
   setupMicrosoftAccountEl.textContent = 'Войдите в другую учётную запись Microsoft.';
-  updateSetupWizard();
-});
-setupOneNoteClientIdInput.addEventListener('input', () => {
-  setupMicrosoftConnected = false;
-  setupMicrosoftAccountEl.classList.remove('success');
-  setupMicrosoftAccountEl.textContent = '';
   updateSetupWizard();
 });
 setupSelectAllNotebooksButton.addEventListener('click', () => {

@@ -8,6 +8,7 @@ import {
   listCachedPagesWithStaleSectionContent,
   listOldestCachedPagesForContentRefresh,
   markMissingSectionPagesDeleted,
+  markPageDeleted,
   openCacheDb,
   setPageFetchError,
   updatePageContent
@@ -210,6 +211,26 @@ test('incremental section reconciliation deletes only missing pages in that sect
     assert.equal(db.prepare('SELECT deleted_at FROM pages WHERE id = ?').get('keep').deleted_at, null);
     assert.ok(db.prepare('SELECT deleted_at FROM pages WHERE id = ?').get('remove').deleted_at);
     assert.equal(db.prepare('SELECT deleted_at FROM pages WHERE id = ?').get('other').deleted_at, null);
+  } finally {
+    db.close();
+  }
+});
+
+test('targeted reconciliation marks a removed page deleted and removes it from full-text search', () => {
+  const db = openCacheDb(':memory:');
+  try {
+    db.prepare('INSERT INTO pages(id, title, metadata_synced_at) VALUES (?, ?, ?)')
+      .run('removed-page', 'Removed', '2026-07-30T18:00:00Z');
+    db.prepare('INSERT INTO pages_fts(page_id, title, content, notebook, section) VALUES (?, ?, ?, ?, ?)')
+      .run('removed-page', 'Removed', 'Text', 'Notebook', 'Section');
+
+    assert.equal(markPageDeleted(db, 'removed-page', '2026-07-30T19:00:00Z'), 1);
+    assert.equal(
+      db.prepare('SELECT deleted_at FROM pages WHERE id = ?').get('removed-page').deleted_at,
+      '2026-07-30T19:00:00Z'
+    );
+    assert.equal(db.prepare('SELECT COUNT(*) AS value FROM pages_fts WHERE page_id = ?').get('removed-page').value, 0);
+    assert.equal(markPageDeleted(db, 'removed-page'), 0);
   } finally {
     db.close();
   }

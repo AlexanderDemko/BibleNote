@@ -482,6 +482,24 @@ export function markMissingSectionPagesDeleted(
   return missing.length;
 }
 
+export function markPageDeleted(
+  db: Database.Database,
+  pageId: string,
+  deletedAt = nowIso()
+): number {
+  const page = db.prepare(`
+    SELECT id FROM pages
+    WHERE id = ? AND deleted_at IS NULL
+  `).get(pageId) as { id: string } | undefined;
+  if (!page) return 0;
+  const tx = db.transaction(() => {
+    db.prepare('UPDATE pages SET deleted_at = ? WHERE id = ?').run(deletedAt, pageId);
+    db.prepare('DELETE FROM pages_fts WHERE page_id = ?').run(pageId);
+  });
+  tx();
+  return 1;
+}
+
 export function getBibleParseState(db: Database.Database, pageId: string): BibleParseStateRow | undefined {
   return db.prepare('SELECT * FROM page_bible_parse_state WHERE page_id = ?').get(pageId) as BibleParseStateRow | undefined;
 }
@@ -558,7 +576,7 @@ export function upsertBibleParseResult(
   const module = result.module || 'rst';
   const paragraphs = result.paragraphs ?? [];
   if (!Array.isArray(result.relations)) {
-    throw new Error('BibleNote API ParsePage response does not contain relations. Update the BibleNote API before parsing with biblenote-http-v4.');
+    throw new Error('BibleNote API ParsePage response does not contain relations. Update the BibleNote API before parsing with biblenote-http-v6.');
   }
   const relations = result.relations;
   const valuableParagraphs = paragraphs.filter(paragraph =>

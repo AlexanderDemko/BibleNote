@@ -503,6 +503,12 @@ namespace BibleNote.Tests
         }
 
         [TestMethod]
+        public void GenitiveProverbsBookNameIsRecognized()
+        {
+            CheckVerses("В Книге притчей 18:17 Соломон говорит", null, null, "Притч 18:17");
+        }
+
+        [TestMethod]
         public void Test33()
         {
             CheckVerses("Римлянам 1-3:20, Второе послание к Тимофею 3:16-17", null, null, "Рим 1-3:20", "2Тим 3:16-17");

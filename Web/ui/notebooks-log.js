@@ -172,6 +172,12 @@ clearAllNotebooksButton.addEventListener('click', () => {
 
 async function loadDownloadLog(resetOffset) {
   if (resetOffset) logOffset = 0;
+  // A rebuild can replace Graph notebook ids with classic OneNote ids while
+  // this renderer still holds the pre-reset selection. Refresh the selector
+  // before querying the journal so its scope follows the rebuilt cache.
+  if (syncRunning && activeSyncContext?.payload?.replaceAll) {
+    await loadNotebookSelector();
+  }
   const selectedIds = selectedNotebookIds();
   logListEl.replaceChildren();
   if (selectedIds.length === 0) {
@@ -188,7 +194,12 @@ async function loadDownloadLog(resetOffset) {
   });
   for (const notebookId of selectedIds) params.append('notebookId', notebookId);
   const result = await api('/api/download-log?' + params.toString());
-  logSummaryEl.textContent = 'Журнал: ' + result.counts.downloaded + ' загружено · ' + result.counts.missing + ' не загружено · ' + result.counts.errors + ' ' + pluralRu(result.counts.errors, 'ошибка', 'ошибки', 'ошибок');
+  const counts = {
+    downloaded:Number(result.counts?.downloaded) || 0,
+    missing:Number(result.counts?.missing) || 0,
+    errors:Number(result.counts?.errors) || 0
+  };
+  logSummaryEl.textContent = 'Журнал: ' + counts.downloaded + ' загружено · ' + counts.missing + ' не загружено · ' + counts.errors + ' ' + pluralRu(counts.errors, 'ошибка', 'ошибки', 'ошибок');
   for (const item of result.rows) {
     const button = document.createElement('button');
     button.className = 'log-row';

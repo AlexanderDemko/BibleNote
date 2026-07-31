@@ -25,26 +25,41 @@ Default cache path:
 ~/BibleNote/onenote-cache.sqlite
 ```
 
+## OneNote data source
+
+The Windows desktop app can populate the same SQLite cache from either:
+
+- `Microsoft Graph (cloud)` — works without the desktop OneNote client and requires Microsoft sign-in.
+- `Classic OneNote on this computer` — reads the notebooks currently opened in classic OneNote
+  through its COM API; Azure registration and Microsoft sign-in are not required.
+
+Choose the source under `Settings → OneNote access → Note source`, or set
+`ONENOTE_DATA_SOURCE=graph` / `ONENOTE_DATA_SOURCE=com`. COM mode is Windows-only and uses the
+OneNote hierarchy/page APIs already used by BibleNote v3. Search, Bible-reference parsing, and the
+viewer continue to use the shared local cache.
+
+Graph and COM use different object identifiers. After switching an existing cache to the other
+source, run `Recreate local cache` once. The setup wizard detects this transition and requests a
+replacement sync automatically.
+
 For thousands of large pages, keep raw HTML disabled unless you really need it. Plain text is always cached and indexed.
 
-## 1. Register an Azure app
+## 1. Microsoft sign-in
 
-1. Open Microsoft Entra admin center.
-2. App registrations → New registration.
-3. Supported account types: choose the accounts you need.
-   - For personal + work/school accounts, choose the multi-tenant + personal option.
-4. Authentication → allow public client / mobile and desktop flows.
-5. API permissions → Microsoft Graph → Delegated permissions:
-   - `Notes.Read`
-   - `User.Read`
-   - `offline_access`
-6. Copy Application (client) ID.
+BibleNote uses its built-in public-client registration. Users do not create an Entra application or
+enter a Client ID. The desktop app requests these delegated Microsoft Graph scopes:
+
+- `Notes.Read.All` — read the signed-in user's own and shared OneNote notebooks;
+- `User.Read` — identify the signed-in account;
+- `offline_access` — keep the local sign-in active between launches.
+
+The registration uses the `common` authority for personal Microsoft accounts and work/school
+accounts. It contains no client secret; desktop applications authenticate as public clients.
 
 ## 2. Configure locally
 
 ```bash
 cp .env.example .env
-# edit .env and set ONENOTE_CLIENT_ID
 npm install
 npm run login
 npm run build
@@ -159,6 +174,24 @@ Then open `http://127.0.0.1:4312`. The viewer provides a lazy notebook/section/p
 full-text FTS5 search with highlighted matches, cache status, page metadata, cached plain-text
 content, notebook selection for display/search/sync, and background synchronization controls with
 progress reporting. The notebook selection is saved in the browser.
+
+### Inductive Bible markings
+
+The built-in Bible reader includes a local-first inductive marking mode. Select a word or phrase,
+then apply a semantic style such as key word, God, Christ, Holy Spirit, time, place, contrast,
+comparison, conclusion, or command. An exact-match action can apply the same style to every
+occurrence in the open chapter. The observation panel lists the resulting marks in verse order,
+supports navigation and removal, and can export the chapter as JSON. Custom key-word styles can be
+added from the same panel.
+
+Markings and palettes are stored separately from the disposable OneNote cache in:
+
+```text
+~/BibleNote/biblenote-user.sqlite
+```
+
+They therefore survive a full `--replace-all` cache rebuild. Text anchors include the translation
+module, canonical Bible location, character offsets, selected quote, and nearby context.
 
 The separate synchronization settings panel applies to full sync and every targeted notebook,
 section, or page sync action, except `Перезаписать данные полностью`, which is intentionally used
@@ -312,3 +345,52 @@ Direct Graph tools, useful for quick checks:
 - `src/cache-schema.ts`, `src/cache-search.ts`, and `src/cache-types.ts` isolate SQLite schema, read queries, and data contracts.
 - `src/cache-ui.ts` owns the local HTTP routes; `src/biblenote-gateway.ts` owns communication with the BibleNote API/process.
 - `ui/` contains the browser application, split by feature area. Keep browser-only code out of the Node server modules.
+
+## End-to-end tests
+
+The Playwright suite starts the real cache UI server with an isolated temporary SQLite database.
+Microsoft Graph, the BibleNote HTTP API, and the Electron control bridge are represented by local
+deterministic HTTP services, so tests never read or modify the user's OneNote cache or account.
+
+Run all browser scenarios:
+
+```powershell
+npm.cmd run e2e:all
+```
+
+Run one functional area:
+
+```powershell
+npm.cmd run e2e:notes
+npm.cmd run e2e:search
+npm.cmd run e2e:bible
+npm.cmd run e2e:inductive
+npm.cmd run e2e:sync
+npm.cmd run e2e:settings
+npm.cmd run e2e:electron
+```
+
+Run the smoke suite plus only areas affected by committed and working-tree changes:
+
+```powershell
+npm.cmd run e2e:changed -- --base origin/main
+```
+
+The source-to-area rules live in `e2e/areas.mjs`. Shared and unknown production files intentionally
+select the full suite. Documentation-only changes select smoke tests. Use `--list` after the base
+argument to inspect the selected scenarios without executing them.
+
+Local runs use the installed Google Chrome. CI uses Playwright Chromium; install it once on the CI
+runner with:
+
+```powershell
+npm.cmd run e2e:install
+```
+
+Failed scenarios retain a Playwright trace and screenshot under `Web/.tmp/`.
+
+For a periodic full verification (build, unit/integration tests, and every e2e area), run:
+
+```powershell
+npm.cmd run verify:e2e
+```

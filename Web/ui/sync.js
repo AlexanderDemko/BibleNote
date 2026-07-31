@@ -1,10 +1,36 @@
+function activityToastTargets() {
+  const targets = [activityToastEl];
+  for (const dialog of document.querySelectorAll('dialog[open]')) {
+    let mirror = dialog.querySelector(':scope > .dialog-activity-toast');
+    if (!mirror) {
+      mirror = document.createElement('div');
+      mirror.className = 'activity-toast dialog-activity-toast';
+      mirror.setAttribute('role', 'status');
+      mirror.setAttribute('aria-live', 'polite');
+      dialog.append(mirror);
+    }
+    targets.push(mirror);
+  }
+  document.querySelectorAll('.dialog-activity-toast').forEach(mirror => {
+    if (!mirror.closest('dialog')?.open) mirror.remove();
+  });
+  return targets;
+}
+
+function setActivityToast(message, type, visible) {
+  const className = 'activity-toast' + (type === 'running' ? '' : ' ' + type) + (visible ? ' show' : '');
+  for (const toast of activityToastTargets()) {
+    toast.textContent = message;
+    toast.className = className + (toast === activityToastEl ? '' : ' dialog-activity-toast');
+  }
+}
+
 function showActivity(message, type = 'running', sticky = false) {
   clearTimeout(activityToastTimer);
-  activityToastEl.textContent = message;
-  activityToastEl.className = 'activity-toast show' + (type === 'running' ? '' : ' ' + type);
+  setActivityToast(message, type, true);
   if (!sticky) {
     activityToastTimer = setTimeout(() => {
-      activityToastEl.className = 'activity-toast';
+      setActivityToast(message, type, false);
     }, type === 'error' ? 9000 : 5000);
   }
 }
@@ -351,14 +377,19 @@ function appendSyncResultMetric(container, label, value) {
 
 function renderSyncResult(result, context) {
   const errorCount = (result.contentErrors || 0) + (result.sectionScanErrors || 0) + (result.bibleRefsParseErrors || 0);
+  const targetedPageDeleted = Boolean(context?.pageId && result.deletedPagesMarked > 0 && result.pages === 0);
   const box = document.createElement('div');
   box.className = 'sync-result-box';
   const title = document.createElement('strong');
   title.className = 'sync-result-title';
-  title.textContent = errorCount ? 'Завершено с ошибками' : 'Синхронизация завершена';
+  title.textContent = targetedPageDeleted
+    ? 'Страница удалена из OneNote'
+    : errorCount ? 'Завершено с ошибками' : 'Синхронизация завершена';
   const metrics = document.createElement('div');
   metrics.className = 'sync-result-metrics';
-  if (context?.localBibleReparse) {
+  if (targetedPageDeleted) {
+    appendSyncResultMetric(metrics, 'убрано из BibleNote', result.deletedPagesMarked);
+  } else if (context?.localBibleReparse) {
     appendSyncResultMetric(metrics, 'обработано страниц', result.bibleRefsPagesParsed);
     appendSyncResultMetric(metrics, 'распознано ссылок', result.bibleRefsRecognized);
     appendSyncResultMetric(metrics, 'ошибок', result.bibleRefsParseErrors);
@@ -402,14 +433,32 @@ async function refreshSyncState() {
   } else if (state.status === 'success') {
     const result = state.result;
     const completedContext = activeSyncContext;
+    const targetedPageDeleted = Boolean(
+      completedContext?.pageId && result.deletedPagesMarked > 0 && result.pages === 0
+    );
     const renderedResult = renderSyncResult(result, completedContext);
-    const resultSummary = completedContext?.localBibleReparse
+    const resultSummary = targetedPageDeleted
+      ? 'Страница удалена из OneNote и убрана из BibleNote.'
+      : completedContext?.localBibleReparse
       ? `${renderedResult.title}: обработано ${result.bibleRefsPagesParsed || 0}, ошибок ${renderedResult.errorCount}`
       : `${renderedResult.title}: проверено ${result.pages || 0}, загружено ${result.contentDownloaded || 0}, ошибок ${renderedResult.errorCount}`;
     showActivity(resultSummary, renderedResult.errorCount ? 'warning' : 'success');
     const status = await api('/api/status');
     statusEl.textContent = cacheStatusText(status);
-    if (completedContext?.pageId && selectedPageId === completedContext.pageId) {
+    if (targetedPageDeleted) {
+      if (selectedPageId === completedContext.pageId) {
+        if (pageFocusMode) setPageFocusMode(false);
+        selectedPageId = null;
+        currentTargetParagraphIndex = undefined;
+        currentTargetParagraphIndexes = [];
+        currentTargetBibleOccurrences = [];
+        history.replaceState(null, '', '/');
+        renderEmptyPage();
+      }
+      await loadNotebookSelector();
+      await loadDownloadLog(true);
+      await renderNotesList();
+    } else if (completedContext?.pageId && selectedPageId === completedContext.pageId) {
       loadDownloadLog(false).catch(error => console.warn(error));
       await openPage(completedContext.pageId, { updateUrl:false, paragraphIndex:currentTargetParagraphIndex });
       await renderNotesList();

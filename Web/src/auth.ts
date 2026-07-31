@@ -5,19 +5,21 @@ import { PublicClientApplication, Configuration, AuthenticationResult } from '@a
 import { defaultBibleNoteDir } from './paths.js';
 
 export type OneNoteAuthConfig = {
-  clientId: string | undefined;
+  clientId: string;
   tenantId: string;
   scopes: string[];
   cachePath: string;
 };
 
+export const bibleNoteMicrosoftClientId = 'ba50c2dc-5307-432b-b092-c6a5298f685f';
+export const bibleNoteMicrosoftTenantId = 'common';
+export const bibleNoteMicrosoftScopes = ['Notes.Read.All', 'User.Read', 'offline_access'];
+
 export function oneNoteAuthConfig(): OneNoteAuthConfig {
   return {
-    clientId: process.env.ONENOTE_CLIENT_ID,
-    tenantId: process.env.ONENOTE_TENANT_ID ?? 'common',
-    scopes: (process.env.ONENOTE_SCOPES ?? 'Notes.Read User.Read offline_access')
-      .split(/\s+/)
-      .filter(Boolean),
+    clientId: bibleNoteMicrosoftClientId,
+    tenantId: bibleNoteMicrosoftTenantId,
+    scopes: [...bibleNoteMicrosoftScopes],
     cachePath: process.env.ONENOTE_TOKEN_CACHE
       ?? path.join(defaultBibleNoteDir, 'msal-cache.json')
   };
@@ -28,10 +30,6 @@ export const cachePath = oneNoteAuthConfig().cachePath;
 
 export function createMsalClient(): PublicClientApplication {
   const { clientId, tenantId } = oneNoteAuthConfig();
-  if (!clientId || clientId === '00000000-0000-0000-0000-000000000000') {
-    throw new Error('ONENOTE_CLIENT_ID is not set. Copy .env.example to .env or %USERPROFILE%\\BibleNote\\.env and fill your Azure app client ID.');
-  }
-
   const config: Configuration = {
     auth: {
       clientId,
@@ -93,9 +91,8 @@ export type MicrosoftDeviceCode = {
 };
 
 export async function signedInMicrosoftAccount(): Promise<MicrosoftAccountSummary | undefined> {
-  const pca = createMsalClient();
-  await loadCache(pca);
-  const account = (await pca.getTokenCache().getAllAccounts())[0];
+  const result = await acquireTokenSilent();
+  const account = result.account;
   if (!account) return undefined;
   return {
     username: account.username,

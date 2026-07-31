@@ -324,6 +324,33 @@ export async function bibleNoteCurrentOneNotePage(): Promise<OneNoteCurrentPage>
   ) as Promise<OneNoteCurrentPage>;
 }
 
+type OneNoteComContentResponse = {
+  xml?: string;
+};
+
+export async function bibleNoteOneNoteHierarchy(): Promise<string> {
+  await ensureBibleNoteAvailable();
+  const bibleConfig = bibleParseConfigFromEnv();
+  const result = await fetchJson(
+    `${bibleConfig.apiUrl.replace(/\/+$/, '')}/api/OneNoteIntegration/Hierarchy`,
+    { signal:AbortSignal.timeout(60_000) }
+  ) as OneNoteComContentResponse;
+  if (!result.xml) throw new Error('Classic OneNote returned an empty hierarchy.');
+  return result.xml;
+}
+
+export async function bibleNoteOneNotePageContent(pageId: string): Promise<string> {
+  await ensureBibleNoteAvailable();
+  const bibleConfig = bibleParseConfigFromEnv();
+  const params = new URLSearchParams({ pageId });
+  const result = await fetchJson(
+    `${bibleConfig.apiUrl.replace(/\/+$/, '')}/api/OneNoteIntegration/PageContent?${params.toString()}`,
+    { signal:AbortSignal.timeout(60_000) }
+  ) as OneNoteComContentResponse;
+  if (!result.xml) throw new Error(`Classic OneNote returned empty content for page ${pageId}.`);
+  return result.xml;
+}
+
 export async function bibleNoteQuickAnalyzeCurrentPage(): Promise<Record<string, unknown>> {
   await ensureBibleNoteAvailable();
   const bibleConfig = bibleParseConfigFromEnv();

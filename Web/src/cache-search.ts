@@ -560,7 +560,7 @@ export function searchBibleReferenceNotesByWeight(
       LEFT JOIN sections s ON s.id = p.parent_section_id
       JOIN page_paragraphs pp ON pp.page_id = r.page_id AND pp.paragraph_index = r.paragraph_index
       WHERE ${filters.join(' AND ')}
-    ), matching_refs AS (
+    ), matching_refs AS MATERIALIZED (
       SELECT
         id, page_id, paragraph_index, start_index, end_index,
         chapter, verse, top_chapter, top_verse,
@@ -587,23 +587,29 @@ export function searchBibleReferenceNotesByWeight(
         all_ref.page_id,
         all_ref.paragraph_index,
         COUNT(*) AS reference_count
-      FROM paragraph_verse_refs all_ref
-      JOIN matching_paragraphs mp
-        ON mp.page_id = all_ref.page_id
-        AND mp.paragraph_index = all_ref.paragraph_index
+      FROM matching_paragraphs mp
+      CROSS JOIN paragraph_verse_refs all_ref INDEXED BY idx_bible_refs_page_paragraph
       JOIN page_paragraphs all_pp
         ON all_pp.page_id = all_ref.page_id
         AND all_pp.paragraph_index = all_ref.paragraph_index
-      WHERE ${paragraphRefCountFilter}
+      WHERE all_ref.page_id = mp.page_id
+        AND all_ref.paragraph_index = mp.paragraph_index
+        AND ${paragraphRefCountFilter}
       GROUP BY all_ref.page_id, all_ref.paragraph_index
+    ), counted_matching_refs AS MATERIALIZED (
+      SELECT id
+      FROM matching_refs
+      WHERE verse IS NULL OR top_chapter <> chapter
     ), relation_ref_verses AS (
       SELECT rel.verse_ref_id AS ref_id, rel.verse_id
-      FROM paragraph_verse_relations rel
-      JOIN matching_refs mr ON mr.id = rel.verse_ref_id
-      UNION
+      FROM counted_matching_refs mr
+      CROSS JOIN paragraph_verse_relations rel INDEXED BY idx_bible_relations_verse_ref
+      WHERE rel.verse_ref_id = mr.id
+      UNION ALL
       SELECT rel.relative_verse_ref_id AS ref_id, rel.relative_verse_id AS verse_id
-      FROM paragraph_verse_relations rel
-      JOIN matching_refs mr ON mr.id = rel.relative_verse_ref_id
+      FROM counted_matching_refs mr
+      CROSS JOIN paragraph_verse_relations rel INDEXED BY idx_bible_relations_relative_verse_ref
+      WHERE rel.relative_verse_ref_id = mr.id
     ), relation_ref_verse_counts AS (
       SELECT ref_id, COUNT(DISTINCT verse_id) AS verse_count
       FROM relation_ref_verses
@@ -713,6 +719,9 @@ export function findParallelBibleReferences(
     `;
   const sourceVerseFilter = options.verse == null ? '' : 'AND rel.verse_id = @targetVerseId';
   const relativeVerseFilter = options.verse == null ? '' : 'AND rel.relative_verse_id = @targetVerseId';
+  const sourceRelationIndex = options.verse == null ? '' : 'INDEXED BY idx_bible_relations_verse';
+  const relativeRelationIndex = options.verse == null ? '' : 'INDEXED BY idx_bible_relations_relative';
+  const targetRelationJoin = options.verse == null ? 'JOIN' : 'CROSS JOIN';
   const excludeTargetFilter = options.verse == null
     ? `NOT (${relatedFilter})`
     : 'mr.related_verse_id <> @targetVerseId';
@@ -721,42 +730,25 @@ export function findParallelBibleReferences(
   const pageVisibilityFilter = options.includeAuxiliaryRefs ? '1' : visibleBibleScopeSql('p', 's');
 
   const rows = db.prepare(`
-    WITH relation_ref_verses AS (
-      SELECT verse_ref_id AS ref_id, verse_id
-      FROM paragraph_verse_relations
-      UNION
-      SELECT relative_verse_ref_id AS ref_id, relative_verse_id AS verse_id
-      FROM paragraph_verse_relations
-    ), relation_ref_verse_counts AS (
-      SELECT ref_id, COUNT(DISTINCT verse_id) AS verse_count
-      FROM relation_ref_verses
-      GROUP BY ref_id
-    ), matched_relations AS (
+    WITH matched_relation_rows AS MATERIALIZED (
       SELECT
         rel.relative_verse_ref_id AS ref_id,
         rel.relative_verse_id AS related_verse_id,
         rel.page_id,
         rel.relative_paragraph_index AS paragraph_index,
-        rel.relation_weight
-          / CASE
-              WHEN COALESCE(target.top_chapter, target.chapter) = target.chapter
-                AND target.verse IS NOT NULL
-                AND COALESCE(target.top_verse, target.verse) >= target.verse
-                THEN COALESCE(target.top_verse, target.verse) - target.verse + 1
-              ELSE MAX(1, COALESCE(target_counts.verse_count, 1))
-            END
-          / CASE
-              WHEN COALESCE(r.top_chapter, r.chapter) = r.chapter
-                AND r.verse IS NOT NULL
-                AND COALESCE(r.top_verse, r.verse) >= r.verse
-                THEN COALESCE(r.top_verse, r.verse) - r.verse + 1
-              ELSE MAX(1, COALESCE(related_counts.verse_count, 1))
-            END AS relation_weight
-      FROM paragraph_verse_relations rel
-      JOIN paragraph_verse_refs target ON target.id = rel.verse_ref_id
+        rel.relation_weight,
+        target.id AS target_ref_id,
+        target.chapter AS target_chapter,
+        target.verse AS target_verse,
+        target.top_chapter AS target_top_chapter,
+        target.top_verse AS target_top_verse,
+        r.chapter AS related_chapter,
+        r.verse AS related_verse,
+        r.top_chapter AS related_top_chapter,
+        r.top_verse AS related_top_verse
+      FROM paragraph_verse_relations rel ${sourceRelationIndex}
+      ${targetRelationJoin} paragraph_verse_refs target ON target.id = rel.verse_ref_id
       JOIN paragraph_verse_refs r ON r.id = rel.relative_verse_ref_id
-      LEFT JOIN relation_ref_verse_counts target_counts ON target_counts.ref_id = target.id
-      LEFT JOIN relation_ref_verse_counts related_counts ON related_counts.ref_id = r.id
       WHERE ${targetFilter}
         AND ${targetVisibilityFilter}
         ${sourceVerseFilter}
@@ -768,29 +760,70 @@ export function findParallelBibleReferences(
         rel.verse_id AS related_verse_id,
         rel.page_id,
         rel.paragraph_index AS paragraph_index,
-        rel.relation_weight
-          / CASE
-              WHEN COALESCE(target.top_chapter, target.chapter) = target.chapter
-                AND target.verse IS NOT NULL
-                AND COALESCE(target.top_verse, target.verse) >= target.verse
-                THEN COALESCE(target.top_verse, target.verse) - target.verse + 1
-              ELSE MAX(1, COALESCE(target_counts.verse_count, 1))
-            END
-          / CASE
-              WHEN COALESCE(r.top_chapter, r.chapter) = r.chapter
-                AND r.verse IS NOT NULL
-                AND COALESCE(r.top_verse, r.verse) >= r.verse
-                THEN COALESCE(r.top_verse, r.verse) - r.verse + 1
-              ELSE MAX(1, COALESCE(related_counts.verse_count, 1))
-            END AS relation_weight
-      FROM paragraph_verse_relations rel
-      JOIN paragraph_verse_refs target ON target.id = rel.relative_verse_ref_id
+        rel.relation_weight,
+        target.id AS target_ref_id,
+        target.chapter AS target_chapter,
+        target.verse AS target_verse,
+        target.top_chapter AS target_top_chapter,
+        target.top_verse AS target_top_verse,
+        r.chapter AS related_chapter,
+        r.verse AS related_verse,
+        r.top_chapter AS related_top_chapter,
+        r.top_verse AS related_top_verse
+      FROM paragraph_verse_relations rel ${relativeRelationIndex}
+      ${targetRelationJoin} paragraph_verse_refs target ON target.id = rel.relative_verse_ref_id
       JOIN paragraph_verse_refs r ON r.id = rel.verse_ref_id
-      LEFT JOIN relation_ref_verse_counts target_counts ON target_counts.ref_id = target.id
-      LEFT JOIN relation_ref_verse_counts related_counts ON related_counts.ref_id = r.id
       WHERE ${targetFilter}
         AND ${targetVisibilityFilter}
         ${relativeVerseFilter}
+    ), candidate_ref_ids AS MATERIALIZED (
+      SELECT target_ref_id AS ref_id
+      FROM matched_relation_rows
+      WHERE target_verse IS NULL
+        OR COALESCE(target_top_chapter, target_chapter) <> target_chapter
+      UNION
+      SELECT ref_id
+      FROM matched_relation_rows
+      WHERE related_verse IS NULL
+        OR COALESCE(related_top_chapter, related_chapter) <> related_chapter
+    ), relation_ref_verses AS (
+      SELECT rel.verse_ref_id AS ref_id, rel.verse_id
+      FROM candidate_ref_ids candidate
+      CROSS JOIN paragraph_verse_relations rel INDEXED BY idx_bible_relations_verse_ref
+      WHERE rel.verse_ref_id = candidate.ref_id
+      UNION ALL
+      SELECT rel.relative_verse_ref_id AS ref_id, rel.relative_verse_id AS verse_id
+      FROM candidate_ref_ids candidate
+      CROSS JOIN paragraph_verse_relations rel INDEXED BY idx_bible_relations_relative_verse_ref
+      WHERE rel.relative_verse_ref_id = candidate.ref_id
+    ), relation_ref_verse_counts AS (
+      SELECT ref_id, COUNT(DISTINCT verse_id) AS verse_count
+      FROM relation_ref_verses
+      GROUP BY ref_id
+    ), matched_relations AS (
+      SELECT
+        matched.ref_id,
+        matched.related_verse_id,
+        matched.page_id,
+        matched.paragraph_index,
+        matched.relation_weight
+          / CASE
+              WHEN COALESCE(matched.target_top_chapter, matched.target_chapter) = matched.target_chapter
+                AND matched.target_verse IS NOT NULL
+                AND COALESCE(matched.target_top_verse, matched.target_verse) >= matched.target_verse
+                THEN COALESCE(matched.target_top_verse, matched.target_verse) - matched.target_verse + 1
+              ELSE MAX(1, COALESCE(target_counts.verse_count, 1))
+            END
+          / CASE
+              WHEN COALESCE(matched.related_top_chapter, matched.related_chapter) = matched.related_chapter
+                AND matched.related_verse IS NOT NULL
+                AND COALESCE(matched.related_top_verse, matched.related_verse) >= matched.related_verse
+                THEN COALESCE(matched.related_top_verse, matched.related_verse) - matched.related_verse + 1
+              ELSE MAX(1, COALESCE(related_counts.verse_count, 1))
+            END AS relation_weight
+      FROM matched_relation_rows matched
+      LEFT JOIN relation_ref_verse_counts target_counts ON target_counts.ref_id = matched.target_ref_id
+      LEFT JOIN relation_ref_verse_counts related_counts ON related_counts.ref_id = matched.ref_id
     ), page_evidence AS (
       SELECT
         mr.related_verse_id,
@@ -899,6 +932,9 @@ export function findParallelBibleReferenceNotes(
   const relativeVerseFilter = options.verse == null ? '' : 'AND rel.relative_verse_id = @targetVerseId';
   const relatedAsRelativeVerseFilter = options.relatedVerse == null ? '' : 'AND rel.relative_verse_id = @relatedVerseId';
   const relatedAsSourceVerseFilter = options.relatedVerse == null ? '' : 'AND rel.verse_id = @relatedVerseId';
+  const sourceRelationIndex = options.verse == null ? '' : 'INDEXED BY idx_bible_relations_verse';
+  const relativeRelationIndex = options.verse == null ? '' : 'INDEXED BY idx_bible_relations_relative';
+  const targetRelationJoin = options.verse == null ? 'JOIN' : 'CROSS JOIN';
   const targetVisibilityFilter = options.includeAuxiliaryRefs ? '1' : visibleBibleRefSql('target');
   const relatedVisibilityFilter = options.includeAuxiliaryRefs ? '1' : visibleBibleRefSql('r');
   const finalTargetVisibilityFilter = options.includeAuxiliaryRefs ? '1' : visibleBibleRefSql('target');
@@ -941,43 +977,25 @@ export function findParallelBibleReferenceNotes(
   }
 
   return db.prepare(`
-    WITH relation_ref_verses AS (
-      SELECT verse_ref_id AS ref_id, verse_id
-      FROM paragraph_verse_relations
-      UNION
-      SELECT relative_verse_ref_id AS ref_id, relative_verse_id AS verse_id
-      FROM paragraph_verse_relations
-    ), relation_ref_verse_counts AS (
-      SELECT ref_id, COUNT(DISTINCT verse_id) AS verse_count
-      FROM relation_ref_verses
-      GROUP BY ref_id
-    ), matched_relations AS (
+    WITH matched_relation_rows AS MATERIALIZED (
       SELECT
         rel.page_id,
         rel.verse_ref_id AS target_ref_id,
         rel.relative_verse_ref_id AS related_ref_id,
         rel.paragraph_index AS target_paragraph_index,
         rel.relative_paragraph_index AS related_paragraph_index,
-        rel.relation_weight
-          / CASE
-              WHEN COALESCE(target.top_chapter, target.chapter) = target.chapter
-                AND target.verse IS NOT NULL
-                AND COALESCE(target.top_verse, target.verse) >= target.verse
-                THEN COALESCE(target.top_verse, target.verse) - target.verse + 1
-              ELSE MAX(1, COALESCE(target_counts.verse_count, 1))
-            END
-          / CASE
-              WHEN COALESCE(r.top_chapter, r.chapter) = r.chapter
-                AND r.verse IS NOT NULL
-                AND COALESCE(r.top_verse, r.verse) >= r.verse
-                THEN COALESCE(r.top_verse, r.verse) - r.verse + 1
-              ELSE MAX(1, COALESCE(related_counts.verse_count, 1))
-            END AS relation_weight
-      FROM paragraph_verse_relations rel
-      JOIN paragraph_verse_refs target ON target.id = rel.verse_ref_id
+        rel.relation_weight,
+        target.chapter AS target_chapter,
+        target.verse AS target_verse,
+        target.top_chapter AS target_top_chapter,
+        target.top_verse AS target_top_verse,
+        r.chapter AS related_chapter,
+        r.verse AS related_verse,
+        r.top_chapter AS related_top_chapter,
+        r.top_verse AS related_top_verse
+      FROM paragraph_verse_relations rel ${sourceRelationIndex}
+      ${targetRelationJoin} paragraph_verse_refs target ON target.id = rel.verse_ref_id
       JOIN paragraph_verse_refs r ON r.id = rel.relative_verse_ref_id
-      LEFT JOIN relation_ref_verse_counts target_counts ON target_counts.ref_id = target.id
-      LEFT JOIN relation_ref_verse_counts related_counts ON related_counts.ref_id = r.id
       WHERE ${targetFilter}
         AND ${targetVisibilityFilter}
         ${sourceVerseFilter}
@@ -993,32 +1011,73 @@ export function findParallelBibleReferenceNotes(
         rel.verse_ref_id AS related_ref_id,
         rel.relative_paragraph_index AS target_paragraph_index,
         rel.paragraph_index AS related_paragraph_index,
-        rel.relation_weight
-          / CASE
-              WHEN COALESCE(target.top_chapter, target.chapter) = target.chapter
-                AND target.verse IS NOT NULL
-                AND COALESCE(target.top_verse, target.verse) >= target.verse
-                THEN COALESCE(target.top_verse, target.verse) - target.verse + 1
-              ELSE MAX(1, COALESCE(target_counts.verse_count, 1))
-            END
-          / CASE
-              WHEN COALESCE(r.top_chapter, r.chapter) = r.chapter
-                AND r.verse IS NOT NULL
-                AND COALESCE(r.top_verse, r.verse) >= r.verse
-                THEN COALESCE(r.top_verse, r.verse) - r.verse + 1
-              ELSE MAX(1, COALESCE(related_counts.verse_count, 1))
-            END AS relation_weight
-      FROM paragraph_verse_relations rel
-      JOIN paragraph_verse_refs target ON target.id = rel.relative_verse_ref_id
+        rel.relation_weight,
+        target.chapter AS target_chapter,
+        target.verse AS target_verse,
+        target.top_chapter AS target_top_chapter,
+        target.top_verse AS target_top_verse,
+        r.chapter AS related_chapter,
+        r.verse AS related_verse,
+        r.top_chapter AS related_top_chapter,
+        r.top_verse AS related_top_verse
+      FROM paragraph_verse_relations rel ${relativeRelationIndex}
+      ${targetRelationJoin} paragraph_verse_refs target ON target.id = rel.relative_verse_ref_id
       JOIN paragraph_verse_refs r ON r.id = rel.verse_ref_id
-      LEFT JOIN relation_ref_verse_counts target_counts ON target_counts.ref_id = target.id
-      LEFT JOIN relation_ref_verse_counts related_counts ON related_counts.ref_id = r.id
       WHERE ${targetFilter}
         AND ${targetVisibilityFilter}
         ${relativeVerseFilter}
         AND ${relatedFilter}
         AND ${relatedVisibilityFilter}
         ${relatedAsSourceVerseFilter}
+    ), candidate_ref_ids AS MATERIALIZED (
+      SELECT target_ref_id AS ref_id
+      FROM matched_relation_rows
+      WHERE target_verse IS NULL
+        OR COALESCE(target_top_chapter, target_chapter) <> target_chapter
+      UNION
+      SELECT related_ref_id
+      FROM matched_relation_rows
+      WHERE related_verse IS NULL
+        OR COALESCE(related_top_chapter, related_chapter) <> related_chapter
+    ), relation_ref_verses AS (
+      SELECT rel.verse_ref_id AS ref_id, rel.verse_id
+      FROM candidate_ref_ids candidate
+      CROSS JOIN paragraph_verse_relations rel INDEXED BY idx_bible_relations_verse_ref
+      WHERE rel.verse_ref_id = candidate.ref_id
+      UNION ALL
+      SELECT rel.relative_verse_ref_id AS ref_id, rel.relative_verse_id AS verse_id
+      FROM candidate_ref_ids candidate
+      CROSS JOIN paragraph_verse_relations rel INDEXED BY idx_bible_relations_relative_verse_ref
+      WHERE rel.relative_verse_ref_id = candidate.ref_id
+    ), relation_ref_verse_counts AS (
+      SELECT ref_id, COUNT(DISTINCT verse_id) AS verse_count
+      FROM relation_ref_verses
+      GROUP BY ref_id
+    ), matched_relations AS (
+      SELECT
+        matched.page_id,
+        matched.target_ref_id,
+        matched.related_ref_id,
+        matched.target_paragraph_index,
+        matched.related_paragraph_index,
+        matched.relation_weight
+          / CASE
+              WHEN COALESCE(matched.target_top_chapter, matched.target_chapter) = matched.target_chapter
+                AND matched.target_verse IS NOT NULL
+                AND COALESCE(matched.target_top_verse, matched.target_verse) >= matched.target_verse
+                THEN COALESCE(matched.target_top_verse, matched.target_verse) - matched.target_verse + 1
+              ELSE MAX(1, COALESCE(target_counts.verse_count, 1))
+            END
+          / CASE
+              WHEN COALESCE(matched.related_top_chapter, matched.related_chapter) = matched.related_chapter
+                AND matched.related_verse IS NOT NULL
+                AND COALESCE(matched.related_top_verse, matched.related_verse) >= matched.related_verse
+                THEN COALESCE(matched.related_top_verse, matched.related_verse) - matched.related_verse + 1
+              ELSE MAX(1, COALESCE(related_counts.verse_count, 1))
+            END AS relation_weight
+      FROM matched_relation_rows matched
+      LEFT JOIN relation_ref_verse_counts target_counts ON target_counts.ref_id = matched.target_ref_id
+      LEFT JOIN relation_ref_verse_counts related_counts ON related_counts.ref_id = matched.related_ref_id
     )
     SELECT
       mr.page_id AS pageId,

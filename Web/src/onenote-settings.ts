@@ -1,26 +1,32 @@
 import './env.js';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
-import { oneNoteAuthConfig } from './auth.js';
 import { resetGraphAccessToken } from './graph.js';
 import { defaultBibleNoteDir } from './paths.js';
 
 const managedKeys = [
+  'ONENOTE_DATA_SOURCE'
+] as const;
+const obsoleteRegistrationKeys = new Set([
   'ONENOTE_CLIENT_ID',
   'ONENOTE_TENANT_ID',
-  'ONENOTE_SCOPES',
-  'ONENOTE_TOKEN_CACHE'
-] as const;
+  'ONENOTE_SCOPES'
+]);
 
 type ManagedKey = typeof managedKeys[number];
 
 export type OneNoteAccessSettings = {
   envFilePath: string;
-  clientId: string;
-  tenantId: string;
-  scopes: string;
-  tokenCache: string;
+  dataSource: OneNoteDataSource;
 };
+
+export type OneNoteDataSource = 'graph' | 'com';
+
+export function oneNoteDataSource(): OneNoteDataSource {
+  return process.env.ONENOTE_DATA_SOURCE?.trim().toLowerCase() === 'com'
+    ? 'com'
+    : 'graph';
+}
 
 export function oneNoteSettingsEnvPath(): string {
   return process.env.ONENOTE_ENV_FILE
@@ -28,13 +34,9 @@ export function oneNoteSettingsEnvPath(): string {
 }
 
 export function readOneNoteAccessSettings(): OneNoteAccessSettings {
-  const config = oneNoteAuthConfig();
   return {
     envFilePath: oneNoteSettingsEnvPath(),
-    clientId: config.clientId ?? '',
-    tenantId: config.tenantId,
-    scopes: config.scopes.join(' '),
-    tokenCache: config.cachePath
+    dataSource: oneNoteDataSource()
   };
 }
 
@@ -56,18 +58,12 @@ function envLineKey(line: string): string | undefined {
 
 export async function saveOneNoteAccessSettings(input: Record<string, unknown>): Promise<OneNoteAccessSettings> {
   const current = readOneNoteAccessSettings();
-  const clientId = cleanSingleLine(input.clientId);
-  const tenantId = cleanSingleLine(input.tenantId, current.tenantId) || 'common';
-  const scopes = cleanSingleLine(input.scopes, current.scopes) || 'Notes.Read User.Read offline_access';
-  const tokenCache = cleanSingleLine(input.tokenCache, current.tokenCache) || current.tokenCache;
-
-  if (!clientId) throw new Error('ONENOTE_CLIENT_ID is required.');
+  const dataSource: OneNoteDataSource = cleanSingleLine(input.dataSource, current.dataSource).toLowerCase() === 'com'
+    ? 'com'
+    : 'graph';
 
   const updates: Record<ManagedKey, string> = {
-    ONENOTE_CLIENT_ID: clientId,
-    ONENOTE_TENANT_ID: tenantId,
-    ONENOTE_SCOPES: scopes,
-    ONENOTE_TOKEN_CACHE: tokenCache
+    ONENOTE_DATA_SOURCE: dataSource
   };
   const envPath = oneNoteSettingsEnvPath();
   let lines: string[] = [];
@@ -78,11 +74,12 @@ export async function saveOneNoteAccessSettings(input: Record<string, unknown>):
   }
 
   const seen = new Set<ManagedKey>();
-  lines = lines.map(line => {
+  lines = lines.flatMap(line => {
     const key = envLineKey(line);
-    if (!key || !managedKeys.includes(key as ManagedKey)) return line;
+    if (key && obsoleteRegistrationKeys.has(key)) return [];
+    if (!key || !managedKeys.includes(key as ManagedKey)) return [line];
     seen.add(key as ManagedKey);
-    return `${key}=${formatEnvValue(updates[key as ManagedKey])}`;
+    return [`${key}=${formatEnvValue(updates[key as ManagedKey])}`];
   });
 
   for (const key of managedKeys) {

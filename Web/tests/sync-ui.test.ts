@@ -46,12 +46,40 @@ test('sync progress and partial failures are presented as one staged operation',
 
   assert.equal(sync.includes('function renderSyncProgress(progress)'), true);
   assert.equal(sync.includes('Этап ${stageIndex + 1} из ${stages.length}'), true);
-  assert.equal(sync.includes("title.textContent = errorCount ? 'Завершено с ошибками'"), true);
+  assert.equal(sync.includes("? 'Страница удалена из OneNote'"), true);
+  assert.equal(sync.includes(": errorCount ? 'Завершено с ошибками' : 'Синхронизация завершена'"), true);
   assert.equal(sync.includes('(result.sectionScanErrors || 0)'), true);
   assert.equal(sync.includes('(result.bibleRefsParseErrors || 0)'), true);
   assert.equal(styles.includes('.sync-progress-track'), true);
   assert.equal(styles.includes('.sync-result-metrics'), true);
   assert.equal(styles.includes('.activity-toast.warning'), true);
+  assert.equal(sync.includes("document.querySelectorAll('dialog[open]')"), true);
+  assert.equal(sync.includes("mirror.className = 'activity-toast dialog-activity-toast'"), true);
+  assert.equal(styles.includes('.activity-toast.dialog-activity-toast'), true);
+});
+
+test('targeted sync removes a page that was deleted from classic OneNote', () => {
+  const sync = fs.readFileSync(path.join(uiDirectory, 'sync.js'), 'utf8');
+  const syncCom = fs.readFileSync(path.join(uiDirectory, '..', 'src', 'sync-com.ts'), 'utf8');
+
+  assert.equal(syncCom.includes('const deletedPagesMarked = markPageDeleted(db, options.pageId, startedAt)'), true);
+  assert.equal(syncCom.includes("throw new Error('Страница не найдена в классическом OneNote.')"), true);
+  assert.equal(sync.includes('const targetedPageDeleted = Boolean('), true);
+  assert.equal(sync.includes('Страница удалена из OneNote и убрана из BibleNote.'), true);
+  assert.equal(sync.includes("history.replaceState(null, '', '/')"), true);
+  assert.equal(sync.includes('renderEmptyPage();'), true);
+});
+
+test('download journal remains numeric and follows notebook ids replaced during a rebuild', () => {
+  const cacheUi = fs.readFileSync(path.join(uiDirectory, '..', 'src', 'cache-ui.ts'), 'utf8');
+  const journal = fs.readFileSync(path.join(uiDirectory, 'notebooks-log.js'), 'utf8');
+
+  assert.equal(cacheUi.includes('COALESCE(SUM(CASE WHEN content_text IS NOT NULL'), true);
+  assert.equal(cacheUi.includes('COALESCE(SUM(CASE WHEN content_text IS NULL'), true);
+  assert.equal(cacheUi.includes('COALESCE(SUM(CASE WHEN fetch_error IS NOT NULL'), true);
+  assert.equal(journal.includes('activeSyncContext?.payload?.replaceAll'), true);
+  assert.equal(journal.includes('await loadNotebookSelector()'), true);
+  assert.equal(journal.includes('downloaded:Number(result.counts?.downloaded) || 0'), true);
 });
 
 test('advanced sync settings omit technical limits and use the safe request speed', () => {

@@ -108,7 +108,7 @@ namespace BibleNote.Tests
 
             var paragraphs = docParseResult.GetAllParagraphParseResults().ToList();
             var relations = VerseRelationsCalculator.Calculate(docParseResult).Relations;
-            var expectedWeights = new[] { 0.5M, 0.25M, 0.125M, 0.0625M, 0.0312M, 0.0156M, 0.01M };
+            var expectedWeights = new[] { 0.5M, 0.3333M, 0.25M, 0.2M, 0.1667M, 0.1429M, 0.125M };
 
             for (var targetIndex = 1; targetIndex < paragraphs.Count; targetIndex++)
             {

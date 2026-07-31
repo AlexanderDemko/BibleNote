@@ -3,6 +3,7 @@ using BibleNote.Providers.OneNote.Services.DocumentProvider;
 using BibleNote.Providers.OneNote.Services.Models;
 using BibleNote.Providers.OneNote.Services.NavigationProvider;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Office.Interop.OneNote;
 using System.Threading.Tasks;
 
 namespace BibleNote.Application.Controllers
@@ -26,6 +27,27 @@ namespace BibleNote.Application.Controllers
             return oneNoteApp.GetCurrentPageInfoAsync();
         }
 
+        [HttpGet]
+        public async Task<ActionResult<OneNoteComContentResponse>> Hierarchy()
+        {
+            return new OneNoteComContentResponse
+            {
+                Xml = await oneNoteApp.GetHierarchyContentAsync(null, HierarchyScope.hsPages)
+            };
+        }
+
+        [HttpGet]
+        public async Task<ActionResult<OneNoteComContentResponse>> PageContent(string pageId)
+        {
+            if (string.IsNullOrWhiteSpace(pageId))
+                return BadRequest("pageId is required.");
+
+            return new OneNoteComContentResponse
+            {
+                Xml = await oneNoteApp.GetPageContentAsync(pageId, PageInfo.piBasic)
+            };
+        }
+
         [HttpPost]
         public async Task<ActionResult<QuickAnalyzeCurrentPageResponse>> QuickAnalyzeCurrentPage()
         {
@@ -42,6 +64,11 @@ namespace BibleNote.Application.Controllers
                 VersesCount = parseResult.VersesCount
             };
         }
+    }
+
+    public class OneNoteComContentResponse
+    {
+        public string Xml { get; set; }
     }
 
     public class QuickAnalyzeCurrentPageResponse : OneNoteCurrentPageInfo

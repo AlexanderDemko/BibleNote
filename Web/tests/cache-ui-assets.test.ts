@@ -30,6 +30,7 @@ test('OneNote Ribbon settings and binaries are Windows-only package features', (
   const settings = fs.readFileSync(path.join(uiDirectory, 'settings.js'), 'utf8');
   const electronMain = fs.readFileSync(path.join(uiDirectory, '..', 'src', 'electron-main.ts'), 'utf8');
   const cacheUi = fs.readFileSync(path.join(uiDirectory, '..', 'src', 'cache-ui.ts'), 'utf8');
+  const treePages = fs.readFileSync(path.join(uiDirectory, 'tree-pages.js'), 'utf8');
   const registrar = fs.readFileSync(path.join(uiDirectory, '..', 'windows', 'OneNoteRibbon', 'Registrar', 'Program.cs'), 'utf8');
   const ribbonAddIn = fs.readFileSync(
     path.join(uiDirectory, '..', 'windows', 'OneNoteRibbon', 'RibbonAddIn', 'RibbonAddIn.cs'),
@@ -106,6 +107,12 @@ test('OneNote Ribbon settings and binaries are Windows-only package features', (
   assert.equal(electronMain.includes("if (action === 'open-bible' || action === 'open') focusMainWindow(true);"), true);
   assert.equal(electronMain.includes('Быстрый анализ завершён.'), false);
   assert.equal(electronMain.includes('Promise.resolve(openPage('), true);
+  assert.equal(electronMain.includes('await showOneNotePageLoading();'), true);
+  assert.equal(electronMain.includes('await showOneNotePageLoading(currentPageTitle);'), true);
+  assert.equal(electronMain.includes('showOneNotePageLoadingError(message)'), true);
+  assert.equal(treePages.includes("function showRibbonPageLoading(pageTitle = '')"), true);
+  assert.equal(treePages.includes('Если страницы ещё нет в BibleNote, сначала синхронизируем её.'), true);
+  assert.equal(treePages.includes('function showRibbonPageLoadingError(message)'), true);
   assert.equal(electronMain.includes('response.status !== 503'), true);
   assert.equal(electronMain.includes('focusMainWindow(true);'), true);
   assert.equal(electronMain.includes('setAlwaysOnTop(true)'), true);
@@ -765,19 +772,31 @@ test('verse-reference arrows retain separate occurrences inside one paragraph', 
     bibleOccurrenceKey:(occurrence:any) => `${occurrence.paragraphIndex}:${occurrence.startIndex}:${occurrence.endIndex}`,
     CSS:{ escape:(value:string) => value },
     document:{ createElement:() => ({ className:'', dataset:{} }) },
-    result:[] as string[]
+    result:[] as Array<{ occurrence:string; paragraphIndex:number }>
   };
   vm.runInNewContext(
     treePages.slice(functionStart, functionEnd)
-      + '\nresult = pageNavigationTargets(paragraphTargets, paragraphIndexes, bibleOccurrences, inlineRoot).map(target => target.dataset.bibleOccurrence);',
+      + '\nresult = pageNavigationTargets(paragraphTargets, paragraphIndexes, bibleOccurrences, inlineRoot).map(target => ({ occurrence:target.dataset.bibleOccurrence, paragraphIndex:Number(target.dataset.paragraphIndex) }));',
     context
   );
 
   assert.equal(JSON.stringify(context.result), JSON.stringify([
-    '2:0:3',
-    '2:18:19',
-    '18:0:1'
+    { occurrence:'2:0:3', paragraphIndex:2 },
+    { occurrence:'2:18:19', paragraphIndex:2 },
+    { occurrence:'18:0:1', paragraphIndex:18 }
   ]));
+});
+
+test('HTML verse-reference arrows prefer the occurrence paragraph over an unrelated navigation index', () => {
+  const apiPageView = fs.readFileSync(path.join(uiDirectory, 'api-page-view.js'), 'utf8');
+  const scrollFunction = apiPageView.match(/function scrollTargetParagraph\(index,paragraphIndex\)\{[^']+/)?.[0] || '';
+
+  assert.ok(scrollFunction, 'scrollTargetParagraph bridge is missing');
+  assert.ok(
+    scrollFunction.indexOf('data-onenote-paragraph-index')
+      < scrollFunction.indexOf('data-onenote-target-paragraph-index'),
+    'paragraph fallback must run before the positional paragraph target'
+  );
 });
 
 test('Bible paragraph targets decode cached HTML entities before matching page text', () => {

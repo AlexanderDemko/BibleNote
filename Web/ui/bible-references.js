@@ -651,7 +651,7 @@ async function loadParallelVerseText(ref, host, includeReference = true) {
   host.classList.add('loading');
   host.classList.remove('error');
   try {
-    const result = await api(bibleTextUrl(ref));
+    const result = await api(bibleTextUrl(ref), { timeoutMs:120000 });
     host.textContent = (includeReference ? bibleVerseText(result) : bibleVersePlainText(result)) || 'Текст не найден.';
     host.classList.remove('loading');
   } catch (error) {
@@ -702,7 +702,15 @@ async function openBibleParallelPanel(ref) {
   bibleTextParallelPanel.append(loading);
   loadParallelVerseText(ref, sourceText, false).catch(showError);
 
-  const result = await api('/api/bible/parallel?' + parallelKey);
+  let result;
+  try {
+    result = await api('/api/bible/parallel?' + parallelKey);
+  } catch (error) {
+    if (bibleParallelDrawer.hidden || bibleParallelDrawer.dataset.parallelKey !== parallelKey) return;
+    loading.classList.add('error');
+    loading.textContent = 'Не удалось загрузить параллельные ссылки: ' + (error?.message || String(error));
+    return;
+  }
   if (bibleParallelDrawer.hidden || bibleParallelDrawer.dataset.parallelKey !== parallelKey) return;
   loading.remove();
   if (result.rows.length === 0) {

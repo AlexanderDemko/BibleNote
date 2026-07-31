@@ -11,9 +11,11 @@ import { cacheStatus, defaultDbPath, findCachedGraphSectionIdByOneNoteGuid, find
 import { visibleBibleRefSql, visibleBibleScopeSql } from './cache-sql.js';
 import { hasRenderableHtmlBody } from './html.js';
 import { oneNoteImage } from './image-proxy.js';
+import { createInductiveAnnotations, createInductiveRelation, createInductiveStyle, deleteInductiveAnnotation, deleteInductiveRelation, importInductiveMarkings, listInductiveAnnotations, listInductiveRelations, listInductiveStyles, openInductiveDb, updateInductiveRelation, updateInductiveStyle, type InductiveAnnotationInput, type InductiveImportPayload } from './inductive-markings.js';
 import { graphListAll } from './graph.js';
 import { acquireTokenByDeviceCode, signedInMicrosoftAccount, type MicrosoftAccountSummary } from './auth.js';
-import { readOneNoteAccessSettings, saveOneNoteAccessSettings } from './onenote-settings.js';
+import { oneNoteDataSource, readOneNoteAccessSettings, saveOneNoteAccessSettings } from './onenote-settings.js';
+import { loadOneNoteComSnapshot } from './onenote-com.js';
 import { extractOneNotePageGuid, extractOneNotePageTitle, extractOneNoteSectionGuid, findGraphPageForOneNoteClientPage, findGraphSectionForOneNoteClientPage, type OneNoteLinkedSection } from './onenote-page-link.js';
 import { configureRuntimeLogging, readRuntimeLoggingSettings, runtimeLog, saveRuntimeLoggingSettings } from './runtime-logging.js';
 import { SingleFlight } from './single-flight.js';
@@ -82,6 +84,160 @@ const uploadBibleNoteModuleRequestSchema = z.object({
 const notebookDisplayNameRequestSchema = z.object({
   notebookId: z.string().min(1),
   displayName: z.string().nullable().optional()
+});
+
+const inductiveStyleRequestSchema = z.object({
+  name: z.string().trim().min(1).max(60),
+  symbol: z.string().trim().min(1).max(4),
+  color: z.string().regex(/^#[0-9a-f]{6}$/i),
+  backgroundColor: z.string().regex(/^#[0-9a-f]{6}$/i),
+  decoration: z.enum(['highlight', 'box', 'double', 'wavy', 'dashed'])
+});
+
+const inductiveAnnotationRequestSchema = z.object({
+  module: z.string().trim().min(1).max(80),
+  bookIndex: z.number().int().min(1).max(1000),
+  chapter: z.number().int().min(1).max(1000),
+  verse: z.number().int().min(1).max(1000),
+  startOffset: z.number().int().min(0).max(100_000),
+  endOffset: z.number().int().min(1).max(100_000),
+  quote: z.string().min(1).max(20_000),
+  prefix: z.string().max(200).optional(),
+  suffix: z.string().max(200).optional(),
+  textHash: z.string().max(128).optional(),
+  styleId: z.string().trim().min(1).max(80),
+  note: z.string().max(20_000).optional()
+}).refine(value => value.endOffset > value.startOffset, {
+  message:'endOffset must be greater than startOffset.'
+});
+
+const inductiveAnnotationsRequestSchema = z.object({
+  annotations:z.array(inductiveAnnotationRequestSchema).min(1).max(500)
+});
+
+const inductiveRelationEndpointSchema = z.object({
+  verse:z.number().int().min(1).max(1000),
+  startOffset:z.number().int().min(0).max(100_000),
+  endOffset:z.number().int().min(1).max(100_000),
+  quote:z.string().min(1).max(20_000),
+  prefix:z.string().max(200).optional(),
+  suffix:z.string().max(200).optional(),
+  textHash:z.string().max(128).optional()
+}).refine(value => value.endOffset > value.startOffset, {
+  message:'endOffset must be greater than startOffset.'
+});
+const inductiveRelationRequestSchema = z.object({
+  module:z.string().trim().min(1).max(80),
+  bookIndex:z.number().int().min(1).max(1000),
+  chapter:z.number().int().min(1).max(1000),
+  source:inductiveRelationEndpointSchema,
+  target:inductiveRelationEndpointSchema,
+  type:z.enum(['contrast', 'comparison', 'cause', 'conclusion']),
+  note:z.string().trim().max(500).optional()
+}).refine(value => value.source.verse !== value.target.verse
+  || value.source.startOffset !== value.target.startOffset
+  || value.source.endOffset !== value.target.endOffset, {
+  message:'A relation requires two different text ranges.'
+});
+
+const nullableImportString = (maximum: number) => z.string().max(maximum).nullable().optional()
+  .transform(value => value ?? undefined);
+const inductiveImportAnnotationSchema = z.object({
+  id:z.string().trim().min(1).max(80),
+  module:z.string().trim().min(1).max(80),
+  bookIndex:z.number().int().min(1).max(1000),
+  chapter:z.number().int().min(1).max(1000),
+  verse:z.number().int().min(1).max(1000),
+  startOffset:z.number().int().min(0).max(100_000),
+  endOffset:z.number().int().min(1).max(100_000),
+  quote:z.string().min(1).max(20_000),
+  prefix:nullableImportString(200),
+  suffix:nullableImportString(200),
+  textHash:nullableImportString(128),
+  styleId:z.string().trim().min(1).max(80),
+  note:nullableImportString(20_000)
+}).refine(value => value.endOffset > value.startOffset, {
+  message:'endOffset must be greater than startOffset.'
+});
+const inductiveLegacyImportRelationSchema = z.object({
+  id:z.string().trim().min(1).max(80),
+  sourceAnnotationId:z.string().trim().min(1).max(80),
+  targetAnnotationId:z.string().trim().min(1).max(80),
+  type:z.enum(['contrast', 'comparison', 'cause', 'conclusion', 'repetition']),
+  note:nullableImportString(500)
+}).refine(value => value.sourceAnnotationId !== value.targetAnnotationId, {
+  message:'A relation requires two different annotations.'
+});
+const inductiveDirectImportRelationSchema = z.intersection(
+  inductiveRelationRequestSchema,
+  z.object({ id:z.string().trim().min(1).max(80) })
+);
+
+const inductiveImportSchema = z.object({
+  format:z.literal('biblenote-inductive-markings'),
+  version:z.union([z.literal(1), z.literal(2)]),
+  exportedAt:z.string().max(80).optional(),
+  location:z.object({
+    module:z.string().trim().min(1).max(80),
+    bookIndex:z.number().int().min(1).max(1000),
+    book:z.string().max(200).optional(),
+    chapter:z.number().int().min(1).max(1000)
+  }),
+  styles:z.array(z.object({
+    id:z.string().trim().min(1).max(80),
+    name:z.string().trim().min(1).max(60),
+    category:z.string().trim().min(1).max(60),
+    symbol:z.string().min(1).max(8),
+    color:z.string().regex(/^#[0-9a-f]{6}$/i),
+    backgroundColor:z.string().regex(/^#[0-9a-f]{6}$/i),
+    decoration:z.enum(['highlight', 'box', 'double', 'wavy', 'dashed']),
+    builtIn:z.boolean(),
+    sortOrder:z.number().int().min(0).max(1_000_000)
+  })).min(1).max(2000),
+  annotations:z.array(inductiveImportAnnotationSchema).max(20_000),
+  relations:z.array(z.union([
+    inductiveLegacyImportRelationSchema,
+    inductiveDirectImportRelationSchema
+  ])).max(20_000)
+}).superRefine((payload, context) => {
+  const styleIds = new Set<string>();
+  for (const style of payload.styles) {
+    if (styleIds.has(style.id)) {
+      context.addIssue({ code:'custom', message:`Duplicate style id: ${style.id}` });
+    }
+    styleIds.add(style.id);
+  }
+  const annotationIds = new Set<string>();
+  for (const annotation of payload.annotations) {
+    if (annotationIds.has(annotation.id)) {
+      context.addIssue({ code:'custom', message:`Duplicate annotation id: ${annotation.id}` });
+    }
+    annotationIds.add(annotation.id);
+    if (annotation.module !== payload.location.module
+      || annotation.bookIndex !== payload.location.bookIndex
+      || annotation.chapter !== payload.location.chapter) {
+      context.addIssue({ code:'custom', message:'Every annotation must belong to the exported chapter.' });
+    }
+    if (!styleIds.has(annotation.styleId)) {
+      context.addIssue({ code:'custom', message:`Imported annotation references a missing style: ${annotation.styleId}` });
+    }
+  }
+  const relationIds = new Set<string>();
+  for (const relation of payload.relations) {
+    if (relationIds.has(relation.id)) {
+      context.addIssue({ code:'custom', message:`Duplicate relation id: ${relation.id}` });
+    }
+    relationIds.add(relation.id);
+    if ('sourceAnnotationId' in relation) {
+      if (!annotationIds.has(relation.sourceAnnotationId) || !annotationIds.has(relation.targetAnnotationId)) {
+        context.addIssue({ code:'custom', message:'Every legacy relation must reference annotations from the same file.' });
+      }
+    } else if (relation.module !== payload.location.module
+      || relation.bookIndex !== payload.location.bookIndex
+      || relation.chapter !== payload.location.chapter) {
+      context.addIssue({ code:'custom', message:'Every relation must belong to the exported chapter.' });
+    }
+  }
 });
 
 const startupTimingStartedAt = Date.now();
@@ -173,6 +329,7 @@ async function readJsonBody(request: IncomingMessage): Promise<Record<string, un
 
 export function startCacheUi(options: UiOptions): http.Server {
   configureRuntimeLogging(path.dirname(options.dbPath));
+  const inductiveDb = openInductiveDb(options.dbPath);
   let cacheDb: CacheDb | undefined;
   let dbInitStarted = false;
   let dbInitError: Error | undefined;
@@ -236,6 +393,14 @@ export function startCacheUi(options: UiOptions): http.Server {
     currentPage ??= await bibleNoteCurrentOneNotePage();
     const cachedPage = cachedCurrentOneNotePage(currentPage);
     if (cachedPage) return cachedPage;
+
+    if (oneNoteDataSource() === 'com') {
+      return {
+        id:currentPage.pageId,
+        title:extractOneNotePageTitle(currentPage.clientUrl),
+        clientUrl:currentPage.clientUrl
+      };
+    }
 
     if (!searchGraph) {
       const error = new Error(
@@ -494,6 +659,12 @@ export function startCacheUi(options: UiOptions): http.Server {
         return json(response, 200, await saveOneNoteAccessSettings(await readJsonBody(request)));
       }
       if (url.pathname === '/api/onenote/login/status' && request.method === 'GET') {
+        if (oneNoteDataSource() === 'com') {
+          return json(response, 200, {
+            status:'success',
+            account:{ username:'Классический OneNote', name:'Локальные записные книжки' }
+          });
+        }
         if (!microsoftLoginPromise && microsoftLoginState.status !== 'failed') {
           try {
             const account = await signedInMicrosoftAccount();
@@ -545,9 +716,11 @@ export function startCacheUi(options: UiOptions): http.Server {
           displayName?: string;
           lastModifiedDateTime?: string;
         };
-        const notebooks = await graphListAll<RemoteNotebook>(
-          '/me/onenote/notebooks?$select=id,displayName,lastModifiedDateTime&$top=100'
-        );
+        const notebooks: RemoteNotebook[] = oneNoteDataSource() === 'com'
+          ? (await loadOneNoteComSnapshot()).notebooks
+          : await graphListAll<RemoteNotebook>(
+              '/me/onenote/notebooks?$select=id,displayName,lastModifiedDateTime&$top=100'
+            );
         return json(response, 200, {
           notebooks:notebooks.map(notebook => ({
             id:notebook.id,
@@ -688,6 +861,113 @@ export function startCacheUi(options: UiOptions): http.Server {
         const module = url.searchParams.get('module')?.trim() || undefined;
         return json(response, 200, { reference:await parseExternalBibleRef(rawRef, module) });
       }
+      if (url.pathname === '/api/inductive/styles' && request.method === 'GET') {
+        return json(response, 200, { styles:listInductiveStyles(inductiveDb) });
+      }
+      if (url.pathname === '/api/inductive/styles' && request.method === 'POST') {
+        const ownOrigin = `http://${request.headers.host ?? `127.0.0.1:${options.port}`}`;
+        if (request.headers.origin && request.headers.origin !== ownOrigin) {
+          return json(response, 403, { error:'Cross-origin inductive marking requests are not allowed.' });
+        }
+        const body = inductiveStyleRequestSchema.parse(await readJsonBody(request));
+        return json(response, 201, { style:createInductiveStyle(inductiveDb, body) });
+      }
+      const inductiveStyleUpdateMatch = url.pathname.match(/^\/api\/inductive\/styles\/([^/]+)$/);
+      if (inductiveStyleUpdateMatch && request.method === 'PATCH') {
+        const ownOrigin = `http://${request.headers.host ?? `127.0.0.1:${options.port}`}`;
+        if (request.headers.origin && request.headers.origin !== ownOrigin) {
+          return json(response, 403, { error:'Cross-origin inductive marking requests are not allowed.' });
+        }
+        const body = inductiveStyleRequestSchema.parse(await readJsonBody(request));
+        const style = updateInductiveStyle(inductiveDb, decodeURIComponent(inductiveStyleUpdateMatch[1]), body);
+        return style
+          ? json(response, 200, { style })
+          : json(response, 404, { error:'Inductive marking style not found.' });
+      }
+      if (url.pathname === '/api/inductive/import' && request.method === 'POST') {
+        const ownOrigin = `http://${request.headers.host ?? `127.0.0.1:${options.port}`}`;
+        if (request.headers.origin && request.headers.origin !== ownOrigin) {
+          return json(response, 403, { error:'Cross-origin inductive marking requests are not allowed.' });
+        }
+        const body = inductiveImportSchema.parse(await readJsonBody(request));
+        return json(response, 200, {
+          imported:importInductiveMarkings(inductiveDb, body as InductiveImportPayload)
+        });
+      }
+      if (url.pathname === '/api/inductive/annotations' && request.method === 'GET') {
+        const module = required(url, 'module').trim();
+        const bookIndex = Number(required(url, 'bookIndex'));
+        const chapter = Number(required(url, 'chapter'));
+        if (!Number.isInteger(bookIndex) || !Number.isInteger(chapter)) {
+          throw new Error('bookIndex and chapter must be integers.');
+        }
+        return json(response, 200, {
+          annotations:listInductiveAnnotations(inductiveDb, { module, bookIndex, chapter })
+        });
+      }
+      if (url.pathname === '/api/inductive/annotations' && request.method === 'POST') {
+        const ownOrigin = `http://${request.headers.host ?? `127.0.0.1:${options.port}`}`;
+        if (request.headers.origin && request.headers.origin !== ownOrigin) {
+          return json(response, 403, { error:'Cross-origin inductive marking requests are not allowed.' });
+        }
+        const body = inductiveAnnotationsRequestSchema.parse(await readJsonBody(request));
+        return json(response, 201, {
+          annotations:createInductiveAnnotations(inductiveDb, body.annotations as InductiveAnnotationInput[])
+        });
+      }
+      const inductiveDeleteMatch = url.pathname.match(/^\/api\/inductive\/annotations\/([^/]+)$/);
+      if (inductiveDeleteMatch && request.method === 'DELETE') {
+        const ownOrigin = `http://${request.headers.host ?? `127.0.0.1:${options.port}`}`;
+        if (request.headers.origin && request.headers.origin !== ownOrigin) {
+          return json(response, 403, { error:'Cross-origin inductive marking requests are not allowed.' });
+        }
+        const id = decodeURIComponent(inductiveDeleteMatch[1]);
+        return deleteInductiveAnnotation(inductiveDb, id)
+          ? json(response, 200, { deleted:true, id })
+          : json(response, 404, { error:'Inductive annotation was not found.' });
+      }
+      if (url.pathname === '/api/inductive/relations' && request.method === 'GET') {
+        const module = required(url, 'module').trim();
+        const bookIndex = Number(required(url, 'bookIndex'));
+        const chapter = Number(required(url, 'chapter'));
+        if (!Number.isInteger(bookIndex) || !Number.isInteger(chapter)) {
+          throw new Error('bookIndex and chapter must be integers.');
+        }
+        return json(response, 200, {
+          relations:listInductiveRelations(inductiveDb, { module, bookIndex, chapter })
+        });
+      }
+      if (url.pathname === '/api/inductive/relations' && request.method === 'POST') {
+        const ownOrigin = `http://${request.headers.host ?? `127.0.0.1:${options.port}`}`;
+        if (request.headers.origin && request.headers.origin !== ownOrigin) {
+          return json(response, 403, { error:'Cross-origin inductive relation requests are not allowed.' });
+        }
+        const body = inductiveRelationRequestSchema.parse(await readJsonBody(request));
+        return json(response, 201, { relation:createInductiveRelation(inductiveDb, body) });
+      }
+      const inductiveRelationMatch = url.pathname.match(/^\/api\/inductive\/relations\/([^/]+)$/);
+      if (inductiveRelationMatch && request.method === 'PATCH') {
+        const ownOrigin = `http://${request.headers.host ?? `127.0.0.1:${options.port}`}`;
+        if (request.headers.origin && request.headers.origin !== ownOrigin) {
+          return json(response, 403, { error:'Cross-origin inductive relation requests are not allowed.' });
+        }
+        const id = decodeURIComponent(inductiveRelationMatch[1]);
+        const body = inductiveRelationRequestSchema.parse(await readJsonBody(request));
+        const relation = updateInductiveRelation(inductiveDb, id, body);
+        return relation
+          ? json(response, 200, { relation })
+          : json(response, 404, { error:'Inductive relation was not found.' });
+      }
+      if (inductiveRelationMatch && request.method === 'DELETE') {
+        const ownOrigin = `http://${request.headers.host ?? `127.0.0.1:${options.port}`}`;
+        if (request.headers.origin && request.headers.origin !== ownOrigin) {
+          return json(response, 403, { error:'Cross-origin inductive relation requests are not allowed.' });
+        }
+        const id = decodeURIComponent(inductiveRelationMatch[1]);
+        return deleteInductiveRelation(inductiveDb, id)
+          ? json(response, 200, { deleted:true, id })
+          : json(response, 404, { error:'Inductive relation was not found.' });
+      }
       const db = requireDb();
       if (url.pathname === '/api/sync' && request.method === 'POST') {
         const ownOrigin = `http://${request.headers.host ?? `127.0.0.1:${options.port}`}`;
@@ -785,7 +1065,20 @@ export function startCacheUi(options: UiOptions): http.Server {
       }
       if (request.method !== 'GET') return json(response, 405, { error: 'Method not allowed.' });
       if (url.pathname === '/' || url.pathname.startsWith('/page/') || url.pathname.startsWith('/bible/')) return page(response);
-      if (url.pathname === '/api/status') return json(response, 200, cacheStatus(db));
+      if (url.pathname === '/api/status') {
+        const savedSource = getSyncState(db, 'last_data_source');
+        const existingNotebook = db.prepare('SELECT id FROM notebooks LIMIT 1').get() as { id?: string } | undefined;
+        const cacheDataSource = savedSource === 'graph' || savedSource === 'com'
+          ? savedSource
+          : existingNotebook?.id
+            ? (existingNotebook.id.trim().startsWith('{') ? 'com' : 'graph')
+            : undefined;
+        return json(response, 200, {
+          ...cacheStatus(db),
+          dataSource:oneNoteDataSource(),
+          cacheDataSource
+        });
+      }
       if (url.pathname === '/api/bible/stats') {
         const one = (sql: string) => (db.prepare(sql).get() as any)?.value ?? 0;
         const includeAux = includeAuxiliaryBibleRefs(url);
@@ -1102,9 +1395,9 @@ export function startCacheUi(options: UiOptions): http.Server {
         const scopeSql = scopeConditions.join(' AND ');
         const counts = db.prepare(`
           SELECT
-            SUM(CASE WHEN content_text IS NOT NULL AND fetch_error IS NULL THEN 1 ELSE 0 END) AS downloaded,
-            SUM(CASE WHEN content_text IS NULL AND fetch_error IS NULL THEN 1 ELSE 0 END) AS missing,
-            SUM(CASE WHEN fetch_error IS NOT NULL THEN 1 ELSE 0 END) AS errors,
+            COALESCE(SUM(CASE WHEN content_text IS NOT NULL AND fetch_error IS NULL THEN 1 ELSE 0 END), 0) AS downloaded,
+            COALESCE(SUM(CASE WHEN content_text IS NULL AND fetch_error IS NULL THEN 1 ELSE 0 END), 0) AS missing,
+            COALESCE(SUM(CASE WHEN fetch_error IS NOT NULL THEN 1 ELSE 0 END), 0) AS errors,
             COUNT(*) AS total
           FROM pages
           WHERE ${scopeSql}
@@ -1580,7 +1873,10 @@ export function startCacheUi(options: UiOptions): http.Server {
     }
   });
 
-  server.on('close', () => cacheDb?.close());
+  server.on('close', () => {
+    cacheDb?.close();
+    inductiveDb.close();
+  });
   server.listen(options.port, '127.0.0.1', () => {
     logStartupTiming(`server listening port=${options.port}`);
     console.log(`BibleNote: http://127.0.0.1:${options.port}`);

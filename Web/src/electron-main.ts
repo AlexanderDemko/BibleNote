@@ -215,6 +215,22 @@ async function showRibbonActivity(
   ).catch(() => undefined);
 }
 
+async function showOneNotePageLoading(pageTitle = ''): Promise<void> {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  await mainWindow.webContents.executeJavaScript(
+    `typeof showRibbonPageLoading === 'function' && showRibbonPageLoading(${JSON.stringify(pageTitle)})`,
+    true
+  ).catch(() => undefined);
+}
+
+async function showOneNotePageLoadingError(message: string): Promise<void> {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  await mainWindow.webContents.executeJavaScript(
+    `typeof showRibbonPageLoadingError === 'function' && showRibbonPageLoadingError(${JSON.stringify(message)})`,
+    true
+  ).catch(() => undefined);
+}
+
 async function fetchOneNoteRibbonRoute(route: string): Promise<Response> {
   const attempts = 40;
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
@@ -233,6 +249,10 @@ async function handleOneNoteRibbonAction(action: OneNoteRibbonAction): Promise<v
   }
   await waitForCacheUi(45000);
 
+  if (action === 'open') {
+    await showOneNotePageLoading();
+  }
+
   if (action === 'open-bible') {
     const target = mainWindow;
     if (!target || target.isDestroyed()) {
@@ -247,7 +267,7 @@ async function handleOneNoteRibbonAction(action: OneNoteRibbonAction): Promise<v
   }
 
   let currentPageTitle = '';
-  if (action === 'analyze-current') {
+  if (action === 'analyze-current' || action === 'open') {
     const currentPageResponse = await fetchOneNoteRibbonRoute('current-page');
     const currentPageText = await currentPageResponse.text();
     let currentPageBody: any = {};
@@ -262,12 +282,16 @@ async function handleOneNoteRibbonAction(action: OneNoteRibbonAction): Promise<v
     currentPageTitle = typeof currentPageBody?.currentPage?.title === 'string'
       ? currentPageBody.currentPage.title.trim()
       : '';
-    await showRibbonActivity(
-      currentPageTitle
-        ? `Синхронизация страницы «${currentPageTitle}»…`
-        : 'Синхронизация текущей страницы OneNote…',
-      'running'
-    );
+    if (action === 'analyze-current') {
+      await showRibbonActivity(
+        currentPageTitle
+          ? `Синхронизация страницы «${currentPageTitle}»…`
+          : 'Синхронизация текущей страницы OneNote…',
+        'running'
+      );
+    } else {
+      await showOneNotePageLoading(currentPageTitle);
+    }
   }
 
   const route = action === 'open' ? 'open-current' : action;
@@ -388,6 +412,7 @@ async function startControlServer(): Promise<void> {
         if (action === 'open-bible' || action === 'open') {
           focusMainWindow(true);
           void showRibbonActivity(`Команда OneNote не выполнена: ${message}`, 'error');
+          if (action === 'open') void showOneNotePageLoadingError(message);
         } else if (action === 'analyze-current') {
           void showRibbonActivity(`Не удалось синхронизировать текущую страницу: ${message}`, 'error');
         }
@@ -926,6 +951,7 @@ async function createWindow(): Promise<void> {
       logStartup(`startup OneNote Ribbon action ${firstRibbonAction} failed: ${message}`);
       if (firstRibbonAction === 'open-bible' || firstRibbonAction === 'open') {
         await showRibbonActivity(`Команда OneNote не выполнена: ${message}`, 'error');
+        if (firstRibbonAction === 'open') await showOneNotePageLoadingError(message);
       }
     });
   }
@@ -980,6 +1006,7 @@ if (!singleInstanceLock) {
         if (ribbonAction === 'open-bible' || ribbonAction === 'open') {
           focusMainWindow(true);
           void showRibbonActivity(`Команда OneNote не выполнена: ${message}`, 'error');
+          if (ribbonAction === 'open') void showOneNotePageLoadingError(message);
         }
       });
     } else if (mainWindow) {

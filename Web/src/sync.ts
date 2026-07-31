@@ -11,6 +11,7 @@ import {
   clearSyncState,
   defaultDbPath,
   getCachedPage,
+  getSyncState,
   listCachedPagesForBibleParse,
   listCachedPagesNeedingBibleParse,
   listCachedPagesWithStaleSectionContent,
@@ -41,6 +42,8 @@ import {
 } from './cache.js';
 import type { PageRow, SectionRow } from './cache.js';
 import { graphJson, graphListAll, graphText, setGraphRetryObserver } from './graph.js';
+import { oneNoteDataSource } from './onenote-settings.js';
+import { syncOneNoteComCache } from './sync-com.js';
 
 export type Notebook = {
   id: string;
@@ -557,6 +560,7 @@ export async function loadNotebookSectionsRecursively(
 
 export async function syncOneNoteCache(options: SyncOptions = {}): Promise<SyncResult> {
   if (options.localBibleReparse) return reparseCachedBibleReferences(options);
+  if (oneNoteDataSource() === 'com') return syncOneNoteComCache(options);
   const startedAt = nowIso();
   runtimeLog('sync-core', 'syncOneNoteCache start', {
     maxPages: options.maxPages,
@@ -583,6 +587,14 @@ export async function syncOneNoteCache(options: SyncOptions = {}): Promise<SyncR
   setSyncState(db, 'last_sync_status', 'running');
   clearSyncState(db, 'last_sync_error');
   try {
+  const savedSource = getSyncState(db, 'last_data_source');
+  const existingNotebook = db.prepare('SELECT id FROM notebooks LIMIT 1').get() as { id?: string } | undefined;
+  const inferredSource = savedSource ?? (existingNotebook?.id
+    ? (existingNotebook.id.trim().startsWith('{') ? 'com' : 'graph')
+    : undefined);
+  if (inferredSource === 'com' && !options.replaceAll) {
+    throw new Error('Источник OneNote изменён. Перед первой облачной синхронизацией пересоздайте локальный кэш.');
+  }
   setGraphRetryObserver(event => {
     const waitSeconds = Math.max(1, Math.ceil(event.retryAfterMs / 1000));
     options.onProgress?.({
@@ -1108,6 +1120,7 @@ export async function syncOneNoteCache(options: SyncOptions = {}): Promise<SyncR
   setSyncState(db, 'last_sync_bible_refs_pages_parsed', String(bibleRefsPagesParsed));
   setSyncState(db, 'last_sync_bible_refs_recognized', String(bibleRefsRecognized));
   setSyncState(db, 'last_sync_bible_refs_parse_errors', String(bibleRefsParseErrors));
+  setSyncState(db, 'last_data_source', 'graph');
   setSyncState(db, 'last_sync_status', contentErrors === 0 && sectionScanErrors === 0 && bibleRefsParseErrors === 0 ? 'success' : 'completed_with_errors');
 
   checkpointCacheDb(db, 'TRUNCATE');
