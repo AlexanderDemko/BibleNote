@@ -1,6 +1,6 @@
 import { runtimeLog } from './runtime-logging.js';
 
-export const bibleParserVersion = 'biblenote-http-v6';
+export const bibleParserVersion = 'biblenote-http-v8';
 
 export type BibleReference = {
   originalText?: string;

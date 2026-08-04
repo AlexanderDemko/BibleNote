@@ -5,16 +5,17 @@ import path from 'node:path';
 import { pathToFileURL, URL } from 'node:url';
 import * as z from 'zod/v4';
 import { bibleParseConfigFromEnv, bibleParserVersion, getVerseTextWithBibleNote, parsePageWithBibleNote, type BibleVerseText } from './bible.js';
-import { bibleNoteBooks, bibleNoteCurrentOneNotePage, bibleNoteHealth, bibleNoteModules, bibleNoteParallelVerseText, bibleNoteQuickAnalyzeCurrentPage, bibleNoteSearchText, electronControl, ensureBibleNoteAvailable, parseExternalBibleRef, uploadBibleNoteModule, type OneNoteCurrentPage } from './biblenote-gateway.js';
+import { bibleNoteBooks, bibleNoteCurrentOneNotePage, bibleNoteHealth, bibleNoteModules, bibleNoteOneNotePageLink, bibleNoteParallelVerseText, bibleNoteQuickAnalyzeCurrentPage, bibleNoteSearchText, electronControl, ensureBibleNoteAvailable, parseExternalBibleRef, uploadBibleNoteModule, type OneNoteCurrentPage } from './biblenote-gateway.js';
 import { cacheUiPageHtml, serveCacheUiAsset } from './cache-ui-assets.js';
-import { cacheStatus, defaultDbPath, findCachedGraphSectionIdByOneNoteGuid, findCachedPageByOneNoteGuid, findParallelBibleReferenceNotes, findParallelBibleReferences, getBibleParseState, getCachedPage, getSyncState, markPageHtmlParsed, markPageOpened, openCacheDb, readCachedPage, searchBibleReferenceNotesByWeight, searchCacheAdvanced, searchCacheRelaxed, shouldParseBibleRefs, shouldParsePageHtml, updatePageHtml, upsertBibleParseResult } from './cache.js';
+import { cacheStatistics, cacheStatus, defaultDbPath, findCachedGraphSectionIdByOneNoteGuid, findCachedPageByOneNoteGuid, findParallelBibleReferenceNotes, findParallelBibleReferences, getBibleParseState, getCachedPage, getSyncState, listSyncHistory, markPageHtmlParsed, markPageOpened, openCacheDb, readCachedPage, recordSyncHistory, searchBibleReferenceNotesByWeight, searchCacheAdvanced, searchCacheRelaxed, shouldParseBibleRefs, shouldParsePageHtml, updatePageHtml, upsertBibleParseResult, type SyncHistoryStatus } from './cache.js';
 import { visibleBibleRefSql, visibleBibleScopeSql } from './cache-sql.js';
 import { hasRenderableHtmlBody } from './html.js';
 import { oneNoteImage } from './image-proxy.js';
-import { createInductiveAnnotations, createInductiveRelation, createInductiveStyle, deleteInductiveAnnotation, deleteInductiveRelation, importInductiveMarkings, listInductiveAnnotations, listInductiveRelations, listInductiveStyles, openInductiveDb, updateInductiveRelation, updateInductiveStyle, type InductiveAnnotationInput, type InductiveImportPayload } from './inductive-markings.js';
+import { createInductiveAnnotations, createInductiveRelation, createInductiveStyle, deleteInductiveAnnotation, deleteInductiveRelation, importInductiveMarkings, listAllInductiveAnnotations, listAllInductiveRelations, listInductiveAnnotations, listInductiveRelations, listInductiveStyles, openInductiveDb, updateInductiveRelation, updateInductiveStyle, type InductiveAnnotationInput, type InductiveImportPayload } from './inductive-markings.js';
 import { graphListAll } from './graph.js';
 import { acquireTokenByDeviceCode, signedInMicrosoftAccount, type MicrosoftAccountSummary } from './auth.js';
-import { oneNoteDataSource, readOneNoteAccessSettings, saveOneNoteAccessSettings } from './onenote-settings.js';
+import { configuredDataSources, folderPathsForSource, folderSourcePaths, oneNoteDataSource, readOneNoteAccessSettings, saveOneNoteAccessSettings, type ConfiguredDataSource } from './onenote-settings.js';
+import { folderNotebookId, listFolderNotebooks } from './folder-source.js';
 import { loadOneNoteComSnapshot } from './onenote-com.js';
 import { extractOneNotePageGuid, extractOneNotePageTitle, extractOneNoteSectionGuid, findGraphPageForOneNoteClientPage, findGraphSectionForOneNoteClientPage, type OneNoteLinkedSection } from './onenote-page-link.js';
 import { configureRuntimeLogging, readRuntimeLoggingSettings, runtimeLog, saveRuntimeLoggingSettings } from './runtime-logging.js';
@@ -46,6 +47,117 @@ type MicrosoftLoginState = {
   error?: string;
 };
 
+function cachedNotebookBelongsToSource(notebookId: string, source: ConfiguredDataSource): boolean {
+  if (source.type === 'folder') return folderPathsForSource(source).some(folderPath => notebookId === folderNotebookId(folderPath));
+  if (notebookId.startsWith('folder:notebook:')) return false;
+  const isCom = notebookId.trim().startsWith('{');
+  return source.type === 'com' ? isCom : !isCom;
+}
+
+export function removeCachedSources(db: ReturnType<typeof openCacheDb>, sources: ConfiguredDataSource[]): number {
+  if (sources.length === 0) return 0;
+  const notebookIds = (db.prepare('SELECT id FROM notebooks').all() as Array<{ id: string }>)
+    .map(row => row.id)
+    .filter(id => sources.some(source => cachedNotebookBelongsToSource(id, source)));
+  if (notebookIds.length === 0) return 0;
+  const placeholders = notebookIds.map(() => '?').join(',');
+  const remove = db.transaction(() => {
+    db.prepare(`DELETE FROM pages_fts WHERE page_id IN (SELECT id FROM pages WHERE parent_notebook_id IN (${placeholders}))`).run(...notebookIds);
+    db.prepare(`DELETE FROM page_access WHERE page_id IN (SELECT id FROM pages WHERE parent_notebook_id IN (${placeholders}))`).run(...notebookIds);
+    db.prepare(`DELETE FROM pages WHERE parent_notebook_id IN (${placeholders})`).run(...notebookIds);
+    db.prepare(`DELETE FROM sections WHERE parent_notebook_id IN (${placeholders})`).run(...notebookIds);
+    db.prepare(`DELETE FROM section_groups WHERE parent_notebook_id IN (${placeholders})`).run(...notebookIds);
+    db.prepare(`DELETE FROM notebooks WHERE id IN (${placeholders})`).run(...notebookIds);
+  });
+  remove();
+  return notebookIds.length;
+}
+
+function comparableFolderPath(folderPath: string): string {
+  const resolved = path.resolve(folderPath);
+  return process.platform === 'win32' ? resolved.toLowerCase() : resolved;
+}
+
+function configuredPdfPath(db: CacheDb, pageId: string): string | undefined {
+  const row = getCachedPage(db, pageId);
+  if (!row || row.deleted_at || !row.links_json) return undefined;
+  let candidatePath = '';
+  try {
+    const folder = JSON.parse(row.links_json)?.folder;
+    if (folder?.extension !== '.pdf' || typeof folder.path !== 'string') return undefined;
+    candidatePath = fs.realpathSync(folder.path);
+  } catch {
+    return undefined;
+  }
+  const belongsToConfiguredRoot = configuredDataSources()
+    .filter(source => source.type === 'folder')
+    .flatMap(folderPathsForSource)
+    .some(folderPath => {
+      try {
+        const rootPath = fs.realpathSync(folderPath);
+        const relativePath = path.relative(rootPath, candidatePath);
+        return relativePath !== '' && !relativePath.startsWith(`..${path.sep}`) && relativePath !== '..' && !path.isAbsolute(relativePath);
+      } catch {
+        return false;
+      }
+    });
+  return belongsToConfiguredRoot ? candidatePath : undefined;
+}
+
+function servePdfFile(request: IncomingMessage, response: ServerResponse, filePath: string): void {
+  const stat = fs.statSync(filePath);
+  if (!stat.isFile()) throw new Error('PDF file is not available.');
+  const range = request.headers.range?.match(/^bytes=(\d*)-(\d*)$/);
+  let start = 0;
+  let end = stat.size - 1;
+  let status = 200;
+  if (range) {
+    start = range[1] ? Number(range[1]) : 0;
+    end = range[2] ? Number(range[2]) : end;
+    if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start < 0 || end < start || start >= stat.size) {
+      response.writeHead(416, { 'Content-Range':`bytes */${stat.size}` });
+      response.end();
+      return;
+    }
+    end = Math.min(end, stat.size - 1);
+    status = 206;
+  }
+  response.writeHead(status, {
+    'Content-Type':'application/pdf',
+    'Content-Length':String(end - start + 1),
+    'Accept-Ranges':'bytes',
+    ...(status === 206 ? { 'Content-Range':`bytes ${start}-${end}/${stat.size}` } : {}),
+    'Cache-Control':'private, no-store',
+    'X-Content-Type-Options':'nosniff'
+  });
+  const stream = fs.createReadStream(filePath, { start, end });
+  stream.on('error', error => response.destroy(error));
+  stream.pipe(response);
+}
+
+export function cachedSourceScopesRemovedBySettingsChange(
+  previous: ConfiguredDataSource[],
+  saved: ConfiguredDataSource[]
+): ConfiguredDataSource[] {
+  const savedById = new Map(saved.map(source => [source.id, source]));
+  const removed: ConfiguredDataSource[] = [];
+  for (const previousSource of previous) {
+    const savedSource = savedById.get(previousSource.id);
+    if (!savedSource || savedSource.type !== previousSource.type) {
+      removed.push(previousSource);
+      continue;
+    }
+    if (previousSource.type !== 'folder') continue;
+    const retainedPaths = new Set(folderPathsForSource(savedSource).map(comparableFolderPath));
+    const removedPaths = folderPathsForSource(previousSource)
+      .filter(folderPath => !retainedPaths.has(comparableFolderPath(folderPath)));
+    if (removedPaths.length > 0) {
+      removed.push({ ...previousSource, folderPaths:removedPaths, folderPath:undefined });
+    }
+  }
+  return removed;
+}
+
 type ResolvedOneNotePage = {
   id: string;
   title?: string;
@@ -69,12 +181,95 @@ const syncRequestSchema = z.object({
   metadataOnly: z.boolean().optional(),
   replaceAll: z.boolean().optional(),
   forceContent: z.boolean().optional(),
-  includeHtml: z.boolean().optional(),
   parseBibleRefs: z.boolean().optional(),
   forceBibleParse: z.boolean().optional(),
   localBibleReparse: z.boolean().optional(),
   incrementalMetadata: z.boolean().optional()
 });
+
+type SyncRequest = z.infer<typeof syncRequestSchema>;
+
+function syncHistoryMode(body: SyncRequest): string {
+  if (body.localBibleReparse) return 'bible-reparse';
+  if (body.pageId) return 'page';
+  if (body.sectionId) return 'section';
+  if (body.replaceAll) return 'rebuild';
+  if (body.metadataOnly) return 'metadata';
+  if (body.incrementalMetadata) return 'quick';
+  return body.forceContent ? 'full-reload' : 'full';
+}
+
+function syncHistoryScope(db: CacheDb, body: SyncRequest): string {
+  if (body.localBibleReparse) return 'Локальный кэш';
+  if (body.pageId) {
+    const row = db.prepare('SELECT title FROM pages WHERE id = ?').get(body.pageId) as { title?: string } | undefined;
+    return row?.title ? `Страница «${row.title}»` : 'Одна страница';
+  }
+  if (body.sectionId) {
+    const row = db.prepare('SELECT display_name AS name FROM sections WHERE id = ?').get(body.sectionId) as { name?: string } | undefined;
+    return row?.name ? `Раздел «${row.name}»` : 'Один раздел';
+  }
+  if (body.notebookIds?.length) {
+    const placeholders = body.notebookIds.map(() => '?').join(', ');
+    const rows = db.prepare(`
+      SELECT COALESCE(custom_display_name, display_name) AS name
+      FROM notebooks WHERE id IN (${placeholders}) ORDER BY name COLLATE NOCASE
+    `).all(...body.notebookIds) as Array<{ name?: string }>;
+    const names = rows.map(row => row.name).filter(Boolean) as string[];
+    return names.length > 0 ? names.join(', ') : `${body.notebookIds.length} коллекций`;
+  }
+  return 'Все источники';
+}
+
+function syncHistoryResult(result: SyncResult): Record<string, unknown> {
+  return {
+    notebooks:result.notebooks,
+    sections:result.sections,
+    sectionGroups:result.sectionGroups,
+    pages:result.pages,
+    contentDownloaded:result.contentDownloaded,
+    contentSkipped:result.contentSkipped,
+    contentErrors:result.contentErrors,
+    sectionScanErrors:result.sectionScanErrors,
+    bibleRefsPagesParsed:result.bibleRefsPagesParsed,
+    bibleRefsParseSkipped:result.bibleRefsParseSkipped,
+    bibleRefsParseErrors:result.bibleRefsParseErrors,
+    bibleRefsRecognized:result.bibleRefsRecognized,
+    deletedPagesMarked:result.deletedPagesMarked
+  };
+}
+
+function syncHistoryStatus(result: SyncResult): SyncHistoryStatus {
+  return result.contentErrors || result.sectionScanErrors || result.bibleRefsParseErrors
+    ? 'completed_with_errors'
+    : 'success';
+}
+
+function saveSyncHistory(
+  db: CacheDb,
+  body: SyncRequest,
+  startedAt: string,
+  finishedAt: string,
+  result?: SyncResult,
+  error?: string
+): void {
+  try {
+    recordSyncHistory(db, {
+      startedAt,
+      finishedAt,
+      status:result ? syncHistoryStatus(result) : 'failed',
+      mode:syncHistoryMode(body),
+      scope:syncHistoryScope(db, body),
+      request:{ ...body },
+      result:result ? syncHistoryResult(result) : null,
+      error:error || null
+    });
+  } catch (historyError: any) {
+    runtimeLog('sync-history', 'Failed to save synchronization history', {
+      error:historyError?.stack ?? historyError?.message ?? String(historyError)
+    });
+  }
+}
 
 const uploadBibleNoteModuleRequestSchema = z.object({
   fileName: z.string().min(1),
@@ -175,14 +370,15 @@ const inductiveDirectImportRelationSchema = z.intersection(
 
 const inductiveImportSchema = z.object({
   format:z.literal('biblenote-inductive-markings'),
-  version:z.union([z.literal(1), z.literal(2)]),
+  version:z.union([z.literal(1), z.literal(2), z.literal(3)]),
+  scope:z.enum(['chapter', 'bible']).optional(),
   exportedAt:z.string().max(80).optional(),
   location:z.object({
     module:z.string().trim().min(1).max(80),
     bookIndex:z.number().int().min(1).max(1000),
     book:z.string().max(200).optional(),
     chapter:z.number().int().min(1).max(1000)
-  }),
+  }).optional(),
   styles:z.array(z.object({
     id:z.string().trim().min(1).max(80),
     name:z.string().trim().min(1).max(60),
@@ -194,12 +390,19 @@ const inductiveImportSchema = z.object({
     builtIn:z.boolean(),
     sortOrder:z.number().int().min(0).max(1_000_000)
   })).min(1).max(2000),
-  annotations:z.array(inductiveImportAnnotationSchema).max(20_000),
+  annotations:z.array(inductiveImportAnnotationSchema).max(250_000),
   relations:z.array(z.union([
     inductiveLegacyImportRelationSchema,
     inductiveDirectImportRelationSchema
-  ])).max(20_000)
+  ])).max(250_000)
 }).superRefine((payload, context) => {
+  const wholeBible = payload.version === 3 && payload.scope === 'bible';
+  if (!wholeBible && !payload.location) {
+    context.addIssue({ code:'custom', message:'A chapter export must include its location.' });
+  }
+  if (payload.version === 3 && payload.scope !== 'bible') {
+    context.addIssue({ code:'custom', message:'Version 3 is reserved for a whole-Bible export.' });
+  }
   const styleIds = new Set<string>();
   for (const style of payload.styles) {
     if (styleIds.has(style.id)) {
@@ -213,9 +416,9 @@ const inductiveImportSchema = z.object({
       context.addIssue({ code:'custom', message:`Duplicate annotation id: ${annotation.id}` });
     }
     annotationIds.add(annotation.id);
-    if (annotation.module !== payload.location.module
+    if (!wholeBible && payload.location && (annotation.module !== payload.location.module
       || annotation.bookIndex !== payload.location.bookIndex
-      || annotation.chapter !== payload.location.chapter) {
+      || annotation.chapter !== payload.location.chapter)) {
       context.addIssue({ code:'custom', message:'Every annotation must belong to the exported chapter.' });
     }
     if (!styleIds.has(annotation.styleId)) {
@@ -232,9 +435,9 @@ const inductiveImportSchema = z.object({
       if (!annotationIds.has(relation.sourceAnnotationId) || !annotationIds.has(relation.targetAnnotationId)) {
         context.addIssue({ code:'custom', message:'Every legacy relation must reference annotations from the same file.' });
       }
-    } else if (relation.module !== payload.location.module
+    } else if (!wholeBible && payload.location && (relation.module !== payload.location.module
       || relation.bookIndex !== payload.location.bookIndex
-      || relation.chapter !== payload.location.chapter) {
+      || relation.chapter !== payload.location.chapter)) {
       context.addIssue({ code:'custom', message:'Every relation must belong to the exported chapter.' });
     }
   }
@@ -369,18 +572,23 @@ export function startCacheUi(options: UiOptions): http.Server {
   }
 
   function currentOneNotePageKey(currentPage: OneNoteCurrentPage): string {
-    return extractOneNotePageGuid(currentPage.clientUrl)
-      ?? extractOneNotePageGuid(currentPage.pageId)
-      ?? currentPage.clientUrl
-      ?? currentPage.pageId;
+    return currentPage.pageId
+      || extractOneNotePageGuid(currentPage.clientUrl)
+      || extractOneNotePageGuid(currentPage.pageId)
+      || currentPage.clientUrl
+      || '';
   }
 
   function cachedCurrentOneNotePage(currentPage: OneNoteCurrentPage): ResolvedOneNotePage | undefined {
+    const db = requireDb();
+    const exactPage = currentPage.pageId ? getCachedPage(db, currentPage.pageId) : undefined;
     const currentPageGuid = extractOneNotePageGuid(currentPage.clientUrl)
       ?? extractOneNotePageGuid(currentPage.pageId);
-    const cachedPage = currentPageGuid
-      ? findCachedPageByOneNoteGuid(requireDb(), currentPageGuid)
-      : undefined;
+    const cachedPage = exactPage && !exactPage.deleted_at
+      ? exactPage
+      : currentPageGuid
+        ? findCachedPageByOneNoteGuid(db, currentPageGuid)
+        : undefined;
     return cachedPage
       ? { id:cachedPage.id, title:cachedPage.title ?? undefined, clientUrl:currentPage.clientUrl }
       : undefined;
@@ -390,6 +598,11 @@ export function startCacheUi(options: UiOptions): http.Server {
     searchGraph: boolean,
     currentPage?: OneNoteCurrentPage
   ): Promise<ResolvedOneNotePage> {
+    if (oneNoteDataSource() === 'folder') {
+      const error = new Error('Для источника Folder команды текущей страницы OneNote недоступны.') as Error & { statusCode?: number };
+      error.statusCode = 409;
+      throw error;
+    }
     currentPage ??= await bibleNoteCurrentOneNotePage();
     const cachedPage = cachedCurrentOneNotePage(currentPage);
     if (cachedPage) return cachedPage;
@@ -490,6 +703,13 @@ export function startCacheUi(options: UiOptions): http.Server {
     await waitForActiveSync();
 
     const startedAt = new Date().toISOString();
+    const historyRequest: SyncRequest = {
+      concurrency:1,
+      pageId:resolvedPage.id,
+      forceContent:true,
+      parseBibleRefs:true,
+      forceBibleParse:true
+    };
     syncState = { status:'running', startedAt, progress:{ phase:'starting', message:'Подготовка' } };
     runtimeLog('sync', 'Ribbon current page sync started', { pageId:resolvedPage.id });
 
@@ -497,31 +717,31 @@ export function startCacheUi(options: UiOptions): http.Server {
     try {
       syncResult = await syncOneNoteCache({
         dbPath:options.dbPath,
-        concurrency:1,
-        pageId:resolvedPage.id,
-        forceContent:true,
-        includeHtml:true,
-        parseBibleRefs:true,
-        forceBibleParse:true,
+        ...historyRequest,
+        dataSource:'com',
         onProgress:progress => {
           runtimeLog('sync-progress', progress.phase || 'progress', progress);
           syncState = { ...syncState, progress };
         }
       });
       runtimeLog('sync', 'Ribbon current page sync completed', syncResult);
+      const finishedAt = new Date().toISOString();
+      saveSyncHistory(requireDb(), historyRequest, startedAt, finishedAt, syncResult);
       syncState = {
         status:'success',
         startedAt,
-        finishedAt:new Date().toISOString(),
+        finishedAt,
         result:syncResult
       };
     } catch (error: any) {
       const message = (error?.message ?? String(error)).slice(0, 4000);
+      const finishedAt = new Date().toISOString();
       runtimeLog('sync', 'Ribbon current page sync failed', { pageId:resolvedPage.id, error:error?.stack ?? message });
+      saveSyncHistory(requireDb(), historyRequest, startedAt, finishedAt, undefined, message);
       syncState = {
         status:'failed',
         startedAt,
-        finishedAt:new Date().toISOString(),
+        finishedAt,
         error:message
       };
       throw error;
@@ -656,10 +876,31 @@ export function startCacheUi(options: UiOptions): http.Server {
         if (request.headers.origin && request.headers.origin !== ownOrigin) {
           return json(response, 403, { error: 'Cross-origin OneNote settings requests are not allowed.' });
         }
-        return json(response, 200, await saveOneNoteAccessSettings(await readJsonBody(request)));
+        const previous = configuredDataSources();
+        const saved = await saveOneNoteAccessSettings(await readJsonBody(request));
+        const removed = cachedSourceScopesRemovedBySettingsChange(previous, saved.sources);
+        const removedNotebookCount = removeCachedSources(requireDb(), removed);
+        return json(response, 200, { ...saved, removedNotebookCount });
+      }
+      if (url.pathname === '/api/system/select-folder' && request.method === 'POST') {
+        const ownOrigin = `http://${request.headers.host ?? `127.0.0.1:${options.port}`}`;
+        if (request.headers.origin && request.headers.origin !== ownOrigin) {
+          return json(response, 403, { error: 'Cross-origin folder selection requests are not allowed.' });
+        }
+        return json(response, 200, await electronControl('/select-folder', 'POST'));
       }
       if (url.pathname === '/api/onenote/login/status' && request.method === 'GET') {
-        if (oneNoteDataSource() === 'com') {
+        const requestedSource = url.searchParams.get('source');
+        const dataSource = requestedSource === 'graph' || requestedSource === 'com' || requestedSource === 'folder'
+          ? requestedSource
+          : oneNoteDataSource();
+        if (dataSource === 'folder') {
+          const folders = folderSourcePaths();
+          return json(response, 200, folders.length > 0
+            ? { status:'success', account:{ username:'Folder', name:folders.join('; ') } }
+            : { status:'idle' });
+        }
+        if (dataSource === 'com') {
           return json(response, 200, {
             status:'success',
             account:{ username:'Классический OneNote', name:'Локальные записные книжки' }
@@ -716,11 +957,17 @@ export function startCacheUi(options: UiOptions): http.Server {
           displayName?: string;
           lastModifiedDateTime?: string;
         };
-        const notebooks: RemoteNotebook[] = oneNoteDataSource() === 'com'
-          ? (await loadOneNoteComSnapshot()).notebooks
-          : await graphListAll<RemoteNotebook>(
-              '/me/onenote/notebooks?$select=id,displayName,lastModifiedDateTime&$top=100'
-            );
+        const requestedSource = url.searchParams.get('source');
+        const dataSource = requestedSource === 'graph' || requestedSource === 'com' || requestedSource === 'folder'
+          ? requestedSource
+          : oneNoteDataSource();
+        const notebooks: RemoteNotebook[] = dataSource === 'folder'
+          ? await listFolderNotebooks(folderSourcePaths())
+          : dataSource === 'com'
+            ? (await loadOneNoteComSnapshot()).notebooks
+            : await graphListAll<RemoteNotebook>(
+                '/me/onenote/notebooks?$select=id,displayName,lastModifiedDateTime&$top=100'
+              );
         return json(response, 200, {
           notebooks:notebooks.map(notebook => ({
             id:notebook.id,
@@ -741,6 +988,22 @@ export function startCacheUi(options: UiOptions): http.Server {
           return json(response, 400, { error: 'Only Microsoft sign-in pages can be opened here.' });
         }
         return json(response, 200, await electronControl(`/open-external?url=${encodeURIComponent(parsed.toString())}`, 'POST'));
+      }
+      if (url.pathname === '/api/system/open-onenote-page' && request.method === 'POST') {
+        const ownOrigin = `http://${request.headers.host ?? `127.0.0.1:${options.port}`}`;
+        if (request.headers.origin && request.headers.origin !== ownOrigin) {
+          return json(response, 403, { error: 'Cross-origin OneNote navigation requests are not allowed.' });
+        }
+        const body = await readJsonBody(request);
+        let target = typeof body.url === 'string' ? body.url.trim() : '';
+        const pageId = typeof body.pageId === 'string' ? body.pageId.trim() : '';
+        if (!/^onenote:/i.test(target) && /^\{[0-9A-F-]+\}/i.test(pageId) && pageId.length <= 512) {
+          target = await bibleNoteOneNotePageLink(pageId);
+        }
+        if (!target || target.length > 8192 || !/^onenote:/i.test(target)) {
+          return json(response, 400, { error: 'A valid OneNote page link is required.' });
+        }
+        return json(response, 200, await electronControl(`/onenote/open-page?url=${encodeURIComponent(target)}`, 'POST'));
       }
       if (url.pathname === '/api/biblenote/health' && request.method === 'GET') {
         try {
@@ -812,7 +1075,7 @@ export function startCacheUi(options: UiOptions): http.Server {
         const operationKey = currentOneNotePageKey(currentOneNotePage);
         const cachedPage = cachedCurrentOneNotePage(currentOneNotePage);
         if (cachedPage) {
-          return json(response, 200, { currentPage:cachedPage });
+          return json(response, 200, { currentPage:cachedPage, needsBackgroundSync:true });
         }
 
         const operation = ribbonCurrentPageOperations.run(
@@ -863,6 +1126,13 @@ export function startCacheUi(options: UiOptions): http.Server {
       }
       if (url.pathname === '/api/inductive/styles' && request.method === 'GET') {
         return json(response, 200, { styles:listInductiveStyles(inductiveDb) });
+      }
+      if (url.pathname === '/api/inductive/export' && request.method === 'GET') {
+        return json(response, 200, {
+          styles:listInductiveStyles(inductiveDb),
+          annotations:listAllInductiveAnnotations(inductiveDb),
+          relations:listAllInductiveRelations(inductiveDb)
+        });
       }
       if (url.pathname === '/api/inductive/styles' && request.method === 'POST') {
         const ownOrigin = `http://${request.headers.host ?? `127.0.0.1:${options.port}`}`;
@@ -994,7 +1264,6 @@ export function startCacheUi(options: UiOptions): http.Server {
           metadataOnly: body.metadataOnly === true,
           replaceAll: body.replaceAll === true,
           forceContent: body.forceContent === true,
-          includeHtml: body.includeHtml === true,
           parseBibleRefs: body.parseBibleRefs === true,
           forceBibleParse: body.forceBibleParse === true,
           localBibleReparse: body.localBibleReparse === true,
@@ -1012,7 +1281,6 @@ export function startCacheUi(options: UiOptions): http.Server {
           metadataOnly: body.metadataOnly === true,
           replaceAll: body.replaceAll === true,
           forceContent: body.forceContent === true,
-          includeHtml: body.includeHtml === true,
           parseBibleRefs: body.parseBibleRefs === true,
           forceBibleParse: body.forceBibleParse === true,
           localBibleReparse: body.localBibleReparse === true,
@@ -1026,17 +1294,22 @@ export function startCacheUi(options: UiOptions): http.Server {
             syncState = { ...syncState, progress };
           }
         }).then(result => {
+          const finishedAt = new Date().toISOString();
           console.log(`Sync completed: pages=${result.pages}, contentDownloaded=${result.contentDownloaded}, bibleRefsRecognized=${result.bibleRefsRecognized}, contentErrors=${result.contentErrors}, bibleParseErrors=${result.bibleRefsParseErrors}`);
           runtimeLog('sync', 'Sync completed', result);
-          syncState = { status: 'success', startedAt, finishedAt: new Date().toISOString(), result };
+          saveSyncHistory(db, body, startedAt, finishedAt, result);
+          syncState = { status: 'success', startedAt, finishedAt, result };
         }).catch(error => {
-          console.error(`Sync failed: ${(error?.message ?? String(error)).slice(0, 4000)}`);
+          const finishedAt = new Date().toISOString();
+          const message = (error?.message ?? String(error)).slice(0, 4000);
+          console.error(`Sync failed: ${message}`);
           runtimeLog('sync', 'Sync failed', { error: error?.stack ?? error?.message ?? String(error) });
+          saveSyncHistory(db, body, startedAt, finishedAt, undefined, message);
           syncState = {
             status: 'failed',
             startedAt,
-            finishedAt: new Date().toISOString(),
-            error: (error?.message ?? String(error)).slice(0, 4000)
+            finishedAt,
+            error:message
           };
         });
         return json(response, 202, syncState);
@@ -1066,18 +1339,35 @@ export function startCacheUi(options: UiOptions): http.Server {
       if (request.method !== 'GET') return json(response, 405, { error: 'Method not allowed.' });
       if (url.pathname === '/' || url.pathname.startsWith('/page/') || url.pathname.startsWith('/bible/')) return page(response);
       if (url.pathname === '/api/status') {
-        const savedSource = getSyncState(db, 'last_data_source');
-        const existingNotebook = db.prepare('SELECT id FROM notebooks LIMIT 1').get() as { id?: string } | undefined;
-        const cacheDataSource = savedSource === 'graph' || savedSource === 'com'
-          ? savedSource
-          : existingNotebook?.id
-            ? (existingNotebook.id.trim().startsWith('{') ? 'com' : 'graph')
-            : undefined;
+        const cacheDataSources = [...new Set(
+          (db.prepare('SELECT id FROM notebooks').all() as Array<{ id: string }>).map(notebook =>
+            notebook.id.startsWith('folder:notebook:') ? 'folder' : notebook.id.trim().startsWith('{') ? 'com' : 'graph'
+          )
+        )];
+        const sources = configuredDataSources();
         return json(response, 200, {
           ...cacheStatus(db),
-          dataSource:oneNoteDataSource(),
-          cacheDataSource
+          dataSource:sources[0]?.type ?? oneNoteDataSource(),
+          dataSources:sources,
+          cacheDataSource:cacheDataSources.length === 1 ? cacheDataSources[0] : undefined,
+          cacheDataSources
         });
+      }
+      if (url.pathname === '/api/statistics') {
+        return json(response, 200, cacheStatistics(db));
+      }
+      if (url.pathname === '/api/data-sources') {
+        return json(response, 200, configuredDataSources().map(source => ({
+          id:source.id,
+          configuredId:source.id,
+          type:source.type,
+          displayName:source.displayName,
+          notebooks:source.type === 'folder'
+            ? folderPathsForSource(source).map(folderPath => ({ id:folderNotebookId(folderPath), displayName:path.basename(folderPath) || folderPath }))
+            : source.notebooks,
+          folderPaths:folderPathsForSource(source),
+          deduplicateFilesByName:source.type === 'folder' ? source.deduplicateFilesByName === true : undefined
+        })));
       }
       if (url.pathname === '/api/bible/stats') {
         const one = (sql: string) => (db.prepare(sql).get() as any)?.value ?? 0;
@@ -1322,17 +1612,46 @@ export function startCacheUi(options: UiOptions): http.Server {
         const chapter = Number(required(url, 'chapter'));
         const verseValue = url.searchParams.get('verse');
         const verse = verseValue ? Number(verseValue) : undefined;
+        const notebookIds = [...new Set(url.searchParams.getAll('notebookId').filter(Boolean))];
         const limit = Math.max(1, Math.min(Number(url.searchParams.get('limit') ?? '20') || 20, 200));
         if (!Number.isInteger(bookIndex) || !Number.isInteger(chapter) || (verse != null && !Number.isInteger(verse))) {
           throw new Error('bookIndex, chapter, and verse must be integers.');
         }
-        return json(response, 200, { rows:findParallelBibleReferences(db, {
+        const includeAuxiliaryRefs = includeAuxiliaryBibleRefs(url);
+        const rows = findParallelBibleReferences(db, {
           bookIndex,
           chapter,
           verse,
+          notebookIds,
           limit,
-          includeAuxiliaryRefs:includeAuxiliaryBibleRefs(url)
-        }) });
+          includeAuxiliaryRefs
+        }).map(row => {
+          if (Number(row.verse) > 0) return row;
+          const noteRows = findParallelBibleReferenceNotes(db, {
+            bookIndex,
+            chapter,
+            verse,
+            relatedBookIndex:Number(row.bookIndex),
+            relatedChapter:Number(row.chapter),
+            notebookIds,
+            limit:200,
+            includeAuxiliaryRefs
+          });
+          const commonNotePageIds = [...new Set(noteRows.map(note => String(note.pageId)).filter(Boolean))].sort();
+          return {
+            ...row,
+            relationWeight:Math.round(noteRows.reduce((sum, note) => sum + Number(note.relationWeight || 0), 0) * 10000) / 10000,
+            relations:noteRows.reduce((sum, note) => sum + Number(note.relations || 0), 0),
+            pages:commonNotePageIds.length,
+            commonNotePageIds
+          };
+        }).sort((left, right) =>
+          Number(right.relationWeight || 0) - Number(left.relationWeight || 0)
+          || Number(right.maxRelationWeight || 0) - Number(left.maxRelationWeight || 0)
+          || Number(right.pages || 0) - Number(left.pages || 0)
+          || Number(left.relatedVerseId || 0) - Number(right.relatedVerseId || 0)
+        );
+        return json(response, 200, { rows });
       }
       if (url.pathname === '/api/bible/parallel/notes') {
         const bookIndex = Number(required(url, 'bookIndex'));
@@ -1430,6 +1749,12 @@ export function startCacheUi(options: UiOptions): http.Server {
         `).all(params);
         return json(response, 200, { filter, lastSyncStartedAt, counts, total, limit, offset, rows });
       }
+      if (url.pathname === '/api/sync-history') {
+        const limit = Math.max(1, Math.min(Number(url.searchParams.get('limit') ?? '20') || 20, 100));
+        const offset = Math.max(0, Number(url.searchParams.get('offset') ?? '0') || 0);
+        const history = listSyncHistory(db, { limit, offset });
+        return json(response, 200, { ...history, limit, offset });
+      }
       if (url.pathname === '/api/notebooks') {
         const rows = db.prepare(`
           SELECT
@@ -1437,13 +1762,38 @@ export function startCacheUi(options: UiOptions): http.Server {
             n.display_name AS originalDisplayName,
             n.custom_display_name AS customDisplayName,
             COALESCE(n.custom_display_name, n.display_name) AS displayName,
+            CASE
+              WHEN n.id LIKE 'folder:notebook:%' THEN 'source:' || n.id
+              WHEN SUBSTR(TRIM(n.id), 1, 1) = '{' THEN 'source:com'
+              ELSE 'source:graph'
+            END AS sourceId,
+            CASE
+              WHEN n.id LIKE 'folder:notebook:%' THEN 'folder'
+              WHEN SUBSTR(TRIM(n.id), 1, 1) = '{' THEN 'com'
+              ELSE 'graph'
+            END AS sourceType,
+            CASE
+              WHEN n.id LIKE 'folder:notebook:%' THEN COALESCE(n.custom_display_name, n.display_name)
+              WHEN SUBSTR(TRIM(n.id), 1, 1) = '{' THEN 'OneNote Local'
+              ELSE 'OneNote Cloud'
+            END AS sourceDisplayName,
             COUNT(p.id) AS pageCount
           FROM notebooks n
           LEFT JOIN pages p ON p.parent_notebook_id = n.id AND p.deleted_at IS NULL
           GROUP BY n.id
           ORDER BY COALESCE(n.custom_display_name, n.display_name) COLLATE NOCASE
-        `).all();
-        return json(response, 200, rows);
+        `).all() as Array<Record<string, unknown> & { id: string; sourceType: string }>;
+        const folderSourcesByNotebookId = new Map<string, ConfiguredDataSource>();
+        for (const source of configuredDataSources().filter(source => source.type === 'folder')) {
+          for (const folderPath of folderPathsForSource(source)) {
+            folderSourcesByNotebookId.set(folderNotebookId(folderPath), source);
+          }
+        }
+        return json(response, 200, rows.map(row => {
+          if (row.sourceType !== 'folder') return row;
+          const source = folderSourcesByNotebookId.get(row.id);
+          return source ? { ...row, sourceId:source.id, sourceDisplayName:source.displayName } : row;
+        }));
       }
       if (url.pathname === '/api/sections') {
         const rows = db.prepare(`
@@ -1486,7 +1836,8 @@ export function startCacheUi(options: UiOptions): http.Server {
       if (url.pathname === '/api/pages') {
         const rows = db.prepare(`
           SELECT id, title, order_index AS orderIndex, page_level AS pageLevel,
-            content_text IS NOT NULL AS hasContent, fetch_error AS fetchError
+            content_text IS NOT NULL AS hasContent, fetch_error AS fetchError,
+            json_extract(links_json, '$.folder.extension') AS fileExtension
           FROM pages
           WHERE parent_section_id = ? AND deleted_at IS NULL
           ORDER BY order_index IS NULL, order_index, title COLLATE NOCASE
@@ -1645,6 +1996,7 @@ export function startCacheUi(options: UiOptions): http.Server {
             bibleRef:item.bibleRef,
             bibleMatchScore:item.bibleMatchScore,
             bibleWeight:item.bibleWeight,
+            fileExtension:item.fileExtension,
             searchWeight:item.search_weight ?? item.searchWeight
           });
         };
@@ -1703,9 +2055,10 @@ export function startCacheUi(options: UiOptions): http.Server {
             const parsedRef = parsedSearchRef;
             const bookIndex = Number(parsedRef.bookIndex);
             const chapter = Number(parsedRef.chapter);
-            const verse = Number(parsedRef.verse);
+            const parsedVerse = Number(parsedRef.verse);
+            const verse = Number.isInteger(parsedVerse) && parsedVerse > 0 ? parsedVerse : undefined;
             if (Number.isInteger(bookIndex) && Number.isInteger(chapter)) {
-              if (Number.isInteger(verse)) {
+              if (verse != null) {
                 const bibleRows = searchBibleReferenceNotesByWeight(db, {
                   bookIndex,
                   chapter,
@@ -1779,6 +2132,19 @@ export function startCacheUi(options: UiOptions): http.Server {
             });
           }
         }
+        const resultIds = [...resultsById.keys()];
+        if (resultIds.length > 0) {
+          const placeholders = resultIds.map(() => '?').join(', ');
+          const fileTypes = db.prepare(`
+            SELECT id, json_extract(links_json, '$.folder.extension') AS fileExtension
+            FROM pages
+            WHERE id IN (${placeholders})
+          `).all(...resultIds) as Array<{ id:string; fileExtension:string | null }>;
+          for (const fileType of fileTypes) {
+            const result = resultsById.get(fileType.id);
+            if (result) result.fileExtension = fileType.fileExtension;
+          }
+        }
         for (const result of resultsById.values()) {
           if (Array.isArray(result.paragraphIndexes)) {
             const paragraphIndexes = result.paragraphIndexes as unknown[];
@@ -1833,6 +2199,13 @@ export function startCacheUi(options: UiOptions): http.Server {
           contentSyncedAt: row.content_synced_at,
           fetchError: row.fetch_error
         });
+      }
+      if (url.pathname === '/api/page-pdf') {
+        const pageId = required(url, 'id');
+        const pdfPath = configuredPdfPath(db, pageId);
+        if (!pdfPath) return json(response, 404, { error:'PDF is not available for this page.' });
+        servePdfFile(request, response, pdfPath);
+        return;
       }
       if (url.pathname === '/api/page-html') {
         const pageId = required(url, 'id');

@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 const webDirectory = fileURLToPath(new URL('../', import.meta.url));
 
-test('external Bible links open a dedicated popup without focusing the main window', () => {
+test('external Bible links can open in the main Bible reader or the dedicated popup', () => {
   const electronMain = fs.readFileSync(path.join(webDirectory, 'src', 'electron-main.ts'), 'utf8');
   const handlerStart = electronMain.indexOf('async function openBibleLink(link: string)');
   const handlerEnd = electronMain.indexOf('async function startControlServer', handlerStart);
@@ -14,8 +14,24 @@ test('external Bible links open a dedicated popup without focusing the main wind
 
   assert.equal(handler.includes('createBiblePopupWindow()'), true);
   assert.equal(handler.includes('uiBiblePopupUrl(nextLink)'), true);
-  assert.equal(handler.includes('mainWindow.focus()'), false);
+  assert.equal(handler.includes("localStorage.getItem('biblenote.onenoteLinksOpenInBible') === 'true'"), true);
+  assert.equal(handler.includes('window.bibleNoteOpenBibleRefInReader'), true);
+  assert.equal(handler.includes("logStartup('bible link opened in main Bible reader')"), true);
   assert.equal(electronMain.includes('bibleVersePopup=1'), true);
+});
+
+test('OneNote Bible-link preference is exposed in settings and used on cold startup', () => {
+  const html = fs.readFileSync(path.join(webDirectory, 'ui', 'index.html'), 'utf8');
+  const settings = fs.readFileSync(path.join(webDirectory, 'ui', 'settings.js'), 'utf8');
+  const references = fs.readFileSync(path.join(webDirectory, 'ui', 'bible-references.js'), 'utf8');
+  const pageView = fs.readFileSync(path.join(webDirectory, 'ui', 'api-page-view.js'), 'utf8');
+
+  assert.equal(html.includes('id="openOneNoteBibleLinksInReader"'), true);
+  assert.equal(html.includes('Открывать ссылки из OneNote сразу в окне «Библия»'), true);
+  assert.equal(settings.includes("localStorage.setItem('biblenote.onenoteLinksOpenInBible'"), true);
+  assert.equal(references.includes("localStorage.getItem('biblenote.onenoteLinksOpenInBible') === 'true'"), true);
+  assert.equal(references.includes('await openBibleRefInReader(rawRef);'), true);
+  assert.equal(pageView.includes('window.bibleNoteOpenBibleRefInReader = openBibleRefInReader;'), true);
 });
 
 test('Bible popup reuses the in-app verse dialog and Escape closes its window', () => {

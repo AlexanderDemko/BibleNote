@@ -24,6 +24,114 @@ test('desktop package includes the UI directory', () => {
   assert.ok(packageJson.build.files.includes('ui/**/*'));
 });
 
+test('PDF viewer assets and the visual PDF route are packaged', () => {
+  const viewerHtml = fs.readFileSync(path.join(uiDirectory, 'pdf-viewer.html'), 'utf8');
+  const viewerScript = fs.readFileSync(path.join(uiDirectory, 'pdf-viewer.js'), 'utf8');
+  const viewerStyles = fs.readFileSync(path.join(uiDirectory, 'pdf-viewer.css'), 'utf8');
+  const treePages = fs.readFileSync(path.join(uiDirectory, 'tree-pages.js'), 'utf8');
+  const cacheUi = fs.readFileSync(path.join(uiDirectory, '..', 'src', 'cache-ui.ts'), 'utf8');
+  const assets = fs.readFileSync(path.join(uiDirectory, '..', 'src', 'cache-ui-assets.ts'), 'utf8');
+
+  assert.match(viewerHtml, /pdf_viewer\.css/);
+  assert.match(viewerScript, /new PDFViewer/);
+  assert.match(viewerScript, /page-fit/);
+  assert.match(viewerScript, /onenote-main-search-result/);
+  assert.match(viewerScript, /onenote-pdf-context/);
+  assert.match(viewerScript, /pdf-bible-link/);
+  assert.equal(viewerScript.includes("if (activeFindKind === 'main' && mainSearch.key) return;"), true);
+  assert.equal(viewerScript.includes('scheduleMainAlignment(countChanged ? 180 : 0);'), true);
+  assert.equal(viewerStyles.includes('.textLayer .highlight { --highlight-bg-color:rgba(255,211,61,.64); --highlight-selected-bg-color:rgba(167,100,223,.78);'), true);
+  assert.equal(viewerStyles.includes('.textLayer .highlight.selected { outline:2px solid #7a35b7;'), true);
+  assert.match(treePages, /\/ui\/pdf-viewer\.html\?id=/);
+  assert.match(treePages, /const preferHtmlView = page\.hasHtml && defaultPageViewMode\(\) === 'html';/);
+  assert.match(treePages, /postPdfFrameContext\(htmlFrame, pdfContext\)/);
+  assert.equal(treePages.includes('void setPageVisualView(false)'), false);
+  assert.match(cacheUi, /url\.pathname === '\/api\/page-pdf'/);
+  assert.match(assets, /pdf\.worker\.min\.mjs/);
+});
+
+test('PDF page context maps parsed Bible references to bnVerse links and paragraph targets', () => {
+  const treePages = fs.readFileSync(path.join(uiDirectory, 'tree-pages.js'), 'utf8');
+  const helperStart = treePages.indexOf('function normalizedPdfAnchor');
+  const helperEnd = treePages.indexOf('\nfunction postPdfFrameContext', helperStart);
+  assert.ok(helperStart >= 0 && helperEnd > helperStart, 'PDF context helpers are missing');
+
+  const context: Record<string, any> = {
+    decodeHtmlText:(value: string) => value,
+    result:undefined
+  };
+  vm.runInNewContext(
+    treePages.slice(helperStart, helperEnd)
+      + `\nresult = pdfPageContext({ paragraphs:[{ index:4, text:'Перед Втор 17:19 после', references:[{ originalText:'Втор 17:19', normalizedRef:'Второзаконие 17:19', startIndex:6, endIndex:15 }] }] }, [4], [{ paragraphIndex:4, startIndex:6, endIndex:15 }]);`,
+    context
+  );
+
+  assert.equal(context.result.bibleLinks[0].href, 'bnVerse:Второзаконие 17:19');
+  assert.equal(context.result.bibleLinks[0].text, 'Втор 17:19');
+  assert.equal(context.result.targets[0].paragraphIndex, 4);
+  assert.equal(context.result.targets[0].query, 'Втор 17:19');
+  assert.equal(context.result.targets[0].highlightText, 'Перед Втор 17:19 после');
+});
+
+test('PDF page context does not apply context-dependent references globally', () => {
+  const treePages = fs.readFileSync(path.join(uiDirectory, 'tree-pages.js'), 'utf8');
+  const helperStart = treePages.indexOf('function normalizedPdfAnchor');
+  const helperEnd = treePages.indexOf('\nfunction postPdfFrameContext', helperStart);
+  assert.ok(helperStart >= 0 && helperEnd > helperStart, 'PDF context helpers are missing');
+
+  const context: Record<string, any> = {
+    decodeHtmlText:(value: string) => value,
+    result:undefined
+  };
+  vm.runInNewContext(
+    treePages.slice(helperStart, helperEnd)
+      + `\nresult = pdfPageContext({ paragraphs:[{ index:90, text:'Евр. 11:23, затем 1:3', references:[
+        { originalText:'Евр. 11:23', normalizedRef:'Евреям 11:23', entryType:'BookChapterVerse' },
+        { originalText:'1:3', normalizedRef:'Евреям 1:3', entryType:'ChapterVerse' }
+      ] }] });`,
+    context
+  );
+
+  assert.equal(context.result.bibleLinks.length, 1);
+  assert.equal(context.result.bibleLinks[0].text, 'Евр. 11:23');
+  assert.equal(context.result.bibleLinks[0].href, 'bnVerse:Евреям 11:23');
+});
+
+test('PDF page context applies a context-dependent reference when its book matches the page title', () => {
+  const treePages = fs.readFileSync(path.join(uiDirectory, 'tree-pages.js'), 'utf8');
+  const helperStart = treePages.indexOf('function normalizedPdfAnchor');
+  const helperEnd = treePages.indexOf('\nfunction postPdfFrameContext', helperStart);
+  const context: Record<string, any> = { decodeHtmlText:(value: string) => value, result:undefined };
+  vm.runInNewContext(
+    treePages.slice(helperStart, helperEnd)
+      + `\nresult = pdfPageContext({ paragraphs:[{ index:6, references:[
+        { originalText:'1:3', normalizedRef:'Ефесянам 1:3', bookName:'К Ефесянам', entryType:'ChapterVerse' }
+      ] }] }, [], [], 'Перевод к Ефесянам от Тогобицкого');`,
+    context
+  );
+
+  assert.equal(context.result.bibleLinks.length, 1);
+  assert.equal(context.result.bibleLinks[0].text, '1:3');
+  assert.equal(context.result.bibleLinks[0].href, 'bnVerse:Ефесянам 1:3');
+});
+
+test('PDF page context suppresses conflicting context-dependent mappings for the same text', () => {
+  const treePages = fs.readFileSync(path.join(uiDirectory, 'tree-pages.js'), 'utf8');
+  const helperStart = treePages.indexOf('function normalizedPdfAnchor');
+  const helperEnd = treePages.indexOf('\nfunction postPdfFrameContext', helperStart);
+  const context: Record<string, any> = { decodeHtmlText:(value: string) => value, result:undefined };
+  vm.runInNewContext(
+    treePages.slice(helperStart, helperEnd)
+      + `\nresult = pdfPageContext({ paragraphs:[{ index:1, references:[
+        { originalText:'1:3', normalizedRef:'Ефесянам 1:3', bookName:'К Ефесянам', entryType:'ChapterVerse' },
+        { originalText:'1:3', normalizedRef:'Евреям 1:3', bookName:'К Евреям', entryType:'ChapterVerse' }
+      ] }] }, [], [], 'Ефесянам и Евреям');`,
+    context
+  );
+
+  assert.equal(context.result.bibleLinks.length, 0);
+});
+
 test('OneNote Ribbon settings and binaries are Windows-only package features', () => {
   const packageJson = JSON.parse(fs.readFileSync(path.join(uiDirectory, '..', 'package.json'), 'utf8'));
   const html = fs.readFileSync(path.join(uiDirectory, 'index.html'), 'utf8');
@@ -104,6 +212,25 @@ test('OneNote Ribbon settings and binaries are Windows-only package features', (
   assert.equal(electronMain.includes('Синхронизация страницы «${currentPageTitle}»…'), true);
   assert.equal(electronMain.includes('Страница «${currentPageTitle}» синхронизирована с BibleNote.'), true);
   assert.equal(cacheUi.includes("url.pathname === '/api/ribbon/current-page'"), true);
+  assert.equal(cacheUi.includes("dataSource:'com'"), true);
+  assert.equal(cacheUi.includes("url.pathname === '/api/system/open-onenote-page'"), true);
+  assert.equal(electronMain.includes("url.pathname === '/onenote/open-page'"), true);
+  assert.equal(treePages.includes("button.title = 'Открыть в OneNote'"), true);
+  assert.equal(treePages.includes("button.hidden = !oneNoteIntegrationEnabled"), true);
+  assert.equal(treePages.includes("/^onenote:/i.test(target)"), true);
+  assert.equal(treePages.includes("body:JSON.stringify({ url:target, pageId:localPageId })"), true);
+  assert.equal(cacheUi.includes('await bibleNoteOneNotePageLink(pageId)'), true);
+  assert.equal(treePages.includes('class="onenote-logo"'), true);
+  assert.equal(cacheUi.includes('const exactPage = currentPage.pageId ? getCachedPage(db, currentPage.pageId) : undefined;'), true);
+  assert.equal(cacheUi.includes('return json(response, 200, { currentPage:cachedPage, needsBackgroundSync:true });'), true);
+  assert.equal(electronMain.includes("const response = await fetchOneNoteRibbonRoute('analyze-current');"), true);
+  assert.equal(electronMain.includes('if (body?.needsBackgroundSync === true)'), true);
+  assert.ok(electronMain.indexOf('Promise.resolve(openPage(') < electronMain.indexOf('if (body?.needsBackgroundSync === true)'));
+  assert.equal(electronMain.includes('selectedPageId === ${JSON.stringify(pageId)}'), true);
+  assert.equal(electronMain.includes('{ updateUrl:false, rememberHistory:false }'), true);
+  assert.equal(electronMain.includes('Обновляем страницу «${currentPageTitle}» из OneNote…'), true);
+  assert.equal(electronMain.includes('Страница «${currentPageTitle}» обновлена из OneNote.'), true);
+  assert.equal(electronMain.includes('Не удалось обновить страницу из OneNote: ${message}'), true);
   assert.equal(electronMain.includes("if (action === 'open-bible' || action === 'open') focusMainWindow(true);"), true);
   assert.equal(electronMain.includes('Быстрый анализ завершён.'), false);
   assert.equal(electronMain.includes('Promise.resolve(openPage('), true);
@@ -143,17 +270,17 @@ test('module settings do not expose the internal BibleNote health status', () =>
   assert.equal(settings.includes("'Каталог модулей: ' + (result.modulesDirectory"), true);
 });
 
-test('first-run wizard connects OneNote and completes an initial Bible-aware sync', () => {
+test('first-run wizard connects a data source and completes an initial Bible-aware sync', () => {
   const html = fs.readFileSync(path.join(uiDirectory, 'index.html'), 'utf8');
   const settings = fs.readFileSync(path.join(uiDirectory, 'settings.js'), 'utf8');
   const styles = fs.readFileSync(path.join(uiDirectory, 'styles.css'), 'utf8');
   const cacheUi = fs.readFileSync(path.join(uiDirectory, '..', 'src', 'cache-ui.ts'), 'utf8');
 
   assert.equal((html.match(/data-setup-step="/g) || []).length, 5);
-  assert.equal(html.includes('Подключение к OneNote'), true);
+  assert.equal(html.includes('<h3>Источник данных</h3>'), true);
   assert.equal(html.includes('Перевод Библии'), true);
   assert.equal(html.includes('Интеграция с OneNote'), true);
-  assert.equal(html.includes('Блокноты и первая загрузка'), true);
+  assert.equal(html.includes('Коллекции и первая загрузка'), true);
   assert.equal(html.includes('OneNote Client ID:'), false);
   assert.equal(html.includes('Модуль BibleNote:'), false);
   assert.equal(settings.includes("api('/api/onenote/login/start'"), true);
@@ -161,9 +288,10 @@ test('first-run wizard connects OneNote and completes an initial Bible-aware syn
   assert.equal(settings.includes("api('/api/status', { timeoutMs:120000 })"), true);
   assert.equal(settings.includes('incrementalMetadata:setupCacheHasPages'), true);
   assert.equal(settings.includes("setupCacheHasPages ? 'Обновить заметки' : 'Загрузить заметки'"), true);
-  assert.equal(settings.includes('setupCacheHasPages ? !hiddenNotebookIds.has(notebook.id) : true'), true);
+  assert.equal(settings.includes('setupHasConfiguredNotebookSelection'), true);
+  assert.equal(html.includes('id="notebookPanel"'), false);
   assert.equal(settings.includes("'Всего страниц в локальном кеше', cacheStatus.pages || 0"), true);
-  assert.equal(settings.includes("'Всего распознанных ссылок в кеше', cacheStatus.bibleReferences || 0"), true);
+  assert.equal(settings.includes("'Всего распознанных ссылок в кеше', cacheStatus.bibleReferences || 0"), false);
   assert.equal(settings.includes("'Заново обработано страниц', result.bibleRefsPagesParsed || 0"), true);
   assert.equal(settings.includes("'Ссылок найдено на них', result.bibleRefsRecognized || 0"), true);
   assert.equal(settings.includes("'Непроверенных разделов', result.sectionScanErrors"), true);
@@ -175,6 +303,7 @@ test('first-run wizard connects OneNote and completes an initial Bible-aware syn
   assert.equal(settings.includes("localStorage.setItem('biblenote.setupWizardDone', 'true')"), true);
   assert.equal(cacheUi.includes("url.pathname === '/api/onenote/login/start'"), true);
   assert.equal(cacheUi.includes("url.pathname === '/api/onenote/remote-notebooks'"), true);
+  assert.equal(cacheUi.includes("url.pathname === '/api/statistics'"), true);
 });
 
 test('text and HTML note views use the available content width', () => {
@@ -334,6 +463,12 @@ test('full page mode preserves Bible and Ctrl+F searches', () => {
   assert.equal(focusMode.includes("pageFindWidget.classList.contains('hidden')"), true);
   assert.equal(styles.includes('.page-focus-mode .page-find-widget { z-index:46; top:64px; right:16px; }'), true);
   assert.equal(styles.includes('.page-focus-mode .page.html-view-active > :not(.html-frame):not(.match-nav) { display:none; }'), true);
+  assert.equal(treePages.includes("if (isPdfPage) article.classList.add('pdf-page');"), true);
+  assert.equal(treePages.includes("matchNav.classList.toggle('html-match-nav-overlay', shouldOverlay);"), true);
+  assert.equal(treePages.includes('const top = Math.max(0, htmlFrame.offsetTop - matchNav.offsetHeight - 8);'), true);
+  assert.equal(styles.includes(':root:not(.page-focus-mode) .match-nav.html-match-nav-overlay { position:absolute; top:var(--html-match-nav-top, 0); right:10px; left:auto; margin:0; transform:none; }'), true);
+  assert.equal(styles.includes('.page-focus-mode:has(.page.pdf-page.html-view-active) .page-focus-toolbar { right:170px; width:min(680px, calc(100vw - 186px)); }'), true);
+  assert.equal(styles.includes('.page.pdf-page.html-view-active > .folder-quality { display:none; }'), true);
   assert.equal(styles.includes('.page-focus-mode .page.html-view-active > .match-nav { position:fixed; z-index:44; top:60px; left:16px; margin:0; }'), true);
   assert.equal(styles.includes('@media (min-width:960px) { .page-focus-mode .page.html-view-active > .match-nav { top:8px; } }'), true);
 });
@@ -418,7 +553,7 @@ test('notes panel can switch between the OneNote structure and recent pages', ()
   assert.equal(treePages.includes("page.recentReason === 'opened' ? 'открыта здесь ' : 'изменена '"), true);
   assert.equal(treePages.includes('notesViewSwitch.hidden = Boolean(activeSearchQuery)'), true);
   assert.equal(styles.includes('.notes-view-switch[hidden] { display:none !important; }'), true);
-  assert.equal(styles.includes('top:8px; right:24px; display:flex'), true);
+  assert.equal(styles.includes('top:8px; right:2px; display:flex'), true);
   assert.equal(styles.includes('.notes-panel[open] > .tree-shell { position:absolute; left:0; right:0; top:42px;'), true);
   assert.equal(styles.includes('@container (max-width:300px)'), true);
 });
@@ -437,6 +572,22 @@ test('clicking the active recent note does not reload it', () => {
   assert.notEqual(clickStart, -1);
   assert.equal(clickHandler.includes('if (page.id === selectedPageId) return;'), true);
   assert.ok(clickHandler.indexOf('page.id === selectedPageId') < clickHandler.indexOf('await openPage(page.id)'));
+});
+
+test('recent notes keep their visible order while the list is open', () => {
+  const treePages = fs.readFileSync(path.join(uiDirectory, 'tree-pages.js'), 'utf8');
+  const recentStart = treePages.indexOf('async function renderRecentPages()');
+  const recentEnd = treePages.indexOf('function renderNotesList()', recentStart);
+  const recentPages = treePages.slice(recentStart, recentEnd);
+  const clickStart = recentPages.indexOf('button.onclick = async () => {');
+  const clickEnd = recentPages.indexOf('};', clickStart);
+  const clickHandler = recentPages.slice(clickStart, clickEnd);
+
+  assert.equal(treePages.includes('let recentPagesSnapshot = null;'), true);
+  assert.equal(treePages.includes("if (view === 'recent') {"), true);
+  assert.equal(recentPages.includes('recentPagesSnapshotKey !== snapshotKey'), true);
+  assert.equal(recentPages.includes('const pages = recentPagesSnapshot;'), true);
+  assert.equal(clickHandler.includes('renderRecentPages()'), false);
 });
 
 test('page Bible references expose usage, context, reader, and note search actions', () => {
@@ -507,6 +658,28 @@ test('HTML paragraph navigation is not overwritten by the HTML text-search count
   assert.equal(openPage.includes('showingHtml && !navigationUsesParagraphTargets && htmlSearchResultsReady'), true);
   assert.equal(openPage.includes('if (showingHtml && !navigationUsesParagraphTargets)'), true);
   assert.equal(openPage.includes("matchCount.textContent = initialNavigationCount > 0"), true);
+  assert.equal(openPage.includes('if (!matchNav || htmlSearchMatchCount === 0)'), true);
+  assert.equal(openPage.includes('if (initialNavigationCount === 0) return;'), true);
+});
+
+test('note search results show source and document type icons', () => {
+  const treePages = fs.readFileSync(path.join(uiDirectory, 'tree-pages.js'), 'utf8');
+  const cacheUi = fs.readFileSync(path.join(uiDirectory, '..', 'src', 'cache-ui.ts'), 'utf8');
+  const searchStart = treePages.indexOf('function renderSearchResults(');
+  const searchEnd = treePages.indexOf('async function renderSearch(', searchStart);
+  const searchRenderer = treePages.slice(searchStart, searchEnd);
+
+  assert.ok(searchStart >= 0 && searchEnd > searchStart, 'search result renderer is missing');
+  assert.equal(searchRenderer.includes('const sourceType = sourceTypeForNotebook(notebook.id);'), true);
+  assert.equal(searchRenderer.includes('source:true,'), true);
+  assert.equal(searchRenderer.includes('page:true,'), true);
+  assert.equal(searchRenderer.includes('fileExtension:page.fileExtension,'), true);
+  assert.equal(treePages.includes("typeIcons.className = 'search-weight-type-icons';"), true);
+  assert.equal(treePages.includes('typeIcons.append(sourceTypeIcon(sourceType));'), true);
+  assert.equal(treePages.includes('fileTypeIcon(page.fileExtension, sourceType)'), true);
+  assert.equal(treePages.includes("{ key:'onenote', label:'N', title:'OneNote' }"), true);
+  assert.equal(cacheUi.includes("json_extract(links_json, '$.folder.extension') AS fileExtension"), true);
+  assert.equal(cacheUi.includes('if (result) result.fileExtension = fileType.fileExtension;'), true);
 });
 
 test('closing HTML paragraph navigation cancels delayed highlights and clears every highlight layer', () => {
@@ -574,9 +747,9 @@ test('parallel references use a per-verse modal action and a one-fifth drawer', 
   assert.equal(bibleReferences.includes('topVerse:verseNumber'), true);
   assert.equal(bibleReferences.includes(".join('; ');"), true);
   assert.equal(bibleReferences.includes('await renderSearch(query);'), true);
-  assert.equal(bibleReferences.includes("weightMetric.title = 'Индекс параллельности: ' + weight"), true);
+  assert.equal(bibleReferences.includes("weightMetric.title = 'Вес связи: ' + weight"), true);
   assert.equal(bibleReferences.includes("notesButton.title = 'Общие заметки: ' + commonNotes"), true);
-  assert.equal(bibleReferences.includes("toFixed(2).replace('.', ',')"), true);
+  assert.equal(bibleReferences.includes("toFixed(4).replace(/\\.?0+$/, '').replace('.', ',')"), true);
   assert.equal(bibleReferences.includes("pluralRu(commonNotes, 'общая заметка', 'общие заметки', 'общих заметок')"), true);
   assert.equal(bibleReferences.includes('const query = [parallelReferenceLabel(targetRef), parallelReferenceLabel(relatedRef)]'), true);
   const showBibleText = bibleReferences.slice(
@@ -690,7 +863,8 @@ test('parallel references combine only consecutive verses with identical evidenc
       { bookIndex:40, bookName:'От Матфея', chapter:17, verse:5, relationWeight:0.04, maxRelationWeight:0.04, relations:1, paragraphs:1, commonNotePageIds:['page-b'] },
       { bookIndex:40, bookName:'От Матфея', chapter:17, verse:6, relationWeight:0.02, maxRelationWeight:0.02, relations:1, paragraphs:1, commonNotePageIds:['page-c'] },
       { bookIndex:40, bookName:'От Матфея', chapter:17, verse:7, relationWeight:0.02, maxRelationWeight:0.02, relations:1, paragraphs:1, commonNotePageIds:['page-c'] },
-      { bookIndex:40, bookName:'От Матфея', chapter:17, verse:9, relationWeight:0.02, maxRelationWeight:0.02, relations:1, paragraphs:1, commonNotePageIds:['page-c'] }
+      { bookIndex:40, bookName:'От Матфея', chapter:17, verse:9, relationWeight:0.02, maxRelationWeight:0.02, relations:1, paragraphs:1, commonNotePageIds:['page-c'] },
+      { bookIndex:39, bookName:'Малахия', chapter:3, verse:0, isChapter:true, relationWeight:0.02, maxRelationWeight:0.02, relations:1, paragraphs:1, commonNotePageIds:['page-d'] }
     ],
     result:[] as Array<{ verse:number; topVerse:number; label:string }>
   };
@@ -704,14 +878,46 @@ test('parallel references combine only consecutive verses with identical evidenc
     { verse:3, topVerse:4, label:'От Матфея 17:3-4' },
     { verse:5, topVerse:5, label:'От Матфея 17:5' },
     { verse:6, topVerse:7, label:'От Матфея 17:6-7' },
-    { verse:9, topVerse:9, label:'От Матфея 17:9' }
+    { verse:9, topVerse:9, label:'От Матфея 17:9' },
+    { verse:0, topVerse:0, label:'Малахия 3' }
   ]));
 });
 
 test('common-note weights sum repeated parallel-reference evidence', () => {
   const cacheUi = fs.readFileSync(path.join(uiDirectory, '..', 'src', 'cache-ui.ts'), 'utf8');
+  const treePages = fs.readFileSync(path.join(uiDirectory, 'tree-pages.js'), 'utf8');
+  const bibleReferences = fs.readFileSync(path.join(uiDirectory, 'bible-references.js'), 'utf8');
   assert.equal(cacheUi.includes('page.bibleWeight += Number(row.relationWeight || 0);'), true);
   assert.equal(cacheUi.includes('page.bibleWeight = Math.max(page.bibleWeight, Number(row.relationWeight || 0));'), false);
+  assert.equal(cacheUi.includes('noteRows.reduce((sum, note) => sum + Number(note.relationWeight || 0), 0)'), true);
+  assert.equal(cacheUi.includes('Number(right.relationWeight || 0) - Number(left.relationWeight || 0)'), true);
+  assert.equal(treePages.includes("return 'вес ' + numericWeight.toFixed(4)"), true);
+  assert.equal(treePages.includes('суммарный вес'), false);
+  assert.equal(bibleReferences.includes("toFixed(4).replace(/\\.?0+$/, '').replace('.', ',')"), true);
+  assert.equal(bibleReferences.includes("for (const notebookId of selectedNotebookIds()) params.append('notebookId', notebookId);"), true);
+  assert.equal(bibleReferences.includes("limit:'200'"), true);
+});
+
+test('parallel chapter text is limited to two verses with an ellipsis', () => {
+  const bibleReferences = fs.readFileSync(path.join(uiDirectory, 'bible-references.js'), 'utf8');
+  const functionStart = bibleReferences.indexOf('function bibleVersePreview');
+  const functionEnd = bibleReferences.indexOf('function cloneBibleTextRef', functionStart);
+  const context = {
+    source:{ verses:[
+      { reference:'3:1', text:'Первый' },
+      { reference:'3:2', text:'Второй' },
+      { reference:'3:3', text:'Третий' }
+    ] },
+    result:''
+  };
+  assert.ok(functionStart >= 0 && functionEnd > functionStart, 'Bible verse preview helpers are missing');
+  vm.runInNewContext(
+    bibleReferences.slice(functionStart, functionEnd)
+      + '\nresult = bibleVerseText(source, 2);',
+    context
+  );
+  assert.equal(context.result, '3:1 Первый\n3:2 Второй\n…');
+  assert.equal(bibleReferences.includes('const maxVerses = Number(ref?.verse) > 0 ? undefined : 2;'), true);
 });
 
 test('parallel-reference arrows include a matching page title', () => {

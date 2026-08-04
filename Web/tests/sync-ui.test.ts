@@ -46,16 +46,50 @@ test('sync progress and partial failures are presented as one staged operation',
 
   assert.equal(sync.includes('function renderSyncProgress(progress)'), true);
   assert.equal(sync.includes('Этап ${stageIndex + 1} из ${stages.length}'), true);
-  assert.equal(sync.includes("? 'Страница удалена из OneNote'"), true);
+  assert.equal(sync.includes("? 'Страница удалена из источника данных'"), true);
   assert.equal(sync.includes(": errorCount ? 'Завершено с ошибками' : 'Синхронизация завершена'"), true);
   assert.equal(sync.includes('(result.sectionScanErrors || 0)'), true);
   assert.equal(sync.includes('(result.bibleRefsParseErrors || 0)'), true);
+  assert.equal(sync.includes("parts.push('страниц: ' + progress.bibleParseDone + '/' + progress.bibleParseTotal)"), true);
+  assert.equal(sync.includes("parts.push('BibleNote: ' + progress.bibleParseDone"), false);
+  assert.equal(sync.includes("parts.push('актуальны: ' + progress.bibleParseSkipped)"), false);
   assert.equal(styles.includes('.sync-progress-track'), true);
   assert.equal(styles.includes('.sync-result-metrics'), true);
   assert.equal(styles.includes('.activity-toast.warning'), true);
   assert.equal(sync.includes("document.querySelectorAll('dialog[open]')"), true);
   assert.equal(sync.includes("mirror.className = 'activity-toast dialog-activity-toast'"), true);
   assert.equal(styles.includes('.activity-toast.dialog-activity-toast'), true);
+});
+
+test('sync UI discovers externally started synchronization while idle', () => {
+  const sync = fs.readFileSync(path.join(uiDirectory, 'sync.js'), 'utf8');
+  const initializeStart = sync.indexOf('async function initializeApp()');
+  const initialSyncPoll = sync.indexOf('refreshSyncState().catch(handleSyncPollError)', initializeStart);
+  const initialStatusLoad = sync.indexOf("api('/api/status')", initializeStart);
+  const startupWait = sync.indexOf('await waitForCacheReady()', initializeStart);
+
+  assert.equal(sync.includes('const idleSyncPollIntervalMs = 5000'), true);
+  assert.equal(sync.includes('scheduleSyncStatePoll(idleSyncPollIntervalMs)'), true);
+  assert.equal(sync.includes('scheduleSyncStatePoll(activeSyncPollIntervalMs)'), true);
+  assert.equal(sync.includes('let lastHandledTerminalSyncKey = null'), true);
+  assert.equal(sync.includes('terminalSyncKey !== lastHandledTerminalSyncKey'), true);
+  assert.equal(sync.includes("api('/api/startup', { timeoutMs:180000 })"), true);
+  assert.equal(sync.includes("setTimeout(() => initializeApp().catch(showError), 500)"), false);
+  assert.equal(startupWait > initializeStart && startupWait < initialSyncPoll, true);
+  assert.equal(initialSyncPoll > initializeStart && initialSyncPoll < initialStatusLoad, true);
+});
+
+test('sync UI refreshes source counts when document loading reaches Bible parsing', () => {
+  const sync = fs.readFileSync(path.join(uiDirectory, 'sync.js'), 'utf8');
+  const syncCore = fs.readFileSync(path.join(uiDirectory, '..', 'src', 'sync.ts'), 'utf8');
+
+  assert.equal(sync.includes("if (progress.phase !== 'bible-parse') return"), true);
+  assert.equal(sync.includes('const sourceKey = progress.sourceId'), true);
+  assert.equal(sync.includes('await loadNotebookSelector()'), true);
+  assert.equal(sync.includes('await renderNotesList()'), true);
+  assert.equal(sync.includes('await refreshLiveSyncTree(state, progress)'), true);
+  assert.equal(syncCore.includes('sourceId:source.id'), true);
+  assert.equal(syncCore.includes('onProgress:progress => options.onProgress?.({ ...progress, ...sourceProgress })'), true);
 });
 
 test('targeted sync removes a page that was deleted from classic OneNote', () => {
@@ -65,21 +99,24 @@ test('targeted sync removes a page that was deleted from classic OneNote', () =>
   assert.equal(syncCom.includes('const deletedPagesMarked = markPageDeleted(db, options.pageId, startedAt)'), true);
   assert.equal(syncCom.includes("throw new Error('Страница не найдена в классическом OneNote.')"), true);
   assert.equal(sync.includes('const targetedPageDeleted = Boolean('), true);
-  assert.equal(sync.includes('Страница удалена из OneNote и убрана из BibleNote.'), true);
+  assert.equal(sync.includes('Страница удалена из источника данных и убрана из BibleNote.'), true);
   assert.equal(sync.includes("history.replaceState(null, '', '/')"), true);
   assert.equal(sync.includes('renderEmptyPage();'), true);
 });
 
-test('download journal remains numeric and follows notebook ids replaced during a rebuild', () => {
+test('synchronization journal presents durable run history instead of individual pages', () => {
   const cacheUi = fs.readFileSync(path.join(uiDirectory, '..', 'src', 'cache-ui.ts'), 'utf8');
   const journal = fs.readFileSync(path.join(uiDirectory, 'notebooks-log.js'), 'utf8');
+  const html = fs.readFileSync(path.join(uiDirectory, 'index.html'), 'utf8');
 
-  assert.equal(cacheUi.includes('COALESCE(SUM(CASE WHEN content_text IS NOT NULL'), true);
-  assert.equal(cacheUi.includes('COALESCE(SUM(CASE WHEN content_text IS NULL'), true);
-  assert.equal(cacheUi.includes('COALESCE(SUM(CASE WHEN fetch_error IS NOT NULL'), true);
-  assert.equal(journal.includes('activeSyncContext?.payload?.replaceAll'), true);
-  assert.equal(journal.includes('await loadNotebookSelector()'), true);
-  assert.equal(journal.includes('downloaded:Number(result.counts?.downloaded) || 0'), true);
+  assert.equal(cacheUi.includes("url.pathname === '/api/sync-history'"), true);
+  assert.equal(cacheUi.includes('saveSyncHistory(db, body, startedAt, finishedAt, result)'), true);
+  assert.equal(journal.includes("api('/api/sync-history?'"), true);
+  assert.equal(journal.includes("['проверено', values.pages || 0]"), true);
+  assert.equal(journal.includes("['загружено', values.contentDownloaded || 0]"), true);
+  assert.equal(journal.includes('formatSyncDuration(item.startedAt, item.finishedAt)'), true);
+  assert.equal(html.includes('<h2>История синхронизаций</h2>'), true);
+  assert.equal(html.includes('id="logFilter"'), false);
 });
 
 test('advanced sync settings omit technical limits and use the safe request speed', () => {
@@ -96,6 +133,6 @@ test('advanced sync settings omit technical limits and use the safe request spee
   assert.equal(sync.includes('const safeSyncConcurrency = 1'), true);
   assert.equal(sync.includes('concurrency: safeSyncConcurrency'), true);
   assert.equal(html.includes('которые ещё не были обработаны'), false);
-  assert.equal(styles.includes('.sync-panel .sync-advanced > summary::after'), true);
-  assert.equal(styles.includes('.sync-panel .sync-advanced[open] > summary::after'), true);
+  assert.equal(html.includes('syncIncludeHtml'), false);
+  assert.equal(styles.includes('.sync-advanced'), false);
 });

@@ -92,19 +92,62 @@
     <div class="settings-dialog-body">
       <header class="settings-dialog-header">
         <h2>Параметры</h2>
-        <p>Записные книжки, синхронизация, модули и обработка внешних библейских ссылок.</p>
+        <p>Источники данных, синхронизация, модули и обработка внешних библейских ссылок.</p>
       </header>
       <div id="settingsDialogContent" class="settings-dialog-content">
-        <details class="settings-module-section onenote-settings">
-          <summary>Доступ к OneNote</summary>
+        <details class="settings-module-section data-source-settings">
+          <summary>Источники данных</summary>
           <div class="settings-module-body">
-            <div id="oneNoteAccessStatus" class="settings-status">Параметры доступа еще не загружены.</div>
-            <label class="field">Источник заметок
-              <select id="oneNoteDataSource">
-                <option value="graph">Microsoft Graph (облако)</option>
-                <option value="com">Классический OneNote на этом компьютере</option>
-              </select>
-            </label>
+            <div id="dataSourceOverview">
+              <div id="oneNoteAccessStatus" class="settings-status">Источники данных ещё не загружены.</div>
+              <div id="dataSourceList" class="data-source-list"></div>
+              <div class="data-source-add-row">
+                <label class="field">Добавить источник
+                  <select id="oneNoteDataSource">
+                    <option value="graph">OneNote Cloud</option>
+                    <option value="com">OneNote Local</option>
+                    <option value="folder">Папка</option>
+                  </select>
+                </label>
+                <button id="addDataSource" class="small-button" type="button">Добавить</button>
+              </div>
+            </div>
+            <div id="oneNoteSourceSettings" class="onenote-source-settings" hidden>
+              <strong id="oneNoteSourceTitle">Записные книжки OneNote</strong>
+              <p class="settings-note">Выберите записные книжки, которые BibleNote должен загружать из этого источника.</p>
+              <div class="setup-notebook-actions">
+                <button id="refreshOneNoteSourceNotebooks" class="small-button" type="button">Обновить список</button>
+                <button id="selectAllOneNoteSourceNotebooks" class="small-button" type="button">Выбрать все</button>
+                <button id="clearAllOneNoteSourceNotebooks" class="small-button" type="button">Снять все</button>
+              </div>
+              <div id="oneNoteSourceNotebookList" class="setup-notebook-list"></div>
+              <div id="oneNoteSourceStatus" class="settings-status"></div>
+              <div class="settings-row">
+                <button id="saveOneNoteSource" class="small-button" type="button">Сохранить источник</button>
+                <button id="cancelOneNoteSourceEdit" class="small-button" type="button">Отмена</button>
+              </div>
+            </div>
+            <div id="folderSourceSettings" class="folder-source-settings" hidden>
+              <label class="field">Название источника
+                <input id="folderSourceName" type="text" maxlength="120" placeholder="Например: Проповеди и конспекты">
+              </label>
+              <label class="field">Папки этого источника, по одной в строке
+                <textarea id="folderSourcePaths" rows="3" placeholder="C:\Notes"></textarea>
+              </label>
+              <label class="check folder-deduplicate-toggle">
+                <input id="folderSourceDeduplicateFiles" type="checkbox">
+                <span>Не дублировать файлы с одинаковым именем, но разными форматами</span>
+              </label>
+              <p class="settings-note">Если в одной папке есть несколько таких файлов, используется формат с наивысшим приоритетом: DOCX → DOC → HTML → TXT → PDF.</p>
+              <div class="settings-row">
+                <button id="selectFolderSource" class="small-button" type="button">Выбрать папку</button>
+                <button id="saveFolderSource" class="small-button" type="button">Сохранить источник</button>
+                <button id="cancelFolderSourceEdit" class="small-button" type="button" hidden>Отмена</button>
+              </div>
+              <div id="folderSourceStatus" class="settings-status"></div>
+              <p class="settings-note">Можно выбрать несколько папок: все они будут синхронизироваться и отображаться как один источник данных под указанным названием.</p>
+              <p class="settings-note">Поддерживаются .html, .htm, .txt и .docx. Файлы .doc читаются через установленный Microsoft Word COM в Windows; без Word и на macOS ошибка записывается в лог. PDF обрабатывается экспериментально без OCR.</p>
+            </div>
           </div>
         </details>
         <details id="oneNoteIntegrationSettings" class="settings-module-section onenote-integration-settings" hidden>
@@ -122,6 +165,10 @@
             <div class="onenote-integration-option">
               <strong class="onenote-integration-option-title">Открытие библейских ссылок</strong>
               <div id="protocolStatus" class="settings-status">Проверка настройки открытия ссылок...</div>
+              <label class="check">
+                <input id="openOneNoteBibleLinksInReader" type="checkbox">
+                <span>Открывать ссылки из OneNote сразу в окне «Библия»</span>
+              </label>
               <div class="settings-row">
                 <button id="registerBibleProtocol" class="small-button" type="button">Настроить открытие ссылок</button>
               </div>
@@ -169,11 +216,12 @@
         <details class="settings-module-section inductive-settings">
           <summary>Индуктивная разметка</summary>
           <div class="settings-module-body">
-            <p class="settings-note">Экспорт сохраняет стили, отметки и связи открытой главы в JSON. Импорт добавляет данные из такого файла, обновляя совпадающие стили и отметки без дублей.</p>
+            <p class="settings-note">Экспорт сохраняет стили, отметки и связи текущей главы или всей Библии в JSON. Импорт сам определяет масштаб файла и добавляет данные без дублей.</p>
             <div class="settings-row settings-actions-right">
               <input id="importInductiveMarkingsFile" type="file" accept=".json,application/json" hidden>
               <button id="importInductiveMarkings" class="small-button" type="button">Импортировать разметку</button>
-              <button id="exportInductiveMarkings" class="small-button" type="button" disabled>Экспортировать разметку главы</button>
+              <button id="exportInductiveMarkings" class="small-button" type="button" disabled>Экспортировать разметку текущей главы</button>
+              <button id="exportAllInductiveMarkings" class="small-button" type="button">Экспортировать разметку всей Библии</button>
             </div>
             <div id="importInductiveMarkingsStatus" class="settings-status" aria-live="polite"></div>
           </div>
@@ -198,7 +246,7 @@
     <div class="setup-wizard-body">
       <header class="setup-wizard-header">
         <h2>Добро пожаловать в BibleNote</h2>
-        <p>Подключим OneNote, выберем перевод Библии и загрузим заметки. Обычно это нужно сделать только один раз.</p>
+        <p>Подключим источник данных, выберем перевод Библии и загрузим заметки. Обычно это нужно сделать только один раз.</p>
       </header>
       <div class="setup-wizard-content">
         <div class="setup-wizard-progress" aria-hidden="true">
@@ -212,14 +260,15 @@
           <div class="setup-wizard-step-heading">
             <span class="setup-wizard-step-number">1</span>
             <div>
-              <h3>Подключение к OneNote</h3>
-              <p id="setupOneNoteSourceDescription">Выберите, откуда BibleNote будет читать ваши блокноты.</p>
+              <h3>Источник данных</h3>
+              <p id="setupOneNoteSourceDescription">Выберите, откуда BibleNote будет читать ваши заметки.</p>
             </div>
           </div>
-          <label class="field">Источник заметок
+          <label class="field">Источник данных
             <select id="setupOneNoteDataSource">
-              <option value="graph">Microsoft Graph (облако)</option>
-              <option value="com">Классический OneNote на этом компьютере</option>
+              <option value="graph">OneNote Cloud</option>
+              <option value="com">OneNote Local</option>
+              <option value="folder">Папка</option>
             </select>
           </label>
           <div id="setupMicrosoftConnectionControls" class="setup-connection-controls">
@@ -276,8 +325,8 @@
           <div class="setup-wizard-step-heading">
             <span class="setup-wizard-step-number">4</span>
             <div>
-              <h3 id="setupNotebookStepTitle">Блокноты и первая загрузка</h3>
-              <p id="setupNotebookStepDescription">Выберите блокноты, которые должны быть доступны в BibleNote.</p>
+              <h3 id="setupNotebookStepTitle">Коллекции и первая загрузка</h3>
+              <p id="setupNotebookStepDescription">Выберите коллекции заметок, которые должны быть доступны в BibleNote.</p>
             </div>
           </div>
           <div class="setup-notebook-actions">
@@ -290,7 +339,7 @@
         <section class="setup-wizard-step" data-setup-step="4" hidden>
           <div id="setupWizardFinishedMark" class="setup-wizard-finished-mark">✓</div>
           <h3 id="setupWizardFinishedTitle">Всё готово</h3>
-          <p id="setupWizardFinishedText" class="setup-wizard-finished-text">BibleNote подключён к OneNote. Библейские ссылки в загруженных заметках уже распознаны.</p>
+          <p id="setupWizardFinishedText" class="setup-wizard-finished-text">Источники данных подключены. Библейские ссылки в загруженных заметках уже распознаны.</p>
           <div id="setupWizardSummary" class="setup-wizard-summary"></div>
         </section>
         <div id="setupWizardStatus" class="setup-wizard-status"></div>
@@ -304,7 +353,7 @@
   <dialog id="downloadLogDialog" class="log-dialog">
     <div class="log-dialog-body">
       <header class="log-dialog-header">
-        <h2>Журнал загрузки</h2>
+        <h2>История синхронизаций</h2>
       </header>
       <div id="downloadLogDialogContent" class="log-dialog-content"></div>
       <footer class="log-dialog-footer">
@@ -330,21 +379,11 @@
             <div id="searchHistoryMenu" class="search-history-menu hidden" role="listbox" aria-label="История поиска"></div>
           </div>
           <div class="brand-actions">
-            <button id="quickSync" class="settings-button quick-sync-button" type="button" aria-label="Обновить изменения в выбранных блокнотах" title="Проверить изменённые разделы и загрузить новые или изменённые страницы">↻</button>
+            <button id="quickSync" class="settings-button quick-sync-button" type="button" aria-label="Обновить изменения во всех источниках данных" title="Проверить все источники данных и загрузить новые или изменённые страницы и документы">↻</button>
             <button id="openSettings" class="settings-button" type="button" aria-label="Параметры" title="Параметры">⚙</button>
           </div>
         </div>
       </header>
-      <details class="notebook-panel">
-        <summary id="notebookSummary">Записные книжки</summary>
-        <div class="notebook-controls">
-          <div class="notebook-actions">
-            <button id="selectAllNotebooks" class="small-button" type="button">Выбрать все</button>
-            <button id="clearAllNotebooks" class="small-button" type="button">Снять все</button>
-          </div>
-          <div id="notebookList" class="notebook-list"></div>
-        </div>
-      </details>
       <details class="bible-reader-panel">
         <summary id="bibleReaderSummary">Библия</summary>
         <div class="bible-reader-controls">
@@ -371,11 +410,11 @@
             </label>
             <label class="sync-mode-card">
               <input id="syncModeFull" type="radio" name="syncMode" value="full">
-              <span class="sync-mode-copy"><strong>Проверить все разделы</strong><small>Заново сверить всю структуру выбранных блокнотов.</small></span>
+              <span class="sync-mode-copy"><strong>Проверить все разделы</strong><small>Заново сверить всю структуру выбранных коллекций.</small></span>
             </label>
             <label class="sync-mode-card danger">
               <input id="syncModeRebuild" type="radio" name="syncMode" value="rebuild">
-              <span class="sync-mode-copy"><strong>Пересоздать локальный кэш</strong><small>Удалить локальные данные и скачать выбранные блокноты заново.</small></span>
+              <span class="sync-mode-copy"><strong>Пересоздать локальный кэш</strong><small>Удалить локальные данные и скачать выбранные коллекции заново.</small></span>
             </label>
           </fieldset>
           <label class="field sync-content-field">Содержимое страниц
@@ -387,29 +426,16 @@
           <div id="syncPlanSummary" class="sync-plan-summary" role="status" aria-live="polite"></div>
           <button id="syncButton" class="sync-button" type="button">Обновить изменения</button>
           <div id="syncState" class="sync-state">Синхронизация не запущена</div>
-          <details class="sync-advanced">
-            <summary>Расширенные настройки</summary>
-            <div class="sync-advanced-body">
-              <label class="check"><input id="syncIncludeHtml" type="checkbox" checked>Сохранять HTML страниц</label>
-            </div>
-          </details>
           <div class="sync-maintenance">
             <span class="settings-note">Обслуживание локальных данных</span>
             <button id="reparseBibleCacheButton" class="small-button" type="button">Пересчитать библейские ссылки</button>
-            <span class="settings-note">Использует сохранённый текст без обращения к Microsoft Graph.</span>
+            <span class="settings-note">Использует сохранённый HTML без обращения к Microsoft Graph.</span>
           </div>
         </div>
       </details>
       <details class="log-panel">
-        <summary id="logSummary">Журнал загрузки</summary>
+        <summary id="logSummary">История синхронизаций</summary>
         <div class="log-controls">
-          <select id="logFilter" class="log-filter">
-            <option value="downloaded-last-sync">Загружены в последней синхронизации</option>
-            <option value="downloaded">Все загруженные</option>
-            <option value="missing">Не загруженные</option>
-            <option value="errors">Ошибки</option>
-            <option value="all">Все страницы</option>
-          </select>
           <button id="refreshLog" class="small-button" type="button">Обновить</button>
         </div>
         <div id="logList" class="log-list"></div>
@@ -426,7 +452,7 @@
           <button id="notesRecentView" class="notes-view-button" type="button" role="tab" aria-controls="tree">Последние</button>
         </div>
         <div class="tree-shell">
-          <nav id="tree" class="tree" aria-label="Структура OneNote"></nav>
+          <nav id="tree" class="tree" aria-label="Структура заметок"></nav>
           <div id="treeScrollbar" class="custom-scrollbar" role="scrollbar" aria-label="Прокрутка списка заметок" aria-controls="tree" tabindex="0"><div class="custom-scrollbar-thumb"></div></div>
         </div>
       </details>

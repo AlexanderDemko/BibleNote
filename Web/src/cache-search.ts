@@ -238,6 +238,18 @@ export function searchCache(
   return db.prepare(sql).all(params) as CacheSearchResult[];
 }
 
+function escapeSearchRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+export function phraseSearchRegExp(query: string, caseSensitive = false): RegExp {
+  const terms = query.match(/[\p{L}\p{N}_]+/gu) ?? [];
+  const source = terms.length > 0
+    ? `(?<![\\p{L}\\p{N}_])${terms.map(escapeSearchRegExp).join('[^\\p{L}\\p{N}_]+')}(?![\\p{L}\\p{N}_])`
+    : escapeSearchRegExp(query);
+  return new RegExp(source, `u${caseSensitive ? '' : 'i'}`);
+}
+
 export function relaxedSearchTextScore(
   text: string,
   query: string,
@@ -684,20 +696,22 @@ export function findParallelBibleReferences(
     bookIndex: number;
     chapter: number;
     verse?: number;
+    notebookIds?: string[];
     limit?: number;
     includeAuxiliaryRefs?: boolean;
   }
 ): Array<Record<string, unknown>> {
   const limit = Math.max(1, Math.min(options.limit ?? 50, 200));
-  const targetVerseId = options.verse == null ? null : toVerseId(options.bookIndex, options.chapter, options.verse);
-  const params = {
+  const verse = Number.isInteger(options.verse) && Number(options.verse) > 0 ? Number(options.verse) : undefined;
+  const targetVerseId = verse == null ? null : toVerseId(options.bookIndex, options.chapter, verse);
+  const params: Record<string, unknown> = {
     bookIndex: options.bookIndex,
     chapter: options.chapter,
-    verse: options.verse ?? null,
+    verse: verse ?? null,
     targetVerseId,
     limit
   };
-  const targetFilter = options.verse == null
+  const targetFilter = verse == null
     ? 'target.book_index = @bookIndex AND target.chapter = @chapter'
     : `
       target.book_index = @bookIndex
@@ -707,7 +721,7 @@ export function findParallelBibleReferences(
         (COALESCE(target.top_chapter, target.chapter) > @chapter OR (COALESCE(target.top_chapter, target.chapter) = @chapter AND COALESCE(target.top_verse, target.verse, 999) >= @verse))
       )
     `;
-  const relatedFilter = options.verse == null
+  const relatedFilter = verse == null
     ? 'r.book_index = @bookIndex AND r.chapter = @chapter'
     : `
       r.book_index = @bookIndex
@@ -717,17 +731,32 @@ export function findParallelBibleReferences(
         (COALESCE(r.top_chapter, r.chapter) > @chapter OR (COALESCE(r.top_chapter, r.chapter) = @chapter AND COALESCE(r.top_verse, r.verse, 999) >= @verse))
       )
     `;
-  const sourceVerseFilter = options.verse == null ? '' : 'AND rel.verse_id = @targetVerseId';
-  const relativeVerseFilter = options.verse == null ? '' : 'AND rel.relative_verse_id = @targetVerseId';
-  const sourceRelationIndex = options.verse == null ? '' : 'INDEXED BY idx_bible_relations_verse';
-  const relativeRelationIndex = options.verse == null ? '' : 'INDEXED BY idx_bible_relations_relative';
-  const targetRelationJoin = options.verse == null ? 'JOIN' : 'CROSS JOIN';
-  const excludeTargetFilter = options.verse == null
+  const sourceVerseFilter = verse == null ? '' : 'AND rel.verse_id = @targetVerseId';
+  const relativeVerseFilter = verse == null ? '' : 'AND rel.relative_verse_id = @targetVerseId';
+  const sourceRelationIndex = verse == null ? '' : 'INDEXED BY idx_bible_relations_verse';
+  const relativeRelationIndex = verse == null ? '' : 'INDEXED BY idx_bible_relations_relative';
+  const targetRelationJoin = verse == null ? 'JOIN' : 'CROSS JOIN';
+  const excludeTargetFilter = verse == null
     ? `NOT (${relatedFilter})`
     : 'mr.related_verse_id <> @targetVerseId';
   const targetVisibilityFilter = options.includeAuxiliaryRefs ? '1' : visibleBibleRefSql('target');
   const relatedVisibilityFilter = options.includeAuxiliaryRefs ? '1' : visibleBibleRefSql('r');
   const pageVisibilityFilter = options.includeAuxiliaryRefs ? '1' : visibleBibleScopeSql('p', 's');
+  const pageFilters = [
+    'p.deleted_at IS NULL',
+    relatedVisibilityFilter,
+    pageVisibilityFilter,
+    excludeTargetFilter
+  ];
+  const notebookIds = [...new Set(options.notebookIds?.filter(Boolean) ?? [])];
+  if (notebookIds.length > 0) {
+    const placeholders = notebookIds.map((notebookId, index) => {
+      const key = `notebookId${index}`;
+      params[key] = notebookId;
+      return `@${key}`;
+    });
+    pageFilters.push(`p.parent_notebook_id IN (${placeholders.join(', ')})`);
+  }
 
   const rows = db.prepare(`
     WITH matched_relation_rows AS MATERIALIZED (
@@ -837,10 +866,7 @@ export function findParallelBibleReferences(
       JOIN paragraph_verse_refs r ON r.id = mr.ref_id
       JOIN pages p ON p.id = mr.page_id
       LEFT JOIN sections s ON s.id = p.parent_section_id
-      WHERE p.deleted_at IS NULL
-        AND ${relatedVisibilityFilter}
-        AND ${pageVisibilityFilter}
-        AND ${excludeTargetFilter}
+      WHERE ${pageFilters.join('\n        AND ')}
       GROUP BY mr.related_verse_id, mr.page_id
     )
     SELECT
@@ -895,20 +921,24 @@ export function findParallelBibleReferenceNotes(
   }
 ): Array<Record<string, unknown>> {
   const limit = Math.max(1, Math.min(options.limit ?? 50, 200));
-  const targetVerseId = options.verse == null ? null : toVerseId(options.bookIndex, options.chapter, options.verse);
-  const relatedVerseId = options.relatedVerse == null ? null : toVerseId(options.relatedBookIndex, options.relatedChapter, options.relatedVerse);
+  const verse = Number.isInteger(options.verse) && Number(options.verse) > 0 ? Number(options.verse) : undefined;
+  const relatedVerse = Number.isInteger(options.relatedVerse) && Number(options.relatedVerse) > 0
+    ? Number(options.relatedVerse)
+    : undefined;
+  const targetVerseId = verse == null ? null : toVerseId(options.bookIndex, options.chapter, verse);
+  const relatedVerseId = relatedVerse == null ? null : toVerseId(options.relatedBookIndex, options.relatedChapter, relatedVerse);
   const params: Record<string, unknown> = {
     bookIndex: options.bookIndex,
     chapter: options.chapter,
-    verse: options.verse ?? null,
+    verse: verse ?? null,
     targetVerseId,
     relatedBookIndex: options.relatedBookIndex,
     relatedChapter: options.relatedChapter,
-    relatedVerse: options.relatedVerse ?? null,
+    relatedVerse: relatedVerse ?? null,
     relatedVerseId,
     limit
   };
-  const targetFilter = options.verse == null
+  const targetFilter = verse == null
     ? 'target.book_index = @bookIndex AND target.chapter = @chapter'
     : `
       target.book_index = @bookIndex
@@ -918,7 +948,7 @@ export function findParallelBibleReferenceNotes(
         (COALESCE(target.top_chapter, target.chapter) > @chapter OR (COALESCE(target.top_chapter, target.chapter) = @chapter AND COALESCE(target.top_verse, target.verse, 999) >= @verse))
       )
     `;
-  const relatedFilter = options.relatedVerse == null
+  const relatedFilter = relatedVerse == null
     ? 'r.book_index = @relatedBookIndex AND r.chapter = @relatedChapter'
     : `
       r.book_index = @relatedBookIndex
@@ -928,13 +958,13 @@ export function findParallelBibleReferenceNotes(
         (COALESCE(r.top_chapter, r.chapter) > @relatedChapter OR (COALESCE(r.top_chapter, r.chapter) = @relatedChapter AND COALESCE(r.top_verse, r.verse, 999) >= @relatedVerse))
       )
     `;
-  const sourceVerseFilter = options.verse == null ? '' : 'AND rel.verse_id = @targetVerseId';
-  const relativeVerseFilter = options.verse == null ? '' : 'AND rel.relative_verse_id = @targetVerseId';
-  const relatedAsRelativeVerseFilter = options.relatedVerse == null ? '' : 'AND rel.relative_verse_id = @relatedVerseId';
-  const relatedAsSourceVerseFilter = options.relatedVerse == null ? '' : 'AND rel.verse_id = @relatedVerseId';
-  const sourceRelationIndex = options.verse == null ? '' : 'INDEXED BY idx_bible_relations_verse';
-  const relativeRelationIndex = options.verse == null ? '' : 'INDEXED BY idx_bible_relations_relative';
-  const targetRelationJoin = options.verse == null ? 'JOIN' : 'CROSS JOIN';
+  const sourceVerseFilter = verse == null ? '' : 'AND rel.verse_id = @targetVerseId';
+  const relativeVerseFilter = verse == null ? '' : 'AND rel.relative_verse_id = @targetVerseId';
+  const relatedAsRelativeVerseFilter = relatedVerse == null ? '' : 'AND rel.relative_verse_id = @relatedVerseId';
+  const relatedAsSourceVerseFilter = relatedVerse == null ? '' : 'AND rel.verse_id = @relatedVerseId';
+  const sourceRelationIndex = verse == null ? '' : 'INDEXED BY idx_bible_relations_verse';
+  const relativeRelationIndex = verse == null ? '' : 'INDEXED BY idx_bible_relations_relative';
+  const targetRelationJoin = verse == null ? 'JOIN' : 'CROSS JOIN';
   const targetVisibilityFilter = options.includeAuxiliaryRefs ? '1' : visibleBibleRefSql('target');
   const relatedVisibilityFilter = options.includeAuxiliaryRefs ? '1' : visibleBibleRefSql('r');
   const finalTargetVisibilityFilter = options.includeAuxiliaryRefs ? '1' : visibleBibleRefSql('target');
@@ -1129,6 +1159,7 @@ export function searchCacheAdvanced(
 ): Array<Record<string, unknown>> {
   if (!query) throw new Error('Search query is empty.');
   let regex: RegExp | undefined;
+  let phraseRegex: RegExp | undefined;
   let terms: string[] = [];
   if (options.mode === 'regex') {
     try {
@@ -1139,6 +1170,8 @@ export function searchCacheAdvanced(
   } else if (options.mode === 'and') {
     terms = query.match(/[\p{L}\p{N}_-]+/gu) ?? [];
     if (terms.length === 0) terms = [query];
+  } else if (options.mode === 'phrase') {
+    phraseRegex = phraseSearchRegExp(query, options.caseSensitive);
   }
 
   const filters = ['p.deleted_at IS NULL'];
@@ -1172,8 +1205,9 @@ export function searchCacheAdvanced(
       const match = regex.exec(haystack);
       regex.lastIndex = 0;
       matchIndex = match?.index ?? -1;
-    } else if (options.mode === 'phrase') {
-      matchIndex = comparable.indexOf(needle);
+    } else if (phraseRegex) {
+      const match = phraseRegex.exec(haystack);
+      matchIndex = match?.index ?? -1;
     } else if (normalizedTerms.every(term => comparable.includes(term))) {
       matchIndex = comparable.indexOf(normalizedTerms[0] ?? '');
     }

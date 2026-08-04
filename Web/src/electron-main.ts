@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { resolveFolderSelection } from './folder-picker.js';
 import { listenOnLoopbackWithFallback } from './loopback-server.js';
 import { ensureOfficeTrustedProtocol, isOfficeTrustedProtocol } from './office-trusted-protocol.js';
 
@@ -22,6 +23,7 @@ const bibleProtocols = [primaryBibleProtocol, legacyBibleProtocol] as const;
 let bibleNoteProcess: ChildProcess | undefined;
 let uiProcess: ChildProcess | undefined;
 let controlServer: http.Server | undefined;
+let lastFolderPickerPath: string | undefined;
 let mainWindow: BrowserWindow | undefined;
 let biblePopupWindow: BrowserWindow | undefined;
 let bibleNoteEnsurePromise: Promise<void> | undefined;
@@ -129,6 +131,22 @@ async function openBibleLink(link: string): Promise<void> {
   const nextLink = pendingBibleLink;
   pendingBibleLink = undefined;
   if (!nextLink) return;
+  const target = mainWindow;
+  if (target && !target.isDestroyed() && target.webContents.getURL().startsWith(uiUrl('/'))) {
+    const openInReader = await target.webContents.executeJavaScript(
+      `localStorage.getItem('biblenote.onenoteLinksOpenInBible') === 'true'`,
+      true
+    ).catch(() => false);
+    if (openInReader) {
+      const script = `typeof window.bibleNoteOpenBibleRefInReader === 'function' ? Promise.resolve(window.bibleNoteOpenBibleRefInReader(${JSON.stringify(nextLink)})).then(() => true) : false`;
+      const handled = await target.webContents.executeJavaScript(script, true);
+      if (handled) {
+        focusMainWindow(true);
+        logStartup('bible link opened in main Bible reader');
+        return;
+      }
+    }
+  }
   let popup = biblePopupWindow;
   if (!popup || popup.isDestroyed()) {
     popup = createBiblePopupWindow();
@@ -242,6 +260,19 @@ async function fetchOneNoteRibbonRoute(route: string): Promise<Response> {
   throw new Error('BibleNote cache did not become ready.');
 }
 
+async function refreshCurrentOneNotePageInBackground(): Promise<void> {
+  const response = await fetchOneNoteRibbonRoute('analyze-current');
+  if (response.ok) return;
+  const text = await response.text();
+  let body: any = {};
+  try {
+    body = text ? JSON.parse(text) : {};
+  } catch {
+    body = {};
+  }
+  throw new Error(body?.error || text || `HTTP ${response.status}`);
+}
+
 async function handleOneNoteRibbonAction(action: OneNoteRibbonAction): Promise<void> {
   if (action === 'open-bible' || action === 'open') focusMainWindow(true);
   if (action === 'analyze-current') {
@@ -321,6 +352,33 @@ async function handleOneNoteRibbonAction(action: OneNoteRibbonAction): Promise<v
       true
     );
     focusMainWindow(true);
+    if (body?.needsBackgroundSync === true) {
+      await showRibbonActivity(
+        currentPageTitle
+          ? `Обновляем страницу «${currentPageTitle}» из OneNote…`
+          : 'Обновляем текущую страницу из OneNote…',
+        'running'
+      );
+      void refreshCurrentOneNotePageInBackground()
+        .then(async () => {
+          if (target.isDestroyed()) return;
+          await target.webContents.executeJavaScript(
+            `selectedPageId === ${JSON.stringify(pageId)} ? Promise.resolve(openPage(${JSON.stringify(pageId)}, { updateUrl:false, rememberHistory:false })).then(() => true) : true`,
+            true
+          );
+          await showRibbonActivity(
+            currentPageTitle
+              ? `Страница «${currentPageTitle}» обновлена из OneNote.`
+              : 'Текущая страница обновлена из OneNote.',
+            'success'
+          );
+        })
+        .catch(async error => {
+          const message = error instanceof Error ? error.message : String(error);
+          logStartup(`Background OneNote page refresh failed: ${error instanceof Error ? error.message : String(error)}`);
+          await showRibbonActivity(`Не удалось обновить страницу из OneNote: ${message}`, 'error');
+        });
+    }
   } else if (action === 'analyze-current') {
     await showRibbonActivity(
       currentPageTitle
@@ -376,6 +434,40 @@ async function startControlServer(): Promise<void> {
       }
       shell.openExternal(parsed.toString()).then(() => {
         send(200, { opened:true });
+      }).catch(error => {
+        send(500, { error:error instanceof Error ? error.message : String(error) });
+      });
+      return;
+    }
+    if (url.pathname === '/onenote/open-page' && request.method === 'POST') {
+      const target = (url.searchParams.get('url') || '').trim();
+      if (!target || target.length > 8192 || !/^onenote:/i.test(target)) {
+        send(400, { error:'A valid OneNote page link is required.' });
+        return;
+      }
+      shell.openExternal(target).then(() => {
+        send(200, { opened:true });
+      }).catch(error => {
+        send(500, { error:error instanceof Error ? error.message : String(error) });
+      });
+      return;
+    }
+    if (url.pathname === '/select-folder' && request.method === 'POST') {
+      const owner = mainWindow && !mainWindow.isDestroyed() ? mainWindow : undefined;
+      const initialFolderPath = lastFolderPickerPath || app.getPath('desktop');
+      const options = {
+        title:'Выбор папки с заметками',
+        buttonLabel:'Добавить эту папку',
+        defaultPath:initialFolderPath,
+        properties:['openDirectory'] as Array<'openDirectory'>
+      };
+      const selection = owner
+        ? dialog.showOpenDialog(owner, options)
+        : dialog.showOpenDialog(options);
+      selection.then(result => {
+        const resolved = resolveFolderSelection(result, initialFolderPath);
+        if (resolved.folderPath) lastFolderPickerPath = resolved.folderPath;
+        send(200, resolved);
       }).catch(error => {
         send(500, { error:error instanceof Error ? error.message : String(error) });
       });

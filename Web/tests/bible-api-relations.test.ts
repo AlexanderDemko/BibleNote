@@ -289,6 +289,15 @@ test('returns range relations as exact verses and sums repeated contributions pe
       verse:16,
       relatedBookIndex:44,
       relatedChapter:9,
+      relatedVerse:0,
+      includeAuxiliaryRefs:true
+    }).length, 1);
+    assert.equal(findParallelBibleReferenceNotes(db, {
+      bookIndex:43,
+      chapter:3,
+      verse:16,
+      relatedBookIndex:44,
+      relatedChapter:9,
       relatedVerse:3,
       notebookIds:['another-notebook'],
       includeAuxiliaryRefs:true

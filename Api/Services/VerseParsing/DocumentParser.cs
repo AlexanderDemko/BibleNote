@@ -3,6 +3,7 @@ using BibleNote.Services.VerseParsing.Contracts;
 using BibleNote.Services.VerseParsing.Contracts.ParseContext;
 using BibleNote.Services.VerseParsing.Models;
 using BibleNote.Services.VerseParsing.Models.ParseResult;
+using BibleNote.Services.ModulesManager.Scheme.Module;
 
 namespace BibleNote.Services.VerseParsing
 {
@@ -35,6 +36,11 @@ namespace BibleNote.Services.VerseParsing
             {
                 return paragraphParser.ParseParagraph(node, docParseContext.CurrentParagraphEditor);                
             }
+        }
+
+        public void SetDefaultBook(BibleBookInfo book, string moduleName)
+        {
+            docParseContext.SetDefaultBook(book, moduleName);
         }
 
         public DisposeHandler ParseHierarchyElement(ElementType paragraphType)

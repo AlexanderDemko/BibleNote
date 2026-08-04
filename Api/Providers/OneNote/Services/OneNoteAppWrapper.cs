@@ -81,6 +81,18 @@ namespace BibleNote.Providers.OneNote.Services
             return result;
         }
 
+        public async Task<string> GetHyperlinkToObjectAsync(string hierarchyId, string objectId = "")
+        {
+            string result = null;
+
+            await UseOneNoteAppInSingleThreadAsync(app =>
+            {
+                app.GetHyperlinkToObject(hierarchyId, objectId ?? string.Empty, out result);
+            });
+
+            return result;
+        }
+
         public async Task<string> GetCurrentSectionIdAsync()
         {
             string currentSectionId = null;

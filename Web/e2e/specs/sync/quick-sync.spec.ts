@@ -2,12 +2,20 @@ import { test, expect } from '../../fixtures/app.fixture.js';
 import { readScalar } from '../../fixtures/seed-cache.js';
 
 test('@sync быстрый sync получает страницу из fake Graph и сохраняет её в кэш', async ({ app, appPage: page }) => {
+  let quickSyncPayload: Record<string, unknown> | undefined;
+  page.on('request', request => {
+    if (request.method() === 'POST' && request.url().endsWith('/api/sync')) {
+      quickSyncPayload = request.postDataJSON();
+    }
+  });
   await page.locator('#quickSync').click();
 
   await expect.poll(
     () => readScalar(app.dbPath, 'SELECT COUNT(*) FROM pages WHERE id = ?', 'page-from-sync'),
     { timeout: 20_000 }
   ).toBe(1);
+  expect(quickSyncPayload?.incrementalMetadata).toBe(true);
+  expect(quickSyncPayload).not.toHaveProperty('notebookIds');
   await expect.poll(
     () => readScalar(app.dbPath, 'SELECT content_text FROM pages WHERE id = ?', 'page-from-sync'),
     { timeout: 20_000 }

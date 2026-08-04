@@ -48,6 +48,18 @@ namespace BibleNote.Application.Controllers
             };
         }
 
+        [HttpGet]
+        public async Task<ActionResult<OneNotePageLinkResponse>> PageLink(string pageId)
+        {
+            if (string.IsNullOrWhiteSpace(pageId))
+                return BadRequest("pageId is required.");
+
+            return new OneNotePageLinkResponse
+            {
+                ClientUrl = await oneNoteApp.GetHyperlinkToObjectAsync(pageId)
+            };
+        }
+
         [HttpPost]
         public async Task<ActionResult<QuickAnalyzeCurrentPageResponse>> QuickAnalyzeCurrentPage()
         {
@@ -69,6 +81,11 @@ namespace BibleNote.Application.Controllers
     public class OneNoteComContentResponse
     {
         public string Xml { get; set; }
+    }
+
+    public class OneNotePageLinkResponse
+    {
+        public string ClientUrl { get; set; }
     }
 
     public class QuickAnalyzeCurrentPageResponse : OneNoteCurrentPageInfo

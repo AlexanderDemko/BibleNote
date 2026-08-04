@@ -245,24 +245,27 @@ function bibleVerseIsInsideReference(verse, ref) {
     && compareBibleVerse(chapter, verseNumber, endChapter, endVerse) <= 0;
 }
 
-function bibleVerseText(result) {
+function bibleVersePreview(result, includeReference, maxVerses) {
   if (Array.isArray(result?.verses) && result.verses.length > 0) {
-    return result.verses
-      .map(verse => [verse.reference, verse.text].filter(Boolean).join(' '))
+    const limit = Number.isInteger(maxVerses) && maxVerses > 0 ? maxVerses : result.verses.length;
+    const verses = result.verses.slice(0, limit);
+    const text = verses
+      .map(verse => includeReference
+        ? [verse.reference, verse.text].filter(Boolean).join(' ')
+        : verse.text)
       .filter(Boolean)
       .join('\n');
+    return verses.length < result.verses.length ? text + '\n…' : text;
   }
   return result?.text || '';
 }
 
-function bibleVersePlainText(result) {
-  if (Array.isArray(result?.verses) && result.verses.length > 0) {
-    return result.verses
-      .map(verse => verse.text)
-      .filter(Boolean)
-      .join('\n');
-  }
-  return result?.text || '';
+function bibleVerseText(result, maxVerses) {
+  return bibleVersePreview(result, true, maxVerses);
+}
+
+function bibleVersePlainText(result, maxVerses) {
+  return bibleVersePreview(result, false, maxVerses);
 }
 
 function cloneBibleTextRef(ref) {
@@ -425,7 +428,11 @@ async function showBibleTextContext(options = {}) {
 async function openExternalBibleRefFromUrl() {
   const rawRef = new URLSearchParams(location.search).get('openBibleRef');
   if (!rawRef) return;
-  await openBibleRef(rawRef);
+  if (localStorage.getItem('biblenote.onenoteLinksOpenInBible') === 'true') {
+    await openBibleRefInReader(rawRef);
+  } else {
+    await openBibleRef(rawRef);
+  }
   history.replaceState(null, '', selectedPageId ? pageUrl(selectedPageId, currentTargetParagraphIndex) : '/');
 }
 
@@ -570,9 +577,10 @@ function parallelParams(ref) {
   const params = addBibleDisplayParams(new URLSearchParams({
     bookIndex:String(ref.bookIndex),
     chapter:String(ref.chapter),
-    limit:'30'
+    limit:'200'
   }));
   if (ref.verse) params.set('verse', String(ref.verse));
+  for (const notebookId of selectedNotebookIds()) params.append('notebookId', notebookId);
   return params;
 }
 
@@ -586,7 +594,10 @@ function parallelReferenceLabel(ref) {
   const bookName = String(ref?.bookName || '').trim();
   const chapter = Number(ref?.chapter);
   const verse = Number(ref?.verse);
-  if (bookName && Number.isInteger(chapter) && Number.isInteger(verse)) {
+  if (bookName && Number.isInteger(chapter)) {
+    if (ref?.isChapter || !Number.isInteger(verse) || verse <= 0) {
+      return bookName + ' ' + chapter;
+    }
     const topChapter = Number(ref?.topChapter || chapter);
     const topVerse = Number(ref?.topVerse || verse);
     const rangeEnd = topChapter === chapter && Number.isInteger(topVerse) && topVerse > verse
@@ -594,7 +605,8 @@ function parallelReferenceLabel(ref) {
       : '';
     return bookName + ' ' + chapter + ':' + verse + rangeEnd;
   }
-  return ref?.normalizedRef || ref?.originalText || 'Стих';
+  const fallback = ref?.normalizedRef || ref?.originalText || 'Стих';
+  return String(fallback).replace(/(\b\d+):0\b/g, '$1');
 }
 
 function parallelCommonNoteKey(row) {
@@ -631,8 +643,9 @@ function groupConsecutiveParallelRows(rows) {
 }
 
 function parallelRefFromRow(row) {
-  const normalizedRef = row.bookName && row.chapter && row.verse
-    ? row.bookName + ' ' + row.chapter + ':' + row.verse
+  const verse = Number(row.verse);
+  const normalizedRef = row.bookName && row.chapter
+    ? row.bookName + ' ' + row.chapter + (Number.isInteger(verse) && verse > 0 ? ':' + verse : '')
     : row.normalizedRef;
   return {
     normalizedRef,
@@ -652,7 +665,8 @@ async function loadParallelVerseText(ref, host, includeReference = true) {
   host.classList.remove('error');
   try {
     const result = await api(bibleTextUrl(ref), { timeoutMs:120000 });
-    host.textContent = (includeReference ? bibleVerseText(result) : bibleVersePlainText(result)) || 'Текст не найден.';
+    const maxVerses = Number(ref?.verse) > 0 ? undefined : 2;
+    host.textContent = (includeReference ? bibleVerseText(result, maxVerses) : bibleVersePlainText(result)) || 'Текст не найден.';
     host.classList.remove('loading');
   } catch (error) {
     host.textContent = 'Не удалось загрузить текст: ' + (error?.message || String(error));
@@ -747,12 +761,12 @@ async function openBibleParallelPanel(ref) {
     notesButton.addEventListener('click', () => showParallelPairNotes(ref, relatedRef).catch(showError));
     const metrics = document.createElement('span');
     metrics.className = 'bible-parallel-metrics';
-    const weight = Number(item.relationWeight || 0).toFixed(2).replace('.', ',');
+    const weight = Number(item.relationWeight || 0).toFixed(4).replace(/\.?0+$/, '').replace('.', ',');
     const weightMetric = document.createElement('span');
     weightMetric.className = 'bible-parallel-metric';
     weightMetric.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h10M14 4l3 3-3 3M17 17H7M10 14l-3 3 3 3"/></svg><span>' + weight + '</span>';
-    weightMetric.title = 'Индекс параллельности: ' + weight;
-    weightMetric.setAttribute('aria-label', 'Индекс параллельности: ' + weight);
+    weightMetric.title = 'Вес связи: ' + weight;
+    weightMetric.setAttribute('aria-label', 'Вес связи: ' + weight);
     metrics.append(weightMetric, notesButton);
     const verseText = document.createElement('div');
     verseText.className = 'bible-parallel-note-text bible-parallel-verse-text loading';
@@ -786,7 +800,15 @@ function pluralRu(value, one, few, many) {
 }
 
 function cacheStatusText(status) {
-  return status.pages + ' страниц · ' + status.pagesWithContent + ' с текстом · ' + (status.bibleReferences || 0) + ' ссылок · ' + status.pagesWithErrors + ' ' + pluralRu(status.pagesWithErrors, 'ошибка', 'ошибки', 'ошибок');
+  const parts = [
+    status.pages + ' страниц',
+    status.pagesWithContent + ' с текстом'
+  ];
+  if (status.bibleReferences != null) parts.push(status.bibleReferences + ' ссылок');
+  if (status.pagesWithErrors != null) {
+    parts.push(status.pagesWithErrors + ' ' + pluralRu(status.pagesWithErrors, 'ошибка', 'ошибки', 'ошибок'));
+  }
+  return parts.join(' · ');
 }
 
 function searchHighlightTerms(request) {

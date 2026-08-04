@@ -2,6 +2,7 @@
 using BibleNote.Services.Contracts;
 using BibleNote.Services.VerseParsing.Contracts.ParseContext;
 using BibleNote.Services.VerseParsing.Models.ParseResult;
+using BibleNote.Services.ModulesManager.Scheme.Module;
 
 namespace BibleNote.Services.VerseParsing.Models.ParseContext
 {
@@ -13,6 +14,10 @@ namespace BibleNote.Services.VerseParsing.Models.ParseContext
         public IDocumentId DocumentId { get; private set; }
 
         public ChapterEntry TitleChapter { get; private set; }
+
+        public BibleBookInfo DefaultBook { get; private set; }
+
+        public string DefaultBookModuleName { get; private set; }
 
         public DocumentParseResult DocumentParseResult { get; private set; }
 
@@ -31,6 +36,12 @@ namespace BibleNote.Services.VerseParsing.Models.ParseContext
         public void SetTitleVerse(ChapterEntry titleChapter)
         {
             TitleChapter = titleChapter;
+        }
+
+        public void SetDefaultBook(BibleBookInfo book, string moduleName)
+        {
+            DefaultBook = book;
+            DefaultBookModuleName = moduleName;
         }
 
         public DisposeHandler ParseParagraph()
@@ -114,29 +125,32 @@ namespace BibleNote.Services.VerseParsing.Models.ParseContext
                 SetTitleVerse(CurrentHierarchy.ChapterEntry);
             }
 
-            var valuableHierarchyResult = CurrentHierarchy.ParseResult.GetValuableHierarchyResult();
+            var structuralHierarchyResult = CurrentHierarchy.ParseResult;
+            var valuableHierarchyResult = structuralHierarchyResult.GetValuableHierarchyResult();
             previousElement = CurrentHierarchy;
             CurrentHierarchy = CurrentHierarchy.ParentHierarchy;
-            
-            if (valuableHierarchyResult != null)
-            {
-                if (CurrentHierarchy != null)
-                {
-                    CurrentHierarchy.AddHierarchyResult(valuableHierarchyResult);
-                }
-                else
-                {
-                    if (DocumentParseResult.RootHierarchyResult != null)
-                        throw new InvalidOperationException("DocumentParseResult.RootHierarchyResult != null");
 
-                    DocumentParseResult.RootHierarchyResult = valuableHierarchyResult;                    
-                }
-            }                
+            if (CurrentHierarchy != null)
+            {
+                CurrentHierarchy.AddStructuralHierarchyResult(structuralHierarchyResult);
+                if (valuableHierarchyResult != null)
+                    CurrentHierarchy.AddHierarchyResult(valuableHierarchyResult);
+            }
+            else
+            {
+                if (DocumentParseResult.StructureRootHierarchyResult != null)
+                    throw new InvalidOperationException("DocumentParseResult.StructureRootHierarchyResult != null");
+
+                DocumentParseResult.StructureRootHierarchyResult = structuralHierarchyResult;
+                DocumentParseResult.RootHierarchyResult = valuableHierarchyResult;
+            }
         }
 
         public void ClearContext()
-        {   
-            TitleChapter = null;            
+        {
+            TitleChapter = null;
+            DefaultBook = null;
+            DefaultBookModuleName = null;
             CurrentParagraph = null;
             CurrentHierarchy = null;
             previousElement = null;

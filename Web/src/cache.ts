@@ -108,8 +108,8 @@ export function resetCacheDb(db: Database.Database): void {
   db.pragma('secure_delete = OFF');
   try {
     const reset = db.transaction(() => {
-      // page_access intentionally survives a cache rebuild so a new hydration
-      // run can still prioritize pages the user has opened before.
+      // page_access and sync_history intentionally survive a cache rebuild so
+      // user activity and synchronization history remain available.
       db.exec(`
         DROP TABLE IF EXISTS pages_fts;
         DROP TABLE IF EXISTS paragraph_verse_relations;
@@ -149,6 +149,80 @@ export function setSyncState(db: Database.Database, key: string, value: string):
 
 export function clearSyncState(db: Database.Database, key: string): void {
   db.prepare('DELETE FROM sync_state WHERE key = ?').run(key);
+}
+
+export type SyncHistoryStatus = 'success' | 'completed_with_errors' | 'failed';
+
+export type SyncHistoryEntry = {
+  id: number;
+  startedAt: string;
+  finishedAt: string;
+  status: SyncHistoryStatus;
+  mode: string;
+  scope: string;
+  request: Record<string, unknown> | null;
+  result: Record<string, unknown> | null;
+  error: string | null;
+};
+
+export function recordSyncHistory(
+  db: Database.Database,
+  entry: Omit<SyncHistoryEntry, 'id'>
+): number {
+  const result = db.prepare(`
+    INSERT INTO sync_history(
+      started_at, finished_at, status, mode, scope, request_json, result_json, error
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    entry.startedAt,
+    entry.finishedAt,
+    entry.status,
+    entry.mode,
+    entry.scope,
+    entry.request ? JSON.stringify(entry.request) : null,
+    entry.result ? JSON.stringify(entry.result) : null,
+    entry.error
+  );
+  return Number(result.lastInsertRowid);
+}
+
+export function listSyncHistory(
+  db: Database.Database,
+  options: { limit?: number; offset?: number } = {}
+): { total: number; rows: SyncHistoryEntry[] } {
+  const limit = Math.max(1, Math.min(options.limit ?? 20, 100));
+  const offset = Math.max(0, options.offset ?? 0);
+  const total = (db.prepare('SELECT COUNT(*) AS value FROM sync_history').get() as { value: number }).value;
+  const rows = db.prepare(`
+    SELECT id, started_at, finished_at, status, mode, scope, request_json, result_json, error
+    FROM sync_history
+    ORDER BY started_at DESC, id DESC
+    LIMIT ? OFFSET ?
+  `).all(limit, offset) as Array<{
+    id: number;
+    started_at: string;
+    finished_at: string;
+    status: SyncHistoryStatus;
+    mode: string;
+    scope: string;
+    request_json: string | null;
+    result_json: string | null;
+    error: string | null;
+  }>;
+  return {
+    total,
+    rows:rows.map(row => ({
+      id:row.id,
+      startedAt:row.started_at,
+      finishedAt:row.finished_at,
+      status:row.status,
+      mode:row.mode,
+      scope:row.scope,
+      request:row.request_json ? JSON.parse(row.request_json) : null,
+      result:row.result_json ? JSON.parse(row.result_json) : null,
+      error:row.error
+    }))
+  };
 }
 
 export function upsertNotebook(db: Database.Database, notebook: any, syncedAt = nowIso()): void {
@@ -309,6 +383,22 @@ export function listRecentlyOpenedPageIds(db: Database.Database, limit = 100): s
 }
 
 export function upsertPageMetadata(db: Database.Database, page: any, syncedAt = nowIso()): void {
+  const existing = db.prepare(`
+    SELECT
+      title,
+      parent_notebook_name,
+      parent_section_name,
+      deleted_at,
+      content_text IS NOT NULL AS has_content
+    FROM pages
+    WHERE id = ?
+  `).get(page.id) as {
+    title: string | null;
+    parent_notebook_name: string | null;
+    parent_section_name: string | null;
+    deleted_at: string | null;
+    has_content: number;
+  } | undefined;
   const upsert = db.prepare(`
     INSERT INTO pages(
       id, title, created_date_time, last_modified_date_time, content_url,
@@ -350,13 +440,32 @@ export function upsertPageMetadata(db: Database.Database, page: any, syncedAt = 
     order_index: page.orderIndex ?? page.order ?? null,
     page_level: page.level ?? page.pageLevel ?? null
   };
+  const refreshFtsMetadata = Boolean(existing?.has_content) && (
+    existing?.deleted_at != null
+    || existing?.title !== values.title
+    || existing?.parent_notebook_name !== values.parent_notebook_name
+    || existing?.parent_section_name !== values.parent_section_name
+  );
   const tx = db.transaction(() => {
     upsert.run(values);
-    db.prepare(`
-      UPDATE pages_fts
-      SET title = @title, notebook = @parent_notebook_name, section = @parent_section_name
-      WHERE page_id = @id
-    `).run(values);
+    if (refreshFtsMetadata) {
+      const updated = db.prepare(`
+        UPDATE pages_fts
+        SET title = @title, notebook = @parent_notebook_name, section = @parent_section_name
+        WHERE page_id = @id
+      `).run(values);
+      if (updated.changes === 0) {
+        const content = db.prepare('SELECT content_text FROM pages WHERE id = ?').get(values.id) as {
+          content_text: string | null;
+        } | undefined;
+        if (content?.content_text != null) {
+          db.prepare(`
+            INSERT INTO pages_fts(page_id, title, content, notebook, section)
+            VALUES (@id, @title, @content, @parent_notebook_name, @parent_section_name)
+          `).run({ ...values, content:content.content_text });
+        }
+      }
+    }
   });
   tx();
 }
@@ -576,7 +685,7 @@ export function upsertBibleParseResult(
   const module = result.module || 'rst';
   const paragraphs = result.paragraphs ?? [];
   if (!Array.isArray(result.relations)) {
-    throw new Error('BibleNote API ParsePage response does not contain relations. Update the BibleNote API before parsing with biblenote-http-v6.');
+    throw new Error('BibleNote API ParsePage response does not contain relations. Update the BibleNote API before parsing with biblenote-http-v7.');
   }
   const relations = result.relations;
   const valuableParagraphs = paragraphs.filter(paragraph =>
@@ -864,6 +973,25 @@ export function markMissingPagesDeleted(
 export function cacheStatus(db: Database.Database): Record<string, unknown> {
   const one = (sql: string) => (db.prepare(sql).get() as any)?.value ?? 0;
   const lastSync = db.prepare('SELECT key, value, updated_at FROM sync_state ORDER BY key').all();
+  const pages = one('SELECT COUNT(*) AS value FROM pages WHERE deleted_at IS NULL');
+  const pagesWithoutContent = one('SELECT COUNT(*) AS value FROM pages WHERE content_synced_at IS NULL AND deleted_at IS NULL');
+
+  return {
+    dbPath: db.name,
+    notebooks: one('SELECT COUNT(*) AS value FROM notebooks'),
+    sections: one('SELECT COUNT(*) AS value FROM sections'),
+    pages,
+    deletedPages: one('SELECT COUNT(*) AS value FROM pages WHERE deleted_at IS NOT NULL'),
+    pagesWithContent: Math.max(0, pages - pagesWithoutContent),
+    sectionsWithScanErrors: one("SELECT COUNT(*) AS value FROM sections WHERE pages_scan_error IS NOT NULL"),
+    bibleParsedPages: one("SELECT COUNT(*) AS value FROM page_bible_parse_state WHERE parsed_at IS NOT NULL AND parse_error IS NULL"),
+    bibleParseErrors: one("SELECT COUNT(*) AS value FROM page_bible_parse_state WHERE parse_error IS NOT NULL"),
+    lastSync
+  };
+}
+
+export function cacheStatistics(db: Database.Database): Record<string, unknown> {
+  const one = (sql: string) => (db.prepare(sql).get() as any)?.value ?? 0;
   const size = db.prepare(`
     SELECT
       COALESCE(SUM(content_chars), 0) AS content_chars,
@@ -871,22 +999,13 @@ export function cacheStatus(db: Database.Database): Record<string, unknown> {
     FROM pages
     WHERE deleted_at IS NULL
   `).get();
-
   return {
-    dbPath: db.name,
-    notebooks: one('SELECT COUNT(*) AS value FROM notebooks'),
-    sections: one('SELECT COUNT(*) AS value FROM sections'),
-    pages: one('SELECT COUNT(*) AS value FROM pages WHERE deleted_at IS NULL'),
-    deletedPages: one('SELECT COUNT(*) AS value FROM pages WHERE deleted_at IS NOT NULL'),
+    ...cacheStatus(db),
     pagesWithContent: one('SELECT COUNT(*) AS value FROM pages WHERE deleted_at IS NULL AND content_text IS NOT NULL'),
     pagesWithErrors: one("SELECT COUNT(*) AS value FROM pages WHERE deleted_at IS NULL AND fetch_error IS NOT NULL"),
-    sectionsWithScanErrors: one("SELECT COUNT(*) AS value FROM sections WHERE pages_scan_error IS NOT NULL"),
-    bibleParsedPages: one("SELECT COUNT(*) AS value FROM page_bible_parse_state WHERE parsed_at IS NOT NULL AND parse_error IS NULL"),
-    bibleParseErrors: one("SELECT COUNT(*) AS value FROM page_bible_parse_state WHERE parse_error IS NOT NULL"),
     bibleReferencedParagraphs: one('SELECT COUNT(*) AS value FROM page_paragraphs'),
     bibleReferences: one('SELECT COUNT(*) AS value FROM paragraph_verse_refs'),
     bibleReferenceRelations: one('SELECT COUNT(*) AS value FROM paragraph_verse_relations'),
-    content: size,
-    lastSync
+    content: size
   };
 }

@@ -1,6 +1,7 @@
 ﻿using BibleNote.Services.Contracts;
 using BibleNote.Services.VerseParsing.Models;
 using BibleNote.Services.VerseParsing.Models.ParseResult;
+using BibleNote.Services.ModulesManager.Scheme.Module;
 
 namespace BibleNote.Services.VerseParsing.Contracts.ParseContext
 {
@@ -9,6 +10,10 @@ namespace BibleNote.Services.VerseParsing.Contracts.ParseContext
         IDocumentId DocumentId { get; }
 
         ChapterEntry TitleChapter { get; }
+
+        BibleBookInfo DefaultBook { get; }
+
+        string DefaultBookModuleName { get; }
 
         IParagraphParseContext CurrentParagraph { get; }
 
@@ -24,6 +29,8 @@ namespace BibleNote.Services.VerseParsing.Contracts.ParseContext
         IParagraphParseContextEditor CurrentParagraphEditor { get; }
 
         void SetTitleVerse(ChapterEntry titleChapter);
+
+        void SetDefaultBook(BibleBookInfo book, string moduleName);
 
         DisposeHandler ParseParagraph();
 

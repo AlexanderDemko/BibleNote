@@ -97,14 +97,24 @@ namespace BibleNote.Services.VerseParsing
         /// <param name="docParseContext"></param>
         /// <returns></returns>
         private static bool ChapterVerseRule(VerseEntry verseEntry, IDocumentParseContext docParseContext)
-        {            
-            if (docParseContext.CurrentParagraph.LatestVerseEntry != null)
+        {
+            const int maxContextDistance = 64;
+            var latestEntry = docParseContext.CurrentParagraph.LatestVerseEntry;
+            if (latestEntry != null
+                && verseEntry.StartIndex - latestEntry.EndIndex <= maxContextDistance)
             {
-                var latestVp = docParseContext.CurrentParagraph.LatestVerseEntry.VersePointer;
+                var latestVp = latestEntry.VersePointer;
                 verseEntry.VersePointer.Book = latestVp.Book;
                 verseEntry.VersePointer.ModuleShortName = latestVp.ModuleShortName;
                 return true;
-            }                        
+            }
+
+            if (docParseContext.DefaultBook != null)
+            {
+                verseEntry.VersePointer.Book = docParseContext.DefaultBook;
+                verseEntry.VersePointer.ModuleShortName = docParseContext.DefaultBookModuleName;
+                return true;
+            }
 
             return false;
         }

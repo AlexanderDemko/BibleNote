@@ -16,7 +16,7 @@ The cache stores:
 - sections
 - page metadata
 - page plain text
-- optional raw page HTML
+- raw page HTML used to preserve document structure
 - SQLite FTS5 full-text index over title, page text, notebook, and section
 
 Default cache path:
@@ -25,24 +25,42 @@ Default cache path:
 ~/BibleNote/onenote-cache.sqlite
 ```
 
-## OneNote data source
+## Data sources
 
-The Windows desktop app can populate the same SQLite cache from either:
+The desktop app can populate the same SQLite cache from:
 
-- `Microsoft Graph (cloud)` — works without the desktop OneNote client and requires Microsoft sign-in.
-- `Classic OneNote on this computer` — reads the notebooks currently opened in classic OneNote
+- `OneNote Cloud` — works without the desktop OneNote client and requires Microsoft sign-in.
+- `OneNote Local` — reads the notebooks currently opened in classic OneNote
   through its COM API; Azure registration and Microsoft sign-in are not required.
+- `Folder` — recursively reads local `.html`, `.htm`, `.txt`, `.doc`, `.docx`, and `.pdf` files. Each configured
+  root folder is shown as a notebook, nested folders are shown as groups, and files are pages.
+  PDF is experimental and never invokes OCR. Legacy `.doc` files are converted through Microsoft
+  Word COM when Word is installed on Windows. If COM is unavailable (including on macOS), the file
+  error and its path are written to the runtime log while the rest of the sync continues.
 
-Choose the source under `Settings → OneNote access → Note source`, or set
-`ONENOTE_DATA_SOURCE=graph` / `ONENOTE_DATA_SOURCE=com`. COM mode is Windows-only and uses the
+Add any combination under `Settings → Data sources`: OneNote Cloud, OneNote Local, and named folder
+sources. A folder source can contain one or more root folders. The left navigation groups all roots
+from that source into one expandable panel under its configured name; Cloud and Local panels contain
+notebooks. Removing a source removes only the cached hierarchy belonging to its folders.
+
+The desktop UI stores the list in `BIBLENOTE_DATA_SOURCES`. The legacy
+`ONENOTE_DATA_SOURCE=graph` / `ONENOTE_DATA_SOURCE=com` / `ONENOTE_DATA_SOURCE=folder` setting is
+still migrated when no source list exists. COM mode is Windows-only and uses the
 OneNote hierarchy/page APIs already used by BibleNote v3. Search, Bible-reference parsing, and the
 viewer continue to use the shared local cache.
 
-Graph and COM use different object identifiers. After switching an existing cache to the other
-source, run `Recreate local cache` once. The setup wizard detects this transition and requests a
-replacement sync automatically.
+HTML and derived plain text are always cached. HTML preserves paragraph nesting for Bible-reference relation weights; plain text is used for FTS indexing.
 
-For thousands of large pages, keep raw HTML disabled unless you really need it. Plain text is always cached and indexed.
+### Folder extraction quality
+
+- HTML keeps its native block/list/table structure after unsafe active markup is removed.
+- TXT indentation is converted to nested lists.
+- DOCX is converted to HTML with paragraphs, headings, lists, and tables through Mammoth.
+- DOC is first converted to DOCX by installed Microsoft Word through COM on Windows, then follows
+  the same structured extraction path as DOCX.
+- PDF text is reconstructed from positioned text items. A page indicator reports `textual`,
+  `heuristic`, or `requires OCR`. The last state means the PDF has no useful text layer; OCR remains
+  disabled in this version.
 
 ## 1. Microsoft sign-in
 
@@ -98,7 +116,6 @@ npm run sync -- --replace-all
 npm run sync -- --force-content
 npm run sync -- --refresh-older-than-hours 720
 npm run sync -- --concurrency 1
-npm run sync -- --include-html
 npm run sync -- --section-id <section-id>
 npm run sync -- --page-id <page-id>
 npm run sync -- --notebook-id <notebook-id>
@@ -195,9 +212,8 @@ module, canonical Bible location, character offsets, selected quote, and nearby 
 
 The separate synchronization settings panel applies to full sync and every targeted notebook,
 section, or page sync action, except `Перезаписать данные полностью`, which is intentionally used
-only by the main full-sync button. Settings are saved in the browser. To refresh one page with its
-raw OneNote HTML, enable `Сохранять HTML` and then use the page's `↻` action; after completion the
-page shows `Показать HTML`.
+only by the main full-sync button. Settings are saved in the browser. Every content sync stores the
+page HTML; use the page's `↻` action to refresh one page.
 
 The theme selector in the viewer header offers three persistent themes: `A · Тёплая`,
 `B · Светлая`, and `C · Тёмная`.
@@ -206,8 +222,9 @@ Notebook rows also provide a pencil action for setting a local display name. The
 SQLite, is used throughout the cache viewer, and does not rename the notebook in OneNote or require
 Graph write permissions. The dialog can restore the original OneNote name at any time.
 
-Pages synchronized with `--include-html` show a `Показать HTML` button. The cached HTML is loaded
-only on demand and rendered in a sandboxed iframe; pages without cached HTML remain text-only.
+Synchronized pages show a `Показать HTML` button. The cached HTML is loaded only on demand and
+rendered in a sandboxed iframe. Legacy cache entries without HTML are downloaded again during the
+next content sync.
 
 The `Журнал загрузки` panel reports page-level cache state for the selected notebooks. It can show
 pages downloaded during the latest sync, all downloaded pages, pages still missing content, Graph

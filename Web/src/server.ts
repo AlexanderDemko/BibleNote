@@ -95,7 +95,6 @@ server.registerTool(
       replaceAll: z.boolean().default(false),
       forceContent: z.boolean().default(false),
       metadataOnly: z.boolean().default(false),
-      includeHtml: z.boolean().default(false),
       maxPages: z.number().int().min(1).max(100000).optional(),
       concurrency: z.number().int().min(1).max(3).default(1),
       refreshOlderThanHours: z.number().int().min(0).max(100000).default(0),
@@ -108,12 +107,11 @@ server.registerTool(
       bibleModule: z.string().default('rst')
     })
   },
-  async ({ replaceAll, forceContent, metadataOnly, includeHtml, maxPages, concurrency, refreshOlderThanHours, sectionId, pageId, notebookIds, parseBibleRefs, forceBibleParse, bibleNoteApiUrl, bibleModule }) => {
+  async ({ replaceAll, forceContent, metadataOnly, maxPages, concurrency, refreshOlderThanHours, sectionId, pageId, notebookIds, parseBibleRefs, forceBibleParse, bibleNoteApiUrl, bibleModule }) => {
     const result = await syncOneNoteCache({
       replaceAll,
       forceContent,
       metadataOnly,
-      includeHtml,
       maxPages,
       concurrency,
       refreshOlderThanHours,

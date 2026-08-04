@@ -385,17 +385,27 @@ function waitForHtmlFrameReady(frame, signal) {
   });
 }
 
-async function openBibleRef(rawRef) {
+async function parseBibleRefLink(rawRef) {
   uiLog('ui.openBibleRef', { rawRef });
   const normalizedRef = String(rawRef || '').trim()
     .replace(/^https?:\/\/isbtBibleVerse:/i, 'isbtBibleVerse:')
     .replace(/^https?:\/\/bnVerse:/i, 'bnVerse:');
   const params = new URLSearchParams({ ref:normalizedRef, module:currentBibleModule() });
-  const result = await api('/api/bible/parse-link?' + params.toString());
+  return api('/api/bible/parse-link?' + params.toString());
+}
+
+async function openBibleRef(rawRef) {
+  const result = await parseBibleRefLink(rawRef);
   if (result.reference) await showBibleText(result.reference);
 }
 
+async function openBibleRefInReader(rawRef) {
+  const result = await parseBibleRefLink(rawRef);
+  if (result.reference) await openBibleTextInReader(result.reference);
+}
+
 window.bibleNoteOpenBibleRef = openBibleRef;
+window.bibleNoteOpenBibleRefInReader = openBibleRefInReader;
 
 window.addEventListener('message', event => {
   const data = event.data || {};

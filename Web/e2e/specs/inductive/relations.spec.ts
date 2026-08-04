@@ -133,7 +133,12 @@ test('@inductive создание, изменение и удаление свя
   await selectVerseRange(page, 1, 0, 8);
   await page.locator('.inductive-popover-relation[data-type="cause"]').click();
   await expect(page.locator('.inductive-relation-status')).toContainText('нажмите на второе слово');
+  const chapterHint = page.locator('.inductive-relation-chapter-hint');
+  await expect(chapterHint).toBeVisible();
+  await expect(chapterHint).toContainText('выберите второе слово или выделите фразу');
+  await expect(chapterHint).toContainText('Esc — отменить');
   await clickVerseWord(page, 2, 11, 17);
+  await expect(chapterHint).toBeHidden();
   await expect(page.locator('.inductive-relation-row')).toHaveCount(1);
   await expect(page.locator('.inductive-relation-status.created'))
     .toContainText('Связь «Причина → следствие» сохранена.');
@@ -200,6 +205,22 @@ test('@inductive неполное выделение второй фразы р�
   expect(created.targetStartOffset).toBe(11);
   expect(created.targetEndOffset).toBe(24);
   expect(created.targetQuote).toBe('начале у Бога');
+});
+
+test('@inductive одинаковые стороны связи отклоняются понятной подсказкой без закрытия главы', async ({ app, appPage:page }) => {
+  await page.goto(`${app.baseUrl}/bible/rst/43/1`);
+  await page.locator('.inductive-mode-button').click();
+
+  await selectVerseRange(page, 1, 4, 6);
+  await page.locator('.inductive-popover-relation[data-type="comparison"]').click();
+  await clickVerseWord(page, 1, 2, 8);
+
+  await expect(page.locator('.inductive-relation-status.invalid'))
+    .toContainText('Этот фрагмент уже выбран как первая сторона связи. Выберите другое слово или фразу.');
+  await expect(page.locator('.inductive-relation-row')).toHaveCount(0);
+  await expect(page.locator('.error-box')).toHaveCount(0);
+  await expect(page.locator('#bible-verse-1-1')).toBeVisible();
+  expect(await chapterRelations(page, app)).toHaveLength(0);
 });
 
 test('@inductive удаление ранее сохранённой связи записывается в пустую историю', async ({ app, appPage:page }) => {
@@ -304,4 +325,56 @@ test('@inductive экспортированная глава импортиру�
     backgroundColor:'#dceefa',
     decoration:'box'
   });
+});
+
+test('@inductive экспорт и импорт всей Библии переносит разметку разных глав', async ({ app, appPage:page }) => {
+  const annotationsResponse = await page.request.post(`${app.baseUrl}/api/inductive/annotations`, {
+    data:{ annotations:[
+      {
+        module:'rst', bookIndex:43, chapter:1, verse:1,
+        startOffset:0, endOffset:8, quote:'В начале', styleId:'keyword'
+      },
+      {
+        module:'rst', bookIndex:43, chapter:2, verse:1,
+        startOffset:0, endOffset:5, quote:'Слово', styleId:'keyword'
+      }
+    ] }
+  });
+  expect(annotationsResponse.ok()).toBeTruthy();
+  const annotations = (await annotationsResponse.json()).annotations as Array<{ id:string }>;
+  const relationResponse = await page.request.post(`${app.baseUrl}/api/inductive/relations`, {
+    data:{
+      module:'rst', bookIndex:43, chapter:2,
+      source:{ verse:1, startOffset:0, endOffset:5, quote:'Слово' },
+      target:{ verse:2, startOffset:6, endOffset:9, quote:'Бог' },
+      type:'comparison', note:'между главами экспорта'
+    }
+  });
+  expect(relationResponse.ok()).toBeTruthy();
+  const relation = (await relationResponse.json()).relation as { id:string };
+
+  await page.goto(`${app.baseUrl}/bible/rst/43/1`);
+  await expect(page.locator('#exportInductiveMarkings')).toHaveText('Экспортировать разметку текущей главы');
+  await expect(page.locator('#exportAllInductiveMarkings')).toHaveText('Экспортировать разметку всей Библии');
+  const downloadPromise = page.waitForEvent('download');
+  await page.locator('#exportAllInductiveMarkings').evaluate((button:HTMLButtonElement) => button.click());
+  const download = await downloadPromise;
+  const exportedFile = await download.path();
+  expect(exportedFile).toBeTruthy();
+  await expect(page.locator('#importInductiveMarkingsStatus')).toContainText('Экспортировано: глав — 2, отметок — 2, связей — 1');
+
+  await page.request.delete(`${app.baseUrl}/api/inductive/relations/${relation.id}`);
+  for (const annotation of annotations) {
+    await page.request.delete(`${app.baseUrl}/api/inductive/annotations/${annotation.id}`);
+  }
+
+  await page.locator('#importInductiveMarkingsFile').setInputFiles(exportedFile!);
+  await expect(page.locator('#importInductiveMarkingsStatus'))
+    .toContainText('Импортирована разметка всей Библии');
+  const chapterOne = await page.request.get(`${app.baseUrl}/api/inductive/annotations?module=rst&bookIndex=43&chapter=1`);
+  const chapterTwo = await page.request.get(`${app.baseUrl}/api/inductive/annotations?module=rst&bookIndex=43&chapter=2`);
+  const chapterTwoRelations = await page.request.get(`${app.baseUrl}/api/inductive/relations?module=rst&bookIndex=43&chapter=2`);
+  expect((await chapterOne.json()).annotations).toHaveLength(1);
+  expect((await chapterTwo.json()).annotations).toHaveLength(1);
+  expect((await chapterTwoRelations.json()).relations).toHaveLength(1);
 });

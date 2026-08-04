@@ -322,6 +322,10 @@ namespace BibleNote.Application.Controllers
 
                 using (var parser = documentParserFactory.Create(provider, documentId))
                 {
+                    var defaultBook = TryGetTitleBook(request.Title);
+                    if (defaultBook != null)
+                        parser.SetDefaultBook(defaultBook.BibleBook, defaultBook.ModuleName);
+
                     if (!string.IsNullOrWhiteSpace(request.Html))
                     {
                         updatedHtml = ParseHtml(parser, request.Html, paragraphs, updateHtml);
@@ -379,6 +383,30 @@ namespace BibleNote.Application.Controllers
                     RelationsCapped = relationCalculation.Capped
                 };
             }
+        }
+
+        private Abbreviation TryGetTitleBook(string title)
+        {
+            if (string.IsNullOrWhiteSpace(title))
+                return null;
+
+            var matches = applicationManager.CurrentModuleInfo.BibleStructure.AllAbbreviations.Values
+                .Where(abbreviation => abbreviation.IsFullBookName
+                    && TitleContainsBookName(title, abbreviation.Value))
+                .GroupBy(abbreviation => abbreviation.BibleBook.Index)
+                .Select(group => group.OrderByDescending(abbreviation => abbreviation.Value.Length).First())
+                .ToList();
+
+            return matches.Count == 1 ? matches[0] : null;
+        }
+
+        private static bool TitleContainsBookName(string title, string bookName)
+        {
+            var words = Regex.Split(bookName.Trim(), @"\s+")
+                .Where(word => word.Length > 0)
+                .Select(Regex.Escape);
+            var pattern = @"(?<![\p{L}\p{N}])" + string.Join(@"\s+", words) + @"(?![\p{L}\p{N}])";
+            return Regex.IsMatch(title, pattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
         }
 
         [HttpGet]

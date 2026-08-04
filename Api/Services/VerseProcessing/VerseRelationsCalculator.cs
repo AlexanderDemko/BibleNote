@@ -8,13 +8,18 @@ namespace BibleNote.Services.VerseProcessing
 {
     public static class VerseRelationsCalculator
     {
+        private const decimal MinWeight = 0.01M;
+        private const decimal UnrelatedDepthFactor = 0.2M;
+        private const decimal NestedIntermediateParagraphCost = 0.1M;
+
         public static VerseRelationCalculationResult Calculate(DocumentParseResult documentResult, int? maxRelations = null)
         {
             var result = new VerseRelationCalculationResult();
             if (documentResult?.RootHierarchyResult == null)
                 return result;
 
-            var linearResult = LinearParseResult.FromHierarchyParseResult(documentResult.RootHierarchyResult);
+            var linearResult = LinearParseResult.FromHierarchyParseResult(
+                documentResult.StructureRootHierarchyResult ?? documentResult.RootHierarchyResult);
             var paragraphs = new List<ParagraphParseResultExt>(linearResult.Paragraphs);
             var referencedParagraphIndexes = GetReferencedParagraphIndexes(paragraphs);
             var nextLowerParagraphIndexes = GetNextLowerParagraphIndexes(paragraphs);
@@ -67,6 +72,7 @@ namespace BibleNote.Services.VerseProcessing
                         var relationWeight = GetParagraphsWeight(
                             paragraphIndex,
                             relativeParagraphIndex,
+                            paragraphs,
                             nextLowerParagraphIndexes);
                         for (var relativeReferenceIndex = 0;
                             relativeReferenceIndex < relativeParagraph.VerseEntries.Count;
@@ -160,14 +166,32 @@ namespace BibleNote.Services.VerseProcessing
         private static decimal GetParagraphsWeight(
             int paragraphIndex,
             int relativeParagraphIndex,
+            IReadOnlyList<ParagraphParseResultExt> paragraphs,
             IReadOnlyList<int> nextLowerParagraphIndexes)
         {
-            const decimal minWeight = 0.01M;
             if (nextLowerParagraphIndexes[paragraphIndex] <= relativeParagraphIndex)
-                return minWeight;
+                return MinWeight;
 
-            var intermediateParagraphs = relativeParagraphIndex - paragraphIndex - 1;
-            return Math.Max(minWeight, 1M / (intermediateParagraphs + 2));
+            var paragraph = paragraphs[paragraphIndex];
+            var relativeParagraph = paragraphs[relativeParagraphIndex];
+            var effectiveIntermediateDistance = 0M;
+            for (var index = paragraphIndex + 1; index < relativeParagraphIndex; index++)
+            {
+                var intermediateParagraph = paragraphs[index];
+                var isNestedInsideSourceBranch = paragraph.Depth == relativeParagraph.Depth
+                    && intermediateParagraph.Depth > paragraph.Depth
+                    && paragraph.SharesStructuralScopeWith(intermediateParagraph);
+                effectiveIntermediateDistance += isNestedInsideSourceBranch
+                    ? NestedIntermediateParagraphCost
+                    : 1M;
+            }
+
+            var distanceWeight = 1M / (effectiveIntermediateDistance + 2M);
+            var depthFactor = paragraph.Depth != relativeParagraph.Depth
+                && !paragraph.SharesStructuralScopeWith(relativeParagraph)
+                    ? UnrelatedDepthFactor
+                    : 1M;
+            return Math.Max(MinWeight, distanceWeight * depthFactor);
         }
 
         private static decimal GetWithinParagraphRelationWeight(VerseEntry source, VerseEntry target)

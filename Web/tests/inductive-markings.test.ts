@@ -12,6 +12,8 @@ import {
   deleteInductiveAnnotation,
   deleteInductiveRelation,
   inductiveDbPath,
+  listAllInductiveAnnotations,
+  listAllInductiveRelations,
   listInductiveAnnotations,
   listInductiveRelations,
   listInductiveStyles,
@@ -230,9 +232,39 @@ test('reader assets expose the inductive palette, chapter observations, and exac
   assert.equal(styles.includes('.inductive-reader-workspace.panel-collapsed {'), true);
   assert.equal(styles.includes(':root .page.bible-reader-page { width:100%; max-width:none;'), true);
   assert.equal(html.includes('id="exportInductiveMarkings"'), true);
+  assert.equal(html.includes('id="exportAllInductiveMarkings"'), true);
+  assert.equal(html.includes('Экспортировать разметку текущей главы'), true);
+  assert.equal(html.includes('Экспортировать разметку всей Библии'), true);
+  assert.equal(reader.includes("api('/api/inductive/export'"), true);
+  assert.equal(cacheUi.includes("url.pathname === '/api/inductive/export'"), true);
+  assert.equal(cacheUi.includes('listAllInductiveAnnotations(inductiveDb)'), true);
+  assert.equal(cacheUi.includes('listAllInductiveRelations(inductiveDb)'), true);
   assert.equal(cacheUi.includes("url.pathname === '/api/inductive/annotations'"), true);
   assert.equal(cacheUi.includes("url.pathname === '/api/inductive/relations'"), true);
   assert.equal(cacheUi.includes("request.method === 'PATCH'"), true);
+});
+
+test('whole-Bible inductive export queries include markings from different chapters', () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'biblenote-inductive-all-'));
+  const cacheDbPath = path.join(directory, 'onenote-cache.sqlite');
+  const db = openInductiveDb(cacheDbPath);
+  try {
+    createInductiveAnnotations(db, [
+      { module:'rst', bookIndex:43, chapter:1, verse:1, startOffset:0, endOffset:8, quote:'В начале', styleId:'keyword' },
+      { module:'rst', bookIndex:43, chapter:2, verse:1, startOffset:0, endOffset:5, quote:'слово', styleId:'keyword' }
+    ]);
+    createInductiveRelation(db, {
+      module:'rst', bookIndex:43, chapter:2,
+      source:{ verse:1, startOffset:0, endOffset:5, quote:'слово' },
+      target:{ verse:2, startOffset:6, endOffset:9, quote:'Бог' },
+      type:'comparison'
+    });
+    assert.deepEqual(listAllInductiveAnnotations(db).map(item => Number(item.chapter)), [1, 2]);
+    assert.deepEqual(listAllInductiveRelations(db).map(item => Number(item.chapter)), [2]);
+  } finally {
+    db.close();
+    fs.rmSync(directory, { recursive:true, force:true });
+  }
 });
 
 test('reader expands partial selections to whole words and joins adjacent marks of one style', () => {

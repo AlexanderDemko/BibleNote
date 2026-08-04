@@ -46,10 +46,11 @@ test('empty page text is a valid cached result and is not downloaded forever', (
     content_text: '',
     content_synced_at: '2026-07-17T10:01:00Z',
     content_source_modified_date_time: '2026-07-17T10:00:00Z',
-    content_html: null,
+    content_html: '<html><body></body></html>',
     fetch_error: null
   } as any;
-  assert.equal(shouldRefreshContent(cached, page, { includeHtml: false }), false);
+  assert.equal(shouldRefreshContent(cached, page, {}), false);
+  assert.equal(shouldRefreshContent({ ...cached, content_html:null }, page, {}), true);
 });
 
 test('recently opened pages are refreshed independently of OneNote page timestamps', () => {
@@ -249,7 +250,9 @@ test('quick sync UI requests incremental metadata mode', () => {
   const listenerStart = source.indexOf("quickSyncButton.addEventListener('click'");
   const listenerEnd = source.indexOf('reparseBibleCacheButton.addEventListener', listenerStart);
   assert.ok(listenerStart >= 0 && listenerEnd > listenerStart);
-  assert.match(source.slice(listenerStart, listenerEnd), /incrementalMetadata:\s*true/);
+  const listener = source.slice(listenerStart, listenerEnd);
+  assert.match(listener, /incrementalMetadata:\s*true/);
+  assert.doesNotMatch(listener, /selectedNotebookIds|notebookIds/);
 });
 
 test('incremental sync can select cached pages that need Bible reparse', () => {

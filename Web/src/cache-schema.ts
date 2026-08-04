@@ -84,6 +84,18 @@ export function migrateCacheSchema(
       updated_at TEXT NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS sync_history (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      started_at TEXT NOT NULL,
+      finished_at TEXT NOT NULL,
+      status TEXT NOT NULL,
+      mode TEXT NOT NULL,
+      scope TEXT NOT NULL,
+      request_json TEXT,
+      result_json TEXT,
+      error TEXT
+    );
+
     CREATE TABLE IF NOT EXISTS page_access (
       page_id TEXT PRIMARY KEY,
       last_opened_at TEXT NOT NULL
@@ -194,6 +206,7 @@ export function migrateCacheSchema(
     CREATE INDEX IF NOT EXISTS idx_pages_content_synced ON pages(content_synced_at);
     CREATE INDEX IF NOT EXISTS idx_pages_deleted ON pages(deleted_at);
     CREATE INDEX IF NOT EXISTS idx_page_access_last_opened ON page_access(last_opened_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_sync_history_started ON sync_history(started_at DESC, id DESC);
     CREATE INDEX IF NOT EXISTS idx_bible_refs_page ON paragraph_verse_refs(page_id);
     CREATE INDEX IF NOT EXISTS idx_bible_refs_page_paragraph ON paragraph_verse_refs(page_id, paragraph_index);
     CREATE INDEX IF NOT EXISTS idx_bible_refs_ref ON paragraph_verse_refs(book_index, chapter, verse, top_chapter, top_verse);
@@ -311,6 +324,43 @@ export function migrateCacheSchema(
     db.exec('ALTER TABLE paragraph_verse_refs ADD COLUMN top_verse_id INTEGER');
   }
   db.exec('CREATE INDEX IF NOT EXISTS idx_bible_refs_verse_id ON paragraph_verse_refs(verse_id)');
+
+  const historyCount = (db.prepare('SELECT COUNT(*) AS value FROM sync_history').get() as { value: number }).value;
+  const legacySyncState = Object.fromEntries(
+    (db.prepare("SELECT key, value FROM sync_state WHERE key LIKE 'last_sync_%'").all() as Array<{ key: string; value: string }>)
+      .map(row => [row.key, row.value])
+  ) as Record<string, string>;
+  if (historyCount === 0
+    && legacySyncState.last_sync_started_at
+    && legacySyncState.last_sync_finished_at
+    && legacySyncState.last_sync_status !== 'running') {
+    const numberState = (key: string): number => Number(legacySyncState[key] ?? 0) || 0;
+    db.prepare(`
+      INSERT INTO sync_history(
+        started_at, finished_at, status, mode, scope, request_json, result_json, error
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      legacySyncState.last_sync_started_at,
+      legacySyncState.last_sync_finished_at,
+      legacySyncState.last_sync_status || 'success',
+      'unknown',
+      'Все источники',
+      null,
+      JSON.stringify({
+        pages:numberState('last_sync_page_count'),
+        contentDownloaded:numberState('last_sync_content_downloaded'),
+        contentSkipped:0,
+        contentErrors:numberState('last_sync_content_errors'),
+        sectionScanErrors:numberState('last_sync_section_scan_errors'),
+        bibleRefsPagesParsed:numberState('last_sync_bible_refs_pages_parsed'),
+        bibleRefsParseSkipped:0,
+        bibleRefsParseErrors:numberState('last_sync_bible_refs_parse_errors'),
+        bibleRefsRecognized:numberState('last_sync_bible_refs_recognized'),
+        deletedPagesMarked:0
+      }),
+      legacySyncState.last_sync_error ?? null
+    );
+  }
   logStartupTiming('migrate schema incremental complete');
 
   const relationPriorityMigrationKey = 'bible_relation_priority_local_first_v1';
@@ -337,8 +387,5 @@ export function migrateCacheSchema(
     logStartupTiming(`migrate local-first Bible relations invalidated=${invalidatedPages}`);
   }
 
-  const bibleRefsCount = (db.prepare('SELECT COUNT(*) AS value FROM paragraph_verse_refs').get() as { value: number }).value;
-  const bibleRelationsCount = (db.prepare('SELECT COUNT(*) AS value FROM paragraph_verse_relations').get() as { value: number }).value;
-  logStartupTiming(`migrate relation counts refs=${bibleRefsCount} relations=${bibleRelationsCount}`);
   logStartupTiming('migrate complete');
 }

@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>PDF</title>
+  <link rel="stylesheet" href="/vendor/pdfjs/pdf_viewer.css">
+  <link rel="stylesheet" href="/ui/pdf-viewer.css">
+</head>
+<body>
+  <header class="pdf-toolbar" aria-label="Навигация по PDF">
+    <button id="previousPage" type="button" title="Предыдущая страница" aria-label="Предыдущая страница">‹</button>
+    <label class="pdf-page-number"><input id="pageNumber" type="number" min="1" value="1" aria-label="Номер страницы"><span id="pageCount">/ …</span></label>
+    <button id="nextPage" type="button" title="Следующая страница" aria-label="Следующая страница">›</button>
+    <span class="pdf-toolbar-spacer"></span>
+    <label class="pdf-zoom"><span>Масштаб</span><input id="pdfZoom" type="range" min="50" max="200" step="10" value="100" aria-label="Масштаб PDF"><output id="pdfZoomValue" for="pdfZoom">100%</output></label>
+    <button id="fitWidth" type="button" title="Показать страницу по ширине" aria-label="Показать страницу по ширине" aria-pressed="false" data-short-label="↔">По ширине</button>
+  </header>
+  <div id="viewerContainer" tabindex="0">
+    <div id="viewer" class="pdfViewer"></div>
+  </div>
+  <div id="loading" role="status">Открываем PDF…</div>
+  <div id="error" role="alert" hidden></div>
+  <script type="module" src="/ui/pdf-viewer.js"></script>
+</body>
+</html>

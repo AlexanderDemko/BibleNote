@@ -149,6 +149,93 @@ namespace BibleNote.Tests
         }
 
         [TestMethod]
+        public void InterParagraphRelationWeightsRespectSharedAndSeparateBranches()
+        {
+            DocumentParseResult docParseResult;
+            using (var docParser = this.documentParserFactory.Create(this.documentProvider, this.mockDocumentId))
+            {
+                using (docParser.ParseHierarchyElement(ElementType.HierarchicalBlock))
+                {
+                    docParser.ParseParagraph(GetNode("Ин 1:1"));
+                    using (docParser.ParseHierarchyElement(ElementType.HierarchicalBlock))
+                    {
+                        using (docParser.ParseHierarchyElement(ElementType.HierarchicalBlock))
+                            docParser.ParseParagraph(GetNode("Ин 1:2"));
+                        using (docParser.ParseHierarchyElement(ElementType.HierarchicalBlock))
+                            docParser.ParseParagraph(GetNode("Ин 1:3"));
+                    }
+                }
+
+                using (docParser.ParseHierarchyElement(ElementType.HierarchicalBlock))
+                {
+                    docParser.ParseParagraph(GetNode("Ин 1:4"));
+                    using (docParser.ParseHierarchyElement(ElementType.HierarchicalBlock))
+                    {
+                        using (docParser.ParseHierarchyElement(ElementType.HierarchicalBlock))
+                            docParser.ParseParagraph(GetNode("Ин 1:5"));
+                    }
+                }
+
+                docParseResult = docParser.DocumentParseResult;
+            }
+
+            var paragraphs = docParseResult.GetAllParagraphParseResults().ToList();
+            var relations = VerseRelationsCalculator.Calculate(docParseResult).Relations;
+            decimal Weight(int source, int target) => relations.Single(item =>
+                item.Paragraph == paragraphs[source - 1]
+                && item.RelativeParagraph == paragraphs[target - 1]).RelationWeight;
+
+            Assert.AreEqual(0.5M, Weight(1, 2));
+            Assert.AreEqual(0.3333M, Weight(1, 3));
+            Assert.AreEqual(0.5M, Weight(2, 3));
+            Assert.AreEqual(0.5M, Weight(4, 5));
+
+            Assert.AreEqual(0.4545M, Weight(1, 4));
+            Assert.AreEqual(0.04M, Weight(1, 5));
+            Assert.AreEqual(0.01M, Weight(2, 4));
+            Assert.AreEqual(0.01M, Weight(2, 5));
+            Assert.AreEqual(0.01M, Weight(3, 4));
+            Assert.AreEqual(0.01M, Weight(3, 5));
+        }
+
+        [TestMethod]
+        public void InterParagraphRelationDistanceIncludesParagraphsWithoutReferences()
+        {
+            DocumentParseResult docParseResult;
+            using (var docParser = this.documentParserFactory.Create(this.documentProvider, this.mockDocumentId))
+            {
+                docParser.ParseParagraph(GetNode("Ин 1:1"));
+                docParser.ParseParagraph(GetNode("Обычный текст без ссылки"));
+                docParser.ParseParagraph(GetNode("Ин 1:2"));
+                docParseResult = docParser.DocumentParseResult;
+            }
+
+            var relation = VerseRelationsCalculator.Calculate(docParseResult).Relations.Single();
+
+            Assert.AreEqual(0.3333M, relation.RelationWeight);
+        }
+
+        [TestMethod]
+        public void FlatHtmlParagraphWrappersDoNotCreateSeparateStructuralBranches()
+        {
+            DocumentParseResult docParseResult;
+            using (var docParser = this.documentParserFactory.Create(this.documentProvider, this.mockDocumentId))
+            {
+                using (docParser.ParseHierarchyElement(ElementType.HierarchicalBlock))
+                    docParser.ParseParagraph(GetNode("Ин 1:1"));
+                using (docParser.ParseHierarchyElement(ElementType.HierarchicalBlock))
+                    docParser.ParseParagraph(GetNode("Обычный текст без ссылки"));
+                using (docParser.ParseHierarchyElement(ElementType.HierarchicalBlock))
+                    docParser.ParseParagraph(GetNode("Ин 1:2"));
+                docParseResult = docParser.DocumentParseResult;
+            }
+
+            var relation = VerseRelationsCalculator.Calculate(docParseResult).Relations.Single();
+
+            Assert.AreEqual(0.3333M, relation.RelationWeight);
+        }
+
+        [TestMethod]
         public void Test2()
         {
             var node1 = GetNode("Мк 5:6");

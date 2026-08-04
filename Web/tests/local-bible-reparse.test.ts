@@ -22,7 +22,7 @@ test('reparses every cached page through BibleNote without using Microsoft Graph
       module: body.module,
       paragraphs: [{
         index: 0,
-        text: body.text,
+        text: body.html ?? body.text,
         references: [{
           originalText: 'Мф. 1:1',
           normalized: 'Матфея 1:1',
@@ -41,12 +41,12 @@ test('reparses every cached page through BibleNote without using Microsoft Graph
   try {
     const seedDb = openCacheDb(dbPath);
     seedDb.prepare(`
-      INSERT INTO pages(id, title, content_text, content_hash, metadata_synced_at)
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO pages(id, title, content_text, content_html, content_hash, metadata_synced_at)
+      VALUES (?, ?, ?, '<p>cached html</p>', ?, ?)
     `).run('page-1', 'First', 'Мф. 1:1', 'hash-1', '2026-07-17T00:00:00Z');
     seedDb.prepare(`
-      INSERT INTO pages(id, title, content_text, content_hash, metadata_synced_at)
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO pages(id, title, content_text, content_html, content_hash, metadata_synced_at)
+      VALUES (?, ?, ?, '<div><p>cached html</p></div>', ?, ?)
     `).run('page-2', 'Second', 'Ин. 1:1', 'hash-2', '2026-07-17T00:00:00Z');
     seedDb.prepare(`
       INSERT INTO pages(id, title, metadata_synced_at)
@@ -73,7 +73,7 @@ test('reparses every cached page through BibleNote without using Microsoft Graph
     assert.equal(result.bibleRefsRecognized, 2);
     assert.equal(requests.length, 2);
     assert.deepEqual(new Set(requests.map(request => request.pageId)), new Set(['page-1', 'page-2']));
-    assert.ok(requests.every(request => typeof request.text === 'string' && request.html === undefined));
+    assert.ok(requests.every(request => typeof request.html === 'string' && request.text === undefined));
     assert.ok(progressPhases.every(phase => phase === 'bible-parse-local'));
 
     const db = openCacheDb(dbPath);

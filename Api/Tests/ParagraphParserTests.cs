@@ -721,5 +721,33 @@ lang=ru>&nbsp;Тим&nbsp;</span><span style='color:#444444' lang=en-US>2:2). </
             htmlDoc.InnerXml.Should().Contain(">1Петр 3:22</a>");
             htmlDoc.InnerXml.Should().NotContain(">1</a>Петр 3:22");
         }
+
+        [TestMethod]
+        public void DistantChapterVerseDoesNotInheritBookAcrossUnrelatedFootnotes()
+        {
+            var input = "Ср. Евр. 11:23. "
+                + new string('а', 100)
+                + " (см. 6:1). "
+                + new string('б', 100)
+                + " см. примечание к 1:3.";
+
+            CheckVerses(input, null, null, "Евр 11:23");
+        }
+
+        [TestMethod]
+        public void ChapterVerseUsesDocumentDefaultBookWhenLocalContextIsMissing()
+        {
+            var defaultVerse = versePointerFactory.CreateVersePointer("Еф 1:1");
+            ParagraphParseResult result;
+            using (var parser = documentParserFactory.Create(documentProvider, new FileDocumentId(0, null, true)))
+            {
+                parser.SetDefaultBook(defaultVerse.Book, defaultVerse.ModuleShortName);
+                result = parser.ParseParagraph(new PlainTextNodeWrapper("См. 1:3-14."));
+            }
+
+            Assert.AreEqual(1, result.VerseEntries.Count);
+            Assert.IsTrue(result.VerseEntries.Select(entry => entry.VersePointer)
+                .Contains(versePointerFactory.CreateVersePointer("Еф 1:3-14")));
+        }
     }
 }

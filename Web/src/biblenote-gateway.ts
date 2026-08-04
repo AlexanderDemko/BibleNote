@@ -351,6 +351,20 @@ export async function bibleNoteOneNotePageContent(pageId: string): Promise<strin
   return result.xml;
 }
 
+export async function bibleNoteOneNotePageLink(pageId: string): Promise<string> {
+  await ensureBibleNoteAvailable();
+  const bibleConfig = bibleParseConfigFromEnv();
+  const params = new URLSearchParams({ pageId });
+  const result = await fetchJson(
+    `${bibleConfig.apiUrl.replace(/\/+$/, '')}/api/OneNoteIntegration/PageLink?${params.toString()}`,
+    { signal:AbortSignal.timeout(60_000) }
+  ) as { clientUrl?: string };
+  if (!result.clientUrl || !/^onenote:/i.test(result.clientUrl)) {
+    throw new Error(`Classic OneNote did not return a link for page ${pageId}.`);
+  }
+  return result.clientUrl;
+}
+
 export async function bibleNoteQuickAnalyzeCurrentPage(): Promise<Record<string, unknown>> {
   await ensureBibleNoteAvailable();
   const bibleConfig = bibleParseConfigFromEnv();

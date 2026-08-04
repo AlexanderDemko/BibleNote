@@ -33,6 +33,14 @@ test('classic OneNote hierarchy is normalized for the shared cache', () => {
   assert.equal(snapshot.pages[1].orderIndex, 1);
 });
 
+test('classic OneNote pages can be recognized by their local hierarchy id without a cached link', () => {
+  const treePages = fs.readFileSync(path.resolve(testDirectory, '../ui/tree-pages.js'), 'utf8');
+  assert.equal(treePages.includes("/^\\{[0-9A-F-]+\\}/i.test(String(page?.id || ''))"), true);
+  assert.equal(treePages.includes('actions.append(revealPageButton);'), true);
+  assert.ok(treePages.indexOf('actions.append(revealPageButton);') < treePages.indexOf('actions.append(openInOneNoteButton);'));
+  assert.ok(treePages.indexOf('actions.append(openInOneNoteButton);') < treePages.indexOf('actions.append(syncPageButton);'));
+});
+
 test('classic OneNote page XML becomes searchable renderable HTML', () => {
   const xml = fs.readFileSync(
     path.resolve(testDirectory, '../../Api/Tests/TestData/OneNote_1.html'),
@@ -100,7 +108,6 @@ test('COM source synchronizes hierarchy and page content into the shared cache',
   try {
     const result = await syncOneNoteCache({
       dbPath,
-      includeHtml:true,
       parseBibleRefs:false
     });
     assert.equal(result.notebooks, 1);

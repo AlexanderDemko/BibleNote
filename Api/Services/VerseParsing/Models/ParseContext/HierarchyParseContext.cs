@@ -137,15 +137,20 @@ namespace BibleNote.Services.VerseParsing.Models.ParseContext
         {
             ParseResult.TextLength += paragraphResult.TextLength;
             ParseResult.VersesCount += paragraphResult.VersesCount;
+            ParseResult.AddOrderedParagraph(paragraphResult);
 
             if (paragraphResult.IsValuable)
                 ParseResult.ParagraphResults.Add(paragraphResult);
         }
 
         public void AddHierarchyResult(HierarchyParseResult hierarchyResult)
-        {            
+        {
             ParseResult.ChildHierarchyResults.Add(hierarchyResult);
+        }
 
+        public void AddStructuralHierarchyResult(HierarchyParseResult hierarchyResult)
+        {
+            ParseResult.AddOrderedHierarchy(hierarchyResult);
             ParseResult.TextLength += hierarchyResult.TextLength;
             ParseResult.VersesCount += hierarchyResult.VersesCount;
         }

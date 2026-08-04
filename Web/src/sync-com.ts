@@ -29,24 +29,15 @@ import { loadOneNoteComPageHtml, loadOneNoteComSnapshot } from './onenote-com.js
 import { runtimeLog } from './runtime-logging.js';
 import type { Page, SyncOptions, SyncResult } from './sync.js';
 
-function cachedSource(db: ReturnType<typeof openCacheDb>): 'graph' | 'com' | undefined {
-  const saved = db.prepare("SELECT value FROM sync_state WHERE key = 'last_data_source'").get() as { value?: string } | undefined;
-  if (saved?.value === 'graph' || saved?.value === 'com') return saved.value;
-  const existing = db.prepare('SELECT id FROM notebooks LIMIT 1').get() as { id?: string } | undefined;
-  if (!existing?.id) return undefined;
-  return existing.id.trim().startsWith('{') ? 'com' : 'graph';
-}
-
 function shouldFetchPage(
   cached: ReturnType<typeof getCachedPage>,
   page: Page,
-  options: SyncOptions,
-  includeHtml: boolean
+  options: SyncOptions
 ): boolean {
   if (options.metadataOnly) return false;
   if (options.forceContent) return true;
   if (!cached?.content_synced_at || !cached.content_text) return true;
-  if (includeHtml && !cached.content_html) return true;
+  if (!cached.content_html) return true;
   return (cached.content_source_modified_date_time ?? null) !== (page.lastModifiedDateTime ?? null);
 }
 
@@ -66,10 +57,6 @@ export async function syncOneNoteComCache(options: SyncOptions = {}): Promise<Sy
   clearSyncState(db, 'last_sync_error');
 
   try {
-    const previousSource = cachedSource(db);
-    if (previousSource && previousSource !== 'com' && !options.replaceAll) {
-      throw new Error('Источник OneNote изменён. Перед первой локальной синхронизацией пересоздайте локальный кэш.');
-    }
     if (options.replaceAll) {
       options.onProgress?.({ phase:'reset-cache', message:'Recreating local cache tables' });
       resetCacheDb(db);
@@ -192,9 +179,8 @@ export async function syncOneNoteComCache(options: SyncOptions = {}): Promise<Sy
     });
     options.onProgress?.({ phase:'pages', pages:pages.length, sectionTotal:sections.length });
 
-    const includeHtml = options.includeHtml ?? process.env.ONENOTE_CACHE_INCLUDE_HTML === 'true';
     const pagesToFetch = pages.filter(page =>
-      shouldFetchPage(getCachedPage(db, page.id), page, options, includeHtml)
+      shouldFetchPage(getCachedPage(db, page.id), page, options)
     );
     let contentDownloaded = 0;
     let contentErrors = 0;
@@ -214,7 +200,7 @@ export async function syncOneNoteComCache(options: SyncOptions = {}): Promise<Sy
           db,
           page.id,
           htmlToText(html),
-          includeHtml ? html : null,
+          html,
           page.lastModifiedDateTime ?? null,
           nowIso(),
           null
@@ -276,7 +262,7 @@ export async function syncOneNoteComCache(options: SyncOptions = {}): Promise<Sy
         });
         for (const page of pagesToParse) {
           try {
-            const sourceHtml = includeHtml ? page!.content_html : null;
+            const sourceHtml = page!.content_html;
             const result = await parsePageWithBibleNote({
               apiUrl:bibleConfig.apiUrl,
               pageId:page!.id,
@@ -320,8 +306,9 @@ export async function syncOneNoteComCache(options: SyncOptions = {}): Promise<Sy
     }
 
     const seenPageIds = new Set(pages.map(page => page.id));
+    const reconciliationNotebookIds = selectedNotebookIds ?? notebooks.map(notebook => notebook.id);
     const deletedPagesMarked = !options.pageId && !options.sectionId && !options.maxPages
-      ? markMissingPagesDeleted(db, seenPageIds, syncedAt, selectedNotebookIds)
+      ? markMissingPagesDeleted(db, seenPageIds, syncedAt, reconciliationNotebookIds)
       : 0;
     const finishedAt = nowIso();
     setSyncState(db, 'last_data_source', 'com');

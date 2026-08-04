@@ -9,6 +9,11 @@ namespace BibleNote.Services.VerseParsing.Models.ParseResult
 
         public HierarchyParseResult RootHierarchyResult { get; internal set; }
 
+        /// <summary>
+        /// Complete source-order hierarchy, including paragraphs without Bible references.
+        /// </summary>
+        public HierarchyParseResult StructureRootHierarchyResult { get; internal set; }
+
         public int TextLength { get { return RootHierarchyResult?.TextLength ?? 0; } }
 
         /// <summary>

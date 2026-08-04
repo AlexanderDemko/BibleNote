@@ -15,6 +15,7 @@ let inductiveObservationsPanel = null;
 let inductivePanelCollapsed = localStorage.getItem('biblenote.inductive.panelCollapsed') === '1';
 let inductiveObservationStyleFilter = null;
 let inductiveRelationDraft = null;
+let inductiveRelationChapterHint = null;
 let inductiveRelationEditingId = null;
 let inductiveJustCreatedRelationId = null;
 let inductiveActiveRelationIds = [];
@@ -22,6 +23,7 @@ let inductiveActiveRelationAnchorIds = [];
 let inductiveVerseTextByVerse = new Map();
 let inductiveEventsReady = false;
 const exportInductiveMarkingsButton = document.getElementById('exportInductiveMarkings');
+const exportAllInductiveMarkingsButton = document.getElementById('exportAllInductiveMarkings');
 const importInductiveMarkingsButton = document.getElementById('importInductiveMarkings');
 const importInductiveMarkingsFile = document.getElementById('importInductiveMarkingsFile');
 const importInductiveMarkingsStatus = document.getElementById('importInductiveMarkingsStatus');
@@ -204,6 +206,14 @@ function inductiveRelationEndpoint(selection) {
     textHash:selection.textHash || undefined
   };
 }
+
+function sameInductiveRelationEndpoint(left, right) {
+  return Number(left?.verse) === Number(right?.verse)
+    && Number(left?.startOffset) === Number(right?.startOffset)
+    && Number(left?.endOffset) === Number(right?.endOffset);
+}
+
+const sameInductiveRelationEndpointMessage = 'Этот фрагмент уже выбран как первая сторона связи. Выберите другое слово или фразу.';
 
 function upsertInductiveRelation(relation) {
   inductiveRelations = [
@@ -672,7 +682,6 @@ function handleInductiveMarkClick(event) {
 async function createInductiveRelationFromSelection(selection) {
   if (!inductiveRelationDraft) return;
   const draft = inductiveRelationDraft;
-  inductiveRelationDraft = null;
   const relationsBeforeRequest = new Map(inductiveRelations.map(relation => [relation.id, { ...relation }]));
   const fullText = selection.fullText || inductiveVerseTextByVerse.get(Number(selection.verse)) || '';
   const normalizedTarget = expandInductiveSelectionToWordBoundaries(
@@ -680,12 +689,20 @@ async function createInductiveRelationFromSelection(selection) {
     selection.startOffset,
     selection.endOffset
   );
+  const target = inductiveRelationEndpoint({ ...selection, ...normalizedTarget });
+  if (sameInductiveRelationEndpoint(draft.source, target)) {
+    inductiveRelationDraft = { ...draft, error:sameInductiveRelationEndpointMessage };
+    inductiveSelection = null;
+    refreshInductiveRendering();
+    return;
+  }
+  inductiveRelationDraft = null;
   const input = {
     module:draft.module,
     bookIndex:draft.bookIndex,
     chapter:draft.chapter,
     source:draft.source,
-    target:inductiveRelationEndpoint({ ...selection, ...normalizedTarget }),
+    target,
     type:draft.type
   };
   let result;
@@ -696,8 +713,13 @@ async function createInductiveRelationFromSelection(selection) {
       body:JSON.stringify(input)
     });
   } catch (error) {
-    if (!inductiveRelationDraft) inductiveRelationDraft = draft;
+    if (!inductiveRelationDraft) {
+      inductiveRelationDraft = String(error?.message || error).includes('A relation requires two different text ranges')
+        ? { ...draft, error:sameInductiveRelationEndpointMessage }
+        : draft;
+    }
     refreshInductiveRendering();
+    if (inductiveRelationDraft.error) return;
     throw error;
   }
   const relation = result.relation;
@@ -878,7 +900,40 @@ function refreshInductiveRendering() {
     const text = inductiveVerseTextByVerse.get(verse) ?? textElement.textContent ?? '';
     renderInductiveText(textElement, verse, text);
   });
+  renderInductiveRelationChapterHint();
   renderInductiveObservations();
+}
+
+function cancelInductiveRelationDraft() {
+  inductiveRelationDraft = null;
+  window.getSelection()?.removeAllRanges();
+  refreshInductiveRendering();
+}
+
+function renderInductiveRelationChapterHint() {
+  if (!inductiveRelationChapterHint) return;
+  inductiveRelationChapterHint.replaceChildren();
+  inductiveRelationChapterHint.hidden = !inductiveRelationDraft;
+  if (!inductiveRelationDraft) return;
+
+  const definition = inductiveRelationType(inductiveRelationDraft.type);
+  const message = document.createElement('span');
+  const title = document.createElement('strong');
+  title.textContent = definition.symbol + ' ' + definition.name + ': ';
+  const instruction = document.createTextNode(inductiveRelationDraft.error
+    || 'выберите второе слово или выделите фразу для связи с «' + inductiveRelationDraft.source.quote + '».');
+  const shortcut = document.createElement('small');
+  shortcut.textContent = 'Esc — отменить';
+  message.append(title, instruction, shortcut);
+
+  const cancel = document.createElement('button');
+  cancel.type = 'button';
+  cancel.textContent = 'Отмена';
+  cancel.title = 'Отменить создание связи (Esc)';
+  cancel.addEventListener('click', cancelInductiveRelationDraft);
+
+  inductiveRelationChapterHint.classList.toggle('invalid', Boolean(inductiveRelationDraft.error));
+  inductiveRelationChapterHint.append(message, cancel);
 }
 
 function createInductiveRelationEditor(relation = null) {
@@ -1101,17 +1156,15 @@ function renderInductiveObservations() {
   if (inductiveRelationDraft) {
     const status = document.createElement('div');
     status.className = 'inductive-relation-status';
+    status.classList.toggle('invalid', Boolean(inductiveRelationDraft.error));
     const statusText = document.createElement('span');
     const definition = inductiveRelationType(inductiveRelationDraft.type);
-    statusText.textContent = definition.symbol + ' ' + definition.name
-      + ': нажмите на второе слово или выделите фразу для связи с «' + inductiveRelationDraft.source.quote + '».';
+    statusText.textContent = inductiveRelationDraft.error || (definition.symbol + ' ' + definition.name
+      + ': нажмите на второе слово или выделите фразу для связи с «' + inductiveRelationDraft.source.quote + '».');
     const cancel = document.createElement('button');
     cancel.type = 'button';
     cancel.textContent = 'Отмена';
-    cancel.addEventListener('click', () => {
-      inductiveRelationDraft = null;
-      refreshInductiveRendering();
-    });
+    cancel.addEventListener('click', cancelInductiveRelationDraft);
     status.append(statusText, cancel);
     relationControls.push(status);
   }
@@ -1263,6 +1316,15 @@ function showInductiveStyleForm(_anchor, style = null) {
   form.elements.name.focus();
 }
 
+function downloadInductiveMarkings(payload, fileName) {
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type:'application/json' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = fileName;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+}
+
 function exportInductiveChapter() {
   const location = currentBibleReaderLocation();
   const payload = {
@@ -1274,12 +1336,45 @@ function exportInductiveChapter() {
     annotations:inductiveAnnotations,
     relations:inductiveRelations.map(relation => ({ id:relation.id, ...inductiveRelationInput(relation) }))
   };
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type:'application/json' });
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = 'BibleNote-' + (location.book?.shortName || location.book?.name || 'Bible') + '-' + location.chapter + '-markings.json';
-  link.click();
-  setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+  downloadInductiveMarkings(
+    payload,
+    'BibleNote-' + (location.book?.shortName || location.book?.name || 'Bible') + '-' + location.chapter + '-markings.json'
+  );
+}
+
+async function exportAllInductiveMarkings() {
+  if (importInductiveMarkingsStatus) importInductiveMarkingsStatus.textContent = 'Подготовка разметки всей Библии…';
+  if (exportAllInductiveMarkingsButton) exportAllInductiveMarkingsButton.disabled = true;
+  try {
+    const exported = await api('/api/inductive/export', { timeoutMs:60_000 });
+    const annotations = (exported.annotations || []).map(annotation => ({
+      id:annotation.id,
+      ...inductiveAnnotationInput(annotation)
+    }));
+    const relations = (exported.relations || []).map(relation => ({
+      id:relation.id,
+      ...inductiveRelationInput(relation)
+    }));
+    downloadInductiveMarkings({
+      format:'biblenote-inductive-markings',
+      version:3,
+      scope:'bible',
+      exportedAt:new Date().toISOString(),
+      styles:exported.styles || [],
+      annotations,
+      relations
+    }, 'BibleNote-all-Bible-markings.json');
+    const chapters = new Set([
+      ...annotations.map(item => [item.module, item.bookIndex, item.chapter].join(':')),
+      ...relations.map(item => [item.module, item.bookIndex, item.chapter].join(':'))
+    ]).size;
+    if (importInductiveMarkingsStatus) {
+      importInductiveMarkingsStatus.textContent = 'Экспортировано: глав — ' + chapters
+        + ', отметок — ' + annotations.length + ', связей — ' + relations.length + '.';
+    }
+  } finally {
+    if (exportAllInductiveMarkingsButton) exportAllInductiveMarkingsButton.disabled = false;
+  }
 }
 
 async function importInductiveChapterFile(file) {
@@ -1291,7 +1386,10 @@ async function importInductiveChapterFile(file) {
   } catch {
     throw new Error('Не удалось прочитать JSON-файл разметки.');
   }
-  if (payload?.format !== 'biblenote-inductive-markings' || ![1, 2].includes(payload?.version)) {
+  const chapterFile = payload?.format === 'biblenote-inductive-markings' && [1, 2].includes(payload?.version);
+  const bibleFile = payload?.format === 'biblenote-inductive-markings'
+    && payload?.version === 3 && payload?.scope === 'bible';
+  if (!chapterFile && !bibleFile) {
     throw new Error('Это не файл индуктивной разметки BibleNote поддерживаемой версии.');
   }
   if (importInductiveMarkingsStatus) importInductiveMarkingsStatus.textContent = 'Импорт разметки…';
@@ -1306,18 +1404,22 @@ async function importInductiveChapterFile(file) {
     const imported = result.imported;
     inductiveStyles = [];
     const current = currentBibleReaderLocation();
-    const sameChapter = current.module === imported.location.module
+    const wholeBible = imported.scope === 'bible';
+    const sameChapter = Boolean(imported.location)
+      && current.module === imported.location.module
       && Number(current.bookIndex) === Number(imported.location.bookIndex)
       && Number(current.chapter) === Number(imported.location.chapter);
-    if (sameChapter && inductiveObservationsPanel) {
+    if ((wholeBible || sameChapter) && inductiveObservationsPanel) {
       await loadInductiveChapter(current);
       refreshInductiveRendering();
     }
-    const summary = 'Импортировано: стилей — ' + imported.styles
+    const summary = (wholeBible ? 'Импортирована разметка всей Библии' : 'Импортировано')
+      + ': стилей — ' + imported.styles
       + ', отметок — ' + imported.annotations
       + ', связей — ' + imported.relations + '.';
     if (importInductiveMarkingsStatus) {
-      importInductiveMarkingsStatus.textContent = summary + (sameChapter ? '' : ' Данные появятся при открытии импортированной главы.');
+      importInductiveMarkingsStatus.textContent = summary
+        + (wholeBible || sameChapter ? '' : ' Данные появятся при открытии импортированной главы.');
     }
   } finally {
     if (importInductiveMarkingsButton) importInductiveMarkingsButton.disabled = false;
@@ -1384,6 +1486,10 @@ if (exportInductiveMarkingsButton) {
   updateInductiveActionButtons();
 }
 
+if (exportAllInductiveMarkingsButton) {
+  exportAllInductiveMarkingsButton.addEventListener('click', () => exportAllInductiveMarkings().catch(showError));
+}
+
 if (importInductiveMarkingsButton && importInductiveMarkingsFile) {
   importInductiveMarkingsButton.addEventListener('click', () => importInductiveMarkingsFile.click());
   importInductiveMarkingsFile.addEventListener('change', () => {
@@ -1412,11 +1518,8 @@ function ensureInductiveEvents() {
     event.preventDefault();
     event.stopImmediatePropagation();
     if (popoverVisible) hideInductivePopover();
-    if (inductiveRelationDraft) {
-      inductiveRelationDraft = null;
-      refreshInductiveRendering();
-    }
-    window.getSelection()?.removeAllRanges();
+    if (inductiveRelationDraft) cancelInductiveRelationDraft();
+    else window.getSelection()?.removeAllRanges();
   }, true);
   document.addEventListener('pointerdown', event => {
     if (inductivePopover && !inductivePopover.hidden && !inductivePopover.contains(event.target)) hideInductivePopover();
@@ -1958,13 +2061,23 @@ function renderBibleReaderChapter(result, highlightRef, translations = []) {
   }
   const workspace = document.createElement('div');
   workspace.className = 'inductive-reader-workspace';
+  const readerMain = document.createElement('div');
+  readerMain.className = 'inductive-reader-main';
+  const relationHint = document.createElement('div');
+  relationHint.className = 'inductive-relation-chapter-hint';
+  relationHint.setAttribute('role', 'status');
+  relationHint.setAttribute('aria-live', 'polite');
+  relationHint.hidden = true;
+  inductiveRelationChapterHint = relationHint;
+  readerMain.append(relationHint, versesEl);
   const observations = document.createElement('aside');
   observations.className = 'inductive-observations-panel';
   observations.setAttribute('aria-label', 'Индуктивные наблюдения');
   inductiveObservationsPanel = observations;
-  workspace.append(versesEl, observations);
+  workspace.append(readerMain, observations);
   article.append(crumbs, heading, toolbar, workspace);
   content.append(article);
+  renderInductiveRelationChapterHint();
   renderInductiveObservations();
   refreshPageFind();
   if (firstHighlighted) requestAnimationFrame(() => firstHighlighted.scrollIntoView({ block:'center', behavior:'smooth' }));

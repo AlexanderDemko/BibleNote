@@ -20,6 +20,8 @@ namespace BibleNote.Services.VerseParsing.Contracts.ParseContext
 
         void AddHierarchyResult(HierarchyParseResult hierarchyResult);
 
+        void AddStructuralHierarchyResult(HierarchyParseResult hierarchyResult);
+
         void ChangeElementType(ElementType elementType);
 
         ChapterEntry GetPreviousSiblingChapterEntry();

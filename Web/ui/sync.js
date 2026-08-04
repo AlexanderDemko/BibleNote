@@ -39,14 +39,14 @@ function updateSyncControls(running) {
   syncRunning = running;
   syncButton.disabled = running || selectedNotebookIds().length === 0;
   reparseBibleCacheButton.disabled = running;
-  quickSyncButton.disabled = running || selectedNotebookIds().length === 0;
+  quickSyncButton.disabled = running || dataSourcesCache.length === 0;
   quickSyncButton.textContent = running ? '…' : '↻';
   quickSyncButton.setAttribute('aria-label', running
     ? 'Синхронизация выполняется'
-    : 'Обновить изменения в выбранных блокнотах');
+    : 'Обновить изменения во всех источниках данных');
   quickSyncButton.title = running
     ? 'Синхронизация выполняется'
-    : 'Проверить изменённые разделы и загрузить новые или изменённые страницы';
+    : 'Проверить все источники данных и загрузить новые или изменённые страницы и документы';
   updateSyncSettingsPresentation();
   document.querySelectorAll('.tree-sync').forEach(control => control.setAttribute('aria-disabled', String(running)));
   document.querySelectorAll('.title-sync').forEach(control => {
@@ -63,6 +63,10 @@ const syncModeLabels = {
 let lastFullContentPolicy = 'changed';
 let lastSyncProgressPhase = 'starting';
 const safeSyncConcurrency = 1;
+const activeSyncPollIntervalMs = 3000;
+const idleSyncPollIntervalMs = 5000;
+let lastHandledTerminalSyncKey = null;
+let lastLiveTreeRefreshKey = null;
 
 function currentSyncMode() {
   return syncModeInputs.find(input => input.checked)?.value || 'quick';
@@ -84,7 +88,6 @@ function currentSyncSettings() {
     metadataOnly,
     replaceAll,
     forceContent: mode === 'full' && contentPolicy === 'all',
-    includeHtml: document.getElementById('syncIncludeHtml').checked,
     parseBibleRefs: true,
     incrementalMetadata: mode === 'quick',
     bibleModule: currentBibleModule()
@@ -95,7 +98,7 @@ function renderSyncPlan(settings, mode) {
   const selectedCount = selectedNotebookIds().length;
   const contentPolicy = currentContentPolicy(mode);
   const lines = [
-    `${selectedCount} ${pluralRu(selectedCount, 'блокнот', 'блокнота', 'блокнотов')}`,
+    `${selectedCount} ${pluralRu(selectedCount, 'коллекция', 'коллекции', 'коллекций')}`,
     mode === 'quick' ? 'Только изменённые разделы' : 'Все разделы',
     contentPolicy === 'all'
         ? 'Содержимое всех найденных страниц'
@@ -121,7 +124,6 @@ function updateSyncSettingsPresentation() {
   const settings = currentSyncSettings();
   for (const input of syncModeInputs) input.disabled = syncRunning;
   syncContentPolicyEl.disabled = syncRunning || mode !== 'full';
-  document.getElementById('syncIncludeHtml').disabled = syncRunning || settings.metadataOnly;
   if (!syncRunning) syncButton.textContent = syncModeLabels[mode];
   renderSyncPlan(settings, mode);
 }
@@ -155,11 +157,6 @@ function loadSyncSettings() {
     const modeInput = syncModeInputs.find(input => input.value === mode);
     if (modeInput) modeInput.checked = true;
     syncContentPolicyEl.value = mode === 'full' ? contentPolicy : mode === 'rebuild' ? 'all' : 'changed';
-    if (!localStorage.getItem('onenote.syncSettings.defaultBibleParse')) {
-      settings.includeHtml = true;
-      localStorage.setItem('onenote.syncSettings.defaultBibleParse', 'true');
-    }
-    document.getElementById('syncIncludeHtml').checked = settings.includeHtml !== false;
     if (typeof settings.bibleModule === 'string' && settings.bibleModule.trim()) bibleModuleNameInput.value = settings.bibleModule.trim();
   } catch {
     localStorage.removeItem('onenote.syncSettings');
@@ -167,13 +164,18 @@ function loadSyncSettings() {
   updateSyncSettingsPresentation();
 }
 
-for (const id of ['syncContentPolicy', 'syncIncludeHtml']) {
+for (const id of ['syncContentPolicy']) {
   document.getElementById(id).addEventListener('change', saveSyncSettings);
 }
 for (const input of syncModeInputs) input.addEventListener('change', saveSyncSettings);
 
 function errorMessage(error) {
   return error?.message || String(error);
+}
+
+function scheduleSyncStatePoll(delayMs) {
+  clearTimeout(syncPollTimer);
+  syncPollTimer = setTimeout(() => refreshSyncState().catch(handleSyncPollError), delayMs);
 }
 
 function handleSyncStartError(error) {
@@ -186,12 +188,12 @@ function handleSyncStartError(error) {
 
 function handleSyncPollError(error) {
   const message = errorMessage(error);
-  syncStateEl.textContent = 'Ожидание ответа синхронизации: ' + message;
-  showActivity('Ожидание ответа синхронизации: ' + message, 'running', true);
-  if (syncRunning || activeSyncContext) {
-    clearTimeout(syncPollTimer);
-    syncPollTimer = setTimeout(() => refreshSyncState().catch(handleSyncPollError), 3000);
+  const awaitingActiveSync = syncRunning || Boolean(activeSyncContext);
+  if (awaitingActiveSync) {
+    syncStateEl.textContent = 'Ожидание ответа синхронизации: ' + message;
+    showActivity('Ожидание ответа синхронизации: ' + message, 'running', true);
   }
+  scheduleSyncStatePoll(awaitingActiveSync ? activeSyncPollIntervalMs : idleSyncPollIntervalMs);
 }
 
 async function submitSync(payload, label, context = {}) {
@@ -231,9 +233,8 @@ function startTargetedSync(scope, label) {
 }
 
 quickSyncButton.addEventListener('click', async () => {
-  const notebookIds = selectedNotebookIds();
-  if (notebookIds.length === 0) {
-    syncStateEl.textContent = 'Выберите хотя бы один блокнот';
+  if (dataSourcesCache.length === 0) {
+    syncStateEl.textContent = 'Добавьте хотя бы один источник данных';
     return;
   }
   const settings = currentSyncSettings();
@@ -241,14 +242,12 @@ quickSyncButton.addEventListener('click', async () => {
     concurrency: settings.concurrency,
     metadataOnly: false,
     forceContent: false,
-    includeHtml: settings.includeHtml,
     parseBibleRefs: settings.parseBibleRefs,
     forceBibleParse: false,
     incrementalMetadata: true,
-    bibleModule: settings.bibleModule,
-    notebookIds
+    bibleModule: settings.bibleModule
   };
-  await submitSync(payload, 'обновление изменений', { notebookIds, syncMode:'quick', quick:true });
+  await submitSync(payload, 'обновление всех источников', { syncMode:'quick', quick:true, allSources:true });
 });
 
 reparseBibleCacheButton.addEventListener('click', async () => {
@@ -263,13 +262,13 @@ reparseBibleCacheButton.addEventListener('click', async () => {
 syncButton.addEventListener('click', async () => {
   const notebookIds = selectedNotebookIds();
   if (notebookIds.length === 0) {
-    syncStateEl.textContent = 'Выберите хотя бы один блокнот';
+    syncStateEl.textContent = 'Выберите хотя бы одну коллекцию';
     return;
   }
   const mode = currentSyncMode();
   const settings = currentSyncSettings();
   if (settings.replaceAll && !window.confirm(
-    'Локальный кэш, история синхронизации, результаты разбора и локальные названия блокнотов будут удалены. Все выбранные страницы придётся скачать заново. Продолжить?'
+    'Локальный кэш, история синхронизации, результаты разбора и локальные названия коллекций будут удалены. Все выбранные страницы придётся скачать заново. Продолжить?'
   )) return;
   await submitSync({ ...settings, notebookIds }, syncModeLabels[mode].toLowerCase(), { notebookIds, syncMode:mode });
   if (mode === 'rebuild') {
@@ -299,7 +298,7 @@ function localizedSyncProgressMessage(progress) {
   switch (progress.phase) {
     case 'starting': return 'Подготовка';
     case 'reset-cache': return 'Пересоздание таблиц локального кэша';
-    case 'notebooks': return 'Загрузка списка блокнотов';
+    case 'notebooks': return 'Загрузка структуры коллекций';
     case 'sections': return 'Загрузка списка разделов';
     case 'section-groups': return 'Загрузка структуры групп разделов';
     case 'pages': return mode === 'quick' ? 'Проверка изменённых разделов' : 'Проверка всех разделов';
@@ -313,14 +312,14 @@ function localizedSyncProgressMessage(progress) {
 }
 
 function syncProgressDetails(progress) {
-  const parts = [localizedSyncProgressMessage(progress)];
+  const bibleProgress = progress.phase === 'bible-parse' || progress.phase === 'bible-parse-local';
+  const parts = bibleProgress ? [] : [localizedSyncProgressMessage(progress)];
   if (progress.sectionGroups != null) parts.push('групп разделов: ' + progress.sectionGroups);
   if (progress.sections != null) parts.push('разделов: ' + (progress.sectionTotal ? progress.sections + '/' + progress.sectionTotal : progress.sections));
   if (progress.pages != null) parts.push('страниц: ' + progress.pages);
   if (progress.contentDone != null && progress.contentTotal != null) parts.push('содержимое: ' + progress.contentDone + '/' + progress.contentTotal);
   if (progress.contentSkipped != null) parts.push('без изменений: ' + progress.contentSkipped);
-  if (progress.bibleParseDone != null && progress.bibleParseTotal != null) parts.push('BibleNote: ' + progress.bibleParseDone + '/' + progress.bibleParseTotal);
-  if (progress.bibleParseSkipped != null) parts.push('актуальны: ' + progress.bibleParseSkipped);
+  if (progress.bibleParseDone != null && progress.bibleParseTotal != null) parts.push('страниц: ' + progress.bibleParseDone + '/' + progress.bibleParseTotal);
   if (progress.bibleRefsRecognized != null) parts.push('ссылок: ' + progress.bibleRefsRecognized);
   if (progress.errors) parts.push('ошибок: ' + progress.errors);
   return parts;
@@ -383,7 +382,7 @@ function renderSyncResult(result, context) {
   const title = document.createElement('strong');
   title.className = 'sync-result-title';
   title.textContent = targetedPageDeleted
-    ? 'Страница удалена из OneNote'
+    ? 'Страница удалена из источника данных'
     : errorCount ? 'Завершено с ошибками' : 'Синхронизация завершена';
   const metrics = document.createElement('div');
   metrics.className = 'sync-result-metrics';
@@ -415,6 +414,16 @@ function renderSyncResult(result, context) {
   return { errorCount, title:title.textContent };
 }
 
+async function refreshLiveSyncTree(state, progress) {
+  if (progress.phase !== 'bible-parse') return;
+  const sourceKey = progress.sourceId || `pages:${progress.bibleParseTotal ?? ''}`;
+  const refreshKey = `${state.startedAt || ''}:${sourceKey}`;
+  if (refreshKey === lastLiveTreeRefreshKey) return;
+  lastLiveTreeRefreshKey = refreshKey;
+  await loadNotebookSelector();
+  await renderNotesList();
+}
+
 async function refreshSyncState() {
   clearTimeout(syncPollTimer);
   const state = await api('/api/sync', { timeoutMs:120000 });
@@ -425,60 +434,71 @@ async function refreshSyncState() {
     const progress = state.progress || {};
     const progressText = renderSyncProgress(progress);
     showActivity(progressText, 'running', true);
+    await refreshLiveSyncTree(state, progress);
     if (Date.now() - lastSyncLogRefreshAt > 15000) {
       lastSyncLogRefreshAt = Date.now();
       loadDownloadLog(false).catch(error => console.warn(error));
     }
-    syncPollTimer = setTimeout(() => refreshSyncState().catch(handleSyncPollError), 3000);
+    scheduleSyncStatePoll(activeSyncPollIntervalMs);
+    return;
   } else if (state.status === 'success') {
-    const result = state.result;
-    const completedContext = activeSyncContext;
-    const targetedPageDeleted = Boolean(
-      completedContext?.pageId && result.deletedPagesMarked > 0 && result.pages === 0
-    );
-    const renderedResult = renderSyncResult(result, completedContext);
-    const resultSummary = targetedPageDeleted
-      ? 'Страница удалена из OneNote и убрана из BibleNote.'
-      : completedContext?.localBibleReparse
-      ? `${renderedResult.title}: обработано ${result.bibleRefsPagesParsed || 0}, ошибок ${renderedResult.errorCount}`
-      : `${renderedResult.title}: проверено ${result.pages || 0}, загружено ${result.contentDownloaded || 0}, ошибок ${renderedResult.errorCount}`;
-    showActivity(resultSummary, renderedResult.errorCount ? 'warning' : 'success');
-    const status = await api('/api/status');
-    statusEl.textContent = cacheStatusText(status);
-    if (targetedPageDeleted) {
-      if (selectedPageId === completedContext.pageId) {
-        if (pageFocusMode) setPageFocusMode(false);
-        selectedPageId = null;
-        currentTargetParagraphIndex = undefined;
-        currentTargetParagraphIndexes = [];
-        currentTargetBibleOccurrences = [];
-        history.replaceState(null, '', '/');
-        renderEmptyPage();
+    const terminalSyncKey = `success:${state.startedAt || ''}:${state.finishedAt || ''}`;
+    if (terminalSyncKey !== lastHandledTerminalSyncKey) {
+      const result = state.result;
+      const completedContext = activeSyncContext;
+      const targetedPageDeleted = Boolean(
+        completedContext?.pageId && result.deletedPagesMarked > 0 && result.pages === 0
+      );
+      const renderedResult = renderSyncResult(result, completedContext);
+      const resultSummary = targetedPageDeleted
+        ? 'Страница удалена из источника данных и убрана из BibleNote.'
+        : completedContext?.localBibleReparse
+        ? `${renderedResult.title}: обработано ${result.bibleRefsPagesParsed || 0}, ошибок ${renderedResult.errorCount}`
+        : `${renderedResult.title}: проверено ${result.pages || 0}, загружено ${result.contentDownloaded || 0}, ошибок ${renderedResult.errorCount}`;
+      showActivity(resultSummary, renderedResult.errorCount ? 'warning' : 'success');
+      const status = await api('/api/status');
+      statusEl.textContent = cacheStatusText(status);
+      if (targetedPageDeleted) {
+        if (selectedPageId === completedContext.pageId) {
+          if (pageFocusMode) setPageFocusMode(false);
+          selectedPageId = null;
+          currentTargetParagraphIndex = undefined;
+          currentTargetParagraphIndexes = [];
+          currentTargetBibleOccurrences = [];
+          history.replaceState(null, '', '/');
+          renderEmptyPage();
+        }
+        await loadNotebookSelector();
+        await loadDownloadLog(true);
+        await renderNotesList();
+      } else if (completedContext?.pageId && selectedPageId === completedContext.pageId) {
+        loadDownloadLog(false).catch(error => console.warn(error));
+        await openPage(completedContext.pageId, { updateUrl:false, paragraphIndex:currentTargetParagraphIndex });
+        await renderNotesList();
+      } else {
+        await loadNotebookSelector();
+        await loadDownloadLog(true);
+        await renderNotesList();
       }
-      await loadNotebookSelector();
-      await loadDownloadLog(true);
-      await renderNotesList();
-    } else if (completedContext?.pageId && selectedPageId === completedContext.pageId) {
-      loadDownloadLog(false).catch(error => console.warn(error));
-      await openPage(completedContext.pageId, { updateUrl:false, paragraphIndex:currentTargetParagraphIndex });
-      await renderNotesList();
-    } else {
-      await loadNotebookSelector();
-      await loadDownloadLog(true);
-      await renderNotesList();
+      lastHandledTerminalSyncKey = terminalSyncKey;
     }
     activeSyncContext = null;
     updateSyncControls(false);
   } else if (state.status === 'failed') {
-    syncStateEl.classList.remove('has-result', 'warning', 'success');
-    syncStateEl.textContent = 'Ошибка: ' + state.error;
-    showActivity('Ошибка синхронизации: ' + state.error, 'error');
+    const terminalSyncKey = `failed:${state.startedAt || ''}:${state.finishedAt || ''}`;
+    if (terminalSyncKey !== lastHandledTerminalSyncKey) {
+      syncStateEl.classList.remove('has-result', 'warning', 'success');
+      syncStateEl.textContent = 'Ошибка: ' + state.error;
+      showActivity('Ошибка синхронизации: ' + state.error, 'error');
+      lastHandledTerminalSyncKey = terminalSyncKey;
+    }
     activeSyncContext = null;
     updateSyncControls(false);
   } else {
     syncStateEl.classList.remove('has-result', 'warning', 'success');
     syncStateEl.textContent = 'Синхронизация не запущена';
   }
+  scheduleSyncStatePoll(idleSyncPollIntervalMs);
 }
 
 function showError(error) {
@@ -491,13 +511,33 @@ function showError(error) {
   refreshPageFind();
 }
 
-function showStartupWait() {
+function showStartupWait(elapsedMs = 0) {
   content.innerHTML = '';
   const box = document.createElement('div');
-  box.className = 'empty-state';
-  box.textContent = 'Локальный кэш открывается... Обычно это занимает несколько секунд.';
+  box.className = 'empty-state startup-wait';
+  const spinner = document.createElement('span');
+  spinner.className = 'startup-spinner';
+  spinner.setAttribute('aria-hidden', 'true');
+  const text = document.createElement('span');
+  text.className = 'startup-wait-text';
+  text.textContent = elapsedMs >= 10000
+    ? 'Открываем локальный кэш. Большая база может загружаться несколько минут.'
+    : 'Открываем локальный кэш…';
+  box.append(spinner, text);
   content.append(box);
   refreshPageFind();
+}
+
+async function waitForCacheReady() {
+  const startedAt = Date.now();
+  showStartupWait();
+  while (true) {
+    const startup = await api('/api/startup', { timeoutMs:180000 });
+    if (startup.ready) return;
+    if (startup.error) throw new Error('Не удалось открыть локальный кэш: ' + startup.error);
+    showStartupWait(Date.now() - startedAt);
+    await new Promise(resolve => setTimeout(resolve, 500));
+  }
 }
 
 async function initializeApp() {
@@ -516,8 +556,10 @@ async function initializeApp() {
       }
       return;
     }
-    const [status] = await Promise.all([api('/api/status'), loadNotebookSelector()]);
+    await waitForCacheReady();
+    refreshOneNoteIntegration().catch(error => console.warn(error));
     refreshSyncState().catch(handleSyncPollError);
+    const [status] = await Promise.all([api('/api/status'), loadNotebookSelector()]);
     const initialBibleLocation = bibleLocationFromUrl();
     const loadBibleModules = refreshBibleReaderModules().catch(error => {
       console.warn(error);
@@ -540,16 +582,11 @@ async function initializeApp() {
     await openExternalBibleRefFromUrl();
     openSetupWizardIfNeeded().catch(error => console.warn(error));
   } catch (error) {
-    if (error && error.status === 503) {
-      showStartupWait();
-      setTimeout(() => initializeApp().catch(showError), 500);
-      return;
-    }
     showError(error);
   }
 }
 
-hiddenNotebookIds = new Set(loadHiddenNotebookIds());
+localStorage.removeItem('onenote.hiddenNotebookIds');
 searchOptions = loadSearchOptions();
 searchHistory = loadSearchHistory();
 updateSearchOptionButtons();

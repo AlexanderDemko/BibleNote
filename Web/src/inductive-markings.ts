@@ -60,7 +60,8 @@ export type LegacyInductiveRelationInput = {
 };
 
 export type InductiveImportPayload = {
-  location: { module: string; bookIndex: number; chapter: number };
+  scope?: 'chapter' | 'bible';
+  location?: { module: string; bookIndex: number; chapter: number };
   styles: InductiveStyle[];
   annotations: Array<InductiveAnnotationInput & { id: string }>;
   relations: Array<(InductiveRelationInput | LegacyInductiveRelationInput) & { id: string }>;
@@ -356,6 +357,12 @@ export function listInductiveAnnotations(
   `).all(location.module, location.bookIndex, location.chapter) as any[];
 }
 
+export function listAllInductiveAnnotations(db: Database.Database): any[] {
+  return db.prepare(`${annotationSelect()}
+    ORDER BY a.module, a.book_index, a.chapter, a.verse, a.start_offset, a.created_at
+  `).all() as any[];
+}
+
 export function createInductiveAnnotations(
   db: Database.Database,
   inputs: InductiveAnnotationInput[]
@@ -443,6 +450,13 @@ export function listInductiveRelations(
     WHERE r.module = ? AND r.book_index = ? AND r.chapter = ?
     ORDER BY r.source_verse, r.source_start_offset, r.target_verse, r.target_start_offset
   `).all(location.module, location.bookIndex, location.chapter) as any[];
+}
+
+export function listAllInductiveRelations(db: Database.Database): any[] {
+  return db.prepare(`${relationSelect()}
+    ORDER BY r.module, r.book_index, r.chapter,
+      r.source_verse, r.source_start_offset, r.target_verse, r.target_start_offset
+  `).all() as any[];
 }
 
 function compareRelationEndpoints(left: InductiveRelationEndpointInput, right: InductiveRelationEndpointInput): number {
@@ -562,7 +576,7 @@ export function deleteInductiveRelation(db: Database.Database, id: string): bool
 export function importInductiveMarkings(
   db: Database.Database,
   payload: InductiveImportPayload
-): { location: InductiveImportPayload['location']; styles: number; annotations: number; relations: number } {
+): { scope: 'chapter' | 'bible'; location?: InductiveImportPayload['location']; styles: number; annotations: number; relations: number } {
   let importedRelationCount = 0;
   const importTransaction = db.transaction(() => {
     const now = new Date().toISOString();
@@ -668,7 +682,9 @@ export function importInductiveMarkings(
           throw new Error('Every imported relation must reference annotations from the same file.');
         }
         createInductiveRelation(db, {
-          ...payload.location,
+          module:source.module,
+          bookIndex:source.bookIndex,
+          chapter:source.chapter,
           source:{
             verse:source.verse,
             startOffset:source.startOffset,
@@ -698,6 +714,7 @@ export function importInductiveMarkings(
   });
   importTransaction();
   return {
+    scope:payload.scope === 'bible' ? 'bible' : 'chapter',
     location:payload.location,
     styles:payload.styles.length,
     annotations:payload.annotations.length,

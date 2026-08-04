@@ -42,8 +42,11 @@ import {
 } from './cache.js';
 import type { PageRow, SectionRow } from './cache.js';
 import { graphJson, graphListAll, graphText, setGraphRetryObserver } from './graph.js';
-import { oneNoteDataSource } from './onenote-settings.js';
+import { configuredDataSources, folderPathsForSource, type ConfiguredDataSource, type OneNoteDataSource } from './onenote-settings.js';
 import { syncOneNoteComCache } from './sync-com.js';
+import { syncFolderCache } from './sync-folder.js';
+import { folderNotebookId } from './folder-source.js';
+import type { LegacyDocConverter } from './folder-extract.js';
 
 export type Notebook = {
   id: string;
@@ -101,7 +104,6 @@ export type SyncOptions = {
   replaceAll?: boolean;
   forceContent?: boolean;
   metadataOnly?: boolean;
-  includeHtml?: boolean;
   maxPages?: number;
   concurrency?: number;
   refreshOlderThanHours?: number;
@@ -116,6 +118,10 @@ export type SyncOptions = {
   rollingRefreshLimit?: number;
   bibleNoteApiUrl?: string;
   bibleModule?: string;
+  legacyDocConverter?: LegacyDocConverter;
+  dataSource?: OneNoteDataSource;
+  folderSourcePaths?: string[];
+  deduplicateFolderFilesByName?: boolean;
   onProgress?: (event: SyncProgressEvent) => void;
 };
 
@@ -126,6 +132,10 @@ export const defaultRollingRefreshLimit = 25;
 export type SyncProgressEvent = {
   phase: string;
   message?: string;
+  sourceId?: string;
+  sourceName?: string;
+  sourceIndex?: number;
+  sourceTotal?: number;
   notebooks?: number;
   sections?: number;
   sectionTotal?: number;
@@ -228,12 +238,13 @@ export async function reparseCachedBibleReferences(options: SyncOptions = {}): P
 
     await mapWithConcurrency(pages, Math.min(concurrency, 2), async page => {
       try {
+        const sourceHtml = page.content_html;
         const result = await parsePageWithBibleNote({
           apiUrl: bibleConfig.apiUrl,
           pageId: page.id,
           title: page.title,
-          html: null,
-          text: page.content_text,
+          html: sourceHtml,
+          text: sourceHtml ? null : page.content_text,
           module: bibleConfig.module,
           useCommaDelimiter: bibleConfig.useCommaDelimiter,
           timeoutMs: bibleConfig.timeoutMs,
@@ -345,7 +356,7 @@ export function shouldRefreshContent(
     }
   }
   if (!cached.content_synced_at) return true;
-  if (options.includeHtml && !cached.content_html) return true;
+  if (!cached.content_html) return true;
   if ((cached.content_source_modified_date_time ?? null) !== (page.lastModifiedDateTime ?? null)) return true;
 
   const refreshOlderThanHours = options.refreshOlderThanHours ?? 0;
@@ -558,9 +569,146 @@ export async function loadNotebookSectionsRecursively(
   return { sections: uniqueSections, groups, sectionGroups: visited.size };
 }
 
+function sourceTypeForNotebookId(notebookId: string): OneNoteDataSource {
+  if (notebookId.startsWith('folder:notebook:')) return 'folder';
+  return notebookId.trim().startsWith('{') ? 'com' : 'graph';
+}
+
+function notebookIdsForSource(source: ConfiguredDataSource, notebookIds: string[] | undefined): string[] | undefined {
+  if (source.type === 'folder') {
+    if (!notebookIds) return undefined;
+    const expectedIds = new Set(folderPathsForSource(source).map(folderNotebookId));
+    return notebookIds.filter(id => expectedIds.has(id));
+  }
+  const configuredIds = source.notebooks ? new Set(source.notebooks.map(notebook => notebook.id)) : undefined;
+  if (!notebookIds) return configuredIds ? [...configuredIds] : undefined;
+  return notebookIds.filter(id => sourceTypeForNotebookId(id) === source.type && (!configuredIds || configuredIds.has(id)));
+}
+
+function sourceForTarget(options: SyncOptions): OneNoteDataSource | undefined {
+  if (options.notebookIds?.length) {
+    const types = new Set(options.notebookIds.map(sourceTypeForNotebookId));
+    return types.size === 1 ? [...types][0] : undefined;
+  }
+  if (!options.pageId && !options.sectionId) return undefined;
+  const db = openCacheDb(options.dbPath ?? defaultDbPath);
+  try {
+    const row = options.pageId
+      ? db.prepare('SELECT parent_notebook_id AS notebookId FROM pages WHERE id = ?').get(options.pageId) as { notebookId?: string } | undefined
+      : db.prepare('SELECT parent_notebook_id AS notebookId FROM sections WHERE id = ?').get(options.sectionId) as { notebookId?: string } | undefined;
+    return row?.notebookId ? sourceTypeForNotebookId(row.notebookId) : undefined;
+  } finally {
+    db.close();
+  }
+}
+
+async function syncSingleDataSource(source: ConfiguredDataSource, options: SyncOptions): Promise<SyncResult> {
+  const sourceOptions: SyncOptions = {
+    ...options,
+    dataSource:source.type,
+    folderSourcePaths:source.type === 'folder' ? folderPathsForSource(source) : undefined,
+    deduplicateFolderFilesByName:source.type === 'folder'
+      ? source.deduplicateFilesByName ?? options.deduplicateFolderFilesByName
+      : undefined
+  };
+  if (source.type === 'com') return syncOneNoteComCache(sourceOptions);
+  if (source.type === 'folder') return syncFolderCache(sourceOptions);
+  return syncGraphCache(sourceOptions);
+}
+
 export async function syncOneNoteCache(options: SyncOptions = {}): Promise<SyncResult> {
   if (options.localBibleReparse) return reparseCachedBibleReferences(options);
-  if (oneNoteDataSource() === 'com') return syncOneNoteComCache(options);
+  if (options.dataSource) {
+    const source: ConfiguredDataSource = options.dataSource === 'folder'
+      ? { id:'source:folder:direct', type:'folder', displayName:'Папка', folderPaths:options.folderSourcePaths }
+      : { id:`source:${options.dataSource}`, type:options.dataSource, displayName:options.dataSource === 'graph' ? 'OneNote Cloud' : 'OneNote Local' };
+    return syncSingleDataSource(source, { ...options, dataSource:undefined });
+  }
+
+  let sources = configuredDataSources();
+  const targetType = sourceForTarget(options);
+  if (targetType) sources = sources.filter(source => source.type === targetType);
+  if (options.notebookIds?.length) {
+    sources = sources.filter(source => Boolean(notebookIdsForSource(source, options.notebookIds)?.length));
+  }
+  if (sources.length === 0) throw new Error('Не настроено ни одного подходящего источника данных.');
+  if (sources.length === 1) {
+    const sourceNotebookIds = notebookIdsForSource(sources[0], options.notebookIds);
+    if (sourceNotebookIds?.length === 0) throw new Error('Выберите хотя бы одну записную книжку OneNote.');
+    return syncSingleDataSource(sources[0], { ...options, notebookIds:sourceNotebookIds });
+  }
+
+  const startedAt = nowIso();
+  if (options.replaceAll) {
+    const db = openCacheDb(options.dbPath ?? defaultDbPath);
+    try {
+      resetCacheDb(db);
+      checkpointCacheDb(db, 'TRUNCATE');
+    } finally {
+      db.close();
+    }
+  }
+
+  const totals = {
+    notebooks:0, sections:0, sectionGroups:0, pages:0, contentDownloaded:0, contentSkipped:0,
+    contentErrors:0, sectionScanErrors:0, bibleRefsPagesParsed:0, bibleRefsParseSkipped:0,
+    bibleRefsParseErrors:0, bibleRefsRecognized:0, deletedPagesMarked:0
+  };
+  let completedSources = 0;
+  for (const [sourceOffset, source] of sources.entries()) {
+    const sourceNotebookIds = notebookIdsForSource(source, options.notebookIds);
+    if (options.notebookIds && sourceNotebookIds?.length === 0) continue;
+    const sourceProgress = {
+      sourceId:source.id,
+      sourceName:source.displayName,
+      sourceIndex:sourceOffset + 1,
+      sourceTotal:sources.length
+    };
+    options.onProgress?.({
+      phase:'source',
+      message:`Синхронизация источника «${source.displayName}»`,
+      ...sourceProgress
+    });
+    try {
+      const result = await syncSingleDataSource(source, {
+        ...options,
+        replaceAll:false,
+        notebookIds:sourceNotebookIds,
+        onProgress:progress => options.onProgress?.({ ...progress, ...sourceProgress })
+      });
+      completedSources += 1;
+      for (const key of Object.keys(totals) as Array<keyof typeof totals>) totals[key] += Number(result[key] ?? 0);
+    } catch (error) {
+      totals.contentErrors += 1;
+      runtimeLog('sync-core', 'Data source sync failed while other sources continue', {
+        sourceId:source.id,
+        sourceType:source.type,
+        error:error instanceof Error ? error.stack ?? error.message : String(error)
+      });
+    }
+  }
+  if (completedSources === 0) throw new Error('Не удалось синхронизировать ни один источник данных.');
+  const finishedAt = nowIso();
+  const db = openCacheDb(options.dbPath ?? defaultDbPath);
+  try {
+    setSyncState(db, 'last_sync_started_at', startedAt);
+    setSyncState(db, 'last_sync_finished_at', finishedAt);
+    setSyncState(db, 'last_sync_status', totals.contentErrors || totals.sectionScanErrors || totals.bibleRefsParseErrors ? 'completed_with_errors' : 'success');
+    return {
+      dbPath:db.name,
+      cacheReset:options.replaceAll === true,
+      ...totals,
+      startedAt,
+      finishedAt,
+      status:cacheStatus(db)
+    };
+  } finally {
+    checkpointCacheDb(db, 'TRUNCATE');
+    db.close();
+  }
+}
+
+async function syncGraphCache(options: SyncOptions = {}): Promise<SyncResult> {
   const startedAt = nowIso();
   runtimeLog('sync-core', 'syncOneNoteCache start', {
     maxPages: options.maxPages,
@@ -568,7 +716,6 @@ export async function syncOneNoteCache(options: SyncOptions = {}): Promise<SyncR
     replaceAll: options.replaceAll,
     metadataOnly: options.metadataOnly,
     forceContent: options.forceContent,
-    includeHtml: options.includeHtml,
     parseBibleRefs: options.parseBibleRefs,
     forceBibleParse: options.forceBibleParse,
     localBibleReparse: options.localBibleReparse,
@@ -587,14 +734,6 @@ export async function syncOneNoteCache(options: SyncOptions = {}): Promise<SyncR
   setSyncState(db, 'last_sync_status', 'running');
   clearSyncState(db, 'last_sync_error');
   try {
-  const savedSource = getSyncState(db, 'last_data_source');
-  const existingNotebook = db.prepare('SELECT id FROM notebooks LIMIT 1').get() as { id?: string } | undefined;
-  const inferredSource = savedSource ?? (existingNotebook?.id
-    ? (existingNotebook.id.trim().startsWith('{') ? 'com' : 'graph')
-    : undefined);
-  if (inferredSource === 'com' && !options.replaceAll) {
-    throw new Error('Источник OneNote изменён. Перед первой облачной синхронизацией пересоздайте локальный кэш.');
-  }
   setGraphRetryObserver(event => {
     const waitSeconds = Math.max(1, Math.ceil(event.retryAfterMs / 1000));
     options.onProgress?.({
@@ -611,7 +750,6 @@ export async function syncOneNoteCache(options: SyncOptions = {}): Promise<SyncR
   if (!Number.isInteger(concurrency) || concurrency < 1 || concurrency > 3) {
     throw new Error('Sync concurrency must be an integer from 1 to 3.');
   }
-  const includeHtml = options.includeHtml ?? process.env.ONENOTE_CACHE_INCLUDE_HTML === 'true';
   const seenPageIds = new Set<string>();
   const pagesNeedingContent = new Set<string>();
 
@@ -627,7 +765,6 @@ export async function syncOneNoteCache(options: SyncOptions = {}): Promise<SyncR
   const selectedNotebookIds = options.notebookIds
     ? [...new Set(options.notebookIds.filter(Boolean))]
     : undefined;
-  const fetchedPageHtml = new Map<string, string>();
   const scopeCount = Number(Boolean(options.pageId)) + Number(Boolean(options.sectionId)) + Number(Boolean(selectedNotebookIds));
   if (scopeCount > 1) throw new Error('Specify only one sync scope: notebookIds, sectionId, or pageId.');
   if (selectedNotebookIds?.length === 0) throw new Error('At least one notebook must be selected.');
@@ -711,6 +848,12 @@ export async function syncOneNoteCache(options: SyncOptions = {}): Promise<SyncR
       sectionGroupsFound += tree.sectionGroups;
     }
   }
+  const activeNotebookIds = selectedNotebookIds
+    ?? [...new Set([
+      ...notebooks.map(notebook => notebook.id),
+      ...effectiveSections.flatMap(section => section.parentNotebook?.id ? [section.parentNotebook.id] : []),
+      ...(targetedPage?.parentNotebook?.id ? [targetedPage.parentNotebook.id] : [])
+    ])];
 
   const cachedSectionsById = new Map(listCachedSections(db).map(section => [section.id, section]));
   const sectionModifiedById = new Map(
@@ -763,7 +906,7 @@ export async function syncOneNoteCache(options: SyncOptions = {}): Promise<SyncR
     targetedPage.orderIndex = cachedTargetPage?.order_index
       ?? (Number.isFinite(targetedPage.order) ? Number(targetedPage.order) : undefined);
     seenPageIds.add(targetedPage.id);
-    if (shouldRefreshContent(getCachedPage(db, targetedPage.id), targetedPage, { ...options, includeHtml })) {
+    if (shouldRefreshContent(getCachedPage(db, targetedPage.id), targetedPage, options)) {
       pagesNeedingContent.add(targetedPage.id);
     }
     upsertPageMetadata(db, targetedPage, syncedAt);
@@ -805,7 +948,7 @@ export async function syncOneNoteCache(options: SyncOptions = {}): Promise<SyncR
       for (const page of items) {
         seenPageIds.add(page.id);
         if (changedSectionIds.has(section.id)
-          || shouldRefreshContent(getCachedPage(db, page.id), page, { ...options, includeHtml })) {
+          || shouldRefreshContent(getCachedPage(db, page.id), page, options)) {
           pagesNeedingContent.add(page.id);
         }
         upsertPageMetadata(db, page, syncedAt);
@@ -834,7 +977,12 @@ export async function syncOneNoteCache(options: SyncOptions = {}): Promise<SyncR
   }
 
   if (!options.incrementalMetadata && !options.pageId && !options.sectionId && !maxPages && sectionScanErrors === 0) {
-    deletedPagesMarked += markMissingPagesDeleted(db, seenPageIds, syncedAt, selectedNotebookIds);
+    deletedPagesMarked += markMissingPagesDeleted(
+      db,
+      seenPageIds,
+      syncedAt,
+      activeNotebookIds
+    );
   } else if (sectionScanErrors > 0) {
     runtimeLog('sync-core', 'Skipping cross-section missing page deletion because section scans failed', {
       sectionScanErrors
@@ -862,21 +1010,21 @@ export async function syncOneNoteCache(options: SyncOptions = {}): Promise<SyncR
   };
 
   if (!options.metadataOnly && !options.pageId && !options.sectionId) {
-    for (const cachedPage of listCachedPagesWithStaleSectionContent(db, selectedNotebookIds)) {
+    for (const cachedPage of listCachedPagesWithStaleSectionContent(db, activeNotebookIds)) {
       if (maxPages && pages.length >= maxPages) break;
       addCachedContentCandidate(cachedPage, 'staleSection');
     }
   }
 
   if (options.incrementalMetadata && !options.metadataOnly) {
-    const retryCandidates = listCachedPagesWithFetchErrors(db, selectedNotebookIds);
+    const retryCandidates = listCachedPagesWithFetchErrors(db, activeNotebookIds);
     for (const cachedPage of retryCandidates) {
       if (pageIds.has(cachedPage.id) || !shouldRetryCachedFetchError(cachedPage)) continue;
       if (maxPages && pages.length >= maxPages) break;
       addCachedContentCandidate(cachedPage, 'retry');
     }
 
-    const selectedNotebookIdSet = selectedNotebookIds ? new Set(selectedNotebookIds) : undefined;
+    const selectedNotebookIdSet = new Set(activeNotebookIds);
     const recentlyOpenedRefreshHours = options.recentlyOpenedRefreshHours
       ?? defaultRecentlyOpenedRefreshHours;
     let recentlyOpenedAdded = 0;
@@ -895,7 +1043,7 @@ export async function syncOneNoteCache(options: SyncOptions = {}): Promise<SyncR
     let rollingAdded = 0;
     if (rollingRefreshLimit > 0) {
       const rollingCandidates = listOldestCachedPagesForContentRefresh(db, {
-        notebookIds:selectedNotebookIds,
+        notebookIds:activeNotebookIds,
         limit:Math.min(250, rollingRefreshLimit * 4)
       });
       for (const cachedPage of rollingCandidates) {
@@ -917,7 +1065,6 @@ export async function syncOneNoteCache(options: SyncOptions = {}): Promise<SyncR
       pages: pages.length,
       pagesToFetch: pagesToFetch.length,
       contentSkipped,
-      includeHtml,
       previouslyOpened: pagesToFetch.filter(page => openedAtByPage.has(page.id)).length,
       priority: 'opened-then-last-modified'
     });
@@ -943,7 +1090,6 @@ export async function syncOneNoteCache(options: SyncOptions = {}): Promise<SyncR
         });
         const html = await graphText(`/me/onenote/pages/${encodeURIComponent(page.id)}/content`);
         const text = htmlToText(html);
-        fetchedPageHtml.set(page.id, html);
         const sectionModifiedDateTime = page.parentSection?.id
           ? sectionModifiedById.get(page.parentSection.id) ?? null
           : null;
@@ -951,7 +1097,7 @@ export async function syncOneNoteCache(options: SyncOptions = {}): Promise<SyncR
           db,
           page.id,
           text,
-          includeHtml ? html : null,
+          html,
           page.lastModifiedDateTime ?? null,
           nowIso(),
           sectionModifiedDateTime
@@ -1009,7 +1155,7 @@ export async function syncOneNoteCache(options: SyncOptions = {}): Promise<SyncR
         const pendingPages = listCachedPagesNeedingBibleParse(db, {
           module: bibleConfig.module,
           parserVersion: bibleParserVersion,
-          notebookIds: selectedNotebookIds
+          notebookIds: activeNotebookIds
         });
         for (const page of pendingPages) {
           if (parseCandidatesById.has(page.id)) continue;
@@ -1041,10 +1187,7 @@ export async function syncOneNoteCache(options: SyncOptions = {}): Promise<SyncR
 
       await mapWithConcurrency(pagesToParse, Math.min(concurrency, 2), async page => {
         try {
-          // Cached pages queued only for a relation rebuild already have valid HTML.
-          // Parse their text without rewriting several-megabyte OneNote documents;
-          // newly downloaded pages still get their HTML links refreshed.
-          const htmlForBibleNote = includeHtml ? (fetchedPageHtml.get(page.id) ?? null) : null;
+          const htmlForBibleNote = page.content_html;
           runtimeLog('sync-core', 'Parsing page with BibleNote', {
             pageId: page.id,
             title: page.title,
@@ -1203,9 +1346,6 @@ function parseArgs(argv: string[]): SyncOptions & { statusOnly?: boolean } {
       case '--metadata-only':
         result.metadataOnly = true;
         break;
-      case '--include-html':
-        result.includeHtml = true;
-        break;
       case '--max-pages':
         result.maxPages = integerOption(arg, next, 1);
         i += 1;
@@ -1255,7 +1395,7 @@ function parseArgs(argv: string[]): SyncOptions & { statusOnly?: boolean } {
         break;
       default:
         if (arg === '--help' || arg === '-h') {
-          console.log(`Usage: npm run sync -- [options]\n\nOptions:\n  --status                         Print cache status only\n  --db <path>                      SQLite cache path\n  --replace-all                    Recreate all cache tables before a full content sync\n  --force-content                  Re-download content even if lastModifiedDateTime is unchanged\n  --metadata-only                  Sync notebooks/sections/page metadata only\n  --incremental-metadata           Scan pages only in new or changed sections\n  --include-html                   Store raw page HTML as well as plain text\n  --max-pages <n>                  Limit page count for testing\n  --concurrency <n>                Graph concurrency for metadata (1..3), default 1; content downloads are serialized\n  --refresh-older-than-hours <n>   Re-download content older than n hours\n  --section-id <id>                Sync one section only\n  --page-id <id>                   Sync one page only\n  --notebook-id <id>               Sync one notebook; repeat for multiple notebooks\n  --parse-bible-refs               Parse cached page content with the local BibleNote API\n  --force-bible-parse              Re-parse Bible references even if parser state is current\n  --reparse-bible-cache            Re-parse all locally cached pages without Microsoft Graph\n  --biblenote-api-url <url>        BibleNote API base URL, default http://127.0.0.1:5000\n  --bible-module <name>            BibleNote module, default rst\n`);
+          console.log(`Usage: npm run sync -- [options]\n\nOptions:\n  --status                         Print cache status only\n  --db <path>                      SQLite cache path\n  --replace-all                    Recreate all cache tables before a full content sync\n  --force-content                  Re-download content even if lastModifiedDateTime is unchanged\n  --metadata-only                  Sync notebooks/sections/page metadata only\n  --incremental-metadata           Scan pages only in new or changed sections\n  --max-pages <n>                  Limit page count for testing\n  --concurrency <n>                Graph concurrency for metadata (1..3), default 1; content downloads are serialized\n  --refresh-older-than-hours <n>   Re-download content older than n hours\n  --section-id <id>                Sync one section only\n  --page-id <id>                   Sync one page only\n  --notebook-id <id>               Sync one notebook; repeat for multiple notebooks\n  --parse-bible-refs               Parse cached page content with the local BibleNote API\n  --force-bible-parse              Re-parse Bible references even if parser state is current\n  --reparse-bible-cache            Re-parse all locally cached pages without Microsoft Graph\n  --biblenote-api-url <url>        BibleNote API base URL, default http://127.0.0.1:5000\n  --bible-module <name>            BibleNote module, default rst\n`);
           process.exit(0);
         }
         throw new Error(`Unknown argument: ${arg}`);

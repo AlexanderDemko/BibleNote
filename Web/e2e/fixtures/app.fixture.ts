@@ -34,6 +34,8 @@ export const test = base.extend<Fixtures>({
       BIBLENOTE_E2E_GRAPH_ACCESS_TOKEN: process.env.BIBLENOTE_E2E_GRAPH_ACCESS_TOKEN,
       ONENOTE_ELECTRON_CONTROL_URL: process.env.ONENOTE_ELECTRON_CONTROL_URL,
       ONENOTE_ENV_FILE: process.env.ONENOTE_ENV_FILE,
+      ONENOTE_DATA_SOURCE: process.env.ONENOTE_DATA_SOURCE,
+      BIBLENOTE_DATA_SOURCES: process.env.BIBLENOTE_DATA_SOURCES,
       ONENOTE_TOKEN_CACHE: process.env.ONENOTE_TOKEN_CACHE,
       ONENOTE_BIBLE_PARSE_ENABLED: process.env.ONENOTE_BIBLE_PARSE_ENABLED,
       BIBLENOTE_API_TIMEOUT_MS: process.env.BIBLENOTE_API_TIMEOUT_MS
@@ -45,6 +47,10 @@ export const test = base.extend<Fixtures>({
     process.env.BIBLENOTE_E2E_GRAPH_ACCESS_TOKEN = 'e2e-access-token';
     process.env.ONENOTE_ELECTRON_CONTROL_URL = electron.baseUrl;
     process.env.ONENOTE_ENV_FILE = path.join(directory, '.env');
+    process.env.ONENOTE_DATA_SOURCE = 'graph';
+    process.env.BIBLENOTE_DATA_SOURCES = Buffer.from(JSON.stringify([
+      { type:'graph', id:'source:graph', displayName:'OneNote Cloud' }
+    ]), 'utf8').toString('base64url');
     process.env.ONENOTE_TOKEN_CACHE = path.join(directory, 'msal-cache.json');
     process.env.ONENOTE_BIBLE_PARSE_ENABLED = 'false';
     process.env.BIBLENOTE_API_TIMEOUT_MS = '5000';

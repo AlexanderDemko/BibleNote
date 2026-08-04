@@ -123,11 +123,12 @@ async function saveRuntimeSettings() {
 function openSettingsDialog() {
   uiLog('ui.openSettings', {});
   if (!settingsDialog.open) settingsDialog.showModal();
+  openOneNoteBibleLinksInReaderInput.checked = localStorage.getItem('biblenote.onenoteLinksOpenInBible') === 'true';
   refreshRuntimeSettings().catch(error => {
     verboseLoggingStatusEl.textContent = 'Не удалось загрузить параметры диагностики: ' + error.message;
   });
   refreshOneNoteAccessSettings().catch(error => {
-    oneNoteAccessStatusEl.textContent = 'Не удалось загрузить параметры OneNote: ' + error.message;
+    oneNoteAccessStatusEl.textContent = 'Не удалось загрузить источники данных: ' + error.message;
   });
   refreshOneNoteIntegration().catch(error => {
     if (oneNoteIntegrationSettingsEl && !oneNoteIntegrationSettingsEl.hidden) {
@@ -146,7 +147,9 @@ function openSettingsDialog() {
 function renderOneNoteIntegration(result) {
   if (!oneNoteIntegrationSettingsEl) return;
   const windowsBuild = result?.platform === 'win32';
-  oneNoteIntegrationSettingsEl.hidden = !windowsBuild;
+  oneNoteIntegrationEnabled = windowsBuild && result?.enabled === true;
+  updateOneNoteOpenButtons();
+  oneNoteIntegrationSettingsEl.hidden = !windowsBuild || !configuredDataSourcesValue.some(source => source.type === 'com');
   if (!windowsBuild) return;
 
   const programs = Array.isArray(result.installedPrograms) ? result.installedPrograms : [];
@@ -210,37 +213,351 @@ async function setOneNoteRibbonEnabled(enabled) {
 
 async function refreshOneNoteAccessSettings() {
   const result = await api('/api/onenote/access-settings');
-  renderOneNoteDataSource(result.dataSource);
-  oneNoteAccessStatusEl.textContent = result.dataSource === 'com'
-    ? 'Заметки читаются из классического OneNote на этом компьютере.'
-    : 'Для доступа к облачным блокнотам используется вход через Microsoft.';
+  configuredDataSourcesValue = Array.isArray(result.sources) ? result.sources : [];
+  renderConfiguredDataSources();
+  closeDataSourceEditors();
+  oneNoteAccessStatusEl.textContent = configuredDataSourcesValue.length
+    ? `Настроено источников: ${configuredDataSourcesValue.length}. Они синхронизируются независимо и объединяются только в результатах поиска.`
+    : 'Добавьте хотя бы один источник данных.';
   return result;
 }
 
 function renderOneNoteDataSource(dataSource) {
-  oneNoteDataSourceValue = dataSource === 'com' ? 'com' : 'graph';
+  oneNoteDataSourceValue = dataSource === 'com' || dataSource === 'folder' ? dataSource : 'graph';
   oneNoteDataSourceSelect.value = oneNoteDataSourceValue;
+  folderSourceSettingsEl.hidden = true;
+  oneNoteSourceSettingsEl.hidden = true;
+  if (!configuredDataSourcesValue.some(source => source.type === 'com')) oneNoteIntegrationSettingsEl.hidden = true;
 }
 
-async function saveOneNoteAccessSettings() {
-  if (saveOneNoteAccessButton) saveOneNoteAccessButton.disabled = true;
-  oneNoteAccessStatusEl.textContent = 'Сохранение параметров OneNote...';
-  try {
-    const result = await api('/api/onenote/access-settings', {
-      method:'PUT',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        dataSource:oneNoteDataSourceSelect.value
-      })
+function dataSourceTypeLabel(source) {
+  if (source.type === 'graph') return 'Заметки OneNote из Microsoft Cloud';
+  if (source.type === 'com') return 'Классический OneNote на этом компьютере';
+  return 'Файлы из локальных папок';
+}
+
+function folderPathsOf(source) {
+  return Array.isArray(source?.folderPaths)
+    ? source.folderPaths
+    : source?.folderPath ? [source.folderPath] : [];
+}
+
+function resetFolderSourceEditor() {
+  editingFolderSourceId = null;
+  folderSourceNameInput.value = '';
+  folderSourcePathsInput.value = '';
+  folderSourceDeduplicateFilesInput.checked = false;
+  folderSourceStatusEl.textContent = '';
+  saveFolderSourceButton.textContent = 'Сохранить источник';
+  cancelFolderSourceEditButton.hidden = true;
+}
+
+function resetOneNoteSourceEditor() {
+  editingOneNoteSourceId = null;
+  editingOneNoteSourceType = null;
+  oneNoteSourceRemoteNotebooks = [];
+  oneNoteSourceSelectedNotebookIds = new Set();
+  oneNoteSourceSelectAllByDefault = true;
+  oneNoteSourceNotebookListEl.replaceChildren();
+  oneNoteSourceStatusEl.textContent = '';
+  oneNoteSourceSettingsEl.hidden = true;
+  saveOneNoteSourceButton.textContent = 'Сохранить источник';
+}
+
+function closeDataSourceEditors() {
+  resetFolderSourceEditor();
+  resetOneNoteSourceEditor();
+  folderSourceSettingsEl.hidden = true;
+  dataSourceOverviewEl.hidden = false;
+}
+
+function renderOneNoteSourceNotebooks() {
+  oneNoteSourceNotebookListEl.replaceChildren();
+  for (const notebook of oneNoteSourceRemoteNotebooks) {
+    const option = document.createElement('label');
+    option.className = 'setup-notebook-option';
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.checked = oneNoteSourceSelectedNotebookIds.has(notebook.id);
+    checkbox.addEventListener('change', () => {
+      if (checkbox.checked) oneNoteSourceSelectedNotebookIds.add(notebook.id);
+      else oneNoteSourceSelectedNotebookIds.delete(notebook.id);
+      oneNoteSourceStatusEl.textContent = `Выбрано записных книжек: ${oneNoteSourceSelectedNotebookIds.size}`;
     });
-    renderOneNoteDataSource(result.dataSource);
-    oneNoteAccessStatusEl.textContent = result.dataSource === 'com'
-      ? 'Выбран классический OneNote. Если кэш был создан из облака, пересоздайте его при следующей синхронизации.'
-      : 'Выбран Microsoft Graph. Если кэш был создан из локального OneNote, пересоздайте его при следующей синхронизации.';
-    return result;
-  } finally {
-    if (saveOneNoteAccessButton) saveOneNoteAccessButton.disabled = false;
+    const name = document.createElement('span');
+    name.textContent = notebook.displayName || 'Без названия';
+    option.append(checkbox, name);
+    oneNoteSourceNotebookListEl.append(option);
   }
+  if (oneNoteSourceRemoteNotebooks.length === 0) {
+    oneNoteSourceNotebookListEl.textContent = 'Записные книжки не найдены.';
+  }
+}
+
+async function waitForOneNoteSourceMicrosoftLogin(initialState) {
+  let state = initialState;
+  if (state.verificationUri) {
+    const code = state.userCode ? ` Код: ${state.userCode}.` : '';
+    oneNoteSourceStatusEl.textContent = `Завершите вход в Microsoft.${code}`;
+    await api('/api/system/open-external', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json' },
+      body:JSON.stringify({ url:state.verificationUri })
+    }).catch(() => undefined);
+  }
+  while (state.status === 'starting' || state.status === 'waiting') {
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    state = await api('/api/onenote/login/status?source=graph');
+    if (state.status === 'waiting') {
+      oneNoteSourceStatusEl.textContent = `Завершите вход в Microsoft. Код: ${state.userCode || '—'}`;
+    }
+  }
+  if (state.status !== 'success') throw new Error(state.error || 'Не удалось войти в Microsoft.');
+}
+
+async function loadOneNoteSourceNotebooks(authenticate = false) {
+  if (!editingOneNoteSourceType) return;
+  refreshOneNoteSourceNotebooksButton.disabled = true;
+  oneNoteSourceStatusEl.textContent = 'Загрузка списка записных книжек…';
+  try {
+    if (authenticate && editingOneNoteSourceType === 'graph') {
+      const state = await api('/api/onenote/login/start', { method:'POST', timeoutMs:120000 });
+      await waitForOneNoteSourceMicrosoftLogin(state);
+    }
+    const result = await api(`/api/onenote/remote-notebooks?source=${encodeURIComponent(editingOneNoteSourceType)}`, { timeoutMs:120000 });
+    oneNoteSourceRemoteNotebooks = Array.isArray(result.notebooks) ? result.notebooks : [];
+    if (oneNoteSourceSelectAllByDefault) {
+      oneNoteSourceSelectedNotebookIds = new Set(oneNoteSourceRemoteNotebooks.map(notebook => notebook.id));
+      oneNoteSourceSelectAllByDefault = false;
+    }
+    renderOneNoteSourceNotebooks();
+    oneNoteSourceStatusEl.textContent = `Выбрано записных книжек: ${oneNoteSourceSelectedNotebookIds.size}`;
+    refreshOneNoteSourceNotebooksButton.textContent = 'Обновить список';
+  } catch (error) {
+    oneNoteSourceStatusEl.textContent = 'Не удалось получить список: ' + error.message;
+    if (editingOneNoteSourceType === 'graph') refreshOneNoteSourceNotebooksButton.textContent = 'Войти в Microsoft';
+  } finally {
+    refreshOneNoteSourceNotebooksButton.disabled = false;
+  }
+}
+
+function editConfiguredOneNoteSource(source = { type:oneNoteDataSourceSelect.value }) {
+  editingOneNoteSourceId = source.id || null;
+  editingOneNoteSourceType = source.type;
+  oneNoteSourceSelectAllByDefault = !Array.isArray(source.notebooks);
+  oneNoteSourceSelectedNotebookIds = new Set((source.notebooks || []).map(notebook => notebook.id));
+  oneNoteSourceRemoteNotebooks = Array.isArray(source.notebooks) ? [...source.notebooks] : [];
+  oneNoteDataSourceSelect.value = source.type;
+  oneNoteDataSourceValue = source.type;
+  folderSourceSettingsEl.hidden = true;
+  oneNoteSourceSettingsEl.hidden = false;
+  dataSourceOverviewEl.hidden = true;
+  oneNoteSourceTitleEl.textContent = source.type === 'graph' ? 'OneNote Cloud: записные книжки' : 'OneNote Local: записные книжки';
+  saveOneNoteSourceButton.textContent = source.id ? 'Сохранить изменения' : 'Сохранить источник';
+  refreshOneNoteSourceNotebooksButton.textContent = 'Обновить список';
+  renderOneNoteSourceNotebooks();
+  oneNoteSourceSettingsEl.scrollIntoView({ block:'nearest', behavior:'smooth' });
+  loadOneNoteSourceNotebooks(false).catch(() => undefined);
+}
+
+async function saveConfiguredOneNoteSource() {
+  if (!editingOneNoteSourceType) return;
+  const notebooks = oneNoteSourceRemoteNotebooks.filter(notebook => oneNoteSourceSelectedNotebookIds.has(notebook.id));
+  if (notebooks.length === 0) throw new Error('Выберите хотя бы одну записную книжку.');
+  const existing = configuredDataSourcesValue.find(source => source.id === editingOneNoteSourceId);
+  const updated = { ...(existing || {}), type:editingOneNoteSourceType, notebooks };
+  const sources = existing
+    ? configuredDataSourcesValue.map(source => source.id === existing.id ? updated : source)
+    : [...configuredDataSourcesValue, updated];
+  await saveOneNoteAccessSettings(sources);
+  closeDataSourceEditors();
+}
+
+function editConfiguredFolderSource(source) {
+  editingFolderSourceId = source.id;
+  oneNoteDataSourceSelect.value = 'folder';
+  renderOneNoteDataSource('folder');
+  dataSourceOverviewEl.hidden = true;
+  folderSourceSettingsEl.hidden = false;
+  folderSourceNameInput.value = source.displayName || '';
+  folderSourcePathsInput.value = folderPathsOf(source).join('\n');
+  folderSourceDeduplicateFilesInput.checked = source.deduplicateFilesByName === true;
+  folderSourceStatusEl.textContent = '';
+  saveFolderSourceButton.textContent = 'Сохранить изменения';
+  cancelFolderSourceEditButton.hidden = false;
+  folderSourceSettingsEl.scrollIntoView({ block:'nearest', behavior:'smooth' });
+  folderSourceNameInput.focus();
+}
+
+function renderConfiguredDataSources() {
+  dataSourceListEl.replaceChildren();
+  if (configuredDataSourcesValue.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'data-source-empty';
+    empty.textContent = 'Источники пока не добавлены.';
+    dataSourceListEl.append(empty);
+  }
+  for (const source of configuredDataSourcesValue) {
+    const card = document.createElement('div');
+    card.className = 'data-source-card';
+    const text = document.createElement('div');
+    text.className = 'data-source-card-text';
+    const title = document.createElement('strong');
+    title.textContent = source.displayName || (source.type === 'graph' ? 'OneNote Cloud' : source.type === 'com' ? 'OneNote Local' : 'Папка');
+    text.append(title);
+    if (source.type === 'folder') {
+      const paths = folderPathsOf(source);
+      const count = document.createElement('span');
+      count.className = 'data-source-folder-count';
+      count.textContent = `Папок: ${paths.length}`;
+      const list = document.createElement('ul');
+      list.className = 'data-source-folder-list';
+      for (const folderPath of paths) {
+        const item = document.createElement('li');
+        item.textContent = folderPath;
+        list.append(item);
+      }
+      text.append(count, list);
+      if (source.deduplicateFilesByName === true) {
+        const deduplication = document.createElement('small');
+        deduplication.textContent = 'Одинаковые имена: DOCX → DOC → HTML → TXT → PDF';
+        text.append(deduplication);
+      }
+    } else {
+      const details = document.createElement('small');
+      details.textContent = dataSourceTypeLabel(source);
+      text.append(details);
+      const notebooks = document.createElement('ul');
+      notebooks.className = 'data-source-folder-list';
+      if (Array.isArray(source.notebooks)) {
+        for (const notebook of source.notebooks) {
+          const item = document.createElement('li');
+          item.textContent = notebook.displayName || 'Без названия';
+          notebooks.append(item);
+        }
+      } else {
+        const item = document.createElement('li');
+        item.textContent = 'Все записные книжки';
+        notebooks.append(item);
+      }
+      text.append(notebooks);
+    }
+    const actions = document.createElement('div');
+    actions.className = 'data-source-card-actions';
+    if (source.type === 'folder') {
+      const edit = document.createElement('button');
+      edit.type = 'button';
+      edit.className = 'small-button';
+      edit.textContent = 'Изменить';
+      edit.setAttribute('aria-label', `Изменить источник «${title.textContent}»`);
+      edit.onclick = () => editConfiguredFolderSource(source);
+      actions.append(edit);
+    } else {
+      const edit = document.createElement('button');
+      edit.type = 'button';
+      edit.className = 'small-button';
+      edit.textContent = 'Изменить';
+      edit.setAttribute('aria-label', `Изменить источник «${title.textContent}»`);
+      edit.onclick = () => editConfiguredOneNoteSource(source);
+      actions.append(edit);
+    }
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'small-button danger-button';
+    remove.textContent = 'Удалить';
+    remove.setAttribute('aria-label', `Удалить источник «${title.textContent}»`);
+    remove.onclick = () => removeConfiguredDataSource(source.id).catch(error => {
+      oneNoteAccessStatusEl.textContent = 'Не удалось удалить источник: ' + error.message;
+    });
+    actions.append(remove);
+    card.append(text, actions);
+    dataSourceListEl.append(card);
+  }
+  if (!configuredDataSourcesValue.some(source => source.type === 'com')) oneNoteIntegrationSettingsEl.hidden = true;
+}
+
+function configuredFolderPaths() {
+  return String(folderSourcePathsInput.value || '')
+    .split(/\r?\n/)
+    .map(value => value.trim())
+    .filter(Boolean);
+}
+
+async function saveOneNoteAccessSettings(sources = configuredDataSourcesValue) {
+  oneNoteAccessStatusEl.textContent = 'Сохранение источников данных...';
+  const result = await api('/api/onenote/access-settings', {
+    method:'PUT',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({ sources })
+  });
+  configuredDataSourcesValue = Array.isArray(result.sources) ? result.sources : [];
+  renderConfiguredDataSources();
+  oneNoteAccessStatusEl.textContent = configuredDataSourcesValue.length
+    ? `Настроено источников: ${configuredDataSourcesValue.length}.`
+    : 'Источники данных не настроены.';
+  await refreshOneNoteIntegration().catch(() => undefined);
+  await loadNotebookSelector().then(() => renderNotesList()).catch(() => undefined);
+  return result;
+}
+
+async function addConfiguredDataSource() {
+  const type = oneNoteDataSourceSelect.value;
+  if (type === 'folder') {
+    closeDataSourceEditors();
+    dataSourceOverviewEl.hidden = true;
+    folderSourceSettingsEl.hidden = false;
+    cancelFolderSourceEditButton.hidden = false;
+    folderSourceNameInput.focus();
+    return;
+  }
+  if (configuredDataSourcesValue.some(source => source.type === type)) {
+    oneNoteAccessStatusEl.textContent = type === 'graph' ? 'OneNote Cloud уже добавлен.' : 'OneNote Local уже добавлен.';
+    return;
+  }
+  editConfiguredOneNoteSource({ type });
+}
+
+async function addConfiguredFolders(paths) {
+  const displayName = String(folderSourceNameInput.value || '').replace(/[\r\n]+/g, ' ').trim();
+  if (!displayName) throw new Error('Введите название источника данных.');
+  if (paths.length === 0) throw new Error('Добавьте хотя бы одну папку.');
+  const configuredPaths = new Set(configuredDataSourcesValue.flatMap(source =>
+    source.type === 'folder' && source.id !== editingFolderSourceId ? folderPathsOf(source) : []
+  ).map(value => String(value).toLocaleLowerCase()));
+  const duplicate = paths.find(folderPath => configuredPaths.has(folderPath.toLocaleLowerCase()));
+  if (duplicate) throw new Error(`Папка уже добавлена в другой источник: ${duplicate}`);
+  const existing = configuredDataSourcesValue.find(source => source.id === editingFolderSourceId);
+  const folderSource = {
+    ...(existing || {}),
+    type:'folder',
+    displayName,
+    folderPaths:paths,
+    deduplicateFilesByName:folderSourceDeduplicateFilesInput.checked
+  };
+  const sources = existing
+    ? configuredDataSourcesValue.map(source => source.id === existing.id ? folderSource : source)
+    : [...configuredDataSourcesValue, folderSource];
+  folderSourceStatusEl.textContent = 'Сохранение источника данных…';
+  await saveOneNoteAccessSettings(sources);
+  closeDataSourceEditors();
+}
+
+async function removeConfiguredDataSource(sourceId) {
+  if (editingFolderSourceId === sourceId) resetFolderSourceEditor();
+  if (editingOneNoteSourceId === sourceId) resetOneNoteSourceEditor();
+  await saveOneNoteAccessSettings(configuredDataSourcesValue.filter(source => source.id !== sourceId));
+}
+
+async function selectFolderSource() {
+  const result = await api('/api/system/select-folder', { method:'POST' });
+  if (!result.available) throw new Error('Выбор папки доступен в desktop-приложении. Введите путь вручную.');
+  if (result.canceled) return;
+  if (!result.folderPath) throw new Error('Windows не вернул путь выбранной папки. Введите путь вручную.');
+  const paths = configuredFolderPaths();
+  if (!paths.some(folderPath => folderPath.toLocaleLowerCase() === result.folderPath.toLocaleLowerCase())) {
+    paths.push(result.folderPath);
+  }
+  folderSourcePathsInput.value = paths.join('\n');
 }
 
 function setupWizardCompleted() {
@@ -253,12 +570,19 @@ function setupUsesLocalOneNote() {
   return setupOneNoteDataSourceSelect.value === 'com';
 }
 
+function setupUsesFolder() {
+  return setupOneNoteDataSourceSelect.value === 'folder';
+}
+
 function renderSetupOneNoteSource() {
   const local = setupUsesLocalOneNote();
-  setupMicrosoftLoginButton.textContent = local ? 'Проверить классический OneNote' : 'Войти в Microsoft';
-  setupOneNoteSourceDescriptionEl.textContent = local
-    ? 'BibleNote прочитает открытые локальные блокноты через COM. Вход в Microsoft не требуется.'
-    : 'BibleNote загрузит блокноты из вашей учётной записи через Microsoft Graph.';
+  const folder = setupUsesFolder();
+  setupMicrosoftLoginButton.textContent = folder ? 'Выбрать папку' : local ? 'Проверить OneNote Local' : 'Войти в Microsoft';
+  setupOneNoteSourceDescriptionEl.textContent = folder
+    ? 'BibleNote прочитает .html, .htm, .txt и .docx из выбранной папки. PDF поддерживается экспериментально без OCR.'
+    : local
+      ? 'OneNote Local прочитает открытые заметки через COM. Вход в Microsoft не требуется.'
+      : 'OneNote Cloud загрузит заметки из вашей учётной записи Microsoft.';
 }
 
 function setupWizardSteps() {
@@ -287,7 +611,7 @@ function setupSelectedNotebookIds() {
 function setupSyncProgressText(progress = {}, startedAt) {
   const phaseNames = {
     starting:'Подготовка',
-    notebooks:'Загрузка списка блокнотов',
+    notebooks:'Загрузка структуры коллекций',
     sections:'Загрузка разделов',
     'section-groups':'Загрузка структуры',
     pages:'Проверка страниц',
@@ -299,7 +623,7 @@ function setupSyncProgressText(progress = {}, startedAt) {
   const currentNotebook = typeof progress.message === 'string'
     ? progress.message.match(/(?:Loading (?:section groups|sections|pages) in )(.+)$/)?.[1]
     : '';
-  if (currentNotebook) parts.push('блокнот: ' + currentNotebook);
+  if (currentNotebook) parts.push('коллекция: ' + currentNotebook);
   if (progress.sectionGroups != null) parts.push('групп разделов: ' + progress.sectionGroups);
   if (progress.sections != null) parts.push('разделов: ' + progress.sections);
   if (progress.pages != null) parts.push('страниц: ' + progress.pages);
@@ -336,16 +660,17 @@ function renderSetupWizardSummary() {
   setupWizardFinishedTextEl.textContent = setupCacheHasPages
     ? (errorCount
         ? 'Основные данные обновлены, но некоторые страницы или разделы проверить не удалось. Подробности доступны в журнале загрузки.'
-        : 'Изменения в OneNote проверены. Страницы без актуального результата распознавания обработаны.')
+        : 'Изменения в источниках данных проверены. Страницы без актуального результата распознавания обработаны.')
     : (errorCount
         ? 'Первая загрузка завершена, но некоторые страницы или разделы проверить не удалось. Их можно повторно обновить позже.'
-        : 'BibleNote подключён к OneNote. Библейские ссылки в загруженных заметках распознаны.');
+        : setupUsesFolder()
+          ? 'Папка подключена. Поддерживаемые файлы загружены, библейские ссылки распознаны.'
+          : 'BibleNote подключён к OneNote. Библейские ссылки в загруженных заметках распознаны.');
   setupWizardSummaryEl.replaceChildren();
   const rows = [
-    ['Учётная запись', account || 'Microsoft подключён'],
-    ['Блокнотов', notebookCount],
+    [setupUsesFolder() ? 'Папка' : 'Учётная запись', account || (setupUsesFolder() ? 'Folder подключён' : 'Microsoft подключён')],
+    ['Коллекций', notebookCount],
     ['Всего страниц в локальном кеше', cacheStatus.pages || 0],
-    ['Всего распознанных ссылок в кеше', cacheStatus.bibleReferences || 0],
     [setupCacheHasPages ? 'Проверено при этом обновлении' : 'Страниц найдено', result.pages || 0],
     ['Содержимое обновлено', result.contentDownloaded || 0],
     ['Заново обработано страниц', result.bibleRefsPagesParsed || 0],
@@ -394,7 +719,7 @@ function renderSetupMicrosoftLogin(state) {
   setupMicrosoftLoginButton.disabled = waiting;
   setupMicrosoftLoginButton.textContent = waiting
     ? 'Ожидание входа…'
-    : setupUsesLocalOneNote() ? 'Проверить классический OneNote' : 'Войти в Microsoft';
+    : setupUsesFolder() ? 'Выбрать папку' : setupUsesLocalOneNote() ? 'Проверить классический OneNote' : 'Войти в Microsoft';
   if (state?.status === 'waiting' && state.userCode) {
     setupMicrosoftLoginUrl = state.verificationUri || 'https://microsoft.com/devicelogin';
     setupMicrosoftUserCodeEl.textContent = state.userCode;
@@ -409,8 +734,8 @@ function renderSetupMicrosoftLogin(state) {
     const account = state.account?.username || state.account?.name || '';
     setupMicrosoftAccountEl.dataset.account = account;
     setupMicrosoftAccountEl.textContent = account
-      ? (setupUsesLocalOneNote() ? 'Классический OneNote подключён: ' : 'OneNote подключён: ') + account
-      : 'OneNote подключён.';
+      ? (setupUsesFolder() ? 'Папка подключена: ' : setupUsesLocalOneNote() ? 'Классический OneNote подключён: ' : 'OneNote подключён: ') + account
+      : setupUsesFolder() ? 'Папка подключена.' : 'OneNote подключён.';
     setupMicrosoftAccountEl.classList.add('success');
     clearInterval(setupMicrosoftLoginTimer);
     setupMicrosoftLoginTimer = undefined;
@@ -435,9 +760,11 @@ async function verifySetupMicrosoftAccess(loginState) {
     setupMicrosoftConnectionControlsEl.hidden = false;
     setupChangeMicrosoftAccountButton.hidden = true;
     setupMicrosoftAccountEl.classList.remove('success');
-    setupMicrosoftAccountEl.textContent = setupUsesLocalOneNote()
-      ? 'Не удалось прочитать локальные блокноты. Откройте классический OneNote и повторите проверку.'
-      : 'Нужно войти в Microsoft, чтобы BibleNote мог прочитать список блокнотов.';
+    setupMicrosoftAccountEl.textContent = setupUsesFolder()
+      ? 'Не удалось прочитать выбранную папку. Проверьте путь и права доступа.'
+      : setupUsesLocalOneNote()
+        ? 'Не удалось прочитать локальные данные OneNote. Откройте классический OneNote и повторите проверку.'
+        : 'Нужно войти в Microsoft, чтобы BibleNote мог прочитать заметки OneNote.';
     updateSetupWizard();
     return false;
   }
@@ -457,9 +784,33 @@ async function pollSetupMicrosoftLogin() {
 async function startSetupMicrosoftLogin() {
   clearSetupWizardStatus();
   const local = setupUsesLocalOneNote();
+  const folder = setupUsesFolder();
   setupMicrosoftLoginButton.disabled = true;
-  setupMicrosoftAccountEl.textContent = local ? 'Проверка классического OneNote…' : 'Подготовка входа…';
+  setupMicrosoftAccountEl.textContent = folder ? 'Выбор папки…' : local ? 'Проверка классического OneNote…' : 'Подготовка входа…';
   try {
+    setupHasConfiguredNotebookSelection = false;
+    setupConfiguredNotebookIds.clear();
+    if (folder) {
+      const selection = await api('/api/system/select-folder', { method:'POST' });
+      if (!selection.available) throw new Error('Выбор папки доступен только в desktop-приложении.');
+      if (selection.canceled) {
+        setupMicrosoftLoginButton.disabled = false;
+        return;
+      }
+      if (!selection.folderPath) throw new Error('Windows не вернул путь выбранной папки.');
+      await api('/api/onenote/access-settings', {
+        method:'PUT',
+        headers:{ 'Content-Type':'application/json' },
+        body:JSON.stringify({ dataSource:'folder', folderPaths:[selection.folderPath] })
+      });
+      folderSourcePathsInput.value = selection.folderPath;
+      renderOneNoteDataSource('folder');
+      await verifySetupMicrosoftAccess({
+        status:'success',
+        account:{ username:selection.folderPath, name:'Folder' }
+      });
+      return;
+    }
     await api('/api/onenote/access-settings', {
       method:'PUT',
       headers:{ 'Content-Type':'application/json' },
@@ -551,12 +902,20 @@ async function applySetupIntegration() {
 
 function renderSetupNotebooks() {
   setupNotebookListEl.replaceChildren();
+  setupSelectAllNotebooksButton.parentElement.hidden = setupUsesFolder();
+  if (setupUsesFolder()) {
+    setupNotebookListEl.textContent = 'Папка уже выбрана в источнике данных и будет синхронизирована целиком.';
+    updateSetupWizard();
+    return;
+  }
   for (const notebook of setupRemoteNotebooks) {
     const option = document.createElement('label');
     option.className = 'setup-notebook-option';
     const checkbox = document.createElement('input');
     checkbox.type = 'checkbox';
-    checkbox.checked = setupCacheHasPages ? !hiddenNotebookIds.has(notebook.id) : true;
+    checkbox.checked = setupHasConfiguredNotebookSelection
+      ? setupConfiguredNotebookIds.has(notebook.id)
+      : true;
     checkbox.dataset.notebookId = notebook.id;
     checkbox.addEventListener('change', updateSetupWizard);
     const name = document.createElement('span');
@@ -565,15 +924,17 @@ function renderSetupNotebooks() {
     setupNotebookListEl.append(option);
   }
   if (setupRemoteNotebooks.length === 0) {
-    setupNotebookListEl.textContent = 'В этой учётной записи не найдено блокнотов OneNote.';
+    setupNotebookListEl.textContent = setupUsesFolder()
+      ? 'В выбранной папке не найдено поддерживаемых документов.'
+      : 'В этой учётной записи не найдено заметок OneNote.';
   }
   updateSetupWizard();
 }
 
 async function loadSetupNotebooks() {
-  setupInitialSyncStatusEl.textContent = 'Загрузка списка блокнотов…';
+  setupInitialSyncStatusEl.textContent = 'Загрузка структуры коллекций…';
   const [result, cacheStatus] = await Promise.all([
-    api('/api/onenote/remote-notebooks', { timeoutMs:120000 }),
+    api(`/api/onenote/remote-notebooks?source=${encodeURIComponent(setupOneNoteDataSourceSelect.value)}`, { timeoutMs:120000 }),
     api('/api/status', { timeoutMs:120000 })
   ]);
   setupRemoteNotebooks = Array.isArray(result.notebooks) ? result.notebooks : [];
@@ -582,17 +943,21 @@ async function loadSetupNotebooks() {
   setupCacheSourceMismatch = setupCacheHasPages
     && Boolean(cacheStatus.cacheDataSource)
     && cacheStatus.cacheDataSource !== setupOneNoteDataSourceSelect.value;
-  setupNotebookStepTitleEl.textContent = setupCacheHasPages
-    ? 'Блокноты и обновление'
-    : 'Блокноты и первая загрузка';
-  setupNotebookStepDescriptionEl.textContent = setupCacheHasPages
-    ? 'Кеш уже создан. Выберите блокноты, в которых нужно быстро проверить изменения.'
-    : 'Выберите блокноты, которые должны быть доступны в BibleNote.';
+  setupNotebookStepTitleEl.textContent = setupUsesFolder()
+    ? 'Первая загрузка'
+    : setupCacheHasPages
+    ? 'Коллекции и обновление'
+    : 'Коллекции и первая загрузка';
+  setupNotebookStepDescriptionEl.textContent = setupUsesFolder()
+    ? 'Все поддерживаемые файлы из выбранной папки будут доступны в BibleNote.'
+    : setupCacheHasPages
+    ? 'Кеш уже создан. Выберите коллекции, в которых нужно быстро проверить изменения.'
+    : 'Выберите коллекции заметок, которые должны быть доступны в BibleNote.';
   renderSetupNotebooks();
   setupInitialSyncStatusEl.textContent = setupRemoteNotebooks.length
     ? (setupCacheHasPages
         ? 'В кеше уже ' + setupCachedPageCount + ' страниц. Будут проверены только изменения и необработанные библейские ссылки.'
-        : 'Выбрано блокнотов: ' + setupSelectedNotebookIds().length)
+        : 'Выбрано коллекций: ' + setupSelectedNotebookIds().length)
     : '';
 }
 
@@ -611,9 +976,9 @@ async function waitForSetupInitialSync() {
 }
 
 async function runSetupInitialSync() {
-  const notebookIds = setupSelectedNotebookIds();
-  if (notebookIds.length === 0) {
-    showSetupWizardError('Выберите хотя бы один блокнот.');
+  const notebookIds = setupUsesFolder() ? undefined : setupSelectedNotebookIds();
+  if (!setupUsesFolder() && notebookIds.length === 0) {
+    showSetupWizardError('Выберите хотя бы одну коллекцию.');
     return false;
   }
   clearSetupWizardStatus();
@@ -625,6 +990,19 @@ async function runSetupInitialSync() {
     ? 'Запуск быстрой синхронизации…'
     : 'Запуск первой синхронизации…';
   try {
+    if (!setupUsesFolder()) {
+      const accessSettings = await api('/api/onenote/access-settings');
+      const notebooks = setupRemoteNotebooks
+        .filter(notebook => notebookIds.includes(notebook.id))
+        .map(notebook => ({ id:notebook.id, displayName:notebook.displayName || 'Без названия' }));
+      const sourceType = setupOneNoteDataSourceSelect.value;
+      const sources = (accessSettings.sources || []).map(source => source.type === sourceType ? { ...source, notebooks } : source);
+      await api('/api/onenote/access-settings', {
+        method:'PUT',
+        headers:{ 'Content-Type':'application/json' },
+        body:JSON.stringify({ sources })
+      });
+    }
     bibleModuleNameInput.value = setupBibleModuleInput.value;
     saveBibleModuleSetting();
     await api('/api/sync', {
@@ -634,22 +1012,17 @@ async function runSetupInitialSync() {
         concurrency:1,
         metadataOnly:false,
         forceContent:false,
-        includeHtml:true,
         parseBibleRefs:true,
         forceBibleParse:false,
         incrementalMetadata:setupCacheHasPages && !setupCacheSourceMismatch,
         replaceAll:setupCacheSourceMismatch || undefined,
         bibleModule:currentBibleModule(),
-        notebookIds
+        ...(notebookIds ? { notebookIds } : {})
       }),
       timeoutMs:180000
     });
     setupInitialSyncResult = await waitForSetupInitialSync();
     setupInitialSyncFinished = true;
-    hiddenNotebookIds = new Set(setupRemoteNotebooks
-      .filter(notebook => !notebookIds.includes(notebook.id))
-      .map(notebook => notebook.id));
-    localStorage.setItem('onenote.hiddenNotebookIds', JSON.stringify([...hiddenNotebookIds]));
     setupInitialSyncStatusEl.textContent = setupCacheHasPages
       ? 'Изменения проверены.'
       : 'Первая синхронизация завершена.';
@@ -668,7 +1041,7 @@ async function runSetupInitialSync() {
 
 async function openSetupWizardIfNeeded() {
   const settings = await api('/api/onenote/access-settings');
-  const requiresMicrosoftScopeUpgrade = settings.dataSource !== 'com'
+  const requiresMicrosoftScopeUpgrade = settings.dataSource === 'graph'
     && localStorage.getItem('biblenote.microsoftScopeVersion') !== microsoftScopeVersion;
   const shouldOpen = !setupWizardCompleted() || requiresMicrosoftScopeUpgrade;
   if (!shouldOpen || setupWizardDialog.open) return;
@@ -679,7 +1052,10 @@ async function openSetupWizardIfNeeded() {
   setupCachedPageCount = 0;
   setupInitialSyncFinished = false;
   setupInitialSyncResult = undefined;
-  setupOneNoteDataSourceSelect.value = settings.dataSource === 'com' ? 'com' : 'graph';
+  setupOneNoteDataSourceSelect.value = ['graph', 'com', 'folder'].includes(settings.dataSource) ? settings.dataSource : 'graph';
+  const configuredSource = (settings.sources || []).find(source => source.type === setupOneNoteDataSourceSelect.value);
+  setupHasConfiguredNotebookSelection = Array.isArray(configuredSource?.notebooks);
+  setupConfiguredNotebookIds = new Set((configuredSource?.notebooks || []).map(notebook => notebook.id));
   renderSetupOneNoteSource();
   await refreshBibleNoteSettings().catch(error => {
     setupBibleModuleStatusEl.textContent = 'Не удалось получить список переводов Библии: ' + (error?.message || String(error));
@@ -700,7 +1076,7 @@ async function openSetupWizardIfNeeded() {
 
 async function finishSetupWizard() {
   localStorage.setItem('biblenote.setupWizardDone', 'true');
-  if (!setupUsesLocalOneNote()) {
+  if (!setupUsesLocalOneNote() && !setupUsesFolder()) {
     localStorage.setItem('biblenote.microsoftScopeVersion', microsoftScopeVersion);
   }
   setupWizardCanClose = true;
@@ -714,7 +1090,7 @@ async function nextSetupWizardStep() {
   if (setupWizardBusy) return;
   clearSetupWizardStatus();
   if (setupWizardStep === 0 && !setupMicrosoftConnected) {
-    showSetupWizardError('Сначала войдите в Microsoft.');
+    showSetupWizardError(setupUsesFolder() ? 'Сначала выберите папку.' : 'Сначала подключите источник заметок.');
     return;
   }
   if (setupWizardStep === 1 && !setupBibleModuleSelected()) {
@@ -729,6 +1105,16 @@ async function nextSetupWizardStep() {
   if (setupWizardStep === 1) {
     bibleModuleNameInput.value = setupBibleModuleInput.value;
     saveBibleModuleSetting();
+    if (setupUsesFolder()) {
+      setupWizardStep = 3;
+      updateSetupWizard();
+      try {
+        await loadSetupNotebooks();
+      } catch (error) {
+        showSetupWizardError('Не удалось получить список папок: ' + (error?.message || String(error)));
+      }
+      return;
+    }
   }
   if (setupWizardStep === 2) await applySetupIntegration();
   if (setupWizardStep === 3) {
@@ -740,7 +1126,7 @@ async function nextSetupWizardStep() {
     try {
       await loadSetupNotebooks();
     } catch (error) {
-      showSetupWizardError('Не удалось получить список блокнотов: ' + (error?.message || String(error)));
+      showSetupWizardError('Не удалось получить структуру коллекций: ' + (error?.message || String(error)));
     }
   }
 }
@@ -909,17 +1295,48 @@ themeSelect.addEventListener('change', () => {
 openSettingsButton.addEventListener('click', openSettingsDialog);
 closeSettingsButton.addEventListener('click', () => settingsDialog.close());
 if (saveOneNoteAccessButton) saveOneNoteAccessButton.addEventListener('click', () => saveOneNoteAccessSettings().catch(error => {
-  oneNoteAccessStatusEl.textContent = 'Не удалось сохранить параметры OneNote: ' + error.message;
+  oneNoteAccessStatusEl.textContent = 'Не удалось сохранить источник данных: ' + error.message;
   saveOneNoteAccessButton.disabled = false;
 }));
-oneNoteDataSourceSelect.addEventListener('change', () => {
-  renderOneNoteDataSource(oneNoteDataSourceSelect.value);
-  saveOneNoteAccessSettings().catch(error => {
-    oneNoteAccessStatusEl.textContent = 'Не удалось сменить источник OneNote: ' + error.message;
+addDataSourceButton.addEventListener('click', () => addConfiguredDataSource().catch(error => {
+  oneNoteAccessStatusEl.textContent = 'Не удалось добавить источник: ' + error.message;
+}));
+selectFolderSourceButton.addEventListener('click', () => selectFolderSource().catch(error => {
+  folderSourceStatusEl.textContent = 'Не удалось выбрать папку: ' + error.message;
+}));
+saveFolderSourceButton.addEventListener('click', () => addConfiguredFolders(configuredFolderPaths()).catch(error => {
+  folderSourceStatusEl.textContent = 'Не удалось сохранить папки: ' + error.message;
+}));
+cancelFolderSourceEditButton.addEventListener('click', closeDataSourceEditors);
+refreshOneNoteSourceNotebooksButton.addEventListener('click', () => {
+  const authenticate = editingOneNoteSourceType === 'graph'
+    && refreshOneNoteSourceNotebooksButton.textContent.startsWith('Войти');
+  loadOneNoteSourceNotebooks(authenticate).catch(error => {
+    oneNoteSourceStatusEl.textContent = error.message;
   });
 });
+selectAllOneNoteSourceNotebooksButton.addEventListener('click', () => {
+  oneNoteSourceSelectedNotebookIds = new Set(oneNoteSourceRemoteNotebooks.map(notebook => notebook.id));
+  renderOneNoteSourceNotebooks();
+  oneNoteSourceStatusEl.textContent = `Выбрано записных книжек: ${oneNoteSourceSelectedNotebookIds.size}`;
+});
+clearAllOneNoteSourceNotebooksButton.addEventListener('click', () => {
+  oneNoteSourceSelectedNotebookIds.clear();
+  renderOneNoteSourceNotebooks();
+  oneNoteSourceStatusEl.textContent = 'Выерано записных книжек: 0';
+});
+saveOneNoteSourceButton.addEventListener('click', () => saveConfiguredOneNoteSource().catch(error => {
+  oneNoteSourceStatusEl.textContent = 'Не удалось сохранить источник: ' + error.message;
+}));
+cancelOneNoteSourceEditButton.addEventListener('click', closeDataSourceEditors);
+oneNoteDataSourceSelect.addEventListener('change', () => {
+  closeDataSourceEditors();
+  renderOneNoteDataSource(oneNoteDataSourceSelect.value);
+});
 setupWizardBackButton.addEventListener('click', () => {
-  setupWizardStep = Math.max(0, setupWizardStep - 1);
+  setupWizardStep = setupUsesFolder() && setupWizardStep === 3
+    ? 1
+    : Math.max(0, setupWizardStep - 1);
   clearSetupWizardStatus();
   updateSetupWizard();
 });
@@ -959,11 +1376,11 @@ setupChangeMicrosoftAccountButton.addEventListener('click', () => {
 });
 setupSelectAllNotebooksButton.addEventListener('click', () => {
   setupNotebookListEl.querySelectorAll('input[data-notebook-id]').forEach(input => { input.checked = true; });
-  setupInitialSyncStatusEl.textContent = 'Выбрано блокнотов: ' + setupSelectedNotebookIds().length;
+  setupInitialSyncStatusEl.textContent = 'Выбрано коллекций: ' + setupSelectedNotebookIds().length;
 });
 setupClearAllNotebooksButton.addEventListener('click', () => {
   setupNotebookListEl.querySelectorAll('input[data-notebook-id]').forEach(input => { input.checked = false; });
-  setupInitialSyncStatusEl.textContent = 'Выберите хотя бы один блокнот.';
+  setupInitialSyncStatusEl.textContent = 'Выберите хотя бы одну коллекцию.';
 });
 setupWizardDialog.addEventListener('cancel', event => {
   if (!setupWizardCanClose) {
@@ -1009,6 +1426,9 @@ setupBibleModuleFileInput.addEventListener('click', () => {
 setupBibleModuleFileInput.addEventListener('change', updateSetupBibleModuleUploadState);
 setupUploadBibleModuleButton.addEventListener('click', () => uploadSetupBibleModule().catch(showError));
 registerBibleProtocolButton.addEventListener('click', () => registerBibleProtocol().catch(showError));
+openOneNoteBibleLinksInReaderInput.addEventListener('change', () => {
+  localStorage.setItem('biblenote.onenoteLinksOpenInBible', String(openOneNoteBibleLinksInReaderInput.checked));
+});
 if (enableOneNoteRibbonInput) enableOneNoteRibbonInput.addEventListener('change', () => {
   setOneNoteRibbonEnabled(enableOneNoteRibbonInput.checked).catch(error => {
     oneNoteIntegrationStatusEl.textContent = 'Не удалось изменить интеграцию с OneNote: ' + error.message;

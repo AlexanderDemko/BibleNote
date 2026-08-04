@@ -1,6 +1,34 @@
+function sourceTypeIcon(value) {
+  const sourceIcon = document.createElement('span');
+  const sourceType = ['graph', 'com', 'folder'].includes(value) ? value : 'folder';
+  sourceIcon.className = 'source-type-icon ' + sourceType;
+  sourceIcon.setAttribute('aria-hidden', 'true');
+  sourceIcon.title = sourceType === 'graph'
+    ? 'OneNote Cloud'
+    : (sourceType === 'com' ? 'OneNote Local' : 'Папка');
+  sourceIcon.innerHTML = sourceType === 'folder'
+    ? '<svg viewBox="0 0 20 20"><path d="M2.5 5.5h5l1.7 2h8.3v7.5a1.5 1.5 0 0 1-1.5 1.5H4A1.5 1.5 0 0 1 2.5 15z"/></svg>'
+    : sourceType === 'com'
+      ? '<svg viewBox="0 0 20 20"><rect x="3" y="4" width="14" height="12" rx="2"/><path d="M6.5 13V7l4 6V7M13.5 7v6"/></svg>'
+      : '<svg viewBox="0 0 20 20"><path d="M6.2 15.5h8.2a3.1 3.1 0 0 0 .3-6.2A4.8 4.8 0 0 0 5.5 8a3.8 3.8 0 0 0 .7 7.5Z"/></svg>';
+  return sourceIcon;
+}
+
+function fileTypeIcon(extension, sourceType) {
+  const fileType = fileTypeDescriptor(extension, sourceType);
+  if (!fileType) return null;
+  const icon = document.createElement('span');
+  icon.className = 'status-dot placeholder file-type-icon ' + fileType.key;
+  icon.textContent = fileType.label;
+  icon.title = fileType.title;
+  icon.setAttribute('aria-hidden', 'true');
+  return icon;
+}
+
 function row(label, level, options = {}) {
   const button = document.createElement('button');
   button.className = 'tree-row level-' + level
+    + (options.source ? ' source-row' : '')
     + (options.page ? ' page-row' : '')
     + (options.section ? ' section-row' : '')
     + (options.search ? ' search-result-row' : '')
@@ -8,11 +36,14 @@ function row(label, level, options = {}) {
   button.style.setProperty('--tree-level', String(level));
   button.type = 'button';
   if (options.title) button.title = options.title;
-  if (!options.page) {
-    const chev = document.createElement('span');
-    chev.className = 'chevron';
-    chev.textContent = options.expandable ? (options.open ? '▾' : '▸') : '·';
-    button.append(chev);
+  const chev = document.createElement('span');
+  chev.className = options.page
+    ? 'chevron placeholder'
+    : 'chevron ' + (options.expandable ? 'expandable' : 'leaf') + (options.open ? ' open' : '');
+  chev.setAttribute('aria-hidden', 'true');
+  button.append(chev);
+  if (options.source) {
+    button.append(sourceTypeIcon(options.sourceType));
   }
   if (level > 0 && !options.page && options.folder) {
     const nodeIcon = document.createElement('span');
@@ -20,9 +51,16 @@ function row(label, level, options = {}) {
     nodeIcon.setAttribute('aria-hidden', 'true');
     button.append(nodeIcon);
   }
-  if (options.status) {
+  if (options.status || options.page) {
     const dot = document.createElement('span');
-    dot.className = 'status-dot ' + options.status;
+    dot.className = 'status-dot ' + (options.status || 'placeholder');
+    const fileType = options.page ? fileTypeDescriptor(options.fileExtension, options.sourceType) : null;
+    if (fileType) {
+      dot.classList.add('file-type-icon', fileType.key);
+      dot.textContent = fileType.label;
+      dot.title = fileType.title;
+    }
+    dot.setAttribute('aria-hidden', 'true');
     button.append(dot);
   }
   const text = document.createElement('span');
@@ -110,11 +148,18 @@ function updateNotesListViewControls() {
   notesRecentViewButton.setAttribute('aria-selected', String(!structureSelected));
   notesStructureViewButton.tabIndex = structureSelected ? 0 : -1;
   notesRecentViewButton.tabIndex = structureSelected ? -1 : 0;
-  tree.setAttribute('aria-label', structureSelected ? 'Структура OneNote' : 'Последние заметки');
+  tree.setAttribute('aria-label', structureSelected ? 'Структура заметок' : 'Последние заметки');
 }
+
+let recentPagesSnapshot = null;
+let recentPagesSnapshotKey = '';
 
 async function activateNotesListView(view) {
   if (!['structure', 'recent'].includes(view)) return;
+  if (view === 'recent') {
+    recentPagesSnapshot = null;
+    recentPagesSnapshotKey = '';
+  }
   clearTimeout(searchTimer);
   notesListView = view;
   localStorage.setItem('onenote.notesListView', view);
@@ -157,12 +202,17 @@ async function renderRecentPages() {
   if (selectedIds.length === 0) {
     const empty = document.createElement('div');
     empty.className = 'recent-empty';
-    empty.textContent = 'Выберите хотя бы одну записную книжку.';
+    empty.textContent = 'Выберите хотя бы одну коллекцию.';
     fragment.append(empty);
   } else {
     const params = new URLSearchParams({ limit:'100' });
     for (const notebookId of selectedIds) params.append('notebookId', notebookId);
-    const pages = await api('/api/recent-pages?' + params.toString());
+    const snapshotKey = JSON.stringify(selectedIds);
+    if (!recentPagesSnapshot || recentPagesSnapshotKey !== snapshotKey) {
+      recentPagesSnapshot = await api('/api/recent-pages?' + params.toString());
+      recentPagesSnapshotKey = snapshotKey;
+    }
+    const pages = recentPagesSnapshot;
     let currentGroup = null;
     for (const page of pages) {
       const group = recentDateKey(page.recentAt);
@@ -181,7 +231,6 @@ async function renderRecentPages() {
       button.onclick = async () => {
         if (page.id === selectedPageId) return;
         await openPage(page.id);
-        if (!activeSearchQuery && notesListView === 'recent') await renderRecentPages();
       };
 
       const status = document.createElement('span');
@@ -207,7 +256,7 @@ async function renderRecentPages() {
     if (pages.length === 0) {
       const empty = document.createElement('div');
       empty.className = 'recent-empty';
-      empty.textContent = 'В выбранных записных книжках пока нет заметок.';
+      empty.textContent = 'В выбранных коллекциях пока нет заметок.';
       fragment.append(empty);
     }
   }
@@ -222,23 +271,118 @@ function renderNotesList() {
   return notesListView === 'recent' ? renderRecentPages() : renderTree();
 }
 
+function normalizedStructureLabel(value) {
+  return String(value || '')
+    .normalize('NFKC')
+    .toLocaleLowerCase('ru-RU')
+    .replace(/[^\p{L}\p{N}]+/gu, '');
+}
+
+function structureLabelsMatch(left, right) {
+  const normalizedLeft = normalizedStructureLabel(left);
+  return Boolean(normalizedLeft) && normalizedLeft === normalizedStructureLabel(right);
+}
+
+function fileTypeDescriptor(extension, sourceType) {
+  switch (String(extension || '').toLocaleLowerCase('en-US')) {
+    case '.pdf': return { key:'pdf', label:'P', title:'PDF' };
+    case '.doc': return { key:'word', label:'W', title:'Word DOC' };
+    case '.docx': return { key:'word', label:'W', title:'Word DOCX' };
+    case '.html':
+    case '.htm': return { key:'html', label:'H', title:'HTML' };
+    case '.txt': return { key:'text', label:'T', title:'Текстовый файл' };
+    default: return ['graph', 'com'].includes(sourceType)
+      ? { key:'onenote', label:'N', title:'OneNote' }
+      : null;
+  }
+}
+
+function sourceTypeForNotebook(notebookId) {
+  const notebook = notebooksCache.find(item => String(item.id) === String(notebookId));
+  return notebook?.sourceType
+    || (String(notebookId).startsWith('folder:notebook:')
+      ? 'folder'
+      : (String(notebookId).trim().startsWith('{') ? 'com' : 'graph'));
+}
+
 async function renderTree() {
   const renderToken = ++treeRenderToken;
   const savedScrollTop = tree.scrollTop;
   const fragment = document.createDocumentFragment();
-  for (const notebook of notebooksCache.filter(item => !hiddenNotebookIds.has(item.id))) {
-    const key = 'n:' + notebook.id;
-    const open = expanded.has(key);
-    const button = row(notebook.displayName, 0, {
-      expandable:true,
-      open,
-      count:notebook.pageCount,
-      syncLabel:'Синхронизировать блокнот «' + notebook.displayName + '»',
-      onSync:() => startTargetedSync({ notebookIds:[notebook.id] }, 'блокнот «' + notebook.displayName + '»')
+  const sourceGroups = new Map();
+  for (const source of dataSourcesCache) {
+    sourceGroups.set(source.id, {
+      id:source.id,
+      type:source.type,
+      displayName:source.displayName,
+      notebooks:[]
     });
-    button.onclick = () => { open ? expanded.delete(key) : expanded.add(key); renderTree(); };
-    fragment.append(button);
-    if (open) await renderSections(notebook.id, fragment);
+  }
+  for (const notebook of notebooksCache) {
+    const sourceType = notebook.sourceType || (String(notebook.id).startsWith('folder:notebook:') ? 'folder' : String(notebook.id).trim().startsWith('{') ? 'com' : 'graph');
+    const sourceId = notebook.sourceId || (sourceType === 'folder' ? 'source:' + notebook.id : 'source:' + sourceType);
+    if (!sourceGroups.has(sourceId)) {
+      sourceGroups.set(sourceId, {
+        id:sourceId,
+        type:sourceType,
+        displayName:notebook.sourceDisplayName || (sourceType === 'graph' ? 'OneNote Cloud' : sourceType === 'com' ? 'OneNote Local' : notebook.displayName),
+        notebooks:[]
+      });
+    }
+    sourceGroups.get(sourceId).notebooks.push(notebook);
+  }
+  const sources = [...sourceGroups.values()].sort((left, right) => {
+    const order = { graph:0, com:1, folder:2 };
+    return (order[left.type] ?? 3) - (order[right.type] ?? 3)
+      || String(left.displayName).localeCompare(String(right.displayName), undefined, { numeric:true, sensitivity:'base' });
+  });
+  for (const source of sources) {
+    const sourceKey = 'src:' + source.id;
+    const sourceOpen = expanded.has(sourceKey);
+    const notebookIds = source.notebooks.map(notebook => notebook.id);
+    const pageCount = source.notebooks.reduce((total, notebook) => total + Number(notebook.pageCount || 0), 0);
+    const sourceButton = row(source.displayName, 0, {
+      source:true,
+      sourceType:source.type,
+      expandable:true,
+      open:sourceOpen,
+      count:pageCount,
+      syncLabel:'Синхронизировать источник «' + source.displayName + '»',
+      onSync:notebookIds.length ? () => startTargetedSync({ notebookIds }, 'источник «' + source.displayName + '»') : undefined
+    });
+    sourceButton.onclick = () => { sourceOpen ? expanded.delete(sourceKey) : expanded.add(sourceKey); renderTree(); };
+    fragment.append(sourceButton);
+    if (!sourceOpen) continue;
+
+    for (const notebook of source.notebooks) {
+      const matchingFolderRoot = source.type === 'folder'
+        && structureLabelsMatch(source.displayName, notebook.displayName);
+      if (source.type === 'folder' && (source.notebooks.length === 1 || matchingFolderRoot)) {
+        await renderSections(notebook.id, fragment, 1, {
+          flattenRootSectionLabel:notebook.displayName,
+          flattenFileSections:true
+        });
+        continue;
+      }
+      const key = 'n:' + notebook.id;
+      const open = expanded.has(key);
+      const button = row(notebook.displayName, 1, {
+        expandable:true,
+        open,
+        count:notebook.pageCount,
+        syncLabel:'Синхронизировать коллекцию «' + notebook.displayName + '»',
+        onSync:() => startTargetedSync(
+          { notebookIds:[notebook.id] },
+          'коллекцию «' + notebook.displayName + '»'
+        )
+      });
+      button.onclick = () => { open ? expanded.delete(key) : expanded.add(key); renderTree(); };
+      fragment.append(button);
+      if (open) await renderSections(notebook.id, fragment, 2, source.type === 'folder' ? {
+        flattenRootSectionLabel:notebook.displayName,
+        flattenFileSections:true
+      } : {});
+    }
   }
   if (renderToken !== treeRenderToken) return;
   tree.replaceChildren(fragment);
@@ -265,14 +409,13 @@ async function revealPageInTree(page) {
   const notesPanel = document.querySelector('.notes-panel');
   if (notesPanel) notesPanel.setAttribute('open', '');
 
-  if (hiddenNotebookIds.has(notebookId)) {
-    hiddenNotebookIds.delete(notebookId);
-    saveNotebookSelection();
-    const checkbox = notebookListEl.querySelector('input[data-notebook-id="' + CSS.escape(String(notebookId)) + '"]');
-    if (checkbox) checkbox.checked = true;
-  }
-
   expanded.add('n:' + notebookId);
+  const notebook = notebooksCache.find(item => item.id === notebookId);
+  if (notebook) {
+    const sourceType = notebook.sourceType || (String(notebook.id).startsWith('folder:notebook:') ? 'folder' : String(notebook.id).trim().startsWith('{') ? 'com' : 'graph');
+    const sourceId = notebook.sourceId || (sourceType === 'folder' ? 'source:' + notebook.id : 'source:' + sourceType);
+    expanded.add('src:' + sourceId);
+  }
   const [sections, groups] = await Promise.all([
     api('/api/sections?notebookId=' + encodeURIComponent(notebookId)),
     api('/api/section-groups?notebookId=' + encodeURIComponent(notebookId))
@@ -334,7 +477,7 @@ function clearPageTargetHighlight(pageId) {
   frame?.contentWindow?.postMessage({ type:'onenote-clear-target-paragraphs' }, '*');
 }
 
-async function renderSections(notebookId, target) {
+async function renderSections(notebookId, target, baseLevel = 1, options = {}) {
   const sections = await api('/api/sections?notebookId=' + encodeURIComponent(notebookId));
   const groups = await api('/api/section-groups?notebookId=' + encodeURIComponent(notebookId));
   const sectionsByGroup = new Map();
@@ -394,15 +537,22 @@ async function renderSections(notebookId, target) {
       if (open) await renderLevel(group.id, level + 1);
     }
     for (const section of sectionsByGroup.get(parentGroupId) || []) {
-      await renderSection(section, level);
+      const flattenRootSection = !parentGroupId
+        && options.flattenRootSectionLabel
+        && structureLabelsMatch(options.flattenRootSectionLabel, section.displayName);
+      const flattenFolderFileSection = options.flattenFileSections
+        && structureLabelsMatch('Файлы', section.displayName);
+      if (flattenRootSection || flattenFolderFileSection) await renderPages(section.id, target, level);
+      else await renderSection(section, level);
     }
   };
 
-  await renderLevel('', 1);
+  await renderLevel('', baseLevel);
 }
 
 async function renderPages(sectionId, target = tree, level = 2) {
-  const pages = await api('/api/pages?sectionId=' + encodeURIComponent(sectionId));
+  const pages = (await api('/api/pages?sectionId=' + encodeURIComponent(sectionId)))
+    .filter(page => !String(page.title || '').startsWith('~$'));
   pages.sort(compareOneNotePageOrder);
   for (const page of pages) {
     const state = page.fetchError ? 'error' : page.hasContent ? 'ok' : '';
@@ -413,6 +563,7 @@ async function renderPages(sectionId, target = tree, level = 2) {
     const button = row(page.title, level + pageLevel, {
       page:true,
       status:state,
+      fileExtension:page.fileExtension,
       selected:page.id === selectedPageId,
       title:page.title,
       syncLabel:'Синхронизировать страницу «' + page.title + '»',
@@ -430,7 +581,8 @@ function groupedSearchResults(results) {
     const notebookKey = page.notebookId || page.notebook || '';
     if (!notebooks.has(notebookKey)) {
       notebooks.set(notebookKey, {
-        name:page.notebook || '(без блокнота)',
+        id:notebookKey,
+        name:page.notebook || '(без коллекции)',
         count:0,
         sections:new Map()
       });
@@ -648,8 +800,9 @@ function makeSearchResultGroup(button) {
 function renderWeightedSearchResults(results) {
   for (const page of results) {
     const paragraphIndexes = searchResultParagraphIndexes(page);
+    const sourceType = sourceTypeForNotebook(page.notebookId);
     const button = document.createElement('button');
-    button.className = 'tree-row search-weight-row' + (page.id === selectedPageId ? ' selected' : '');
+    button.className = 'tree-row page-row search-weight-row' + (page.id === selectedPageId ? ' selected' : '');
     button.type = 'button';
     button.dataset.pageId = page.id;
     button.title = [page.notebook, page.section, page.snippet].filter(Boolean).join(' / ');
@@ -659,6 +812,12 @@ function renderWeightedSearchResults(results) {
       bibleOccurrences:searchResultBibleOccurrences(page),
       highlightQuery:page.bibleRef ? '' : activeSearchQuery
     }));
+
+    const typeIcons = document.createElement('span');
+    typeIcons.className = 'search-weight-type-icons';
+    typeIcons.append(sourceTypeIcon(sourceType));
+    const documentIcon = fileTypeIcon(page.fileExtension, sourceType);
+    if (documentIcon) typeIcons.append(documentIcon);
 
     const main = document.createElement('span');
     main.className = 'search-weight-main';
@@ -679,7 +838,7 @@ function renderWeightedSearchResults(results) {
     const weight = document.createElement('span');
     weight.className = 'search-weight-value';
     weight.textContent = searchResultWeightLabel(page);
-    button.append(main, weight);
+    button.append(typeIcons, main, weight);
     tree.append(button);
   }
 }
@@ -799,7 +958,7 @@ function renderSearchResults(query, results, bibleResults = [], hasSelectedNoteb
   if (!hasSelectedNotebooks) {
     const notesUnavailable = document.createElement('div');
     notesUnavailable.className = 'search-heading';
-    notesUnavailable.textContent = 'Для поиска по заметкам выберите блокноты';
+    notesUnavailable.textContent = 'Для поиска по заметкам выберите коллекции';
     tree.append(notesUnavailable);
   }
   const weightedAvailable = results.some(page => searchResultWeightValue(page) != null)
@@ -811,9 +970,12 @@ function renderSearchResults(query, results, bibleResults = [], hasSelectedNoteb
   } else {
     renderBibleTextSearchResults(bibleResults);
     for (const notebook of groupedSearchResults(results)) {
+    const sourceType = sourceTypeForNotebook(notebook.id);
     const notebookRow = row(notebook.name, 0, {
       expandable:true,
       open:true,
+      source:true,
+      sourceType,
       search:true,
       count:searchResultCountLabel(notebook.count),
       title:notebook.name
@@ -831,6 +993,9 @@ function renderSearchResults(query, results, bibleResults = [], hasSelectedNoteb
       const sectionGroup = makeSearchResultGroup(sectionRow);
       for (const page of section.pages) {
         const button = row(page.title, 2, {
+          page:true,
+          fileExtension:page.fileExtension,
+          sourceType,
           selected:page.id === selectedPageId,
           search:true,
           count:searchResultWeightLabel(page) || undefined,
@@ -956,7 +1121,10 @@ function pageSearchHighlightPattern(query) {
   if (request.mode === 'regex') {
     source = request.query;
   } else if (request.mode === 'phrase') {
-    source = request.query.replace(/[.*+?^\x24{}()|[\]\\]/g, '\\$&');
+    const terms = request.query.match(/[\p{L}\p{N}_]+/gu) ?? [];
+    source = terms.length > 0
+      ? `(?<![\\p{L}\\p{N}_])${terms.map(term => term.replace(/[.*+?^\x24{}()|[\]\\]/g, '\\$&')).join('[^\\p{L}\\p{N}_]+')}(?![\\p{L}\\p{N}_])`
+      : request.query.replace(/[.*+?^\x24{}()|[\]\\]/g, '\\$&');
   } else {
     const terms = searchHighlightTerms(request);
     if (terms.length === 0) return undefined;
@@ -974,13 +1142,162 @@ function pageSearchHighlightPattern(query) {
 function postHtmlFrameMainSearch(frame, query, index = 0, scroll = true) {
   if (!frame) return;
   const pattern = pageSearchHighlightPattern(query);
+  const request = query ? searchRequest(query) : undefined;
+  const queries = request
+    ? (request.mode === 'phrase' || request.mode === 'regex'
+      ? [request.query]
+      : searchHighlightTerms(request))
+    : [];
   frame.contentWindow?.postMessage({
     type:'onenote-main-search',
     source:pattern?.source || '',
     flags:pattern?.flags || '',
+    queries,
+    mode:request?.mode || 'and',
+    entireWord:request?.mode === 'and',
     index,
     scroll
   }, '*');
+}
+
+function normalizedPdfAnchor(value, maxLength = 160) {
+  const normalized = decodeHtmlText(String(value || ''))
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (normalized.length <= maxLength) return normalized;
+  const shortened = normalized.slice(0, maxLength);
+  const lastSpace = shortened.lastIndexOf(' ');
+  return (lastSpace >= Math.floor(maxLength * 0.65) ? shortened.slice(0, lastSpace) : shortened).trim();
+}
+
+function pdfReferenceAnchor(paragraphText, referenceText, maxLength = 180) {
+  const paragraph = decodeHtmlText(String(paragraphText || '')).replace(/\s+/g, ' ').trim();
+  const reference = normalizedPdfAnchor(referenceText, 120);
+  if (!paragraph || !reference) return normalizedPdfAnchor(paragraph, maxLength);
+  const referenceIndex = paragraph.toLocaleLowerCase().indexOf(reference.toLocaleLowerCase());
+  if (referenceIndex < 0) return normalizedPdfAnchor(paragraph, maxLength);
+  const beforeLength = Math.floor((maxLength - reference.length) * 0.48);
+  const afterLength = maxLength - reference.length - beforeLength;
+  let start = Math.max(0, referenceIndex - beforeLength);
+  let end = Math.min(paragraph.length, referenceIndex + reference.length + afterLength);
+  if (start > 0) {
+    const nextSpace = paragraph.indexOf(' ', start);
+    if (nextSpace >= 0 && nextSpace < referenceIndex) start = nextSpace + 1;
+  }
+  if (end < paragraph.length) {
+    const previousSpace = paragraph.lastIndexOf(' ', end);
+    if (previousSpace > referenceIndex + reference.length) end = previousSpace;
+  }
+  return paragraph.slice(start, end).trim();
+}
+
+function pdfBibleHref(reference) {
+  const target = String(reference?.normalizedRef || reference?.normalized || reference?.originalText || '').trim();
+  return target ? 'bnVerse:' + target : '';
+}
+
+function normalizedPdfBookLabel(value) {
+  return decodeHtmlText(String(value || ''))
+    .toLocaleLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim();
+}
+
+function pdfBibleLinkMatchesTitle(reference, pageTitle) {
+  const title = normalizedPdfBookLabel(pageTitle);
+  if (!title) return false;
+  const normalizedBook = String(reference?.normalizedRef || reference?.normalized || '')
+    .replace(/\s+\d+(?::\d+)?(?:\s*[-–—]\s*\d+(?::\d+)?)?\s*$/u, '');
+  const candidates = [reference?.bookName, reference?.bookShortName, normalizedBook]
+    .map(normalizedPdfBookLabel)
+    .filter(value => value.length >= 3);
+  const paddedTitle = ' ' + title + ' ';
+  return candidates.some(candidate => paddedTitle.includes(' ' + candidate + ' '));
+}
+
+function pdfBibleLinkIsEligible(reference, pageTitle) {
+  const entryType = String(reference?.entryType || '').trim();
+  if (entryType === 'BookChapter' || entryType === 'BookChapterVerse') return true;
+  if (entryType) return pdfBibleLinkMatchesTitle(reference, pageTitle);
+  return /\p{L}/u.test(String(reference?.originalText || ''));
+}
+
+function pdfPageContext(bibleRefs, paragraphIndexes = [], bibleOccurrences = [], pageTitle = '') {
+  const paragraphs = Array.isArray(bibleRefs?.paragraphs) ? bibleRefs.paragraphs : [];
+  const paragraphByIndex = new Map(paragraphs.map(paragraph => [Number(paragraph?.index), paragraph]));
+  const bibleLinkCandidates = [];
+  for (const paragraph of paragraphs) {
+    for (const reference of paragraph.references || []) {
+      if (!pdfBibleLinkIsEligible(reference, pageTitle)) continue;
+      const text = normalizedPdfAnchor(reference?.originalText, 120);
+      const href = pdfBibleHref(reference);
+      if (!text || !href) continue;
+      bibleLinkCandidates.push({
+        text,
+        href,
+        title:reference.normalizedRef || reference.originalText || text,
+        paragraphIndex:Number(paragraph.index),
+        contextDependent:!String(reference?.entryType || '').startsWith('Book')
+      });
+    }
+  }
+  const hrefsByText = new Map();
+  for (const link of bibleLinkCandidates) {
+    const key = link.text.toLocaleLowerCase();
+    if (!hrefsByText.has(key)) hrefsByText.set(key, new Set());
+    hrefsByText.get(key).add(link.href);
+  }
+  const uniqueBibleLinks = new Map();
+  for (const link of bibleLinkCandidates) {
+    const textKey = link.text.toLocaleLowerCase();
+    if (link.contextDependent && hrefsByText.get(textKey)?.size !== 1) continue;
+    const key = textKey + '\u0000' + link.href;
+    if (!uniqueBibleLinks.has(key)) {
+      const { contextDependent, ...publicLink } = link;
+      uniqueBibleLinks.set(key, publicLink);
+    }
+  }
+  const bibleLinks = [...uniqueBibleLinks.values()];
+
+  const targets = [];
+  const occurrences = Array.isArray(bibleOccurrences) ? bibleOccurrences : [];
+  for (const occurrence of occurrences) {
+    const paragraph = paragraphByIndex.get(Number(occurrence?.paragraphIndex));
+    if (!paragraph) continue;
+    const reference = (paragraph.references || []).find(candidate =>
+      Number(candidate?.startIndex) === Number(occurrence?.startIndex)
+      && Number(candidate?.endIndex) === Number(occurrence?.endIndex)
+    );
+    const query = normalizedPdfAnchor(reference?.originalText || reference?.normalizedRef, 120);
+    const highlightText = pdfReferenceAnchor(paragraph.text, reference?.originalText || query, 180);
+    if (!query && !highlightText) continue;
+    targets.push({
+      paragraphIndex:Number(paragraph.index),
+      query:query || highlightText,
+      highlightText:highlightText || query
+    });
+  }
+  if (targets.length === 0) {
+    for (const paragraphIndex of paragraphIndexes) {
+      const paragraph = paragraphByIndex.get(Number(paragraphIndex));
+      if (!paragraph) continue;
+      const firstReference = (paragraph.references || [])[0];
+      const query = normalizedPdfAnchor(firstReference?.originalText || paragraph.text, 120);
+      const highlightText = normalizedPdfAnchor(paragraph.text, 180);
+      if (!query && !highlightText) continue;
+      targets.push({
+        paragraphIndex:Number(paragraph.index),
+        query:query || highlightText,
+        highlightText:highlightText || query
+      });
+    }
+  }
+  return { bibleLinks, targets };
+}
+
+function postPdfFrameContext(frame, context) {
+  if (!frame || !context) return;
+  frame.contentWindow?.postMessage({ type:'onenote-pdf-context', ...context }, '*');
 }
 
 function viewHistoryKey(entry) {
@@ -1154,6 +1471,51 @@ function createPageFocusButton(page) {
   button.setAttribute('aria-label', 'Открыть страницу «' + (page.title || 'без названия') + '» целиком');
   button.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5"/><path d="m3 8 6-6M21 8l-6-6M3 16l6 6M21 16l-6 6"/></svg>';
   button.addEventListener('click', () => setPageFocusMode(true, page));
+  return button;
+}
+
+function oneNoteClientPageUrl(page) {
+  const clientLink = page?.links?.oneNoteClientUrl;
+  const target = typeof clientLink === 'string' ? clientLink : clientLink?.href;
+  return typeof target === 'string' && /^onenote:/i.test(target) ? target : '';
+}
+
+function updateOneNoteOpenButtons() {
+  document.querySelectorAll('.title-open-onenote').forEach(button => {
+    button.hidden = !oneNoteIntegrationEnabled;
+  });
+}
+
+function createOpenInOneNoteButton(page) {
+  const target = oneNoteClientPageUrl(page);
+  const localPageId = /^\{[0-9A-F-]+\}/i.test(String(page?.id || '')) ? page.id : '';
+  if (!target && !localPageId) return undefined;
+  const button = document.createElement('button');
+  button.className = 'title-tool title-open-onenote';
+  button.type = 'button';
+  button.hidden = !oneNoteIntegrationEnabled;
+  button.title = 'Открыть в OneNote';
+  button.setAttribute('aria-label', 'Открыть страницу «' + (page.title || 'без названия') + '» в OneNote');
+  button.innerHTML = '<svg class="onenote-logo" viewBox="0 0 24 24" aria-hidden="true">'
+    + '<path class="onenote-page-back" d="M9 4h9.5A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5H9z"/>'
+    + '<path class="onenote-page-front" d="M9 7h7.5A1.5 1.5 0 0 1 18 8.5v8a1.5 1.5 0 0 1-1.5 1.5H9z"/>'
+    + '<rect class="onenote-tile" x="3" y="5.5" width="11" height="13" rx="1.4"/>'
+    + '<path class="onenote-letter" d="M5.7 15.5v-7h1.8l3 4.6V8.5h1.7v7h-1.8l-3-4.6v4.6z"/>'
+    + '</svg>';
+  button.addEventListener('click', async () => {
+    button.disabled = true;
+    try {
+      await api('/api/system/open-onenote-page', {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json' },
+        body:JSON.stringify({ url:target, pageId:localPageId })
+      });
+    } catch (error) {
+      showActivity('Не удалось открыть страницу в OneNote: ' + (error?.message || String(error)), 'error');
+    } finally {
+      button.disabled = false;
+    }
+  });
   return button;
 }
 
@@ -1340,9 +1702,30 @@ async function openPage(id, options = {}) {
   meta.append(metaItem('Изменена', formatDate(page.lastModifiedDateTime)), metaItem('Синхронизирована', formatDate(page.contentSyncedAt)));
   const actions = document.createElement('div');
   actions.className = 'page-actions';
-  actions.append(revealPageButton, syncPageButton);
+  const openInOneNoteButton = createOpenInOneNoteButton(page);
+  actions.append(revealPageButton);
+  if (openInOneNoteButton) actions.append(openInOneNoteButton);
+  actions.append(syncPageButton);
   meta.append(actions);
   article.append(crumbs, heading, meta);
+  const folderInfo = page.links?.folder;
+  const isPdfPage = folderInfo?.extension === '.pdf';
+  if (isPdfPage) article.classList.add('pdf-page');
+  if (folderInfo?.extension === '.pdf' && folderInfo.quality) {
+    const quality = document.createElement('div');
+    quality.className = 'folder-quality ' + String(folderInfo.quality).replace('_', '-');
+    const qualityLabels = {
+      textual:'PDF · текстовый слой',
+      heuristic:'PDF · эвристический разбор',
+      requires_ocr:'PDF · требуется OCR'
+    };
+    quality.textContent = [
+      qualityLabels[folderInfo.quality] || 'PDF',
+      folderInfo.qualityMessage,
+      ...(Array.isArray(folderInfo.warnings) ? folderInfo.warnings : [])
+    ].filter(Boolean).join(' — ');
+    article.append(quality);
+  }
   if (!page.hasContent && !page.fetchError) {
     const belongsToActiveSync = !activeSyncContext
       || activeSyncContext.pageId === page.id
@@ -1466,6 +1849,9 @@ async function openPage(id, options = {}) {
     ? paragraphNavigationTargets
     : matches;
   const preferHtmlView = page.hasHtml && defaultPageViewMode() === 'html';
+  let pdfContext = isPdfPage
+    ? pdfPageContext(bibleRefs, currentTargetParagraphIndexes, currentTargetBibleOccurrences, page.title)
+    : undefined;
   let htmlFrame;
   let showingHtml = preferHtmlView;
   let htmlSearchMatchCount = 0;
@@ -1473,6 +1859,30 @@ async function openPage(id, options = {}) {
   let activeMatchIndex = 0;
   let matchCount;
   let matchNav;
+  const positionHtmlMatchNavigation = () => {
+    if (!matchNav) return;
+    const shouldOverlay = Boolean(showingHtml && htmlFrame);
+    matchNav.classList.toggle('html-match-nav-overlay', shouldOverlay);
+    matchNav.classList.toggle('pdf-match-nav-overlay', shouldOverlay && isPdfPage);
+    if (!shouldOverlay) {
+      matchNav.style.removeProperty('--html-match-nav-top');
+      return;
+    }
+    requestAnimationFrame(() => {
+      if (!showingHtml || !matchNav?.isConnected || !htmlFrame?.isConnected) return;
+      const top = Math.max(0, htmlFrame.offsetTop - matchNav.offsetHeight - 8);
+      matchNav.style.setProperty('--html-match-nav-top', top + 'px');
+    });
+  };
+  const matchNavigationResizeObserver = typeof ResizeObserver === 'function'
+    ? new ResizeObserver(positionHtmlMatchNavigation)
+    : undefined;
+  matchNavigationResizeObserver?.observe(article);
+  window.addEventListener('resize', positionHtmlMatchNavigation);
+  pageAbortController.signal.addEventListener('abort', () => {
+    matchNavigationResizeObserver?.disconnect();
+    window.removeEventListener('resize', positionHtmlMatchNavigation);
+  }, { once:true });
   const handleHtmlMainSearchResult = event => {
     if (!htmlFrame || event.source !== htmlFrame.contentWindow) return;
     const data = event.data || {};
@@ -1486,10 +1896,12 @@ async function openPage(id, options = {}) {
     activeMatchIndex = htmlSearchMatchCount > 0
       ? Math.max(0, Math.min(Number(data.index) || 0, htmlSearchMatchCount - 1))
       : 0;
-    if (showingHtml && matchCount) {
-      matchCount.textContent = htmlSearchMatchCount > 0
-        ? (activeMatchIndex + 1) + ' / ' + htmlSearchMatchCount
-        : '0 / 0';
+    if (showingHtml) {
+      if (!matchNav || htmlSearchMatchCount === 0) {
+        renderMatchNavigation(false, false);
+      } else if (matchCount) {
+        matchCount.textContent = (activeMatchIndex + 1) + ' / ' + htmlSearchMatchCount;
+      }
     }
   };
   window.addEventListener('message', handleHtmlMainSearchResult);
@@ -1526,15 +1938,15 @@ async function openPage(id, options = {}) {
     matchNav?.remove();
     matchNav = undefined;
     matchCount = undefined;
-    if (navigationTargets.length === 0) return;
+    const initialNavigationCount = showingHtml && !navigationUsesParagraphTargets && htmlSearchResultsReady
+      ? htmlSearchMatchCount
+      : navigationTargets.length;
+    if (initialNavigationCount === 0) return;
     matchNav = document.createElement('div');
     matchNav.className = 'match-nav';
     matchNav.setAttribute('aria-label', 'Совпадения на странице');
     matchCount = document.createElement('span');
     matchCount.className = 'match-count';
-    const initialNavigationCount = showingHtml && !navigationUsesParagraphTargets && htmlSearchResultsReady
-      ? htmlSearchMatchCount
-      : navigationTargets.length;
     matchCount.textContent = initialNavigationCount > 0
       ? (Math.min(activeMatchIndex, initialNavigationCount - 1) + 1) + ' / ' + initialNavigationCount
       : '0 / 0';
@@ -1565,6 +1977,7 @@ async function openPage(id, options = {}) {
     matchNav.append(matchCount, previousMatch, nextMatch, closeMatchNavigation);
     if (text.parentNode === article) article.insertBefore(matchNav, text);
     else article.append(matchNav);
+    positionHtmlMatchNavigation();
     if (activateWithoutScrolling) requestAnimationFrame(() => goToMatch(0, false, scrollActivatedMatch));
   };
   renderMatchNavigation();
@@ -1590,6 +2003,10 @@ async function openPage(id, options = {}) {
     }
     const inlineQuery = bibleResult && nextParagraphIndexes.length > 0 ? '' : query;
     currentInlineSearchQuery = inlineQuery;
+    if (isPdfPage) {
+      pdfContext = pdfPageContext(bibleRefs, nextParagraphIndexes, nextBibleOccurrences, page.title);
+      postPdfFrameContext(htmlFrame, pdfContext);
+    }
     htmlSearchMatchCount = 0;
     htmlSearchResultsReady = false;
     const nextMatches = [
@@ -1628,9 +2045,9 @@ async function openPage(id, options = {}) {
     const htmlButton = document.createElement('button');
     htmlButton.className = 'view-button';
     htmlButton.type = 'button';
-    htmlButton.textContent = '<>';
-    htmlButton.title = 'Показать HTML';
-    htmlButton.setAttribute('aria-label', 'Показать HTML');
+    htmlButton.textContent = isPdfPage ? 'P' : '<>';
+    htmlButton.title = isPdfPage ? 'Показать PDF' : 'Показать HTML';
+    htmlButton.setAttribute('aria-label', isPdfPage ? 'Показать PDF' : 'Показать HTML');
     const htmlZoom = defaultHtmlZoom();
     const zoomLabel = document.createElement('label');
     zoomLabel.className = 'html-zoom';
@@ -1659,48 +2076,56 @@ async function openPage(id, options = {}) {
         text.style.display = showingHtml ? 'none' : '';
         if (!htmlFrame) {
           htmlButton.disabled = true;
-          htmlButton.textContent = showingHtml ? '¶' : '<>';
-          htmlButton.title = 'Загрузка HTML';
-          htmlButton.setAttribute('aria-label', 'Загрузка HTML');
+          htmlButton.textContent = showingHtml ? '¶' : (isPdfPage ? 'P' : '<>');
+          htmlButton.title = isPdfPage ? 'Загрузка PDF' : 'Загрузка HTML';
+          htmlButton.setAttribute('aria-label', isPdfPage ? 'Загрузка PDF' : 'Загрузка HTML');
           htmlButton.setAttribute('aria-busy', 'true');
-          const htmlParams = new URLSearchParams({ id:page.id, module:currentBibleModule() });
-          const result = await loadPageHtmlWithFallback(htmlParams, { signal:pageAbortController.signal });
-          if (pageRefreshToken !== pendingPageRefreshToken || selectedPageId !== id) return;
-          if (result.bibleReparsed && activeSearchQuery) {
-            renderSearch(activeSearchQuery).catch(error => console.warn(error));
-          }
-          if (result.refreshing) {
-            void waitForPageHtmlRefresh(htmlParams, { signal:pageAbortController.signal }).then(refreshed => {
-              if (!refreshed || pageRefreshToken !== pendingPageRefreshToken || selectedPageId !== id) return;
-              if (refreshed.bibleReparsed && activeSearchQuery) {
-                renderSearch(activeSearchQuery).catch(error => console.warn(error));
-              }
-            });
+          let result;
+          if (!isPdfPage) {
+            const htmlParams = new URLSearchParams({ id:page.id, module:currentBibleModule() });
+            result = await loadPageHtmlWithFallback(htmlParams, { signal:pageAbortController.signal });
+            if (pageRefreshToken !== pendingPageRefreshToken || selectedPageId !== id) return;
+            if (result.bibleReparsed && activeSearchQuery) {
+              renderSearch(activeSearchQuery).catch(error => console.warn(error));
+            }
+            if (result.refreshing) {
+              void waitForPageHtmlRefresh(htmlParams, { signal:pageAbortController.signal }).then(refreshed => {
+                if (!refreshed || pageRefreshToken !== pendingPageRefreshToken || selectedPageId !== id) return;
+                if (refreshed.bibleReparsed && activeSearchQuery) {
+                  renderSearch(activeSearchQuery).catch(error => console.warn(error));
+                }
+              });
+            }
           }
           htmlFrame = document.createElement('iframe');
-          htmlFrame.className = 'html-frame';
-          htmlFrame.title = 'HTML: ' + (page.title || 'страница OneNote');
-          htmlFrame.setAttribute('sandbox', 'allow-scripts');
+          htmlFrame.className = 'html-frame' + (isPdfPage ? ' pdf-frame' : '');
+          htmlFrame.title = (isPdfPage ? 'PDF: ' : 'HTML: ') + (page.title || 'страница OneNote');
+          htmlFrame.setAttribute('sandbox', isPdfPage ? 'allow-scripts allow-same-origin' : 'allow-scripts');
           htmlFrame.referrerPolicy = 'no-referrer';
           const htmlFrameReady = waitForHtmlFrameReady(htmlFrame, pageAbortController.signal);
           htmlFrame.addEventListener('load', () => {
             postHtmlFrameZoom(htmlFrame, Number(zoomRange.value));
+            if (isPdfPage) postPdfFrameContext(htmlFrame, pdfContext);
             if (currentTargetParagraphIndexes.length === 0) {
               htmlFrame.contentWindow?.postMessage({ type:'onenote-clear-target-paragraphs' }, '*');
             }
             postHtmlFrameMainSearch(htmlFrame, currentInlineSearchQuery, activeMatchIndex, true);
             refreshPageFind();
           });
-          htmlFrame.srcdoc = pageHtmlFrameSrcdoc(
-            result.html,
-            bibleRefs.paragraphs.filter(paragraph =>
-              !titleParagraphIndexes.includes(Number(paragraph?.index))
-            ),
-            currentTargetParagraphIndexes,
-            currentTargetBibleOccurrences
-          );
+          if (isPdfPage) {
+            htmlFrame.src = '/ui/pdf-viewer.html?id=' + encodeURIComponent(page.id);
+          } else {
+            htmlFrame.srcdoc = pageHtmlFrameSrcdoc(
+              result.html,
+              bibleRefs.paragraphs.filter(paragraph =>
+                !titleParagraphIndexes.includes(Number(paragraph?.index))
+              ),
+              currentTargetParagraphIndexes,
+              currentTargetBibleOccurrences
+            );
+          }
           text.after(htmlFrame);
-          if (result.degraded) {
+          if (result?.degraded) {
             htmlLoadError = document.createElement('div');
             htmlLoadError.className = 'error-box';
             htmlLoadError.textContent = result.warning;
@@ -1708,26 +2133,29 @@ async function openPage(id, options = {}) {
           }
           await htmlFrameReady;
           if (pageRefreshToken !== pendingPageRefreshToken || selectedPageId !== id) return;
+          if (isPdfPage) postPdfFrameContext(htmlFrame, pdfContext);
           postHtmlFrameMainSearch(htmlFrame, currentInlineSearchQuery, activeMatchIndex, true);
           htmlButton.disabled = false;
           htmlButton.removeAttribute('aria-busy');
         }
         htmlFrame.style.display = showingHtml ? 'block' : 'none';
+        positionHtmlMatchNavigation();
         if (showingHtml) postHtmlFrameZoom(htmlFrame, Number(zoomRange.value));
+        if (showingHtml && isPdfPage) postPdfFrameContext(htmlFrame, pdfContext);
         if (showingHtml) postHtmlFrameMainSearch(htmlFrame, currentInlineSearchQuery, activeMatchIndex, true);
         if (showingHtml) scrollHtmlFrameToTargetParagraph(htmlFrame, currentTargetParagraphIndex, activeMatchIndex);
         if (!showingHtml && navigationTargets.length > 0) goToMatch(activeMatchIndex, false, false);
-        htmlButton.textContent = showingHtml ? '¶' : '<>';
-        htmlButton.title = showingHtml ? 'Показать текст' : 'Показать HTML';
-        htmlButton.setAttribute('aria-label', showingHtml ? 'Показать текст' : 'Показать HTML');
+        htmlButton.textContent = showingHtml ? '¶' : (isPdfPage ? 'P' : '<>');
+        htmlButton.title = showingHtml ? 'Показать извлечённый текст' : (isPdfPage ? 'Показать PDF' : 'Показать HTML');
+        htmlButton.setAttribute('aria-label', showingHtml ? 'Показать извлечённый текст' : (isPdfPage ? 'Показать PDF' : 'Показать HTML'));
         refreshPageFind();
       } catch (error) {
         if (pageRefreshToken !== pendingPageRefreshToken || selectedPageId !== id) return;
         htmlButton.disabled = false;
         htmlButton.removeAttribute('aria-busy');
-        htmlButton.textContent = '<>';
-        htmlButton.title = 'Показать HTML';
-        htmlButton.setAttribute('aria-label', 'Показать HTML');
+        htmlButton.textContent = isPdfPage ? 'P' : '<>';
+        htmlButton.title = isPdfPage ? 'Показать PDF' : 'Показать HTML';
+        htmlButton.setAttribute('aria-label', isPdfPage ? 'Показать PDF' : 'Показать HTML');
         showingHtml = false;
         article.classList.remove('html-view-active');
         text.style.display = '';
@@ -1743,7 +2171,8 @@ async function openPage(id, options = {}) {
       setHtmlView(!showingHtml).catch(showError);
     });
     openDefaultHtmlView = () => setHtmlView(true);
-    actions.append(htmlButton, zoomLabel);
+    actions.append(htmlButton);
+    if (!isPdfPage) actions.append(zoomLabel);
   }
   if (preferHtmlView) text.style.display = 'none';
   article.append(text);
