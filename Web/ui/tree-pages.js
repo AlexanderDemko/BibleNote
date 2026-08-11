@@ -141,6 +141,55 @@ function compareOneNotePageOrder(left, right) {
   );
 }
 
+const defaultNotesSearchPlaceholder = searchInput.placeholder;
+let notesScope = null;
+
+function updateNotesSearchScope() {
+  searchInput.placeholder = notesScope
+    ? `Поиск в ${notesScope.type === 'group' ? 'папке' : 'разделе'} «${notesScope.displayName}»...`
+    : defaultNotesSearchPlaceholder;
+}
+
+function notesScopeBanner() {
+  const banner = document.createElement('div');
+  banner.className = 'notes-scope-banner';
+  const label = document.createElement('span');
+  label.textContent = `${notesScope.type === 'group' ? 'Папка' : 'Раздел'}: ${notesScope.displayName}`;
+  const clear = document.createElement('button');
+  clear.type = 'button';
+  clear.textContent = 'Вся структура';
+  clear.addEventListener('click', () => clearNotesScope().catch(showError));
+  banner.append(label, clear);
+  return banner;
+}
+
+async function clearNotesScope() {
+  notesScope = null;
+  updateNotesSearchScope();
+  tree.scrollTop = 0;
+  await renderNotesList();
+}
+
+async function applyNotesScope(info, focusSearch = false) {
+  notesScope = {
+    ...info,
+    type:info.type === 'group' ? 'group' : 'section'
+  };
+  notesListView = 'structure';
+  localStorage.setItem('onenote.notesListView', notesListView);
+  searchInput.value = '';
+  activeSearchQuery = '';
+  hideSearchHistory();
+  searchHistoryIndex = -1;
+  if (notesScope.type === 'group') expanded.add('g:' + notesScope.id);
+  else expanded.add('s:' + notesScope.id);
+  updateNotesSearchScope();
+  updateNotesListViewControls();
+  tree.scrollTop = 0;
+  await renderNotesList();
+  if (focusSearch) searchInput.focus();
+}
+
 function updateNotesListViewControls() {
   const structureSelected = notesListView === 'structure';
   notesViewSwitch.hidden = Boolean(activeSearchQuery);
@@ -161,6 +210,8 @@ async function activateNotesListView(view) {
     recentPagesSnapshotKey = '';
   }
   clearTimeout(searchTimer);
+  notesScope = null;
+  updateNotesSearchScope();
   notesListView = view;
   localStorage.setItem('onenote.notesListView', view);
   hideSearchHistory();
@@ -233,8 +284,12 @@ async function renderRecentPages() {
         await openPage(page.id);
       };
 
-      const status = document.createElement('span');
-      status.className = 'status-dot ' + (page.fetchError ? 'error' : page.hasContent ? 'ok' : 'pending');
+      const sourceType = sourceTypeForNotebook(page.notebookId);
+      const typeIcons = document.createElement('span');
+      typeIcons.className = 'recent-page-type-icons';
+      typeIcons.append(sourceTypeIcon(sourceType));
+      const documentIcon = fileTypeIcon(page.fileExtension, sourceType);
+      if (documentIcon) typeIcons.append(documentIcon);
       const main = document.createElement('span');
       main.className = 'recent-page-main';
       const title = document.createElement('span');
@@ -250,7 +305,7 @@ async function renderRecentPages() {
       time.textContent = (page.recentReason === 'opened' ? 'открыта здесь ' : 'изменена ') + recentTimeLabel(page.recentAt);
       meta.append(path, time);
       main.append(title, meta);
-      button.append(status, main);
+      button.append(typeIcons, main);
       fragment.append(button);
     }
     if (pages.length === 0) {
@@ -265,9 +320,42 @@ async function renderRecentPages() {
   tree.scrollTop = savedScrollTop;
 }
 
+async function renderScopedTree() {
+  const renderToken = ++treeRenderToken;
+  const fragment = document.createDocumentFragment();
+  fragment.append(notesScopeBanner());
+  if (notesScope.type === 'group') {
+    await renderSections(notesScope.notebookId, fragment, 0, {
+      onlyGroupId:notesScope.id,
+      flattenFileSections:notesScope.sourceType === 'folder'
+    });
+  } else {
+    const key = 's:' + notesScope.id;
+    const open = expanded.has(key);
+    const button = row(notesScope.displayName, 0, {
+      expandable:true,
+      section:true,
+      open,
+      count:notesScope.pageCount || (notesScope.scanComplete === 1 ? 'пустая' : null),
+      title:'Раздел «' + notesScope.displayName + '»',
+      syncLabel:'Синхронизировать раздел «' + notesScope.displayName + '»',
+      onSync:() => startTargetedSync({ sectionId:notesScope.id }, 'раздел «' + notesScope.displayName + '»')
+    });
+    button.dataset.sectionId = notesScope.id;
+    button.dataset.notebookId = notesScope.notebookId;
+    button.onclick = () => { open ? expanded.delete(key) : expanded.add(key); renderNotesList(); };
+    fragment.append(button);
+    if (open) await renderPages(notesScope.id, fragment, 1);
+  }
+  if (renderToken !== treeRenderToken) return;
+  tree.replaceChildren(fragment);
+  tree.scrollTop = 0;
+}
+
 function renderNotesList() {
   updateNotesListViewControls();
   if (activeSearchQuery) return renderSearch(activeSearchQuery);
+  if (notesScope) return renderScopedTree();
   return notesListView === 'recent' ? renderRecentPages() : renderTree();
 }
 
@@ -350,7 +438,7 @@ async function renderTree() {
       syncLabel:'Синхронизировать источник «' + source.displayName + '»',
       onSync:notebookIds.length ? () => startTargetedSync({ notebookIds }, 'источник «' + source.displayName + '»') : undefined
     });
-    sourceButton.onclick = () => { sourceOpen ? expanded.delete(sourceKey) : expanded.add(sourceKey); renderTree(); };
+    sourceButton.onclick = () => { sourceOpen ? expanded.delete(sourceKey) : expanded.add(sourceKey); renderNotesList(); };
     fragment.append(sourceButton);
     if (!sourceOpen) continue;
 
@@ -376,7 +464,7 @@ async function renderTree() {
           'коллекцию «' + notebook.displayName + '»'
         )
       });
-      button.onclick = () => { open ? expanded.delete(key) : expanded.add(key); renderTree(); };
+      button.onclick = () => { open ? expanded.delete(key) : expanded.add(key); renderNotesList(); };
       fragment.append(button);
       if (open) await renderSections(notebook.id, fragment, 2, source.type === 'folder' ? {
         flattenRootSectionLabel:notebook.displayName,
@@ -401,6 +489,8 @@ async function revealPageInTree(page) {
   searchHistoryIndex = -1;
   searchInput.value = '';
   activeSearchQuery = '';
+  notesScope = null;
+  updateNotesSearchScope();
   notesListView = 'structure';
   localStorage.setItem('onenote.notesListView', notesListView);
   updateNotesListViewControls();
@@ -516,7 +606,9 @@ async function renderSections(notebookId, target, baseLevel = 1, options = {}) {
       syncLabel:'Синхронизировать секцию «' + section.displayName + '»',
       onSync:() => startTargetedSync({ sectionId:section.id }, 'секцию «' + section.displayName + '»')
     });
-    button.onclick = () => { open ? expanded.delete(key) : expanded.add(key); renderTree(); };
+    button.dataset.sectionId = section.id;
+    button.dataset.notebookId = notebookId;
+    button.onclick = () => { open ? expanded.delete(key) : expanded.add(key); renderNotesList(); };
     target.append(button);
     if (open) await renderPages(section.id, target, level + 1);
   };
@@ -532,7 +624,9 @@ async function renderSections(notebookId, target, baseLevel = 1, options = {}) {
         count:group.sectionCount || null,
         title:'Группа разделов'
       });
-      button.onclick = () => { open ? expanded.delete(key) : expanded.add(key); renderTree(); };
+      button.dataset.groupId = group.id;
+      button.dataset.notebookId = notebookId;
+      button.onclick = () => { open ? expanded.delete(key) : expanded.add(key); renderNotesList(); };
       target.append(button);
       if (open) await renderLevel(group.id, level + 1);
     }
@@ -547,7 +641,15 @@ async function renderSections(notebookId, target, baseLevel = 1, options = {}) {
     }
   };
 
-  await renderLevel('', baseLevel);
+  if (options.onlyGroupId) {
+    const rootGroup = groups.find(group => group.id === options.onlyGroupId);
+    if (!rootGroup) return;
+    const rootParentId = rootGroup.parentGroupId || '';
+    groupsByParent.set(rootParentId, [rootGroup]);
+    await renderLevel(rootParentId, baseLevel);
+  } else {
+    await renderLevel('', baseLevel);
+  }
 }
 
 async function renderPages(sectionId, target = tree, level = 2) {
@@ -574,6 +676,355 @@ async function renderPages(sectionId, target = tree, level = 2) {
     target.append(button);
   }
 }
+
+let noteContextMenu;
+let noteContextMenuOwner;
+let noteContextMenuRequest = 0;
+
+function closeNoteContextMenu(restoreFocus = false) {
+  noteContextMenuRequest += 1;
+  noteContextMenu?.remove();
+  noteContextMenu = undefined;
+  const owner = noteContextMenuOwner;
+  noteContextMenuOwner = undefined;
+  if (restoreFocus && owner?.isConnected) owner.focus({ preventScroll:true });
+}
+
+function noteContextSeparator() {
+  const separator = document.createElement('div');
+  separator.className = 'note-context-separator';
+  separator.setAttribute('role', 'separator');
+  return separator;
+}
+
+function noteContextItem(label, action, options = {}) {
+  const button = document.createElement('button');
+  button.className = 'note-context-item';
+  button.type = 'button';
+  button.setAttribute('role', 'menuitem');
+  button.textContent = label;
+  button.disabled = options.disabled === true;
+  if (options.title) button.title = options.title;
+  button.addEventListener('click', () => {
+    closeNoteContextMenu();
+    Promise.resolve(action()).catch(showError);
+  });
+  return button;
+}
+
+function pageInfoRow(label, value) {
+  if (value == null || value === '') return undefined;
+  const row = document.createElement('div');
+  const term = document.createElement('dt');
+  const description = document.createElement('dd');
+  term.textContent = label;
+  description.textContent = String(value);
+  row.append(term, description);
+  return row;
+}
+
+function showNoteInfo(page) {
+  document.querySelector('.note-info-dialog')?.remove();
+  const dialog = document.createElement('dialog');
+  dialog.className = 'note-info-dialog';
+  dialog.setAttribute('aria-labelledby', 'noteInfoTitle');
+  const body = document.createElement('div');
+  body.className = 'note-info-body';
+  const header = document.createElement('header');
+  const heading = document.createElement('h2');
+  heading.id = 'noteInfoTitle';
+  heading.textContent = page.title || '(без названия)';
+  const pathLabel = document.createElement('p');
+  pathLabel.textContent = pagePathLabel(page) || 'Расположение не указано';
+  header.append(heading, pathLabel);
+  const details = document.createElement('dl');
+  details.className = 'note-info-list';
+  const folderInfo = page.links?.folder;
+  const originalKind = folderInfo
+    ? 'Файл' + (folderInfo.extension ? ` (${String(folderInfo.extension).replace(/^\./, '').toUpperCase()})` : '')
+    : (oneNoteClientPageUrl(page) || /^\{[0-9A-F-]+\}/i.test(String(page.id || '')) ? 'OneNote' : 'Не указан');
+  const rows = [
+    pageInfoRow('Источник', page.parentNotebook?.displayName),
+    pageInfoRow('Раздел', [page.sectionGroupPath, page.parentSection?.displayName].filter(Boolean).join(' / ')),
+    pageInfoRow('Оригинал', originalKind),
+    pageInfoRow('Путь к файлу', folderInfo?.path),
+    pageInfoRow('Создана', formatDate(page.createdDateTime)),
+    pageInfoRow('Изменена', formatDate(page.lastModifiedDateTime)),
+    pageInfoRow('Синхронизирована', formatDate(page.contentSyncedAt)),
+    pageInfoRow('Ошибка загрузки', page.fetchError)
+  ].filter(Boolean);
+  details.append(...rows);
+  const footer = document.createElement('footer');
+  const closeButton = document.createElement('button');
+  closeButton.className = 'dialog-button primary';
+  closeButton.type = 'button';
+  closeButton.textContent = 'Закрыть';
+  closeButton.addEventListener('click', () => dialog.close());
+  footer.append(closeButton);
+  body.append(header, details, footer);
+  dialog.append(body);
+  dialog.addEventListener('close', () => dialog.remove(), { once:true });
+  document.body.append(dialog);
+  dialog.showModal();
+  closeButton.focus();
+}
+
+function showHierarchyInfo(info) {
+  document.querySelector('.note-info-dialog')?.remove();
+  const dialog = document.createElement('dialog');
+  dialog.className = 'note-info-dialog';
+  dialog.setAttribute('aria-labelledby', 'hierarchyInfoTitle');
+  const body = document.createElement('div');
+  body.className = 'note-info-body';
+  const header = document.createElement('header');
+  const heading = document.createElement('h2');
+  heading.id = 'hierarchyInfoTitle';
+  heading.textContent = info.displayName || (info.type === 'group' ? '(папка без названия)' : '(раздел без названия)');
+  const pathLabel = document.createElement('p');
+  pathLabel.textContent = [info.notebookName, info.groupPath].filter(Boolean).join(' / ') || 'Расположение не указано';
+  header.append(heading, pathLabel);
+  const details = document.createElement('dl');
+  details.className = 'note-info-list';
+  const sourceLabel = info.sourceType === 'folder'
+    ? 'Папка на компьютере'
+    : info.sourceType === 'com' ? 'OneNote Local' : 'OneNote Cloud';
+  const rows = [
+    pageInfoRow('Тип', info.type === 'group' ? 'Папка' : 'Раздел'),
+    pageInfoRow('Источник', sourceLabel),
+    pageInfoRow('Коллекция', info.notebookName),
+    pageInfoRow('Путь', info.links?.folderPath || info.groupPath),
+    info.type === 'group' ? pageInfoRow('Вложенных папок', info.childGroupCount) : undefined,
+    info.type === 'group' ? pageInfoRow('Разделов', info.sectionCount) : undefined,
+    pageInfoRow('Заметок', info.pageCount),
+    pageInfoRow('Изменён', formatDate(info.lastModifiedDateTime)),
+    pageInfoRow('Синхронизирован', formatDate(info.syncedAt)),
+    info.type === 'section' ? pageInfoRow('Структура проверена', formatDate(info.scannedAt)) : undefined,
+    info.type === 'section' ? pageInfoRow('Ошибка проверки', info.scanError) : undefined
+  ].filter(Boolean);
+  details.append(...rows);
+  const footer = document.createElement('footer');
+  const closeButton = document.createElement('button');
+  closeButton.className = 'dialog-button primary';
+  closeButton.type = 'button';
+  closeButton.textContent = 'Закрыть';
+  closeButton.addEventListener('click', () => dialog.close());
+  footer.append(closeButton);
+  body.append(header, details, footer);
+  dialog.append(body);
+  dialog.addEventListener('close', () => dialog.remove(), { once:true });
+  document.body.append(dialog);
+  dialog.showModal();
+  closeButton.focus();
+}
+
+async function openOneNoteOriginal(page) {
+  const target = oneNoteClientPageUrl(page);
+  const localPageId = /^\{[0-9A-F-]+\}/i.test(String(page?.id || '')) ? page.id : '';
+  await api('/api/system/open-onenote-page', {
+    method:'POST',
+    headers:{ 'Content-Type':'application/json' },
+    body:JSON.stringify({ url:target, pageId:localPageId })
+  });
+}
+
+async function openFolderOriginal(page, reveal = false) {
+  await api('/api/system/open-folder-page', {
+    method:'POST',
+    headers:{ 'Content-Type':'application/json' },
+    body:JSON.stringify({ pageId:page.id, reveal })
+  });
+}
+
+async function openHierarchyOriginal(info) {
+  if (info.links?.folderPath) {
+    await api('/api/system/open-folder-hierarchy', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json' },
+      body:JSON.stringify({ kind:info.type, id:info.id })
+    });
+    return;
+  }
+  await openOneNoteOriginal(info);
+}
+
+function positionNoteContextMenu(menu, x, y) {
+  const bounds = menu.getBoundingClientRect();
+  const left = Math.max(8, Math.min(x, window.innerWidth - bounds.width - 8));
+  const top = Math.max(8, Math.min(y, window.innerHeight - bounds.height - 8));
+  menu.style.left = `${left}px`;
+  menu.style.top = `${top}px`;
+}
+
+function mountNoteContextMenu(menu, owner, x, y) {
+  menu.addEventListener('keydown', event => {
+    const items = [...menu.querySelectorAll('.note-context-item:not(:disabled)')];
+    const index = items.indexOf(document.activeElement);
+    let nextIndex;
+    if (event.key === 'ArrowDown') nextIndex = (index + 1) % items.length;
+    else if (event.key === 'ArrowUp') nextIndex = (index - 1 + items.length) % items.length;
+    else if (event.key === 'Home') nextIndex = 0;
+    else if (event.key === 'End') nextIndex = items.length - 1;
+    else if (event.key === 'Escape') {
+      event.preventDefault();
+      closeNoteContextMenu(true);
+      return;
+    }
+    if (nextIndex == null) return;
+    event.preventDefault();
+    items[nextIndex]?.focus();
+  });
+  document.body.append(menu);
+  noteContextMenu = menu;
+  noteContextMenuOwner = owner;
+  positionNoteContextMenu(menu, x, y);
+  menu.querySelector('.note-context-item:not(:disabled)')?.focus();
+}
+
+async function showNoteContextMenu(owner, x, y) {
+  closeNoteContextMenu();
+  const pageId = owner?.dataset.pageId;
+  if (!pageId) return;
+  const request = ++noteContextMenuRequest;
+  const page = await api('/api/page-info?id=' + encodeURIComponent(pageId));
+  if (request !== noteContextMenuRequest) return;
+
+  const menu = document.createElement('div');
+  menu.className = 'note-context-menu';
+  menu.setAttribute('role', 'menu');
+  menu.setAttribute('aria-label', `Действия с заметкой «${page.title || 'без названия'}»`);
+  menu.append(noteContextItem('Открыть целиком', async () => {
+    if (selectedPageId !== page.id) await openPage(page.id);
+    setPageFocusMode(true, page);
+  }));
+  if (activeSearchQuery || notesListView !== 'structure') {
+    menu.append(noteContextItem('Показать в структуре', () => revealPageInTree(page)));
+  }
+
+  const folderInfo = page.links?.folder;
+  const hasOneNoteOriginal = Boolean(oneNoteClientPageUrl(page)) || /^\{[0-9A-F-]+\}/i.test(String(page.id || ''));
+  if (folderInfo || hasOneNoteOriginal) {
+    menu.append(noteContextSeparator());
+    if (folderInfo) {
+      menu.append(
+        noteContextItem('Открыть файл', () => openFolderOriginal(page)),
+        noteContextItem('Показать в Проводнике', () => openFolderOriginal(page, true))
+      );
+    } else {
+      menu.append(noteContextItem('Открыть в OneNote', () => openOneNoteOriginal(page)));
+    }
+  }
+
+  menu.append(
+    noteContextSeparator(),
+    noteContextItem('Синхронизировать заметку', () => {
+      if (!syncRunning) return startTargetedSync({ pageId:page.id }, `заметку «${page.title || 'без названия'}»`);
+    }, {
+      disabled:syncRunning,
+      title:syncRunning ? 'Дождитесь завершения текущей синхронизации' : ''
+    }),
+    noteContextItem('Сведения о заметке', () => showNoteInfo(page))
+  );
+  mountNoteContextMenu(menu, owner, x, y);
+}
+
+async function showHierarchyContextMenu(owner, x, y) {
+  closeNoteContextMenu();
+  const groupId = owner?.dataset.groupId;
+  const sectionId = owner?.dataset.sectionId;
+  if (!groupId && !sectionId) return;
+  const request = ++noteContextMenuRequest;
+  const info = await api(
+    (groupId ? '/api/section-group-info?id=' : '/api/section-info?id=')
+      + encodeURIComponent(groupId || sectionId)
+  );
+  if (request !== noteContextMenuRequest) return;
+
+  const menu = document.createElement('div');
+  menu.className = 'note-context-menu';
+  menu.setAttribute('role', 'menu');
+  const kindLabel = info.type === 'group' ? 'папкой' : 'разделом';
+  menu.setAttribute('aria-label', `Действия с ${kindLabel} «${info.displayName || 'без названия'}»`);
+
+  if (info.type === 'group') {
+    const groupKeys = (info.groupIds || []).map(id => 'g:' + id);
+    const sectionKeys = (info.sectionIds || []).map(id => 's:' + id);
+    const allKeys = [...groupKeys, ...sectionKeys];
+    const allExpanded = allKeys.length > 0 && allKeys.every(key => expanded.has(key));
+    const allCollapsed = allKeys.every(key => !expanded.has(key));
+    menu.append(
+      noteContextItem('Развернуть всё', async () => {
+        for (const key of allKeys) expanded.add(key);
+        await renderNotesList();
+      }, { disabled:allExpanded }),
+      noteContextItem('Свернуть всё', async () => {
+        for (const key of allKeys) expanded.delete(key);
+        await renderNotesList();
+      }, { disabled:allCollapsed })
+    );
+  } else {
+    const key = 's:' + info.id;
+    const open = expanded.has(key);
+    menu.append(noteContextItem(open ? 'Свернуть' : 'Развернуть', async () => {
+      if (open) expanded.delete(key); else expanded.add(key);
+      await renderNotesList();
+    }));
+  }
+
+  menu.append(
+    noteContextSeparator(),
+    noteContextItem(info.type === 'group' ? 'Показать только эту папку' : 'Показать только этот раздел', () => applyNotesScope(info)),
+    noteContextItem(info.type === 'group' ? 'Искать в этой папке' : 'Искать в этом разделе', () => applyNotesScope(info, true))
+  );
+
+  const hasOriginal = Boolean(info.links?.folderPath || oneNoteClientPageUrl(info));
+  if (hasOriginal) {
+    menu.append(
+      noteContextSeparator(),
+      noteContextItem(info.links?.folderPath ? 'Открыть в Проводнике' : 'Открыть в OneNote', () => openHierarchyOriginal(info))
+    );
+  }
+
+  menu.append(
+    noteContextSeparator(),
+    noteContextItem(info.type === 'group' ? 'Синхронизировать содержимое' : 'Синхронизировать раздел', () => {
+      if (syncRunning) return;
+      return startTargetedSync(
+        info.type === 'group' ? { sectionGroupId:info.id } : { sectionId:info.id },
+        `${info.type === 'group' ? 'папку' : 'раздел'} «${info.displayName || 'без названия'}»`
+      );
+    }, {
+      disabled:syncRunning,
+      title:syncRunning ? 'Дождитесь завершения текущей синхронизации' : ''
+    }),
+    noteContextItem(info.type === 'group' ? 'Сведения о папке' : 'Сведения о разделе', () => showHierarchyInfo(info))
+  );
+  mountNoteContextMenu(menu, owner, x, y);
+}
+
+tree.addEventListener('contextmenu', event => {
+  const owner = event.target.closest('.tree-row[data-page-id], .tree-row[data-group-id], .tree-row[data-section-id]');
+  if (!owner || !tree.contains(owner)) return;
+  event.preventDefault();
+  const showMenu = owner.dataset.pageId ? showNoteContextMenu : showHierarchyContextMenu;
+  showMenu(owner, event.clientX, event.clientY).catch(showError);
+});
+
+tree.addEventListener('keydown', event => {
+  if (event.key !== 'ContextMenu' && !(event.shiftKey && event.key === 'F10')) return;
+  const owner = event.target.closest('.tree-row[data-page-id], .tree-row[data-group-id], .tree-row[data-section-id]');
+  if (!owner) return;
+  event.preventDefault();
+  const bounds = owner.getBoundingClientRect();
+  const showMenu = owner.dataset.pageId ? showNoteContextMenu : showHierarchyContextMenu;
+  showMenu(owner, bounds.left + 24, bounds.top + Math.min(bounds.height, 24)).catch(showError);
+});
+
+document.addEventListener('pointerdown', event => {
+  if (noteContextMenu && !noteContextMenu.contains(event.target)) closeNoteContextMenu();
+}, true);
+window.addEventListener('blur', () => closeNoteContextMenu());
+window.addEventListener('resize', () => closeNoteContextMenu());
+tree.addEventListener('scroll', () => closeNoteContextMenu(), { passive:true });
 
 function groupedSearchResults(results) {
   const notebooks = new Map();
@@ -1025,13 +1476,19 @@ function renderSearchResults(query, results, bibleResults = [], hasSelectedNoteb
 }
 
 async function renderSearch(query) {
+  activeSearchAbortController?.abort();
+  const searchAbortController = new AbortController();
+  activeSearchAbortController = searchAbortController;
   const renderToken = ++treeRenderToken;
   activeSearchQuery = query;
   updateNotesListViewControls();
   tree.replaceChildren();
+  if (notesScope) tree.append(notesScopeBanner());
   const heading = document.createElement('div');
   heading.className = 'search-heading';
-  heading.textContent = 'Результаты поиска';
+  heading.textContent = notesScope
+    ? `Результаты в ${notesScope.type === 'group' ? 'папке' : 'разделе'} «${notesScope.displayName}»`
+    : 'Результаты поиска';
   const loading = document.createElement('div');
   loading.className = 'search-loading';
   loading.setAttribute('role', 'status');
@@ -1053,6 +1510,9 @@ async function renderSearch(query) {
   });
   addBibleDisplayParams(params);
   for (const notebookId of selectedIds) params.append('notebookId', notebookId);
+  if (notesScope) {
+    params.set(notesScope.type === 'group' ? 'sectionGroupId' : 'sectionId', notesScope.id);
+  }
   const bibleParams = new URLSearchParams({
     q:request.query,
     module:bibleReaderModuleEl.value || currentBibleModule(),
@@ -1064,16 +1524,28 @@ async function renderSearch(query) {
   let bibleResults;
   try {
     [results, bibleResults] = await Promise.all([
-      selectedIds.length > 0 ? api('/api/search?' + params.toString()) : Promise.resolve([]),
-      api('/api/bible/text-search?' + bibleParams.toString(), { timeoutMs:60000 }).catch(error => {
-        console.warn('Bible text search is unavailable:', error);
-        return [];
-      })
+      selectedIds.length > 0
+        ? api('/api/search?' + params.toString(), { signal:searchAbortController.signal })
+        : Promise.resolve([]),
+      notesScope
+        ? Promise.resolve([])
+        : api('/api/bible/text-search?' + bibleParams.toString(), {
+            timeoutMs:60000,
+            signal:searchAbortController.signal
+          }).catch(error => {
+            if (searchAbortController.signal.aborted) return [];
+            console.warn('Bible text search is unavailable:', error);
+            return [];
+          })
     ]);
   } catch (error) {
-    if (renderToken !== treeRenderToken) return;
+    if (searchAbortController.signal.aborted || renderToken !== treeRenderToken) return;
     loading.remove();
     throw error;
+  } finally {
+    if (activeSearchAbortController === searchAbortController) {
+      activeSearchAbortController = undefined;
+    }
   }
   if (renderToken !== treeRenderToken) return;
   renderSearchResults(query, results, bibleResults, selectedIds.length > 0);
@@ -1099,13 +1571,22 @@ function scrollToTargetParagraph(paragraphIndex, behavior = 'smooth') {
   requestAnimationFrame(run);
 }
 
-function scrollHtmlFrameToTargetParagraph(frame, paragraphIndex, targetIndex) {
+function updateHtmlMatchNavigationPresentation(matchNav, showingHtml, htmlFrame, isPdfPage) {
+  if (!matchNav) return false;
+  const shouldOverlay = Boolean(showingHtml && htmlFrame);
+  matchNav.classList.toggle('html-match-nav-overlay', shouldOverlay);
+  matchNav.classList.toggle('pdf-match-nav-overlay', shouldOverlay && isPdfPage);
+  return shouldOverlay;
+}
+
+function scrollHtmlFrameToTargetParagraph(frame, paragraphIndex, targetIndex, forceTarget = false) {
   if (!Number.isInteger(paragraphIndex) || !frame) return;
-  frame.scrollIntoView({ block:'nearest', behavior:'smooth' });
+  frame.scrollIntoView({ block:'nearest' });
   const post = () => frame.contentWindow?.postMessage({
     type:'onenote-scroll-target-paragraph',
     paragraphIndex,
-    targetIndex:Number.isInteger(targetIndex) ? targetIndex : undefined
+    targetIndex:Number.isInteger(targetIndex) ? targetIndex : undefined,
+    forceTarget
   }, '*');
   requestAnimationFrame(() => {
     post();
@@ -1139,6 +1620,22 @@ function pageSearchHighlightPattern(query) {
   return { source, flags };
 }
 
+function htmlFrameMainSearchRequest(query) {
+  if (!query) return undefined;
+  const request = searchRequest(query);
+  return {
+    query:request.query,
+    mode:request.mode,
+    caseSensitive:request.caseSensitive,
+    terms:request.mode === 'and' ? searchHighlightTerms(request) : []
+  };
+}
+
+function htmlFrameMainSearchKey(query) {
+  const request = htmlFrameMainSearchRequest(query);
+  return request ? JSON.stringify(request) : '';
+}
+
 function postHtmlFrameMainSearch(frame, query, index = 0, scroll = true) {
   if (!frame) return;
   const pattern = pageSearchHighlightPattern(query);
@@ -1148,16 +1645,23 @@ function postHtmlFrameMainSearch(frame, query, index = 0, scroll = true) {
       ? [request.query]
       : searchHighlightTerms(request))
     : [];
-  frame.contentWindow?.postMessage({
+  const message = {
     type:'onenote-main-search',
-    source:pattern?.source || '',
-    flags:pattern?.flags || '',
-    queries,
-    mode:request?.mode || 'and',
-    entireWord:request?.mode === 'and',
     index,
     scroll
-  }, '*');
+  };
+  if (frame.classList.contains('pdf-frame')) {
+    Object.assign(message, {
+      source:pattern?.source || '',
+      flags:pattern?.flags || '',
+      queries,
+      mode:request?.mode || 'and',
+      entireWord:request?.mode === 'and'
+    });
+  } else {
+    message.search = htmlFrameMainSearchRequest(query);
+  }
+  frame.contentWindow?.postMessage(message, '*');
 }
 
 function normalizedPdfAnchor(value, maxLength = 160) {
@@ -1218,6 +1722,8 @@ function pdfBibleLinkMatchesTitle(reference, pageTitle) {
 function pdfBibleLinkIsEligible(reference, pageTitle) {
   const entryType = String(reference?.entryType || '').trim();
   if (entryType === 'BookChapter' || entryType === 'BookChapterVerse') return true;
+  if (entryType === 'Verse') return /^\s*[:：]\s*\d/u.test(String(reference?.originalText || ''))
+    && pdfBibleLinkMatchesTitle(reference, pageTitle);
   if (entryType) return pdfBibleLinkMatchesTitle(reference, pageTitle);
   return /\p{L}/u.test(String(reference?.originalText || ''));
 }
@@ -1225,39 +1731,53 @@ function pdfBibleLinkIsEligible(reference, pageTitle) {
 function pdfPageContext(bibleRefs, paragraphIndexes = [], bibleOccurrences = [], pageTitle = '') {
   const paragraphs = Array.isArray(bibleRefs?.paragraphs) ? bibleRefs.paragraphs : [];
   const paragraphByIndex = new Map(paragraphs.map(paragraph => [Number(paragraph?.index), paragraph]));
-  const bibleLinkCandidates = [];
-  for (const paragraph of paragraphs) {
-    for (const reference of paragraph.references || []) {
-      if (!pdfBibleLinkIsEligible(reference, pageTitle)) continue;
-      const text = normalizedPdfAnchor(reference?.originalText, 120);
-      const href = pdfBibleHref(reference);
-      if (!text || !href) continue;
-      bibleLinkCandidates.push({
-        text,
-        href,
-        title:reference.normalizedRef || reference.originalText || text,
-        paragraphIndex:Number(paragraph.index),
-        contextDependent:!String(reference?.entryType || '').startsWith('Book')
-      });
+  const exactPdfLinks = Array.isArray(bibleRefs?.pdfBibleLinks) ? bibleRefs.pdfBibleLinks : [];
+  let bibleLinks;
+  if (exactPdfLinks.length > 0) {
+    bibleLinks = exactPdfLinks
+      .filter(link => link?.text && link?.href && !/^\d+$/u.test(String(link.text).trim()))
+      .map(link => ({
+        text:normalizedPdfAnchor(link.text, 120),
+        href:String(link.href),
+        title:String(link.title || link.text),
+        pageNumber:Number(link.pageNumber),
+        occurrenceIndex:Number(link.occurrenceIndex)
+      }));
+  } else {
+    const bibleLinkCandidates = [];
+    for (const paragraph of paragraphs) {
+      for (const reference of paragraph.references || []) {
+        if (!pdfBibleLinkIsEligible(reference, pageTitle)) continue;
+        const text = normalizedPdfAnchor(reference?.originalText, 120);
+        const href = pdfBibleHref(reference);
+        if (!text || !href) continue;
+        bibleLinkCandidates.push({
+          text,
+          href,
+          title:reference.normalizedRef || reference.originalText || text,
+          paragraphIndex:Number(paragraph.index),
+          contextDependent:!String(reference?.entryType || '').startsWith('Book')
+        });
+      }
     }
-  }
-  const hrefsByText = new Map();
-  for (const link of bibleLinkCandidates) {
-    const key = link.text.toLocaleLowerCase();
-    if (!hrefsByText.has(key)) hrefsByText.set(key, new Set());
-    hrefsByText.get(key).add(link.href);
-  }
-  const uniqueBibleLinks = new Map();
-  for (const link of bibleLinkCandidates) {
-    const textKey = link.text.toLocaleLowerCase();
-    if (link.contextDependent && hrefsByText.get(textKey)?.size !== 1) continue;
-    const key = textKey + '\u0000' + link.href;
-    if (!uniqueBibleLinks.has(key)) {
-      const { contextDependent, ...publicLink } = link;
-      uniqueBibleLinks.set(key, publicLink);
+    const hrefsByText = new Map();
+    for (const link of bibleLinkCandidates) {
+      const key = link.text.toLocaleLowerCase();
+      if (!hrefsByText.has(key)) hrefsByText.set(key, new Set());
+      hrefsByText.get(key).add(link.href);
     }
+    const uniqueBibleLinks = new Map();
+    for (const link of bibleLinkCandidates) {
+      const textKey = link.text.toLocaleLowerCase();
+      if (link.contextDependent && hrefsByText.get(textKey)?.size !== 1) continue;
+      const key = textKey + '\u0000' + link.href;
+      if (!uniqueBibleLinks.has(key)) {
+        const { contextDependent, ...publicLink } = link;
+        uniqueBibleLinks.set(key, publicLink);
+      }
+    }
+    bibleLinks = [...uniqueBibleLinks.values()];
   }
-  const bibleLinks = [...uniqueBibleLinks.values()];
 
   const targets = [];
   const occurrences = Array.isArray(bibleOccurrences) ? bibleOccurrences : [];
@@ -1302,6 +1822,72 @@ function postPdfFrameContext(frame, context) {
 
 function viewHistoryKey(entry) {
   return JSON.stringify(entry);
+}
+
+let pageViewStateRequestSequence = 0;
+
+function requestPageFrameViewState(frame, timeoutMs = 700) {
+  if (!frame?.contentWindow) return Promise.resolve(undefined);
+  const requestId = `page-view-${Date.now()}-${++pageViewStateRequestSequence}`;
+  return new Promise(resolve => {
+    let settled = false;
+    const finish = value => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      window.removeEventListener('message', handleMessage);
+      resolve(value);
+    };
+    const handleMessage = event => {
+      if (event.source !== frame.contentWindow) return;
+      const data = event.data || {};
+      if (data.type !== 'onenote-page-view-state' || data.requestId !== requestId) return;
+      finish({
+        kind:String(data.kind || ''),
+        pageNumber:Number.isInteger(Number(data.pageNumber)) ? Number(data.pageNumber) : undefined,
+        zoom:Number(data.zoom) > 0 ? Number(data.zoom) : undefined,
+        scrollTop:Math.max(0, Number(data.scrollTop) || 0),
+        scrollLeft:Math.max(0, Number(data.scrollLeft) || 0)
+      });
+    };
+    const timer = setTimeout(() => finish(undefined), timeoutMs);
+    window.addEventListener('message', handleMessage);
+    frame.contentWindow.postMessage({ type:'onenote-page-view-state-request', requestId }, '*');
+  });
+}
+
+async function captureCurrentPageViewHistoryState() {
+  const entry = viewHistory[viewHistoryIndex];
+  if (!entry || entry.type !== 'page' || !selectedPageId || entry.pageId !== selectedPageId) return;
+  const article = selectedPageArticle();
+  if (!article) return;
+  const frame = article.querySelector('.html-frame');
+  const frameVisible = frame && frame.style.display !== 'none';
+  const frameViewState = frameVisible ? await requestPageFrameViewState(frame) : undefined;
+  viewHistory[viewHistoryIndex] = {
+    ...entry,
+    contentScrollTop:Math.max(0, Number(content.scrollTop) || 0),
+    pageZoom:articlePageZoom(article),
+    visualView:article.classList.contains('html-view-active'),
+    ...(frameViewState ? { frameViewState } : {})
+  };
+}
+
+function restorePageFrameViewState(frame, state) {
+  if (!frame?.contentWindow || !state) return;
+  const restore = () => frame.contentWindow?.postMessage({
+    type:'onenote-page-view-state-restore',
+    state
+  }, '*');
+  requestAnimationFrame(restore);
+  setTimeout(restore, 120);
+  setTimeout(restore, 360);
+}
+
+function restorePageContentScroll(scrollTop) {
+  if (!Number.isFinite(Number(scrollTop))) return;
+  const value = Math.max(0, Number(scrollTop));
+  requestAnimationFrame(() => { content.scrollTop = value; });
 }
 
 function viewHistoryAvailability() {
@@ -1405,6 +1991,60 @@ function syncPageFocusTitleSearchState(title) {
   );
 }
 
+function clampPageZoom(percent) {
+  return Math.max(50, Math.min(300, Math.round(Number(percent) || 100)));
+}
+
+function selectedPageArticle() {
+  if (!selectedPageId) return null;
+  return content.querySelector('.page[data-page-id="' + CSS.escape(selectedPageId) + '"]');
+}
+
+function articlePageZoom(article) {
+  return clampPageZoom(article?.dataset.pageZoom || defaultHtmlZoom());
+}
+
+function syncPageFocusZoom(article = selectedPageArticle()) {
+  const percent = articlePageZoom(article);
+  pageFocusZoomRange.value = String(percent);
+  pageFocusZoomValue.value = percent + '%';
+  pageFocusZoomValue.textContent = pageFocusZoomValue.value;
+}
+
+function setArticlePageZoom(article, percent, options = {}) {
+  if (!article) return 100;
+  const nextPercent = clampPageZoom(percent);
+  article.dataset.pageZoom = String(nextPercent);
+  const text = article.querySelector('.page-text');
+  if (text) text.style.zoom = String(nextPercent / 100);
+  const localRange = article.querySelector('.html-zoom input');
+  const localValue = article.querySelector('.html-zoom-value');
+  if (localRange) localRange.value = String(nextPercent);
+  if (localValue) localValue.textContent = nextPercent + '%';
+  if (options.postFrame !== false) postHtmlFrameZoom(article.querySelector('.html-frame'), nextPercent);
+  if (pageFocusMode && article.dataset.pageId === selectedPageId) syncPageFocusZoom(article);
+  return nextPercent;
+}
+
+function postPageFocusModeToFrame(article = selectedPageArticle()) {
+  article?.querySelector('.html-frame')?.contentWindow?.postMessage({
+    type:'onenote-page-focus-mode',
+    enabled:pageFocusMode
+  }, '*');
+}
+
+function wheelDeltaPixels(event) {
+  if (event.deltaMode === 1) return event.deltaY * 16;
+  if (event.deltaMode === 2) return event.deltaY * innerHeight;
+  return event.deltaY;
+}
+
+function zoomArticleFromWheel(article, event) {
+  const delta = wheelDeltaPixels(event);
+  if (!delta) return;
+  setArticlePageZoom(article, articlePageZoom(article) * Math.exp(-delta * 0.0025));
+}
+
 async function updatePageFocusNavigation(page) {
   if (!pageFocusMode || !page?.id) return;
   const pageTitle = page.title || '(без названия)';
@@ -1436,6 +2076,9 @@ function setPageFocusMode(enabled, page) {
   pageFocusMode = Boolean(enabled);
   document.documentElement.classList.toggle('page-focus-mode', pageFocusMode);
   pageFocusToolbar.hidden = !pageFocusMode;
+  pageFocusZoom.hidden = !pageFocusMode;
+  syncPageFocusZoom();
+  postPageFocusModeToFrame();
   closePageFocusMenu();
   if (pageFocusMode && page) {
     updatePageFocusNavigation(page).catch(showError);
@@ -1528,6 +2171,22 @@ pageFocusMenuButton.addEventListener('click', () => {
 pageFocusPreviousButton.addEventListener('click', () => navigatePageFocus(-1).catch(showError));
 pageFocusNextButton.addEventListener('click', () => navigatePageFocus(1).catch(showError));
 pageFocusExitButton.addEventListener('click', () => setPageFocusMode(false));
+pageFocusZoomRange.addEventListener('input', () => {
+  setArticlePageZoom(selectedPageArticle(), Number(pageFocusZoomRange.value));
+});
+window.addEventListener('wheel', event => {
+  if (!event.ctrlKey || event.altKey || !event.deltaY || !content.contains(event.target)) return;
+  const article = selectedPageArticle();
+  if (!article) return;
+  event.preventDefault();
+  zoomArticleFromWheel(article, event);
+}, { passive:false });
+window.addEventListener('message', event => {
+  const article = selectedPageArticle();
+  const frame = article?.querySelector('.html-frame');
+  if (!frame || event.source !== frame.contentWindow || event.data?.type !== 'onenote-page-zoom-change') return;
+  setArticlePageZoom(article, event.data.percent, { postFrame:false });
+});
 document.addEventListener('click', event => {
   if (!pageFocusMenu.hidden && !pageFocusToolbar.contains(event.target)) closePageFocusMenu();
 });
@@ -1557,6 +2216,10 @@ async function navigateViewHistory(step) {
         paragraphIndex:entry.paragraphIndex,
         paragraphIndexes:Array.isArray(entry.paragraphIndexes) ? entry.paragraphIndexes : [],
         bibleOccurrences:Array.isArray(entry.bibleOccurrences) ? entry.bibleOccurrences : [],
+        contentScrollTop:entry.contentScrollTop,
+        frameViewState:entry.frameViewState,
+        pageZoom:entry.pageZoom,
+        visualView:entry.visualView,
         rememberHistory:false
       });
     } else if (entry.type === 'bible') {
@@ -1665,6 +2328,7 @@ async function openPage(id, options = {}) {
   const article = document.createElement('article');
   article.className = 'page';
   article.dataset.pageId = id;
+  article.dataset.pageZoom = String(clampPageZoom(options.pageZoom || defaultHtmlZoom()));
   const crumbs = document.createElement('div');
   crumbs.className = 'breadcrumbs';
   crumbs.textContent = pagePathLabel(page);
@@ -1814,6 +2478,7 @@ async function openPage(id, options = {}) {
   }
   const text = document.createElement('div');
   text.className = 'page-text';
+  text.style.zoom = String(articlePageZoom(article) / 100);
   let matches;
   if (page.isEmpty && !page.fetchError) {
     const emptyPage = document.createElement('div');
@@ -1848,7 +2513,9 @@ async function openPage(id, options = {}) {
   let navigationTargets = navigationUsesParagraphTargets
     ? paragraphNavigationTargets
     : matches;
-  const preferHtmlView = page.hasHtml && defaultPageViewMode() === 'html';
+  const preferHtmlView = page.hasHtml && (typeof options.visualView === 'boolean'
+    ? options.visualView
+    : defaultPageViewMode() === 'html');
   let pdfContext = isPdfPage
     ? pdfPageContext(bibleRefs, currentTargetParagraphIndexes, currentTargetBibleOccurrences, page.title)
     : undefined;
@@ -1860,37 +2527,20 @@ async function openPage(id, options = {}) {
   let matchCount;
   let matchNav;
   const positionHtmlMatchNavigation = () => {
-    if (!matchNav) return;
-    const shouldOverlay = Boolean(showingHtml && htmlFrame);
-    matchNav.classList.toggle('html-match-nav-overlay', shouldOverlay);
-    matchNav.classList.toggle('pdf-match-nav-overlay', shouldOverlay && isPdfPage);
-    if (!shouldOverlay) {
-      matchNav.style.removeProperty('--html-match-nav-top');
-      return;
-    }
-    requestAnimationFrame(() => {
-      if (!showingHtml || !matchNav?.isConnected || !htmlFrame?.isConnected) return;
-      const top = Math.max(0, htmlFrame.offsetTop - matchNav.offsetHeight - 8);
-      matchNav.style.setProperty('--html-match-nav-top', top + 'px');
-    });
+    updateHtmlMatchNavigationPresentation(matchNav, showingHtml, htmlFrame, isPdfPage);
   };
-  const matchNavigationResizeObserver = typeof ResizeObserver === 'function'
-    ? new ResizeObserver(positionHtmlMatchNavigation)
-    : undefined;
-  matchNavigationResizeObserver?.observe(article);
-  window.addEventListener('resize', positionHtmlMatchNavigation);
-  pageAbortController.signal.addEventListener('abort', () => {
-    matchNavigationResizeObserver?.disconnect();
-    window.removeEventListener('resize', positionHtmlMatchNavigation);
-  }, { once:true });
   const handleHtmlMainSearchResult = event => {
     if (!htmlFrame || event.source !== htmlFrame.contentWindow) return;
     const data = event.data || {};
     if (data.type !== 'onenote-main-search-result') return;
     if (navigationUsesParagraphTargets) return;
-    const pattern = pageSearchHighlightPattern(currentInlineSearchQuery);
-    if (String(data.source || '') !== String(pattern?.source || '')) return;
-    if (String(data.flags || '') !== String(pattern?.flags || '')) return;
+    if (htmlFrame.classList.contains('pdf-frame')) {
+      const pattern = pageSearchHighlightPattern(currentInlineSearchQuery);
+      if (String(data.source || '') !== String(pattern?.source || '')) return;
+      if (String(data.flags || '') !== String(pattern?.flags || '')) return;
+    } else if (String(data.searchKey || '') !== htmlFrameMainSearchKey(currentInlineSearchQuery)) {
+      return;
+    }
     htmlSearchMatchCount = Math.max(0, Number(data.count) || 0);
     htmlSearchResultsReady = true;
     activeMatchIndex = htmlSearchMatchCount > 0
@@ -1930,7 +2580,14 @@ async function openPage(id, options = {}) {
         '',
         pageUrl(id, paragraphIndex)
       );
-      if (showingHtml && scroll) scrollHtmlFrameToTargetParagraph(htmlFrame, paragraphIndex, activeMatchIndex);
+      if (showingHtml && scroll) {
+        scrollHtmlFrameToTargetParagraph(
+          htmlFrame,
+          paragraphIndex,
+          activeMatchIndex,
+          !currentInlineSearchQuery
+        );
+      }
     }
     if (!showingHtml && scroll) match?.scrollIntoView({ block:'center', behavior:smooth ? 'smooth' : 'auto' });
   };
@@ -2003,6 +2660,7 @@ async function openPage(id, options = {}) {
     }
     const inlineQuery = bibleResult && nextParagraphIndexes.length > 0 ? '' : query;
     currentInlineSearchQuery = inlineQuery;
+    if (showingHtml) postHtmlFrameMainSearch(htmlFrame, inlineQuery, 0, false);
     if (isPdfPage) {
       pdfContext = pdfPageContext(bibleRefs, nextParagraphIndexes, nextBibleOccurrences, page.title);
       postPdfFrameContext(htmlFrame, pdfContext);
@@ -2048,24 +2706,22 @@ async function openPage(id, options = {}) {
     htmlButton.textContent = isPdfPage ? 'P' : '<>';
     htmlButton.title = isPdfPage ? 'Показать PDF' : 'Показать HTML';
     htmlButton.setAttribute('aria-label', isPdfPage ? 'Показать PDF' : 'Показать HTML');
-    const htmlZoom = defaultHtmlZoom();
     const zoomLabel = document.createElement('label');
     zoomLabel.className = 'html-zoom';
     zoomLabel.textContent = 'Масштаб';
     const zoomRange = document.createElement('input');
     zoomRange.type = 'range';
     zoomRange.min = '50';
-    zoomRange.max = '200';
-    zoomRange.step = '10';
-    zoomRange.value = String(htmlZoom);
+    zoomRange.max = '300';
+    zoomRange.step = '1';
+    zoomRange.value = String(articlePageZoom(article));
     const zoomValue = document.createElement('span');
     zoomValue.className = 'html-zoom-value';
-    zoomValue.textContent = htmlZoom + '%';
+    zoomValue.textContent = articlePageZoom(article) + '%';
     zoomLabel.append(zoomRange, zoomValue);
     let htmlLoadError;
     zoomRange.addEventListener('input', () => {
-      zoomValue.textContent = zoomRange.value + '%';
-      postHtmlFrameZoom(htmlFrame, Number(zoomRange.value));
+      setArticlePageZoom(article, Number(zoomRange.value));
     });
     const setHtmlView = async showHtml => {
       try {
@@ -2085,17 +2741,6 @@ async function openPage(id, options = {}) {
             const htmlParams = new URLSearchParams({ id:page.id, module:currentBibleModule() });
             result = await loadPageHtmlWithFallback(htmlParams, { signal:pageAbortController.signal });
             if (pageRefreshToken !== pendingPageRefreshToken || selectedPageId !== id) return;
-            if (result.bibleReparsed && activeSearchQuery) {
-              renderSearch(activeSearchQuery).catch(error => console.warn(error));
-            }
-            if (result.refreshing) {
-              void waitForPageHtmlRefresh(htmlParams, { signal:pageAbortController.signal }).then(refreshed => {
-                if (!refreshed || pageRefreshToken !== pendingPageRefreshToken || selectedPageId !== id) return;
-                if (refreshed.bibleReparsed && activeSearchQuery) {
-                  renderSearch(activeSearchQuery).catch(error => console.warn(error));
-                }
-              });
-            }
           }
           htmlFrame = document.createElement('iframe');
           htmlFrame.className = 'html-frame' + (isPdfPage ? ' pdf-frame' : '');
@@ -2104,7 +2749,8 @@ async function openPage(id, options = {}) {
           htmlFrame.referrerPolicy = 'no-referrer';
           const htmlFrameReady = waitForHtmlFrameReady(htmlFrame, pageAbortController.signal);
           htmlFrame.addEventListener('load', () => {
-            postHtmlFrameZoom(htmlFrame, Number(zoomRange.value));
+            postHtmlFrameZoom(htmlFrame, articlePageZoom(article));
+            postPageFocusModeToFrame(article);
             if (isPdfPage) postPdfFrameContext(htmlFrame, pdfContext);
             if (currentTargetParagraphIndexes.length === 0) {
               htmlFrame.contentWindow?.postMessage({ type:'onenote-clear-target-paragraphs' }, '*');
@@ -2140,10 +2786,20 @@ async function openPage(id, options = {}) {
         }
         htmlFrame.style.display = showingHtml ? 'block' : 'none';
         positionHtmlMatchNavigation();
-        if (showingHtml) postHtmlFrameZoom(htmlFrame, Number(zoomRange.value));
+        if (showingHtml) postHtmlFrameZoom(htmlFrame, articlePageZoom(article));
+        if (showingHtml) postPageFocusModeToFrame(article);
         if (showingHtml && isPdfPage) postPdfFrameContext(htmlFrame, pdfContext);
         if (showingHtml) postHtmlFrameMainSearch(htmlFrame, currentInlineSearchQuery, activeMatchIndex, true);
-        if (showingHtml) scrollHtmlFrameToTargetParagraph(htmlFrame, currentTargetParagraphIndex, activeMatchIndex);
+        if (showingHtml) {
+          scrollHtmlFrameToTargetParagraph(
+            htmlFrame,
+            currentTargetParagraphIndex,
+            activeMatchIndex,
+            !currentInlineSearchQuery
+          );
+          restorePageFrameViewState(htmlFrame, options.frameViewState);
+        }
+        restorePageContentScroll(options.contentScrollTop);
         if (!showingHtml && navigationTargets.length > 0) goToMatch(activeMatchIndex, false, false);
         htmlButton.textContent = showingHtml ? '¶' : (isPdfPage ? 'P' : '<>');
         htmlButton.title = showingHtml ? 'Показать извлечённый текст' : (isPdfPage ? 'Показать PDF' : 'Показать HTML');
@@ -2186,6 +2842,7 @@ async function openPage(id, options = {}) {
     content.replaceChildren(article);
     finishPageLoading();
   }
+  if (pageFocusMode) syncPageFocusZoom(article);
   refreshPageFind();
   if (openDefaultHtmlView && preferHtmlView) {
     openDefaultHtmlView()
@@ -2196,4 +2853,5 @@ async function openPage(id, options = {}) {
   if (Number.isInteger(targetParagraphIndex) && !showingHtml) {
     scrollToTargetParagraph(targetParagraphIndex);
   }
+  if (!showingHtml) restorePageContentScroll(options.contentScrollTop);
 }

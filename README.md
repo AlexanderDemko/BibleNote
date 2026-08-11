@@ -11,7 +11,7 @@ Build the API solution:
 
 ```powershell
 cd Api
-dotnet build BibleNote.sln -p:GenerateCode=False
+dotnet build BibleNote.sln
 ```
 
 Build the Web project:

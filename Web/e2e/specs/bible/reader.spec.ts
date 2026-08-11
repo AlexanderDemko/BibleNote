@@ -1,5 +1,29 @@
 import { test, expect } from '../../fixtures/app.fixture.js';
 
+test('@bible Назад возвращает Word/HTML на прежнюю позицию', async ({ app, appPage: page }) => {
+  await page.setViewportSize({ width:1100, height:620 });
+  await page.goto(`${app.baseUrl}/page/page-grace`);
+  await page.getByRole('button', { name:'Показать HTML' }).click();
+
+  const frame = page.frameLocator('iframe.html-frame');
+  await expect(frame.locator('body')).toBeVisible();
+  await frame.locator('html').evaluate(element => {
+    element.scrollTop = element.scrollHeight;
+  });
+  const scrollTop = await frame.locator('html').evaluate(element => element.scrollTop);
+  expect(scrollTop).toBeGreaterThan(300);
+
+  await frame.getByText('Ин 3:16', { exact:true }).last().click();
+  await expect(page.locator('#bibleTextDialog')).toHaveAttribute('open', '');
+  await page.getByRole('button', { name:'Открыть в Библии', exact:true }).click();
+  await expect(page.locator('#content h2')).toHaveText('От Иоанна 3');
+
+  await page.locator('.view-history-back').click();
+  await expect(page.locator('#content h2')).toHaveText('Благодать и надежда');
+  await expect(frame.locator('body')).toBeVisible();
+  await expect.poll(async () => frame.locator('html').evaluate(element => element.scrollTop)).toBeCloseTo(scrollTop, 0);
+});
+
 test('@bible читатель открывает главу и переключается на следующую', async ({ app, appPage: page }) => {
   await page.goto(`${app.baseUrl}/bible/rst/43/1`);
 

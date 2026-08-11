@@ -63,15 +63,6 @@ test('page HTML route serves cached HTML before refreshing Bible links', () => {
   assert.equal(route.includes('await ensureBibleNoteAvailable()'), false, 'page HTML request must not await BibleNote');
 });
 
-test('background page HTML refresh completion refreshes an active weighted search', () => {
-  const uiDirectory = fileURLToPath(new URL('../ui/', import.meta.url));
-  const treePages = fs.readFileSync(path.join(uiDirectory, 'tree-pages.js'), 'utf8');
-  assert.match(treePages, /result\.refreshing/);
-  assert.match(treePages, /waitForPageHtmlRefresh\(/);
-  assert.match(treePages, /result\.bibleReparsed\s*&&\s*activeSearchQuery/);
-  assert.match(treePages, /renderSearch\(activeSearchQuery\)/);
-});
-
 test('page HTML endpoint returns immediately and deduplicates a slow refresh', async () => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'biblenote-page-html-'));
   const dbPath = path.join(tempDir, 'cache.sqlite');

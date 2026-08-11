@@ -1,5 +1,4 @@
 ﻿using BibleNote.Common.DiContainer;
-using BibleNote.Services.Analyzer;
 using BibleNote.Services.Configuration;
 using BibleNote.Services.Configuration.Contracts;
 using BibleNote.Services.Contracts;
@@ -11,8 +10,6 @@ using BibleNote.Services.VerseParsing;
 using BibleNote.Services.VerseParsing.Contracts;
 using BibleNote.Services.VerseParsing.Contracts.ParseContext;
 using BibleNote.Services.VerseParsing.Models.ParseContext;
-using BibleNote.Services.VerseProcessing;
-using BibleNote.Services.VerseProcessing.Contracts;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace BibleNote.Services
@@ -31,15 +28,11 @@ namespace BibleNote.Services
                 .AddSingleton<IApplicationManager, ApplicationManager>()
                 .AddTransient<IVerseCorrectionService, VerseCorrectionService>()
                 .AddTransient<IDocumentParserFactory, DocumentParserFactory>()
-                .AddTransient<IDocumentParseResultProcessing, SaveVerseEntriesProcessing>()
-                .AddTransient<IDocumentParseResultProcessing, SaveVerseRelationsProcessing>()
                 .AddTransient<IStringParser, StringParser>()
                 .AddTransient<IParagraphParser, ParagraphParser>()
                 .AddTransient<IDocumentParser, DocumentParser>()
                 .AddTransient<IDocumentParseContextEditor, DocumentParseContext>()
-                .AddTransient<IAnalyzer, Analyzer.Analyzer>()
                 .AddTransient<IVerseLinkService, VerseLinkService>()
-                .AddTransient<IAnalysisSessionsService, AnalysisSessionsService>()
                 ;
         }
     }

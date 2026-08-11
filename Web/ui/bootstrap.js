@@ -2,6 +2,9 @@ const app = document.getElementById('app');
 const bibleVersePopupMode = new URLSearchParams(location.search).get('bibleVersePopup') === '1';
 document.documentElement.classList.toggle('bible-verse-popup-mode', bibleVersePopupMode);
 const pageFocusToolbar = document.getElementById('pageFocusToolbar');
+const pageFocusZoom = document.getElementById('pageFocusZoom');
+const pageFocusZoomRange = document.getElementById('pageFocusZoomRange');
+const pageFocusZoomValue = document.getElementById('pageFocusZoomValue');
 const pageFocusMenuButton = document.getElementById('pageFocusMenuButton');
 const pageFocusLabel = document.getElementById('pageFocusLabel');
 const pageFocusTitle = document.getElementById('pageFocusTitle');
@@ -169,6 +172,7 @@ let pageFindMatches = [];
 let pageFindIndex = -1;
 let searchTimer;
 let searchHistoryTimer;
+let activeSearchAbortController;
 let treeRenderToken = 0;
 let notesListView = localStorage.getItem('onenote.notesListView') === 'recent' ? 'recent' : 'structure';
 

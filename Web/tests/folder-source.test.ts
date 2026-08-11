@@ -4,8 +4,9 @@ import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
+import * as cheerio from 'cheerio';
 import JSZip from 'jszip';
-import { extractFolderFile, repairPdfTextEncoding, WordComUnavailableError } from '../src/folder-extract.js';
+import { extractFolderFile, repairPdfTextEncoding, wordExtractionVersion, WordComUnavailableError } from '../src/folder-extract.js';
 import { loadFolderSnapshot } from '../src/folder-source.js';
 import { openCacheDb, readCachedPage } from '../src/cache.js';
 import { configureRuntimeLogging } from '../src/runtime-logging.js';
@@ -66,6 +67,35 @@ function twoColumnPdf(): Buffer {
   return Buffer.from(output, 'ascii');
 }
 
+function indentedParagraphPdf(): Buffer {
+  const commands = [
+    'BT /F1 12 Tf',
+    '90 720 Td (18:25-27 Peter denied Christ.) Tj',
+    '-18 -14 Td (The prior paragraph ends with Mat 26:34.) Tj',
+    '18 -14 Td (18:28-19:16 A different paragraph begins.) Tj',
+    '-18 -14 Td (Its continuation returns to the left margin.) Tj',
+    'ET'
+  ].join(' ');
+  const objects = [
+    '<< /Type /Catalog /Pages 2 0 R >>',
+    '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>',
+    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+    `<< /Length ${Buffer.byteLength(commands, 'ascii')} >>\nstream\n${commands}\nendstream`
+  ];
+  let output = '%PDF-1.4\n';
+  const offsets = [0];
+  for (const [index, object] of objects.entries()) {
+    offsets.push(Buffer.byteLength(output, 'ascii'));
+    output += `${index + 1} 0 obj\n${object}\nendobj\n`;
+  }
+  const xrefOffset = Buffer.byteLength(output, 'ascii');
+  output += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+  for (const offset of offsets.slice(1)) output += `${String(offset).padStart(10, '0')} 00000 n \n`;
+  output += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF\n`;
+  return Buffer.from(output, 'ascii');
+}
+
 async function writeMinimalDocx(filePath: string): Promise<void> {
   const zip = new JSZip();
   zip.file('[Content_Types].xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -84,6 +114,84 @@ async function writeMinimalDocx(filePath: string): Promise<void> {
     </w:document>`);
   fs.writeFileSync(filePath, await zip.generateAsync({ type:'nodebuffer' }));
 }
+
+async function writeStructuredDocx(filePath: string): Promise<void> {
+  const zip = new JSZip();
+  zip.file('[Content_Types].xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+      <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+      <Default Extension="xml" ContentType="application/xml"/>
+      <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+      <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
+      <Override PartName="/word/numbering.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"/>
+    </Types>`);
+  zip.folder('_rels')?.file('.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+      <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+    </Relationships>`);
+  zip.folder('word')?.folder('_rels')?.file('document.xml.rels', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+      <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+      <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering" Target="numbering.xml"/>
+    </Relationships>`);
+  zip.folder('word')?.file('styles.xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    <w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+      <w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:rPr><w:sz w:val="24"/></w:rPr></w:style>
+      <w:style w:type="paragraph" w:styleId="Heading4"><w:name w:val="heading 4"/><w:basedOn w:val="Normal"/><w:pPr><w:spacing w:before="240" w:after="120"/><w:jc w:val="center"/></w:pPr><w:rPr><w:b/><w:sz w:val="36"/></w:rPr></w:style>
+      <w:style w:type="paragraph" w:styleId="BodyText"><w:name w:val="Body Text"/><w:basedOn w:val="Normal"/><w:pPr><w:ind w:firstLine="567"/></w:pPr></w:style>
+      <w:style w:type="paragraph" w:styleId="List1"><w:name w:val="Numbered 1"/><w:basedOn w:val="BodyText"/><w:pPr><w:numPr><w:numId w:val="9"/></w:numPr></w:pPr></w:style>
+      <w:style w:type="paragraph" w:styleId="List2"><w:name w:val="Numbered 2"/><w:basedOn w:val="BodyText"/><w:pPr><w:numPr><w:numId w:val="7"/></w:numPr></w:pPr></w:style>
+    </w:styles>`);
+  zip.folder('word')?.file('numbering.xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    <w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+      <w:abstractNum w:abstractNumId="1"><w:lvl w:ilvl="0"><w:start w:val="1"/><w:numFmt w:val="decimal"/><w:pStyle w:val="List1"/><w:lvlText w:val="%1."/></w:lvl></w:abstractNum>
+      <w:abstractNum w:abstractNumId="2"><w:lvl w:ilvl="0"><w:start w:val="1"/><w:numFmt w:val="lowerLetter"/><w:pStyle w:val="List2"/><w:lvlText w:val="%1."/></w:lvl></w:abstractNum>
+      <w:num w:numId="9"><w:abstractNumId w:val="1"/></w:num>
+      <w:num w:numId="7"><w:abstractNumId w:val="2"/></w:num>
+    </w:numbering>`);
+  zip.folder('word')?.file('document.xml', `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>
+      <w:p><w:pPr><w:pStyle w:val="Heading4"/></w:pPr><w:r><w:t>Положение человека</w:t></w:r></w:p>
+      <w:p><w:pPr><w:pStyle w:val="BodyText"/></w:pPr><w:r><w:t>Вводный абзац.</w:t></w:r></w:p>
+      <w:p><w:pPr><w:pStyle w:val="List1"/><w:ind w:left="1134" w:hanging="425"/></w:pPr><w:r><w:t>Первый вопрос?</w:t></w:r></w:p>
+      <w:p><w:pPr><w:pStyle w:val="List1"/><w:numPr><w:ilvl w:val="0"/><w:numId w:val="0"/></w:numPr><w:ind w:left="1134"/></w:pPr><w:r><w:rPr><w:color w:val="0070C0"/></w:rPr><w:t>Первый синий ответ.</w:t></w:r></w:p>
+      <w:p><w:pPr><w:pStyle w:val="List1"/><w:ind w:left="1134" w:hanging="425"/></w:pPr><w:r><w:t>Второй вопрос?</w:t></w:r></w:p>
+      <w:p><w:pPr><w:pStyle w:val="List1"/><w:ind w:left="1134" w:hanging="425"/></w:pPr><w:r><w:t>Третий вопрос</w:t></w:r></w:p>
+      <w:p><w:pPr><w:pStyle w:val="List2"/><w:ind w:left="1701" w:hanging="425"/></w:pPr><w:r><w:t>Вложенный вопрос?</w:t></w:r></w:p>
+      <w:p><w:pPr><w:pStyle w:val="List2"/><w:numPr><w:ilvl w:val="0"/><w:numId w:val="0"/></w:numPr><w:ind w:left="1701"/></w:pPr><w:r><w:rPr><w:color w:val="0070C0"/></w:rPr><w:t>Вложенный синий ответ.</w:t></w:r></w:p>
+      <w:sectPr/>
+    </w:body></w:document>`);
+  fs.writeFileSync(filePath, await zip.generateAsync({ type:'nodebuffer' }));
+}
+
+test('Word DOCX extraction preserves coloured answers and nested list structure', async () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'biblenote-word-layout-'));
+  try {
+    const docxPath = path.join(directory, 'structured.docx');
+    await writeStructuredDocx(docxPath);
+    const result = await extractFolderFile(docxPath);
+    const $ = cheerio.load(result.html);
+    const heading = $('h4').filter((_, element) => $(element).text() === 'Положение человека');
+    assert.match(heading.attr('style') || '', /text-align:center/);
+    assert.match($('p').filter((_, element) => $(element).text() === 'Вводный абзац.').attr('style') || '', /text-indent:28\.35pt/);
+
+    const list = $('body > ol').first();
+    assert.equal(list.children('li').length, 3);
+    assert.match(list.children('li').eq(0).text(), /^Первый вопрос\?/);
+    assert.match(list.children('li').eq(1).text(), /^Второй вопрос\?/);
+    const firstAnswer = list.children('li').eq(0).children('p.bn-word-list-continuation');
+    assert.equal(firstAnswer.text(), 'Первый синий ответ.');
+    assert.match(firstAnswer.find('span').attr('style') || '', /color:#0070C0/);
+
+    const nestedList = list.children('li').eq(2).children('ol');
+    assert.equal(nestedList.children('li').length, 1);
+    assert.match(nestedList.children('li').first().text(), /^Вложенный вопрос\?/);
+    assert.match(nestedList.find('p.bn-word-list-continuation span').attr('style') || '', /color:#0070C0/);
+    assert.match($('style[data-biblenote-word]').text(), /ol ol\{list-style-type:lower-alpha\}/);
+  } finally {
+    fs.rmSync(directory, { recursive:true, force:true });
+  }
+});
 
 test('folder snapshot ignores temporary Microsoft Office lock files', async () => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'biblenote-folder-lock-file-'));
@@ -154,6 +262,7 @@ test('named folder source synchronizes only the preferred duplicate format when 
     const row = db.prepare('SELECT title, links_json AS linksJson FROM pages WHERE deleted_at IS NULL').get() as { title: string; linksJson: string };
     assert.equal(row.title, 'lesson');
     assert.equal(JSON.parse(row.linksJson).folder.extension, '.docx');
+    assert.equal(JSON.parse(row.linksJson).folder.extractionVersion, wordExtractionVersion);
     db.close();
 
     fs.rmSync(path.join(notesPath, 'lesson.docx'));
@@ -290,6 +399,22 @@ test('PDF extraction reads a two-column block one column at a time', async () =>
     assert.ok(leftFirst < leftSecond);
     assert.ok(leftSecond < rightFirst);
     assert.ok(rightFirst < rightSecond);
+  } finally {
+    fs.rmSync(directory, { recursive:true, force:true });
+  }
+});
+
+test('PDF extraction keeps equally spaced indented paragraphs separate', async () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'biblenote-pdf-paragraph-indent-'));
+  try {
+    const pdfPath = path.join(directory, 'paragraphs.pdf');
+    fs.writeFileSync(pdfPath, indentedParagraphPdf());
+    const result = await extractFolderFile(pdfPath);
+
+    assert.match(
+      result.html,
+      /<p>18:25-27 Peter denied Christ\. The prior paragraph ends with Mat 26:34\.<\/p><p>18:28-19:16 A different paragraph begins\. Its continuation returns to the left margin\.<\/p>/
+    );
   } finally {
     fs.rmSync(directory, { recursive:true, force:true });
   }

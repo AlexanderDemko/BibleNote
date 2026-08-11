@@ -1,6 +1,6 @@
 {
   "name": "biblenote",
-  "version": "4.0.53",
+  "version": "4.0.54",
   "description": "BibleNote desktop and OneNote cache application.",
   "type": "module",
   "engines": {
@@ -12,7 +12,7 @@
   "main": "./dist/electron-main.js",
   "scripts": {
     "build": "tsc",
-    "test": "tsx --test tests/*.test.ts",
+    "test": "tsx --import ./tests/test-env.ts --test tests/*.test.ts",
     "e2e": "playwright test",
     "e2e:all": "playwright test",
     "e2e:smoke": "playwright test --grep @smoke",
@@ -52,6 +52,7 @@
     "better-sqlite3": "^12.11.1",
     "cheerio": "^1.0.0",
     "dotenv": "^16.4.7",
+    "jszip": "^3.10.1",
     "mammoth": "^1.12.0",
     "pdfjs-dist": "^5.4.624",
     "zod": "^4.0.0"
@@ -62,7 +63,6 @@
     "@types/node": "^22.0.0",
     "electron": "^42.5.1",
     "electron-builder": "^26.15.3",
-    "jszip": "^3.10.1",
     "tsx": "^4.20.0",
     "typescript": "^5.8.0"
   },

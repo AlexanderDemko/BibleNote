@@ -21,14 +21,29 @@ test('@search показывает индикатор, пока поиск не 
 });
 
 test('@search полнотекстовый поиск находит заметку и открывает результат', async ({ appPage: page }) => {
+  let noteSearchRequests = 0;
+  page.on('request', request => {
+    if (new URL(request.url()).pathname === '/api/search') noteSearchRequests += 1;
+  });
   await page.locator('#search').fill('Воскресение');
 
   const result = page.locator('#tree .search-result-row').filter({ hasText: 'Благодать и надежда' });
   await expect(result).toBeVisible();
+  const sourceResult = page.locator('#tree .source-row.search-result-row');
+  await expect(sourceResult).toBeVisible();
+  const sourceCountRightGap = await sourceResult.evaluate(row => {
+    const count = row.querySelector('.count');
+    if (!count) return Number.POSITIVE_INFINITY;
+    return row.getBoundingClientRect().right - count.getBoundingClientRect().right;
+  });
+  expect(sourceCountRightGap).toBeLessThanOrEqual(12);
+  await expect.poll(() => noteSearchRequests).toBe(1);
   await result.click();
 
   await expect(page.locator('#content h2')).toHaveText('Благодать и надежда');
   await expect(page.locator('#content')).toContainText('Воскресение');
+  await page.waitForTimeout(500);
+  expect(noteSearchRequests).toBe(1);
   await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('onenote.searchHistory') || '[]')))
     .toContain('Воскресение');
 });
@@ -46,6 +61,14 @@ test('@search общий поиск показывает текст Библии
   await expect(page).toHaveURL(/\/bible\/rst\/43\/1\?verse=1$/);
 });
 
+test('@search распознанная ссылка не ищется как текст Библии', async ({ appPage: page }) => {
+  await page.locator('#search').fill('От Матфея 19:3-5');
+
+  await expect(page.locator('#tree .search-loading')).toHaveCount(0);
+  await expect(page.locator('#tree .bible-text-search-row')).toHaveCount(0);
+  await expect(page.locator('#tree')).not.toContainText('Мф 9:9');
+});
+
 test('@search односимвольные слова не раздувают подсветку и первое совпадение активно', async ({ appPage: page }) => {
   await page.locator('#search').fill('в тяжбе');
   const result = page.locator('#tree .search-result-row').filter({ hasText:'Благодать и надежда' });
@@ -56,6 +79,38 @@ test('@search односимвольные слова не раздувают п
   await expect(page.locator('#content mark')).toHaveCount(1);
   await expect(page.locator('#content mark')).toHaveText(/тяжбе/i);
   await expect(page.locator('#content mark.current-match')).toHaveCount(1);
+
+  await page.getByRole('button', { name:'Показать HTML' }).click();
+  const htmlFrame = page.frameLocator('#content iframe.html-frame');
+  await expect(htmlFrame.locator('[data-onenote-main-search]')).toHaveCount(1);
+
+  await htmlFrame.locator('body').press('Control+f');
+  await expect(page.locator('#pageFindWidget')).not.toHaveClass(/hidden/);
+  await page.locator('#pageFindClose').click();
+
+  await expect(htmlFrame.locator('[data-onenote-main-search-current]')).toHaveText(/тяжбе/i);
+
+  const zoomBeforeForeignMessage = await htmlFrame.locator('html').evaluate(element => element.style.zoom);
+  await page.evaluate(() => new Promise<void>(resolve => {
+    const attacker = document.createElement('iframe');
+    attacker.hidden = true;
+    const handleMessage = (event:MessageEvent) => {
+      if (event.source !== attacker.contentWindow || event.data?.type !== 'e2e-foreign-message-sent') return;
+      window.removeEventListener('message', handleMessage);
+      attacker.remove();
+      resolve();
+    };
+    window.addEventListener('message', handleMessage);
+    attacker.srcdoc = `<script>
+      parent.document.querySelector('#content iframe.html-frame').contentWindow.postMessage({
+        type:'onenote-html-zoom', zoom:3
+      }, '*');
+      parent.postMessage({ type:'e2e-foreign-message-sent' }, '*');
+    <\/script>`;
+    document.body.append(attacker);
+  }));
+  await expect.poll(() => htmlFrame.locator('html').evaluate(element => element.style.zoom))
+    .toBe(zoomBeforeForeignMessage);
 });
 
 test('@search навигация по ссылке различает диапазон и повторы в HTML и полностью закрывается', async ({ appPage: page }) => {
@@ -125,5 +180,7 @@ test('@search навигация по ссылке различает диапа
 
   await page.getByRole('button', { name:'Закрыть навигацию по совпадениям' }).click();
   await expect(page.locator('.match-nav')).toHaveCount(0);
+  const clearedFrame = page.frameLocator('#content iframe.html-frame');
+  await expect(clearedFrame.locator('[data-onenote-target-match],[data-onenote-target-paragraph]')).toHaveCount(0);
   await expect(page).toHaveURL(/\/page\/page-grace$/);
 });

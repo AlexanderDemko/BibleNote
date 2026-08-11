@@ -30,18 +30,18 @@ async function fetchJson(url: string, init?: RequestInit): Promise<any> {
 
 export async function bibleNoteHealth(): Promise<Record<string, unknown>> {
   const bibleConfig = bibleParseConfigFromEnv();
-  return fetchJson(`${bibleConfig.apiUrl.replace(/\/+$/, '')}/api/VerseParsing/Health`);
+  return fetchJson(`${bibleConfig.apiUrl}/api/VerseParsing/Health`);
 }
 
 export async function bibleNoteModules(): Promise<Array<Record<string, unknown>>> {
   const bibleConfig = bibleParseConfigFromEnv();
-  return fetchJson(`${bibleConfig.apiUrl.replace(/\/+$/, '')}/api/VerseParsing/Modules`) as Promise<Array<Record<string, unknown>>>;
+  return fetchJson(`${bibleConfig.apiUrl}/api/VerseParsing/Modules`) as Promise<Array<Record<string, unknown>>>;
 }
 
 export async function bibleNoteBooks(module: string): Promise<Array<Record<string, unknown>>> {
   const bibleConfig = bibleParseConfigFromEnv();
   const params = new URLSearchParams({ module });
-  return fetchJson(`${bibleConfig.apiUrl.replace(/\/+$/, '')}/api/VerseParsing/Books?${params.toString()}`) as Promise<Array<Record<string, unknown>>>;
+  return fetchJson(`${bibleConfig.apiUrl}/api/VerseParsing/Books?${params.toString()}`) as Promise<Array<Record<string, unknown>>>;
 }
 
 export async function bibleNoteSearchText(options: {
@@ -60,7 +60,7 @@ export async function bibleNoteSearchText(options: {
     limit:String(options.limit)
   });
   return fetchJson(
-    `${bibleConfig.apiUrl.replace(/\/+$/, '')}/api/VerseParsing/SearchText?${params.toString()}`
+    `${bibleConfig.apiUrl}/api/VerseParsing/SearchText?${params.toString()}`
   ) as Promise<Array<Record<string, unknown>>>;
 }
 
@@ -78,7 +78,7 @@ export async function bibleNoteParallelVerseText(options: {
     chapter:String(options.chapter)
   });
   return fetchJson(
-    `${bibleConfig.apiUrl.replace(/\/+$/, '')}/api/VerseParsing/ParallelVerseText?${params.toString()}`
+    `${bibleConfig.apiUrl}/api/VerseParsing/ParallelVerseText?${params.toString()}`
   ) as Promise<Record<string, unknown>>;
 }
 
@@ -197,7 +197,6 @@ export async function uploadBibleNoteModule(fileName: string, contentBase64: str
   if (!/\.(bnm|zip)$/i.test(fileName)) throw new Error('Module file must have .bnm or .zip extension.');
   if (!/^[a-zA-Z0-9+/=]+$/.test(contentBase64)) throw new Error('Invalid base64 module payload.');
   const bibleConfig = bibleParseConfigFromEnv();
-  const apiUrl = bibleConfig.apiUrl.replace(/\/+$/, '');
   const moduleName = cleanModuleName(fileName);
   const uploadDir = path.join(process.env.APPDATA || process.cwd(), 'BibleNote', 'BibleNoteModules');
   fs.mkdirSync(uploadDir, { recursive:true });
@@ -205,7 +204,7 @@ export async function uploadBibleNoteModule(fileName: string, contentBase64: str
   fs.writeFileSync(tempFile, Buffer.from(contentBase64, 'base64'));
 
   try {
-    const result = await fetchJson(`${apiUrl}/api/VerseParsing/UploadModule`, {
+    const result = await fetchJson(`${bibleConfig.apiUrl}/api/VerseParsing/UploadModule`, {
       method:'POST',
       headers:{ 'Content-Type':'application/json' },
       body:JSON.stringify({ filePath:tempFile, moduleName })
@@ -320,7 +319,7 @@ export async function bibleNoteCurrentOneNotePage(): Promise<OneNoteCurrentPage>
   await ensureBibleNoteAvailable();
   const bibleConfig = bibleParseConfigFromEnv();
   return fetchJson(
-    `${bibleConfig.apiUrl.replace(/\/+$/, '')}/api/OneNoteIntegration/CurrentPage`
+    `${bibleConfig.apiUrl}/api/OneNoteIntegration/CurrentPage`
   ) as Promise<OneNoteCurrentPage>;
 }
 
@@ -332,7 +331,7 @@ export async function bibleNoteOneNoteHierarchy(): Promise<string> {
   await ensureBibleNoteAvailable();
   const bibleConfig = bibleParseConfigFromEnv();
   const result = await fetchJson(
-    `${bibleConfig.apiUrl.replace(/\/+$/, '')}/api/OneNoteIntegration/Hierarchy`,
+    `${bibleConfig.apiUrl}/api/OneNoteIntegration/Hierarchy`,
     { signal:AbortSignal.timeout(60_000) }
   ) as OneNoteComContentResponse;
   if (!result.xml) throw new Error('Classic OneNote returned an empty hierarchy.');
@@ -344,7 +343,7 @@ export async function bibleNoteOneNotePageContent(pageId: string): Promise<strin
   const bibleConfig = bibleParseConfigFromEnv();
   const params = new URLSearchParams({ pageId });
   const result = await fetchJson(
-    `${bibleConfig.apiUrl.replace(/\/+$/, '')}/api/OneNoteIntegration/PageContent?${params.toString()}`,
+    `${bibleConfig.apiUrl}/api/OneNoteIntegration/PageContent?${params.toString()}`,
     { signal:AbortSignal.timeout(60_000) }
   ) as OneNoteComContentResponse;
   if (!result.xml) throw new Error(`Classic OneNote returned empty content for page ${pageId}.`);
@@ -356,7 +355,7 @@ export async function bibleNoteOneNotePageLink(pageId: string): Promise<string> 
   const bibleConfig = bibleParseConfigFromEnv();
   const params = new URLSearchParams({ pageId });
   const result = await fetchJson(
-    `${bibleConfig.apiUrl.replace(/\/+$/, '')}/api/OneNoteIntegration/PageLink?${params.toString()}`,
+    `${bibleConfig.apiUrl}/api/OneNoteIntegration/PageLink?${params.toString()}`,
     { signal:AbortSignal.timeout(60_000) }
   ) as { clientUrl?: string };
   if (!result.clientUrl || !/^onenote:/i.test(result.clientUrl)) {
@@ -369,7 +368,7 @@ export async function bibleNoteQuickAnalyzeCurrentPage(): Promise<Record<string,
   await ensureBibleNoteAvailable();
   const bibleConfig = bibleParseConfigFromEnv();
   return fetchJson(
-    `${bibleConfig.apiUrl.replace(/\/+$/, '')}/api/OneNoteIntegration/QuickAnalyzeCurrentPage`,
+    `${bibleConfig.apiUrl}/api/OneNoteIntegration/QuickAnalyzeCurrentPage`,
     { method:'POST' }
   ) as Promise<Record<string, unknown>>;
 }

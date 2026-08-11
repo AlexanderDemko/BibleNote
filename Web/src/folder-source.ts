@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
-import { folderSourceExtensions, pdfExtractionVersion } from './folder-extract.js';
+import { folderSourceExtensions, pdfExtractionVersion, wordExtractionVersion } from './folder-extract.js';
 
 export type FolderNotebook = {
   id: string;
@@ -223,7 +223,9 @@ export async function loadFolderSnapshot(folderPaths: readonly string[], options
                   path:filePath,
                   relativePath:path.relative(rootPath, filePath),
                   extension,
-                  extractionVersion:extension === '.pdf' ? pdfExtractionVersion : undefined
+                  extractionVersion:extension === '.pdf'
+                    ? pdfExtractionVersion
+                    : (extension === '.doc' || extension === '.docx' ? wordExtractionVersion : undefined)
                 }
               }
             });

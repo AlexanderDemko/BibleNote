@@ -1,6 +1,6 @@
 import { runtimeLog } from './runtime-logging.js';
 
-export const bibleParserVersion = 'biblenote-http-v8';
+export const bibleParserVersion = 'biblenote-http-v9';
 
 export type BibleReference = {
   originalText?: string;
@@ -99,10 +99,12 @@ export function bibleParseConfigFromEnv(overrides: Partial<BibleParseConfig> = {
     useCommaDelimiter: process.env.BIBLENOTE_USE_COMMA_DELIMITER !== 'false',
     timeoutMs: Number.isFinite(timeoutMs) && timeoutMs > 0 ? Math.min(timeoutMs, 300000) : 120000
   };
-  return Object.assign(
+  const merged = Object.assign(
     config,
     Object.fromEntries(Object.entries(overrides).filter(([, value]) => value !== undefined))
   );
+  merged.apiUrl = merged.apiUrl.replace(/\/+$/, '');
+  return merged;
 }
 
 function fetchErrorMessage(error: unknown, target: string): string {

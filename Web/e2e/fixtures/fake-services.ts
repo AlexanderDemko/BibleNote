@@ -87,6 +87,19 @@ export function startFakeBibleNoteApi(): Promise<FakeService> {
     }
     if (url.pathname === '/api/VerseParsing/SearchText') {
       const query = String(url.searchParams.get('query') || url.searchParams.get('q') || '').toLocaleLowerCase();
+      if (query.includes('матф')) return json(response, 200, [{
+        module:url.searchParams.get('module') || 'rst',
+        moduleName:'Русский синодальный',
+        bookIndex:40,
+        bookName:'От Матфея',
+        bookShortName:'Мф',
+        chapter:9,
+        verse:9,
+        topVerse:9,
+        reference:'Мф 9:9',
+        text:'Проходя оттуда, Иисус увидел человека.',
+        searchWeight:0.63
+      }]);
       if (!query.includes('начале') && !query.includes('слово')) return json(response, 200, []);
       return json(response, 200, [{
         module:url.searchParams.get('module') || 'rst',
@@ -112,7 +125,10 @@ export function startFakeBibleNoteApi(): Promise<FakeService> {
     }
     if (url.pathname === '/api/VerseParsing/ParsePage' && request.method === 'POST') {
       const input = await body(request);
-      if (input.pageId === 'external-bible-ref' && /(?:Ин|Иоан)/i.test(String(input.text || ''))) {
+      const referenceText = String(input.text || '');
+      const isJohn = /(?:Ин|Иоан)/i.test(referenceText);
+      const isMatthew = /(?:Мф|Матф)/i.test(referenceText);
+      if (input.pageId === 'external-bible-ref' && (isJohn || isMatthew)) {
         return json(response, 200, {
           pageId:input.pageId,
           module:input.module,
@@ -121,16 +137,16 @@ export function startFakeBibleNoteApi(): Promise<FakeService> {
             text:input.text,
             references:[{
               originalText:input.text,
-              normalized:'Ин 3:16',
-              bookIndex:43,
-              bookName:'От Иоанна',
-              bookShortName:'Ин',
-              chapter:3,
-              verse:16,
-              topChapter:3,
-              topVerse:16,
+              normalized:isJohn ? 'Ин 3:16' : 'Мф 19:3-5',
+              bookIndex:isJohn ? 43 : 40,
+              bookName:isJohn ? 'От Иоанна' : 'От Матфея',
+              bookShortName:isJohn ? 'Ин' : 'Мф',
+              chapter:isJohn ? 3 : 19,
+              verse:isJohn ? 16 : 3,
+              topChapter:isJohn ? 3 : 19,
+              topVerse:isJohn ? 16 : 5,
               startIndex:0,
-              endIndex:String(input.text || '').length
+              endIndex:referenceText.length
             }]
           }],
           relations:[],

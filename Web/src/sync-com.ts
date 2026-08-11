@@ -4,7 +4,8 @@ import {
   checkpointCacheDb,
   clearSyncState,
   defaultDbPath,
-  getCachedPage,
+  getCachedPageContent,
+  getCachedPageSyncState,
   markMissingPagesDeleted,
   markPageDeleted,
   markPageHtmlParsed,
@@ -30,14 +31,14 @@ import { runtimeLog } from './runtime-logging.js';
 import type { Page, SyncOptions, SyncResult } from './sync.js';
 
 function shouldFetchPage(
-  cached: ReturnType<typeof getCachedPage>,
+  cached: ReturnType<typeof getCachedPageSyncState>,
   page: Page,
   options: SyncOptions
 ): boolean {
   if (options.metadataOnly) return false;
   if (options.forceContent) return true;
-  if (!cached?.content_synced_at || !cached.content_text) return true;
-  if (!cached.content_html) return true;
+  if (!cached?.content_synced_at || !cached.has_nonempty_content_text) return true;
+  if (!cached.has_content_html) return true;
   return (cached.content_source_modified_date_time ?? null) !== (page.lastModifiedDateTime ?? null);
 }
 
@@ -180,7 +181,7 @@ export async function syncOneNoteComCache(options: SyncOptions = {}): Promise<Sy
     options.onProgress?.({ phase:'pages', pages:pages.length, sectionTotal:sections.length });
 
     const pagesToFetch = pages.filter(page =>
-      shouldFetchPage(getCachedPage(db, page.id), page, options)
+      shouldFetchPage(getCachedPageSyncState(db, page.id), page, options)
     );
     let contentDownloaded = 0;
     let contentErrors = 0;
@@ -241,13 +242,14 @@ export async function syncOneNoteComCache(options: SyncOptions = {}): Promise<Sy
       });
       if (bibleConfig.enabled) {
         const candidates = pages
-          .map(page => getCachedPage(db, page.id))
-          .filter(page => Boolean(page?.content_text && page.content_hash && !page.deleted_at));
+          .map(page => getCachedPageSyncState(db, page.id))
+          .filter((page): page is NonNullable<ReturnType<typeof getCachedPageSyncState>> =>
+            Boolean(page?.has_nonempty_content_text && page.content_hash && !page.deleted_at));
         const pagesToParse = candidates.filter(page =>
           shouldParseBibleRefs(
             db,
-            page!.id,
-            page!.content_hash!,
+            page.id,
+            page.content_hash!,
             bibleConfig.module,
             bibleParserVersion,
             options.forceBibleParse
@@ -260,15 +262,19 @@ export async function syncOneNoteComCache(options: SyncOptions = {}): Promise<Sy
           bibleParseTotal:pagesToParse.length,
           bibleParseSkipped:bibleRefsParseSkipped
         });
-        for (const page of pagesToParse) {
+        for (const candidate of pagesToParse) {
+          const page = getCachedPageContent(db, candidate.id);
           try {
-            const sourceHtml = page!.content_html;
+            if (!page?.content_text || !page.content_hash || page.deleted_at) {
+              throw new Error(`Cached page content is unavailable for Bible parsing: ${candidate.id}`);
+            }
+            const sourceHtml = page.content_html;
             const result = await parsePageWithBibleNote({
               apiUrl:bibleConfig.apiUrl,
-              pageId:page!.id,
-              title:page!.title,
+              pageId:page.id,
+              title:page.title,
               html:sourceHtml,
-              text:page!.content_text,
+              text:page.content_text,
               module:bibleConfig.module,
               useCommaDelimiter:bibleConfig.useCommaDelimiter,
               timeoutMs:bibleConfig.timeoutMs,
@@ -276,18 +282,18 @@ export async function syncOneNoteComCache(options: SyncOptions = {}): Promise<Sy
             });
             const parsedAt = nowIso();
             if (result.html && sourceHtml) {
-              updatePageHtml(db, page!.id, result.html);
-              markPageHtmlParsed(db, page!.id, result.html, result.module || bibleConfig.module, bibleParserVersion, parsedAt);
+              updatePageHtml(db, page.id, result.html);
+              markPageHtmlParsed(db, page.id, result.html, result.module || bibleConfig.module, bibleParserVersion, parsedAt);
             }
-            upsertBibleParseResult(db, page!.id, page!.content_hash!, result, bibleParserVersion, parsedAt);
+            upsertBibleParseResult(db, page.id, page.content_hash, result, bibleParserVersion, parsedAt);
             bibleRefsRecognized += countBibleReferences(result);
             bibleRefsPagesParsed += 1;
           } catch (error: any) {
             bibleRefsParseErrors += 1;
             setBibleParseError(
               db,
-              page!.id,
-              page!.content_hash,
+              candidate.id,
+              candidate.content_hash,
               bibleConfig.module,
               bibleParserVersion,
               error?.message ?? String(error)

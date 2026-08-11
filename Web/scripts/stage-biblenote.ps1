@@ -7,7 +7,7 @@ $runtimeIdentifier = 'win-x64'
 $sourceDir = Join-Path $bibleNoteProjectDir "bin\Release\net10.0\$runtimeIdentifier"
 $targetDir = Join-Path $repoRoot 'vendor\BibleNote'
 
-dotnet build $bibleNoteProjectPath -c Release -r $runtimeIdentifier --self-contained true -p:GenerateCode=False
+dotnet build $bibleNoteProjectPath -c Release -r $runtimeIdentifier --self-contained true
 if ($LASTEXITCODE -ne 0) {
   throw "BibleNote build failed with exit code $LASTEXITCODE"
 }

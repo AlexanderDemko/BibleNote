@@ -117,10 +117,27 @@ namespace BibleNote.Services.VerseParsing
         {
             var bookEntry = TryGetBookName(text, startIndex, indexOfDigit);
             var verseNumberEntry = TryGetVerseNumber(text, indexOfDigit, bookEntry != null ? useCommaDelimiter : false);      // запятую в качестве разделителя можно использовать только для BookChapterVerse
+            if (!verseNumberEntry.VerseNumber.IsChapter)
+                verseNumberEntry.EndIndex = GetVersePartEndIndex(text, verseNumberEntry.EndIndex);
+
             var topVerseNumberEntry = TryGetTopVerseNumber(text, verseNumberEntry.EndIndex + 1, verseNumberEntry.VerseNumber);
+            if (topVerseNumberEntry != null && !topVerseNumberEntry.VerseNumber.IsChapter)
+                topVerseNumberEntry.EndIndex = GetVersePartEndIndex(text, topVerseNumberEntry.EndIndex);
 
             return new TextFragmentInfo(indexOfDigit, text, bookEntry, verseNumberEntry, topVerseNumberEntry);            
-        }     
+        }
+
+        private static int GetVersePartEndIndex(string text, int verseNumberEndIndex)
+        {
+            var markerIndex = verseNumberEndIndex + 1;
+            if (!VerseUtils.IsVersePartMarker(StringUtils.GetChar(text, markerIndex)))
+                return verseNumberEndIndex;
+
+            var nextChar = StringUtils.GetChar(text, markerIndex + 1);
+            return nextChar == default(char) || !char.IsLetterOrDigit(nextChar)
+                ? markerIndex
+                : verseNumberEndIndex;
+        }
 
         private void CheckTextFragment(TextFragmentInfo textFragmentInfo, string text, bool useCommaDelimiter)
         {

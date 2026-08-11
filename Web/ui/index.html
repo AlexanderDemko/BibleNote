@@ -14,6 +14,11 @@
 </head>
 <body>
   <div id="activityToast" class="activity-toast" role="status" aria-live="polite"></div>
+  <label id="pageFocusZoom" class="page-focus-zoom" hidden>
+    <span>Масштаб</span>
+    <input id="pageFocusZoomRange" type="range" min="50" max="300" step="1" value="100" aria-label="Масштаб заметки">
+    <output id="pageFocusZoomValue" for="pageFocusZoomRange">100%</output>
+  </label>
   <div id="pageFocusToolbar" class="page-focus-toolbar" hidden>
     <div class="page-focus-location">
       <span class="page-focus-note-icon" aria-hidden="true">
@@ -207,7 +212,7 @@
               </select>
             </label>
             <label class="field">Масштаб HTML по умолчанию
-              <input id="defaultHtmlZoom" type="number" min="50" max="200" step="10" value="100">
+              <input id="defaultHtmlZoom" type="number" min="50" max="300" step="10" value="100">
             </label>
             <label class="check"><input id="showAuxBibleRefs" type="checkbox" aria-describedby="showAuxBibleRefsHint">Учитывать библейские ссылки в квадратных [ ] и фигурных { } скобках</label>
             <p id="showAuxBibleRefsHint" class="settings-note">Включать такие ссылки в поиск, список ссылок страницы и параллельные места.</p>

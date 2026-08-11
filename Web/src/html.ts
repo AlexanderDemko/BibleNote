@@ -23,3 +23,41 @@ export function hasRenderableHtmlBody(html: string): boolean {
   bodyClone.find('script,style,noscript').remove();
   return Boolean(bodyClone.text().replace(/\s+/g, ' ').trim());
 }
+
+export type PdfHtmlBibleLink = {
+  pageNumber: number;
+  occurrenceIndex: number;
+  text: string;
+  href: string;
+  title: string;
+};
+
+export function pdfBibleLinksFromHtml(html: string): PdfHtmlBibleLink[] {
+  if (!html) return [];
+  const $ = cheerio.load(html);
+  const links: PdfHtmlBibleLink[] = [];
+  const occurrences = new Map<string, number>();
+  $('section[data-pdf-page]').each((_, section) => {
+    const pageNumber = Number($(section).attr('data-pdf-page'));
+    if (!Number.isInteger(pageNumber) || pageNumber < 1) return;
+    $(section).find('a[href]').each((__, anchor) => {
+      const href = String($(anchor).attr('href') || '').trim();
+      if (!/^(?:bnVerse|isbtBibleVerse):/iu.test(href)) return;
+      const text = $(anchor).text().replace(/[\u00ad\u200b]/gu, '').replace(/\s+/gu, ' ').trim();
+      // A bare number is too ambiguous for a page-wide PDF text overlay. Verse-only
+      // references must retain their leading colon (for example, ":17").
+      if (!text || /^\d+$/u.test(text)) return;
+      const occurrenceKey = pageNumber + '\u0000' + text.toLocaleLowerCase();
+      const occurrenceIndex = occurrences.get(occurrenceKey) || 0;
+      occurrences.set(occurrenceKey, occurrenceIndex + 1);
+      links.push({
+        pageNumber,
+        occurrenceIndex,
+        text,
+        href,
+        title:String($(anchor).attr('title') || text).trim() || text
+      });
+    });
+  });
+  return links;
+}

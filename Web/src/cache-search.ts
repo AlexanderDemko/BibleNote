@@ -3,22 +3,114 @@ import { visibleBibleRefSql, visibleBibleScopeSql } from './cache-sql.js';
 import type { BibleReferenceSearchResult, CacheSearchResult, NotebookRow, PageRow, SectionRow, WeightedBibleReferenceNote } from './cache-types.js';
 import { fromVerseId, toVerseId } from './cache-verse-id.js';
 
-export function getCachedPage(db: Database.Database, pageId: string): PageRow | undefined {
-  return db.prepare('SELECT * FROM pages WHERE id = ?').get(pageId) as PageRow | undefined;
+export type CachedPageMetadata = Omit<PageRow, 'content_text' | 'content_html'>;
+export type CachedPageContent = Pick<
+  PageRow,
+  'id' | 'title' | 'content_text' | 'content_html' | 'content_hash' | 'deleted_at'
+>;
+
+export type CachedPageStatus = Pick<PageRow, 'deleted_at' | 'content_synced_at' | 'fetch_error'> & {
+  has_content: number;
+};
+
+export type CachedPageSyncState = CachedPageMetadata & {
+  has_content_text: number;
+  has_nonempty_content_text: number;
+  has_content_html: number;
+};
+
+const cachedPageMetadataColumnNames = [
+  'id',
+  'title',
+  'created_date_time',
+  'last_modified_date_time',
+  'content_url',
+  'parent_section_id',
+  'parent_section_name',
+  'parent_notebook_id',
+  'parent_notebook_name',
+  'links_json',
+  'content_hash',
+  'content_source_modified_date_time',
+  'content_source_section_modified_date_time',
+  'content_chars',
+  'content_bytes',
+  'content_synced_at',
+  'metadata_synced_at',
+  'deleted_at',
+  'fetch_error',
+  'fetch_error_at',
+  'fetch_retry_after',
+  'fetch_error_count',
+  'fetch_error_terminal',
+  'fetch_error_source_modified_date_time',
+  'order_index',
+  'page_level'
+] as const;
+
+function cachedPageMetadataColumns(alias?: string): string {
+  const prefix = alias ? `${alias}.` : '';
+  return cachedPageMetadataColumnNames.map(name => `${prefix}${name}`).join(', ');
+}
+
+export function getCachedPageMetadata(db: Database.Database, pageId: string): CachedPageMetadata | undefined {
+  return db.prepare(`SELECT ${cachedPageMetadataColumns()} FROM pages WHERE id = ?`)
+    .get(pageId) as CachedPageMetadata | undefined;
+}
+
+export function getCachedPageSyncState(db: Database.Database, pageId: string): CachedPageSyncState | undefined {
+  return db.prepare(`
+    SELECT
+      ${cachedPageMetadataColumns()},
+      content_text IS NOT NULL AS has_content_text,
+      COALESCE(content_text <> '', 0) AS has_nonempty_content_text,
+      COALESCE(content_html <> '', 0) AS has_content_html
+    FROM pages
+    WHERE id = ?
+  `).get(pageId) as CachedPageSyncState | undefined;
+}
+
+export function getCachedPageContent(
+  db: Database.Database,
+  pageId: string,
+  kind: 'html' | 'text' | 'both' = 'both'
+): CachedPageContent | undefined {
+  const contentColumns = kind === 'html'
+    ? 'NULL AS content_text, content_html'
+    : kind === 'text'
+      ? 'content_text, NULL AS content_html'
+      : 'content_text, content_html';
+  return db.prepare(`
+    SELECT id, title, ${contentColumns}, content_hash, deleted_at
+    FROM pages
+    WHERE id = ?
+  `).get(pageId) as CachedPageContent | undefined;
+}
+
+export function getCachedPageStatus(db: Database.Database, pageId: string): CachedPageStatus | undefined {
+  return db.prepare(`
+    SELECT
+      deleted_at,
+      content_synced_at,
+      fetch_error,
+      content_text IS NOT NULL AS has_content
+    FROM pages
+    WHERE id = ?
+  `).get(pageId) as CachedPageStatus | undefined;
 }
 
 export function findCachedPageByOneNoteGuid(
   db: Database.Database,
   pageGuid: string
-): PageRow | undefined {
+): CachedPageMetadata | undefined {
   return db.prepare(`
-    SELECT *
+    SELECT ${cachedPageMetadataColumns()}
     FROM pages
     WHERE deleted_at IS NULL
       AND links_json IS NOT NULL
       AND instr(lower(links_json), lower(?)) > 0
     LIMIT 1
-  `).get(pageGuid) as PageRow | undefined;
+  `).get(pageGuid) as CachedPageMetadata | undefined;
 }
 
 export function findCachedGraphSectionIdByOneNoteGuid(
@@ -63,7 +155,7 @@ export function listCachedPagesNeedingBibleParse(
     notebookIds?: readonly string[];
     limit?: number;
   }
-): PageRow[] {
+): CachedPageSyncState[] {
   const uniqueNotebookIds = options.notebookIds
     ? [...new Set(options.notebookIds.filter(Boolean))]
     : undefined;
@@ -77,7 +169,11 @@ export function listCachedPagesNeedingBibleParse(
     : -1;
 
   return db.prepare(`
-    SELECT p.*
+    SELECT
+      ${cachedPageMetadataColumns('p')},
+      p.content_text IS NOT NULL AS has_content_text,
+      COALESCE(p.content_text <> '', 0) AS has_nonempty_content_text,
+      COALESCE(p.content_html <> '', 0) AS has_content_html
     FROM pages p
     LEFT JOIN page_bible_parse_state state ON state.page_id = p.id
     WHERE p.deleted_at IS NULL
@@ -101,39 +197,39 @@ export function listCachedPagesNeedingBibleParse(
       COALESCE(p.last_modified_date_time, p.content_synced_at, p.metadata_synced_at) DESC,
       p.id
     LIMIT ?
-  `).all(options.module, options.parserVersion, ...(uniqueNotebookIds ?? []), limit) as PageRow[];
+  `).all(options.module, options.parserVersion, ...(uniqueNotebookIds ?? []), limit) as CachedPageSyncState[];
 }
 
 export function listCachedPagesWithFetchErrors(
   db: Database.Database,
   notebookIds?: readonly string[]
-): PageRow[] {
+): CachedPageMetadata[] {
   const uniqueNotebookIds = notebookIds ? [...new Set(notebookIds.filter(Boolean))] : undefined;
   if (uniqueNotebookIds?.length === 0) return [];
   const scope = uniqueNotebookIds
     ? `AND parent_notebook_id IN (${uniqueNotebookIds.map(() => '?').join(',')})`
     : '';
   return db.prepare(`
-    SELECT *
+    SELECT ${cachedPageMetadataColumns()}
     FROM pages
     WHERE deleted_at IS NULL
       AND fetch_error IS NOT NULL
       ${scope}
     ORDER BY COALESCE(fetch_retry_after, fetch_error_at, content_synced_at, metadata_synced_at), id
-  `).all(...(uniqueNotebookIds ?? [])) as PageRow[];
+  `).all(...(uniqueNotebookIds ?? [])) as CachedPageMetadata[];
 }
 
 export function listCachedPagesWithStaleSectionContent(
   db: Database.Database,
   notebookIds?: readonly string[]
-): PageRow[] {
+): CachedPageMetadata[] {
   const uniqueNotebookIds = notebookIds ? [...new Set(notebookIds.filter(Boolean))] : undefined;
   if (uniqueNotebookIds?.length === 0) return [];
   const scope = uniqueNotebookIds
     ? `AND p.parent_notebook_id IN (${uniqueNotebookIds.map(() => '?').join(',')})`
     : '';
   return db.prepare(`
-    SELECT p.*
+    SELECT ${cachedPageMetadataColumns('p')}
     FROM pages p
     JOIN sections s ON s.id = p.parent_section_id
     WHERE p.deleted_at IS NULL
@@ -142,13 +238,13 @@ export function listCachedPagesWithStaleSectionContent(
       AND p.content_source_section_modified_date_time IS NOT s.last_modified_date_time
       ${scope}
     ORDER BY s.last_modified_date_time DESC, p.order_index IS NULL, p.order_index, p.id
-  `).all(...(uniqueNotebookIds ?? [])) as PageRow[];
+  `).all(...(uniqueNotebookIds ?? [])) as CachedPageMetadata[];
 }
 
 export function listOldestCachedPagesForContentRefresh(
   db: Database.Database,
   options: { notebookIds?: readonly string[]; limit?: number } = {}
-): PageRow[] {
+): CachedPageMetadata[] {
   const uniqueNotebookIds = options.notebookIds
     ? [...new Set(options.notebookIds.filter(Boolean))]
     : undefined;
@@ -158,14 +254,14 @@ export function listOldestCachedPagesForContentRefresh(
     : '';
   const limit = Math.max(1, Math.min(Math.trunc(options.limit ?? 25), 250));
   return db.prepare(`
-    SELECT *
+    SELECT ${cachedPageMetadataColumns()}
     FROM pages
     WHERE deleted_at IS NULL
       AND fetch_error IS NULL
       ${scope}
     ORDER BY content_synced_at IS NOT NULL, content_synced_at, metadata_synced_at, id
     LIMIT ?
-  `).all(...(uniqueNotebookIds ?? []), limit) as PageRow[];
+  `).all(...(uniqueNotebookIds ?? []), limit) as CachedPageMetadata[];
 }
 
 export function buildFtsQuery(query: string, mode: 'and' | 'or' | 'phrase' = 'and'): string {
@@ -295,6 +391,38 @@ export function relaxedSearchTextScore(
   };
 }
 
+function relaxedFtsQuery(terms: string[]): { query: string; requiredTerms: number; coverageGuaranteed: boolean } {
+  const requiredTerms = terms.length <= 2 ? terms.length : Math.ceil(terms.length * 0.6);
+  if (terms.length > 8) {
+    return {
+      query:buildFtsQuery(terms.join(' '), 'or'),
+      requiredTerms,
+      coverageGuaranteed:false
+    };
+  }
+
+  const combinations: string[][] = [];
+  const choose = (start: number, remaining: number, selected: string[]) => {
+    if (remaining === 0) {
+      combinations.push([...selected]);
+      return;
+    }
+    for (let index = start; index <= terms.length - remaining; index += 1) {
+      selected.push(terms[index]);
+      choose(index + 1, remaining - 1, selected);
+      selected.pop();
+    }
+  };
+  choose(0, requiredTerms, []);
+  return {
+    query:combinations
+      .map(combination => `(${combination.map(term => buildFtsQuery(term)).join(' AND ')})`)
+      .join(' OR '),
+    requiredTerms,
+    coverageGuaranteed:true
+  };
+}
+
 export function searchCacheRelaxed(
   db: Database.Database,
   query: string,
@@ -302,6 +430,7 @@ export function searchCacheRelaxed(
     limit?: number;
     caseSensitive?: boolean;
     notebookIds?: string[];
+    sectionIds?: string[];
   } = {}
 ): CacheSearchResult[] {
   const trimmed = query.trim();
@@ -313,10 +442,14 @@ export function searchCacheRelaxed(
   if (terms.length === 0) return [];
 
   const limit = Math.max(1, Math.min(options.limit ?? 20, 100));
-  const candidateLimit = Math.max(200, Math.min(limit * 20, 2000));
+  // Let FTS enforce the relaxed coverage threshold before returning rows.
+  // Returning the complete text for thousands of OR matches made common
+  // searches copy and scan tens of megabytes in JavaScript.
+  const candidateLimit = Math.max(200, Math.min(limit * 4, 400));
+  const fts = relaxedFtsQuery(terms);
   const filters: string[] = ['p.deleted_at IS NULL'];
   const params: Record<string, unknown> = {
-    ftsQuery:buildFtsQuery(terms.join(' '), 'or'),
+    ftsQuery:fts.query,
     candidateLimit
   };
   if (options.notebookIds) {
@@ -326,12 +459,19 @@ export function searchCacheRelaxed(
     filters.push(`p.parent_notebook_id IN (${placeholders.join(', ')})`);
     notebookIds.forEach((id, index) => { params[`notebookId${index}`] = id; });
   }
+  if (options.sectionIds) {
+    const sectionIds = [...new Set(options.sectionIds)];
+    if (sectionIds.length === 0) return [];
+    const placeholders = sectionIds.map((_, index) => `@sectionId${index}`);
+    filters.push(`p.parent_section_id IN (${placeholders.join(', ')})`);
+    sectionIds.forEach((id, index) => { params[`sectionId${index}`] = id; });
+  }
 
   const candidates = db.prepare(`
     SELECT
+      pages_fts.rowid AS ftsRowId,
       p.id,
       p.title,
-      pages_fts.content AS contentText,
       p.parent_notebook_id,
       COALESCE(n.custom_display_name, p.parent_notebook_name) AS parent_notebook_name,
       p.parent_section_name,
@@ -347,14 +487,48 @@ export function searchCacheRelaxed(
     LIMIT @candidateLimit
   `).all(params) as Array<Record<string, any>>;
 
+  const detailLimit = Math.min(candidates.length, limit);
+  const detailCandidates = candidates.slice(0, detailLimit);
+  const detailParams: Record<string, unknown> = { ftsQuery:fts.query };
+  const detailPlaceholders = detailCandidates.map((candidate, index) => {
+    detailParams[`ftsRowId${index}`] = candidate.ftsRowId;
+    return `@ftsRowId${index}`;
+  });
+  const needsContent = caseSensitive || !fts.coverageGuaranteed;
+  const contentProjection = needsContent ? ', content AS contentText' : '';
+  const details = detailCandidates.length > 0
+    ? db.prepare(`
+        SELECT
+          rowid AS ftsRowId,
+          snippet(pages_fts, 2, '', '', ' … ', 32) AS snippet
+          ${contentProjection}
+        FROM pages_fts
+        WHERE pages_fts MATCH @ftsQuery
+          AND rowid IN (${detailPlaceholders.join(', ')})
+      `).all(detailParams) as Array<Record<string, any>>
+    : [];
+  const detailsByRowId = new Map(details.map(detail => [Number(detail.ftsRowId), detail]));
+
   type RankedCacheSearchResult = CacheSearchResult & { ftsScore: number };
-  return candidates
+  return detailCandidates
     .map((candidate): RankedCacheSearchResult | undefined => {
-      const haystack = `${candidate.title ?? ''}\n${candidate.contentText ?? ''}`;
+      const detail = detailsByRowId.get(Number(candidate.ftsRowId)) ?? {};
+      const candidateSnippet = String(detail.snippet ?? '').replace(/\s+/g, ' ').trim();
+      const haystack = needsContent
+        ? `${candidate.title ?? ''}\n${detail.contentText ?? ''}`
+        : `${candidate.title ?? ''}\n${candidateSnippet}`;
       const relevance = relaxedSearchTextScore(haystack, trimmed, caseSensitive);
-      if (!relevance) return undefined;
-      const start = Math.max(0, relevance.matchIndex - 45);
-      const end = Math.min(haystack.length, relevance.matchIndex + Math.max(trimmed.length, 12) + 75);
+      if (needsContent && !relevance) return undefined;
+      const fallbackWeight = Math.min(0.99, Math.round((fts.requiredTerms / terms.length) * 7000) / 10000);
+      const weight = relevance?.weight ?? fallbackWeight;
+      let snippet = candidateSnippet;
+      if (needsContent && relevance) {
+        const start = Math.max(0, relevance.matchIndex - 45);
+        const end = Math.min(haystack.length, relevance.matchIndex + Math.max(trimmed.length, 12) + 75);
+        snippet = (start > 0 ? '…' : '')
+          + haystack.slice(start, end).replace(/\s+/g, ' ')
+          + (end < haystack.length ? '…' : '');
+      }
       return {
         id:candidate.id,
         title:candidate.title,
@@ -363,9 +537,9 @@ export function searchCacheRelaxed(
         parent_section_name:candidate.parent_section_name,
         last_modified_date_time:candidate.last_modified_date_time,
         content_synced_at:candidate.content_synced_at,
-        snippet:(start > 0 ? '…' : '') + haystack.slice(start, end).replace(/\s+/g, ' ') + (end < haystack.length ? '…' : ''),
-        score:relevance.score,
-        search_weight:relevance.weight,
+        snippet,
+        score:relevance?.score ?? Math.round(weight * 1800),
+        search_weight:weight,
         ftsScore:Number(candidate.ftsScore ?? 0)
       };
     })
@@ -391,8 +565,9 @@ export function listCachedSections(db: Database.Database, notebookId?: string): 
 }
 
 export function readCachedPage(db: Database.Database, pageId: string, includeHtml: boolean, maxTextChars: number): Record<string, unknown> {
-  const row = getCachedPage(db, pageId);
+  const row = getCachedPageMetadata(db, pageId);
   if (!row || row.deleted_at) throw new Error(`Page is not in local cache or was marked deleted: ${pageId}`);
+  const content = getCachedPageContent(db, pageId, includeHtml ? 'both' : 'text');
   const notebook = row.parent_notebook_id
     ? db.prepare('SELECT custom_display_name FROM notebooks WHERE id = ?').get(row.parent_notebook_id) as { custom_display_name: string | null } | undefined
     : undefined;
@@ -405,12 +580,12 @@ export function readCachedPage(db: Database.Database, pageId: string, includeHtm
     createdDateTime: row.created_date_time,
     lastModifiedDateTime: row.last_modified_date_time,
     contentSyncedAt: row.content_synced_at,
-    hasContent: row.content_text != null,
+    hasContent: content?.content_text != null,
     parentNotebook: { id: row.parent_notebook_id, displayName: notebook?.custom_display_name ?? row.parent_notebook_name },
     parentSection: { id: row.parent_section_id, displayName: row.parent_section_name },
     sectionGroupPath: section?.section_group_path ?? undefined,
-    text: (row.content_text ?? '').slice(0, maxTextChars),
-    html: includeHtml ? row.content_html : undefined,
+    text: (content?.content_text ?? '').slice(0, maxTextChars),
+    html: includeHtml ? content?.content_html : undefined,
     links: row.links_json ? JSON.parse(row.links_json) : undefined,
     fetchError: row.fetch_error
   };
@@ -1155,7 +1330,13 @@ export function findParallelBibleReferenceNotes(
 export function searchCacheAdvanced(
   db: Database.Database,
   query: string,
-  options: { mode: 'and' | 'phrase' | 'regex'; caseSensitive: boolean; notebookIds: string[]; limit: number }
+  options: {
+    mode: 'and' | 'phrase' | 'regex';
+    caseSensitive: boolean;
+    notebookIds: string[];
+    sectionIds?: string[];
+    limit: number;
+  }
 ): Array<Record<string, unknown>> {
   if (!query) throw new Error('Search query is empty.');
   let regex: RegExp | undefined;
@@ -1180,6 +1361,37 @@ export function searchCacheAdvanced(
     const placeholders = options.notebookIds.map((_, index) => `@notebookId${index}`);
     filters.push(`p.parent_notebook_id IN (${placeholders.join(', ')})`);
     options.notebookIds.forEach((id, index) => { params[`notebookId${index}`] = id; });
+  }
+  if (options.sectionIds) {
+    const sectionIds = [...new Set(options.sectionIds)];
+    if (sectionIds.length === 0) return [];
+    const placeholders = sectionIds.map((_, index) => `@sectionId${index}`);
+    filters.push(`p.parent_section_id IN (${placeholders.join(', ')})`);
+    sectionIds.forEach((id, index) => { params[`sectionId${index}`] = id; });
+  }
+  if (!options.caseSensitive && options.mode !== 'regex') {
+    params.ftsQuery = buildFtsQuery(query, options.mode === 'phrase' ? 'phrase' : 'and');
+    params.limit = Math.max(1, Math.min(options.limit, 100));
+    return db.prepare(`
+      SELECT
+        p.id,
+        p.title,
+        p.parent_notebook_id,
+        COALESCE(n.custom_display_name, p.parent_notebook_name) AS parent_notebook_name,
+        p.parent_section_name,
+        p.last_modified_date_time,
+        p.content_synced_at,
+        snippet(pages_fts, 2, '', '', ' … ', 48) AS snippet,
+        bm25(pages_fts) AS score,
+        1 AS search_weight
+      FROM pages_fts
+      JOIN pages p ON p.id = pages_fts.page_id
+      LEFT JOIN notebooks n ON n.id = p.parent_notebook_id
+      WHERE pages_fts MATCH @ftsQuery
+        AND ${filters.join(' AND ')}
+      ORDER BY score ASC
+      LIMIT @limit
+    `).all(params) as Array<Record<string, unknown>>;
   }
   const rows = db.prepare(`
     SELECT

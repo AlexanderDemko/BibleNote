@@ -11,6 +11,7 @@ namespace BibleNote.Services.VerseParsing
         private static char[] _wordDelmiters = new char[] { ' ', ' ', ',', '.', ':', '-', '/', '\\', '>', '<', '=', '(', ')', '*', '\'', '"', '\n' };
         private static char[] _midVerseChars = new char[] { '.', ' ', ' ', '(' };  // Allowable symbols between book and chapter
         private static char[] _dashes = new char[] { '-', '—', '‑', '–', '−' };
+        private static char[] _versePartMarkers = new char[] { 'a', 'b', 'c', 'а', 'б', 'в' };
         private static char[] _startVerseAdditionalChars = new char[] { ',', ';', default(char) };
         private static char[] _defaultChapterVerseDelimiters = new char[] { ':' };
         private static char[] _extendedChapterVerseDelimiters = new char[] { ':', ',' };
@@ -28,6 +29,11 @@ namespace BibleNote.Services.VerseParsing
         public static bool IsDash(char c)
         {
             return _dashes.Contains(c);            
+        }
+
+        public static bool IsVersePartMarker(char c)
+        {
+            return _versePartMarkers.Contains(char.ToLowerInvariant(c));
         }
 
         public static bool IsWordDelimiter(char c)

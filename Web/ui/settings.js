@@ -83,7 +83,7 @@ function addBibleDisplayParams(params = new URLSearchParams()) {
 function clampHtmlZoom(value) {
   const numberValue = Number(value);
   if (!Number.isFinite(numberValue)) return 100;
-  return Math.max(50, Math.min(200, Math.round(numberValue / 10) * 10));
+  return Math.max(50, Math.min(300, Math.round(numberValue / 10) * 10));
 }
 
 function savePageViewSettings() {

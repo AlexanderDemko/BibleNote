@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { getVerseTextWithBibleNote } from '../src/bible.js';
+import { bibleParseConfigFromEnv, getVerseTextWithBibleNote } from '../src/bible.js';
 
 const request = {
   apiUrl:'http://127.0.0.1:5000',
@@ -10,6 +10,13 @@ const request = {
   verse:16,
   timeoutMs:5000
 };
+
+test('Bible API URL is normalized after applying overrides', () => {
+  assert.equal(
+    bibleParseConfigFromEnv({ apiUrl:'http://127.0.0.1:5000///' }).apiUrl,
+    'http://127.0.0.1:5000'
+  );
+});
 
 test('verse text retries a transient 404 response', async () => {
   const originalFetch = globalThis.fetch;

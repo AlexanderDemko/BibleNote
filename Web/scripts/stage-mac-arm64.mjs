@@ -47,8 +47,7 @@ run('dotnet', [
   apiProject,
   '-c', 'Release',
   '-r', 'osx-arm64',
-  '--self-contained', 'true',
-  '-p:GenerateCode=False'
+  '--self-contained', 'true'
 ]);
 
 recreateDirectory(apiOutput);

@@ -5,20 +5,24 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { BibleParseResult } from './bible.js';
 import { migrateCacheSchema } from './cache-schema.js';
-import { getCachedPage } from './cache-search.js';
+import { getCachedPageMetadata } from './cache-search.js';
 import type { BibleParseStateRow, PageAccessRow } from './cache-types.js';
 import { toVerseId } from './cache-verse-id.js';
 import { defaultBibleNoteDir } from './paths.js';
 import { runtimeLog } from './runtime-logging.js';
 
 export type * from './cache-types.js';
+export type { CachedPageContent, CachedPageMetadata, CachedPageStatus, CachedPageSyncState } from './cache-search.js';
 export {
   buildFtsQuery,
   findCachedGraphSectionIdByOneNoteGuid,
   findCachedPageByOneNoteGuid,
   findParallelBibleReferenceNotes,
   findParallelBibleReferences,
-  getCachedPage,
+  getCachedPageContent,
+  getCachedPageMetadata,
+  getCachedPageStatus,
+  getCachedPageSyncState,
   listCachedPagesForBibleParse,
   listCachedPagesNeedingBibleParse,
   listCachedPagesWithStaleSectionContent,
@@ -479,7 +483,7 @@ export function updatePageContent(
   fetchedAt = nowIso(),
   sourceSectionModifiedDateTime: string | null = null
 ): void {
-  const page = getCachedPage(db, pageId);
+  const page = getCachedPageMetadata(db, pageId);
   const hash = sha256(text);
   const byteLength = Buffer.byteLength(text, 'utf8') + (html ? Buffer.byteLength(html, 'utf8') : 0);
 

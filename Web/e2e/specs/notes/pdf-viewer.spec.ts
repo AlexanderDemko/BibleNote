@@ -22,6 +22,55 @@ function minimalPdf(): Buffer {
   return Buffer.from(output, 'ascii');
 }
 
+test('@notes Назад возвращает PDF на прежнюю позицию', async ({ app, page }) => {
+  await page.setViewportSize({ width:1100, height:620 });
+  await page.addInitScript(() => {
+    localStorage.setItem('biblenote.setupWizardDone', 'true');
+    localStorage.setItem('biblenote.microsoftScopeVersion', 'notes-read-all-v1');
+    localStorage.setItem('onenote.pageViewMode', 'html');
+  });
+  await page.route('**/api/page?id=pdf-history', route => route.fulfill({
+    status:200,
+    contentType:'application/json',
+    body:JSON.stringify({
+      id:'pdf-history', title:'PDF с историей', text:'PDF document', hasContent:1, hasHtml:true, fetchError:null,
+      parentNotebook:{ id:'notebook-pdf', displayName:'Документы' },
+      parentSection:{ id:'section-pdf-history', displayName:'PDF' },
+      links:{ folder:{ extension:'.pdf', quality:'textual' } }
+    })
+  }));
+  await page.route('**/api/bible/page?**', route => route.fulfill({
+    status:200,
+    contentType:'application/json',
+    body:'{"paragraphs":[]}'
+  }));
+  await page.route('**/api/page-pdf?id=pdf-history', route => route.fulfill({
+    status:200,
+    contentType:'application/pdf',
+    body:minimalPdf()
+  }));
+
+  await page.goto(`${app.baseUrl}/page/pdf-history`);
+  const frame = page.frameLocator('iframe.pdf-frame');
+  const viewer = frame.locator('#viewerContainer');
+  await expect(frame.locator('#viewer .page[data-page-number="1"] canvas')).toBeVisible({ timeout:15_000 });
+  await frame.locator('#pdfZoom').fill('300');
+  await expect.poll(() => viewer.evaluate(element => element.scrollHeight > element.clientHeight)).toBe(true);
+  await viewer.evaluate(element => { element.scrollTop = element.scrollHeight * 0.65; });
+  const scrollTop = await viewer.evaluate(element => element.scrollTop);
+  expect(scrollTop).toBeGreaterThan(100);
+
+  await page.evaluate(() => (window as typeof window & {
+    openBibleTextInReader:(ref: Record<string, unknown>) => Promise<void>;
+  }).openBibleTextInReader({ module:'rst', bookIndex:43, chapter:3, verse:16, topChapter:3, topVerse:16 }));
+  await expect(page.locator('#content h2')).toHaveText('От Иоанна 3');
+
+  await page.locator('.view-history-back').click();
+  await expect(page.locator('#content h2')).toHaveText('PDF с историей');
+  await expect(frame.locator('#viewer .page[data-page-number="1"] canvas')).toBeVisible({ timeout:15_000 });
+  await expect.poll(async () => viewer.evaluate(element => element.scrollTop)).toBeCloseTo(scrollTop, 0);
+});
+
 test('@notes PDF viewer renders an original page with navigation and a text layer', async ({ app, page }) => {
   await page.route('**/api/page-pdf?id=pdf-page', route => route.fulfill({
     status:200,
@@ -37,25 +86,34 @@ test('@notes PDF viewer renders an original page with navigation and a text laye
 
   const zoom = page.locator('#pdfZoom');
   const zoomValue = page.locator('#pdfZoomValue');
+  await expect(zoom).toHaveAttribute('max', '300');
   const renderedPage = page.locator('#viewer .page[data-page-number="1"]');
   const initialWidth = await renderedPage.evaluate(element => element.getBoundingClientRect().width);
   await zoom.fill('150');
   await expect(zoomValue).toHaveText('150%');
   const enlargedWidth = await renderedPage.evaluate(element => element.getBoundingClientRect().width);
   expect(enlargedWidth).toBeGreaterThan(initialWidth * 1.4);
+
+  await zoom.fill('100');
+  const pinchStartWidth = await renderedPage.evaluate(element => element.getBoundingClientRect().width);
+  const pinchPrevented = await page.locator('#viewerContainer').evaluate(element => {
+    const event = new WheelEvent('wheel', { deltaY:-100, ctrlKey:true, bubbles:true, cancelable:true });
+    element.dispatchEvent(event);
+    return event.defaultPrevented;
+  });
+  expect(pinchPrevented).toBe(true);
+  await expect.poll(async () => Number(await zoom.inputValue())).toBeGreaterThan(100);
+  const pinchWidth = await renderedPage.evaluate(element => element.getBoundingClientRect().width);
+  expect(pinchWidth).toBeGreaterThan(pinchStartWidth);
+
+  await page.evaluate(() => window.postMessage({ type:'onenote-html-zoom', zoom:4 }, '*'));
+  await expect(zoom).toHaveValue('300');
+  await expect(zoomValue).toHaveText('300%');
   await page.evaluate(() => window.postMessage({ type:'onenote-html-zoom', zoom:0.8 }, '*'));
   await expect(zoom).toHaveValue('80');
   await expect(zoomValue).toHaveText('80%');
 
-  const fitButton = page.locator('#fitWidth');
-  await expect(fitButton).toHaveText('По ширине');
-  await expect(fitButton).toHaveAttribute('aria-pressed', 'false');
-  await fitButton.click();
-  await expect(fitButton).toHaveText('Страница целиком');
-  await expect(fitButton).toHaveAttribute('aria-pressed', 'true');
-  await fitButton.click();
-  await expect(fitButton).toHaveText('По ширине');
-  await expect(fitButton).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.locator('#fitWidth')).toHaveCount(0);
 
   await page.evaluate(() => window.postMessage({
     type:'onenote-main-search',
@@ -93,6 +151,152 @@ test('@notes PDF viewer renders an original page with navigation and a text laye
     scroll:true
   }, '*'));
   await expect(page.locator('.textLayer .highlight')).toHaveCount(0);
+});
+
+test('@notes full page PDF uses the shared zoom control to the left of navigation', async ({ app, page }) => {
+  await page.setViewportSize({ width:1559, height:603 });
+  await page.addInitScript(() => {
+    try {
+      localStorage.setItem('biblenote.setupWizardDone', 'true');
+      localStorage.setItem('biblenote.microsoftScopeVersion', 'notes-read-all-v1');
+      localStorage.setItem('onenote.pageViewMode', 'html');
+    } catch {}
+  });
+  await page.route('**/api/page?id=pdf-layout', route => route.fulfill({
+    status:200,
+    contentType:'application/json',
+    body:JSON.stringify({
+      id:'pdf-layout',
+      title:'Основы веры. Пособие для преподавателя',
+      text:'PDF document',
+      hasContent:1,
+      hasHtml:true,
+      fetchError:null,
+      parentNotebook:{ id:'notebook-pdf', displayName:'Основы веры' },
+      parentSection:{ id:'section-pdf', displayName:'Файлы' },
+      links:{ folder:{ extension:'.pdf', quality:'textual' } }
+    })
+  }));
+  await page.route('**/api/bible/page?**', route => route.fulfill({
+    status:200,
+    contentType:'application/json',
+    body:'{"paragraphs":[]}'
+  }));
+  await page.route('**/api/pages?sectionId=section-pdf', route => route.fulfill({
+    status:200,
+    contentType:'application/json',
+    body:'[{"id":"pdf-layout","title":"Основы веры. Пособие для преподавателя","pageLevel":0}]'
+  }));
+  await page.route('**/api/page-pdf?id=pdf-layout', route => route.fulfill({
+    status:200,
+    contentType:'application/pdf',
+    body:minimalPdf()
+  }));
+
+  await page.goto(`${app.baseUrl}/page/pdf-layout`);
+  const pdfFrame = page.frameLocator('iframe.pdf-frame');
+  await expect(pdfFrame.locator('#viewer .page[data-page-number="1"] canvas')).toBeVisible({ timeout:15_000 });
+  await page.getByRole('button', { name:'Открыть страницу «Основы веры. Пособие для преподавателя» целиком' }).click();
+  await expect(page.locator('html')).toHaveClass(/page-focus-mode/);
+
+  const sharedZoom = page.locator('#pageFocusZoom');
+  await expect(sharedZoom).toBeVisible();
+  await expect(pdfFrame.locator('.pdf-zoom')).toBeHidden();
+  const focusToolbar = await page.locator('#pageFocusToolbar').boundingBox();
+  const zoomControl = await sharedZoom.boundingBox();
+  if (!focusToolbar || !zoomControl) throw new Error('PDF focus toolbar or shared zoom control is not visible.');
+  expect(zoomControl.x + zoomControl.width).toBeLessThanOrEqual(focusToolbar.x);
+
+  const renderedPage = pdfFrame.locator('#viewer .page[data-page-number="1"]');
+  const initialWidth = await renderedPage.evaluate(element => element.getBoundingClientRect().width);
+  const pinchPrevented = await pdfFrame.locator('#viewerContainer').evaluate(element => {
+    const event = new WheelEvent('wheel', { deltaY:-100, ctrlKey:true, bubbles:true, cancelable:true });
+    element.dispatchEvent(event);
+    return event.defaultPrevented;
+  });
+  expect(pinchPrevented).toBe(true);
+  await expect.poll(async () => Number(await page.locator('#pageFocusZoomRange').inputValue())).toBeGreaterThan(100);
+  const enlargedWidth = await renderedPage.evaluate(element => element.getBoundingClientRect().width);
+  expect(enlargedWidth).toBeGreaterThan(initialWidth);
+});
+
+test('@notes pinch zoom works for Word HTML and extracted text', async ({ app, page }) => {
+  await page.setViewportSize({ width:1559, height:603 });
+  await page.addInitScript(() => {
+    try {
+      localStorage.setItem('biblenote.setupWizardDone', 'true');
+      localStorage.setItem('biblenote.microsoftScopeVersion', 'notes-read-all-v1');
+      localStorage.setItem('onenote.pageViewMode', 'html');
+    } catch {}
+  });
+  await page.route('**/api/page?id=word-layout', route => route.fulfill({
+    status:200,
+    contentType:'application/json',
+    body:JSON.stringify({
+      id:'word-layout',
+      title:'Документ Word',
+      text:'Извлечённый текст Word',
+      hasContent:1,
+      hasHtml:true,
+      fetchError:null,
+      parentNotebook:{ id:'notebook-word', displayName:'Документы' },
+      parentSection:{ id:'section-word', displayName:'Word' },
+      links:{ folder:{ extension:'.docx', quality:'structured' } }
+    })
+  }));
+  await page.route('**/api/bible/page?**', route => route.fulfill({
+    status:200,
+    contentType:'application/json',
+    body:'{"paragraphs":[]}'
+  }));
+  await page.route('**/api/pages?sectionId=section-word', route => route.fulfill({
+    status:200,
+    contentType:'application/json',
+    body:'[{"id":"word-layout","title":"Документ Word","pageLevel":0}]'
+  }));
+  await page.route('**/api/page-html?**', route => route.fulfill({
+    status:200,
+    contentType:'application/json',
+    body:JSON.stringify({ html:'<main id="wordContent"><h1>Документ Word</h1><p>Текст из DOCX</p></main>' })
+  }));
+
+  await page.goto(`${app.baseUrl}/page/word-layout`);
+  const wordFrame = page.frameLocator('iframe.html-frame');
+  await expect(wordFrame.locator('#wordContent')).toBeVisible();
+  await page.getByRole('button', { name:'Открыть страницу «Документ Word» целиком' }).click();
+
+  const sharedZoom = page.locator('#pageFocusZoom');
+  const focusToolbar = page.locator('#pageFocusToolbar');
+  await expect(sharedZoom).toBeVisible();
+  await expect(page.locator('#pageFocusZoomRange')).toHaveAttribute('max', '300');
+  const zoomBox = await sharedZoom.boundingBox();
+  const toolbarBox = await focusToolbar.boundingBox();
+  if (!zoomBox || !toolbarBox) throw new Error('Word focus toolbar or shared zoom control is not visible.');
+  expect(zoomBox.x + zoomBox.width).toBeLessThanOrEqual(toolbarBox.x);
+
+  const htmlPinchPrevented = await wordFrame.locator('body').evaluate(element => {
+    const event = new WheelEvent('wheel', { deltaY:-100, ctrlKey:true, bubbles:true, cancelable:true });
+    element.dispatchEvent(event);
+    return event.defaultPrevented;
+  });
+  expect(htmlPinchPrevented).toBe(true);
+  await expect.poll(async () => Number(await page.locator('#pageFocusZoomRange').inputValue())).toBeGreaterThan(100);
+  await expect.poll(async () => Number(await wordFrame.locator('html').evaluate(element => element.style.zoom))).toBeGreaterThan(1);
+  await page.locator('#pageFocusZoomRange').fill('300');
+  await expect.poll(async () => Number(await wordFrame.locator('html').evaluate(element => element.style.zoom))).toBe(3);
+
+  await page.locator('#pageFocusExit').click();
+  await page.getByRole('button', { name:'Показать извлечённый текст' }).click();
+  await page.getByRole('button', { name:'Открыть страницу «Документ Word» целиком' }).click();
+  await page.locator('#pageFocusZoomRange').fill('100');
+  const textPinchPrevented = await page.locator('.page-text').evaluate(element => {
+    const event = new WheelEvent('wheel', { deltaY:-100, ctrlKey:true, bubbles:true, cancelable:true });
+    element.dispatchEvent(event);
+    return event.defaultPrevented;
+  });
+  expect(textPinchPrevented).toBe(true);
+  await expect.poll(async () => Number(await page.locator('#pageFocusZoomRange').inputValue())).toBeGreaterThan(100);
+  await expect.poll(async () => Number(await page.locator('.page-text').evaluate(element => element.style.zoom))).toBeGreaterThan(1);
 });
 
 test('@notes PDF viewer replays a search posted by its parent while the document is loading', async ({ app, page }) => {
@@ -174,7 +378,7 @@ test('@notes PDF viewer navigates main-search matches and adds Bible links to it
   await page.evaluate(() => window.postMessage({
     type:'onenote-pdf-context',
     bibleLinks:[{ text:'Deut 17:19', href:'bnVerse:Второзаконие 17:19', title:'Второзаконие 17:19' }],
-    targets:[{ paragraphIndex:7, query:'Deut 17:19', highlightText:'Deut 17:19' }]
+    targets:[{ paragraphIndex:7, query:'Deut 17:19', highlightText:'BibleNote PDF viewer Deut 17:19' }]
   }, '*'));
   const bibleLink = page.locator('.pdf-bible-link').first();
   await expect(bibleLink).toHaveAttribute('href', 'bnVerse:Второзаконие 17:19');
@@ -198,18 +402,11 @@ test('@notes PDF viewer navigates main-search matches and adds Bible links to it
   await expect(page.locator('.textLayer .highlight')).toHaveCount(2);
 
   await page.evaluate(() => window.postMessage({
-    type:'onenote-main-search',
-    source:'',
-    flags:'',
-    queries:[],
-    entireWord:false,
-    index:0,
-    scroll:false
-  }, '*'));
-  await page.evaluate(() => window.postMessage({
     type:'onenote-scroll-target-paragraph',
     paragraphIndex:7,
-    targetIndex:0
+    targetIndex:0,
+    forceTarget:true
   }, '*'));
-  await expect(page.locator('.textLayer .highlight').first()).toBeVisible();
+  await expect(page.locator('.textLayer .highlight')).toHaveCount(1);
+  await expect(page.locator('.textLayer .highlight.selected')).toHaveText('Deut 17:19');
 });

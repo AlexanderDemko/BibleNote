@@ -264,62 +264,10 @@ function pageHtmlFrameSrcdoc(rawHtml, bibleParagraphs, targetParagraphIndexes = 
       if (targetIndex === 0) target.setAttribute('data-onenote-target-match-current', 'true');
     }
   }
-  const bridgeScript = [
-    '<scr' + 'ipt>',
-    '(function(){',
-    'function decodeSafe(value){try{return decodeURIComponent(value);}catch(error){return value;}}',
-    'function normalizeBibleHref(href){return String(href||"").trim().replace(/^https?:\\/\\/isbtBibleVerse:/i,"isbtBibleVerse:").replace(/^https?:\\/\\/bnVerse:/i,"bnVerse:");}',
-    'function isBibleHref(href){return /^(?:isbtBibleVerse|bnVerse):/i.test(normalizeBibleHref(href))||/^(?:isbtBibleVerse|bnVerse):/i.test(normalizeBibleHref(decodeSafe(href||"")));}',
-    'function sendBibleLink(href){parent.postMessage({type:"onenote-bible-link",href:normalizeBibleHref(decodeSafe(href))},"*");}',
-    'document.addEventListener("click",function(event){',
-    'var target=event.target;',
-    'var link=target&&target.closest?target.closest("a[href]"):null;',
-    'if(!link)return;',
-    'var href=link.getAttribute("data-onenote-bible-href")||link.getAttribute("href")||"";',
-    'if(isBibleHref(href)){event.preventDefault();event.stopPropagation();sendBibleLink(href);}',
-    '},true);',
-    'document.addEventListener("keydown",function(event){',
-    'var key=String(event.key||"").toLocaleLowerCase();',
-    'var findKey=event.code==="KeyF"||key==="f";',
-    'if((event.ctrlKey||event.metaKey)&&!event.altKey&&!event.shiftKey&&findKey){event.preventDefault();event.stopPropagation();parent.postMessage({type:"onenote-page-find-open"},"*");}',
-    '},true);',
-    'var mainSearchMarks=[];var mainSearchIndex=-1;var mainSearchSource="";var mainSearchFlags="";',
-    'function sendMainSearchResult(){parent.postMessage({type:"onenote-main-search-result",source:mainSearchSource,flags:mainSearchFlags,count:mainSearchMarks.length,index:mainSearchIndex},"*");}',
-    'function clearMainSearch(){document.querySelectorAll("[data-onenote-main-search]").forEach(function(mark){var parentNode=mark.parentNode;mark.replaceWith(document.createTextNode(mark.textContent||""));if(parentNode)parentNode.normalize();});mainSearchMarks=[];mainSearchIndex=-1;}',
-    'function selectMainSearch(index,scroll){mainSearchMarks.forEach(function(mark){mark.removeAttribute("data-onenote-main-search-current");});if(!mainSearchMarks.length){mainSearchIndex=-1;sendMainSearchResult();return;}mainSearchIndex=(Number(index)||0);mainSearchIndex=(mainSearchIndex+mainSearchMarks.length)%mainSearchMarks.length;var mark=mainSearchMarks[mainSearchIndex];mark.setAttribute("data-onenote-main-search-current","true");if(scroll!==false)mark.scrollIntoView({block:"center",behavior:"smooth"});sendMainSearchResult();}',
-    'function runMainSearch(source,flags,index,scroll){clearMainSearch();mainSearchSource=String(source||"");mainSearchFlags=String(flags||"gui");if(!mainSearchSource)return;var regex;try{regex=new RegExp(mainSearchSource,mainSearchFlags);}catch(error){return;}var nodes=[];var walker=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT,{acceptNode:function(node){var parentNode=node.parentElement;if(!node.nodeValue||!parentNode||parentNode.closest("script,style,noscript,textarea,[data-onenote-page-find],[data-onenote-main-search]"))return NodeFilter.FILTER_REJECT;return NodeFilter.FILTER_ACCEPT;}});while(walker.nextNode())nodes.push(walker.currentNode);nodes.forEach(function(node){var text=node.nodeValue||"";var cursor=0;var fragment=document.createDocumentFragment();var found=false;for(var match of text.matchAll(regex)){var matchText=match[0]||"";if(!matchText.length)continue;var matchIndex=Number(match.index)||0;if(matchIndex<cursor)continue;if(matchIndex>cursor)fragment.append(document.createTextNode(text.slice(cursor,matchIndex)));var mark=document.createElement("mark");mark.setAttribute("data-onenote-main-search","true");mark.textContent=matchText;fragment.append(mark);mainSearchMarks.push(mark);cursor=matchIndex+matchText.length;found=true;}if(!found)return;if(cursor<text.length)fragment.append(document.createTextNode(text.slice(cursor)));node.replaceWith(fragment);});selectMainSearch(index,scroll);}',
-    'var pageFindMarks=[];var pageFindIndex=-1;var pageFindQuery="";',
-    'function sendPageFindResult(){parent.postMessage({type:"onenote-page-find-result",query:pageFindQuery,count:pageFindMarks.length,index:pageFindIndex},"*");}',
-    'function clearPageFind(){document.querySelectorAll("[data-onenote-page-find]").forEach(function(mark){var parentNode=mark.parentNode;mark.replaceWith(document.createTextNode(mark.textContent||""));if(parentNode)parentNode.normalize();});pageFindMarks=[];pageFindIndex=-1;}',
-    'function selectPageFind(index,scroll){pageFindMarks.forEach(function(mark){mark.removeAttribute("data-onenote-page-find-current");});if(!pageFindMarks.length){pageFindIndex=-1;sendPageFindResult();return;}pageFindIndex=(index+pageFindMarks.length)%pageFindMarks.length;var mark=pageFindMarks[pageFindIndex];mark.setAttribute("data-onenote-page-find-current","true");if(scroll!==false)mark.scrollIntoView({block:"center",behavior:"smooth"});sendPageFindResult();}',
-    'function runPageFind(query){clearPageFind();pageFindQuery=String(query||"");if(!pageFindQuery){sendPageFindResult();return;}var nodes=[];var walker=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT,{acceptNode:function(node){var parentNode=node.parentElement;if(!node.nodeValue||!parentNode||parentNode.closest("script,style,noscript,textarea,[data-onenote-page-find]"))return NodeFilter.FILTER_REJECT;return NodeFilter.FILTER_ACCEPT;}});while(walker.nextNode())nodes.push(walker.currentNode);var needle=pageFindQuery.toLocaleLowerCase();nodes.forEach(function(node){var text=node.nodeValue||"";var folded=text.toLocaleLowerCase();var cursor=0;var index=folded.indexOf(needle);if(index<0)return;var fragment=document.createDocumentFragment();while(index>=0){if(index>cursor)fragment.append(document.createTextNode(text.slice(cursor,index)));var mark=document.createElement("mark");mark.setAttribute("data-onenote-page-find","true");mark.textContent=text.slice(index,index+pageFindQuery.length);fragment.append(mark);pageFindMarks.push(mark);cursor=index+pageFindQuery.length;index=folded.indexOf(needle,cursor);}if(cursor<text.length)fragment.append(document.createTextNode(text.slice(cursor)));node.replaceWith(fragment);});selectPageFind(0,true);}',
-    'function occurrenceKey(value){var paragraphIndex=value&&value.paragraphIndex;var startIndex=value&&value.startIndex;var endIndex=value&&value.endIndex;return Number.isInteger(paragraphIndex)&&Number.isInteger(startIndex)&&Number.isInteger(endIndex)?paragraphIndex+":"+startIndex+":"+endIndex:"";}',
-    'var targetScrollTimers=[];',
-    'function clearTargetScrollTimers(){targetScrollTimers.forEach(function(timer){clearTimeout(timer);});targetScrollTimers=[];}',
-    'function clearTargetParagraphs(){clearTargetScrollTimers();document.querySelectorAll("[data-onenote-target-paragraph],[data-onenote-target-paragraph-current]").forEach(function(item){item.removeAttribute("data-onenote-target-paragraph");item.removeAttribute("data-onenote-target-paragraph-index");item.removeAttribute("data-onenote-target-paragraph-current");});document.querySelectorAll("[data-onenote-target-match],[data-onenote-target-match-current]").forEach(function(item){item.removeAttribute("data-onenote-target-match");item.removeAttribute("data-onenote-target-match-index");item.removeAttribute("data-onenote-target-match-current");});}',
-    'function setTargetParagraphs(indexes,occurrences){clearTargetParagraphs();(Array.isArray(indexes)?indexes:[]).forEach(function(paragraphIndex,targetIndex){var target=document.querySelector("[data-onenote-paragraph-index=\\\""+paragraphIndex+"\\\"]");if(!target)return;target.setAttribute("data-onenote-target-paragraph","true");target.setAttribute("data-onenote-target-paragraph-index",String(targetIndex));if(targetIndex===0)target.setAttribute("data-onenote-target-paragraph-current","true");});(Array.isArray(occurrences)?occurrences:[]).forEach(function(occurrence,targetIndex){var key=occurrenceKey(occurrence);var target=key?document.querySelector("[data-onenote-bible-occurrence=\\\""+key+"\\\"]"):null;if(!target)return;target.setAttribute("data-onenote-target-match","true");target.setAttribute("data-onenote-target-match-index",String(targetIndex));if(targetIndex===0)target.setAttribute("data-onenote-target-match-current","true");});}',
-    'function reportTargetNavigation(index,paragraphIndex,target,requestId){var scrolling=document.scrollingElement||document.documentElement||document.body;parent.postMessage({type:"onenote-target-navigation-state",requestId:requestId||null,index:Number.isInteger(index)?index:null,paragraphIndex:Number.isInteger(paragraphIndex)?paragraphIndex:null,matchIndex:target?target.getAttribute("data-onenote-target-match-index"):null,targetParagraphIndex:target?target.getAttribute("data-onenote-paragraph-index"):null,scrollTop:Number(scrolling&&scrolling.scrollTop)||0},"*");}',
-    'function targetIntegerAttribute(target,name){var value=target&&target.getAttribute(name);if(value===null||value===undefined)return undefined;var number=Number(value);return Number.isInteger(number)?number:undefined;}',
-    'function reportCurrentTargetNavigation(requestId){var target=document.querySelector("[data-onenote-target-match-current=true]")||document.querySelector("[data-onenote-target-paragraph-current=true]");reportTargetNavigation(targetIntegerAttribute(target,"data-onenote-target-match-index"),targetIntegerAttribute(target,"data-onenote-paragraph-index"),target,requestId);}',
-    'function scrollTargetParagraph(index,paragraphIndex){var matchSelector="[data-onenote-target-match=true]";var paragraphSelector="[data-onenote-target-paragraph=true]";var target=Number.isInteger(index)?document.querySelector("[data-onenote-target-match-index=\\"" + index + "\\"]"):document.querySelector(matchSelector)||document.querySelector(paragraphSelector);if(!target&&Number.isInteger(paragraphIndex))target=document.querySelector("[data-onenote-paragraph-index=\\"" + paragraphIndex + "\\"]");if(!target&&Number.isInteger(index))target=document.querySelector("[data-onenote-target-paragraph-index=\\"" + index + "\\"]");document.querySelectorAll(matchSelector).forEach(function(item){item.removeAttribute("data-onenote-target-match-current");});document.querySelectorAll(paragraphSelector).forEach(function(item){item.removeAttribute("data-onenote-target-paragraph-current");});if(target){if(target.hasAttribute("data-onenote-target-match"))target.setAttribute("data-onenote-target-match-current","true");else target.setAttribute("data-onenote-target-paragraph-current","true");target.scrollIntoView({block:"center"});}requestAnimationFrame(function(){reportTargetNavigation(index,paragraphIndex,target);});}',
-    'window.addEventListener("message",function(event){',
-    'var data=event.data||{};',
-    'if(data.type==="onenote-html-zoom"){document.documentElement.style.zoom=String(data.zoom||1);}',
-    'if(data.type==="onenote-scroll-target-paragraph"){var index=Number.isInteger(data.targetIndex)?data.targetIndex:undefined;var paragraphIndex=Number.isInteger(data.paragraphIndex)?data.paragraphIndex:undefined;clearTargetScrollTimers();scrollTargetParagraph(index,paragraphIndex);targetScrollTimers=[setTimeout(function(){scrollTargetParagraph(index,paragraphIndex);},80),setTimeout(function(){scrollTargetParagraph(index,paragraphIndex);},240)];}',
-    'if(data.type==="onenote-page-find"){runPageFind(data.query);}',
-    'if(data.type==="onenote-page-find-next"&&String(data.query||"")===pageFindQuery){selectPageFind(pageFindIndex+(Number(data.delta)<0?-1:1),true);}',
-    'if(data.type==="onenote-page-find-clear"){clearPageFind();pageFindQuery="";}',
-    'if(data.type==="onenote-main-search"){var source=String(data.source||"");var flags=String(data.flags||"");if(source===mainSearchSource&&flags===mainSearchFlags)selectMainSearch(data.index,data.scroll);else runMainSearch(source,flags,data.index,data.scroll);}',
-    'if(data.type==="onenote-set-target-paragraphs"){setTargetParagraphs(data.paragraphIndexes,data.bibleOccurrences);}',
-    'if(data.type==="onenote-clear-target-paragraphs"){clearTargetParagraphs();}',
-    'if(data.type==="onenote-target-navigation-state-request"){reportCurrentTargetNavigation(String(data.requestId||""));}',
-    '});',
-    'parent.postMessage({type:"onenote-html-ready"},"*");',
-    'window.addEventListener("load",function(){scrollTargetParagraph();setTimeout(scrollTargetParagraph,80);setTimeout(scrollTargetParagraph,240);});',
-    '}());',
-    '</scr' + 'ipt>'
-  ].join('');
-  doc.body.insertAdjacentHTML('beforeend', bridgeScript);
+  const bridgeScript = doc.createElement('script');
+  bridgeScript.src = new URL('/ui/page-frame-bridge.js', location.href).href;
+  bridgeScript.referrerPolicy = 'no-referrer';
+  doc.body.append(bridgeScript);
   return '<!doctype html>\n' + doc.documentElement.outerHTML;
 }
 
@@ -339,27 +287,8 @@ async function loadPageHtmlWithFallback(params, options = {}) {
   }
 }
 
-async function waitForPageHtmlRefresh(params, options = {}) {
-  const deadline = Date.now() + (options.timeoutMs || 45000);
-  while (Date.now() < deadline) {
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    if (options.signal?.aborted) return undefined;
-    try {
-      const result = await api('/api/page-html?' + params.toString(), {
-        timeoutMs:5000,
-        signal:options.signal
-      });
-      if (!result.refreshing) return { ...result, bibleReparsed:true };
-    } catch (error) {
-      if (options.signal?.aborted) return undefined;
-      console.warn(error);
-    }
-  }
-  return undefined;
-}
-
 function postHtmlFrameZoom(frame, percent) {
-  const zoom = Math.max(50, Math.min(200, Number(percent) || 100)) / 100;
+  const zoom = Math.max(50, Math.min(300, Number(percent) || 100)) / 100;
   frame?.contentWindow?.postMessage({ type:'onenote-html-zoom', zoom }, '*');
 }
 

@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="ru" >
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BibleNote — изучение Библии вместе с заметками в OneNote</title>
+<meta name="description" content="BibleNote связывает ваши тетради OneNote с текстом Библии: локальный полнотекстовый поиск, разбор ссылок на стихи, параллельные места и индуктивная разметка. Всё хранится на вашем компьютере.">
+<link rel="icon" href="assets/favicon.ico">
+<link rel="stylesheet" href="assets/styles.css">
+<meta property="og:title" content="BibleNote — изучение Библии вместе с заметками в OneNote">
+<meta property="og:description" content="Локальный индекс тетрадей OneNote, ссылки на стихи, параллельные места и индуктивная разметка текста.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://biblenote.pro/">
+<meta property="og:image" content="https://biblenote.pro/assets/logo.png">
+<script src="assets/site.js"></script>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="index.html"><img src="assets/logo.png" alt="">BibleNote</a>
+    <nav class="nav">
+      <a href="#features">Возможности</a>
+      <a href="docs.html">Документация</a>
+      <a href="download.html">Скачать</a>
+      <a class="nav-extra" href="https://github.com/AlexanderDemko/BibleNote">GitHub</a>
+      <button class="theme-toggle" type="button">Тёмная тема</button>
+    </nav>
+  </div>
+</header>
+
+<main>
+
+<section class="hero">
+  <div class="wrap">
+    <h1>Заметки о Писании — рядом с самим Писанием</h1>
+    <p class="lead">BibleNote читает ваши тетради OneNote, находит в них ссылки на стихи и позволяет открыть нужную запись прямо из текста Библии. Кэш, разметка и поиск работают локально, на вашем компьютере.</p>
+    <div class="btn-row" style="margin-top: 28px;">
+      <a class="btn btn-primary" href="download.html">Скачать для Windows</a>
+      <a class="btn btn-secondary" href="docs.html">Как это работает</a>
+    </div>
+    <p class="meta">Windows 10 и 11 · версия 4.0.51 · открытый исходный код, лицензия MIT</p>
+
+    <div class="verse" style="margin-top: 48px;">
+      <span class="mk mk-time">В начале</span> было <span class="mk mk-key">Слово</span>, и <span class="mk mk-key">Слово</span> было у <span class="mk mk-god">Бога</span>, и <span class="mk mk-key">Слово</span> было <span class="mk mk-god">Бог</span>. Оно было <span class="mk mk-time">в начале</span> у <span class="mk mk-god">Бога</span>.
+    </div>
+    <ul class="legend">
+      <li><span class="swatch" style="background: var(--mark-key-bg)"></span>ключевое слово</li>
+      <li><span class="swatch" style="background: var(--mark-god-bg)"></span>Бог</li>
+      <li><span class="swatch" style="background: var(--mark-time-bg)"></span>время</li>
+      <li><span class="swatch" style="background: var(--mark-place-bg)"></span>место</li>
+      <li><span class="swatch" style="background: var(--mark-contrast-bg)"></span>противопоставление</li>
+    </ul>
+  </div>
+</section>
+
+<section class="section" id="features">
+  <div class="wrap">
+    <div class="section-head">
+      <h2>Что делает программа</h2>
+      <p>Годы заметок в OneNote превращаются в связанный со Священным Писанием справочник, которым можно пользоваться во время чтения.</p>
+    </div>
+
+    <div class="grid grid-3">
+      <article class="card">
+        <h3>Локальный индекс заметок</h3>
+        <p>Полная копия тетрадей OneNote в базе SQLite на вашем диске с полнотекстовым индексом FTS5. Поиск по тысячам страниц отвечает мгновенно и работает без интернета.</p>
+      </article>
+      <article class="card">
+        <h3>Ссылки на стихи</h3>
+        <p>Программа разбирает ссылки на Писание в каждом абзаце заметок и запоминает их. По любому стиху можно найти все страницы, где он упоминается.</p>
+      </article>
+      <article class="card">
+        <h3>Параллельные места</h3>
+        <p>Ссылки, встречающиеся в одном абзаце и рядом друг с другом, связываются между собой с учётом веса. Так из ваших же записей вырастает карта параллельных мест с индексом параллельности.</p>
+      </article>
+      <article class="card">
+        <h3>Индуктивная разметка</h3>
+        <p>Выделите слово или фразу и отметьте её смыслом: ключевое слово, Бог, Христос, Дух Святой, время, место, сравнение, противопоставление, вывод, повеление. Свои стили можно добавить.</p>
+      </article>
+      <article class="card">
+        <h3>Чтение и сравнение переводов</h3>
+        <p>Встроенная читалка открывает главу в основном переводе и позволяет сравнить её ещё с двумя. Наблюдения по главе собираются в отдельную панель и экспортируются.</p>
+      </article>
+      <article class="card">
+        <h3>Доступ для ИИ-агентов</h3>
+        <p>Встроенный MCP-сервер отдаёт кэш заметок ассистентам вроде Claude Code или Codex: поиск, чтение страниц, поиск по библейской ссылке и параллельным местам.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="wrap">
+    <div class="section-head">
+      <h2>Как это выглядит</h2>
+      <p>Слева — ваши тетради и разделы, в центре — текст главы с разметкой, справа — наблюдения и заметки, которые ссылаются на открытые стихи.</p>
+    </div>
+
+    <div class="mock">
+      <div class="mock-bar">
+        <span class="mock-dot"></span><span class="mock-dot"></span><span class="mock-dot"></span>
+        <span class="mock-title">BibleNote — Ин 1</span>
+      </div>
+      <div class="mock-body">
+        <div class="mock-pane">
+          <div class="mock-label">Тетради</div>
+          <ul class="mock-tree">
+            <li>Изучение Библии</li>
+            <li class="lvl2">Евангелия</li>
+            <li class="lvl3">Иоанн · пролог</li>
+            <li class="lvl3">Иоанн · знамения</li>
+            <li class="lvl2">Послания</li>
+            <li>Проповеди</li>
+            <li>Малые группы</li>
+          </ul>
+        </div>
+        <div class="mock-pane">
+          <div class="mock-label">Ин 1:1–3 · Синодальный</div>
+          <div class="mock-verse">
+            <sup class="muted">1</sup> <span class="mk mk-time">В начале</span> было <span class="mk mk-key">Слово</span>, и <span class="mk mk-key">Слово</span> было у <span class="mk mk-god">Бога</span>, и <span class="mk mk-key">Слово</span> было <span class="mk mk-god">Бог</span>.
+            <sup class="muted">2</sup> Оно было <span class="mk mk-time">в начале</span> у <span class="mk mk-god">Бога</span>.
+            <sup class="muted">3</sup> Всё чрез Него начало быть, и без Него ничто не начало быть, что начало быть.
+          </div>
+        </div>
+        <div class="mock-pane">
+          <div class="mock-label">Наблюдения</div>
+          <ul class="mock-note">
+            <li>Ин 1:1 · ключевое слово — «Слово»</li>
+            <li>Ин 1:1 · Бог — 2 упоминания</li>
+            <li>Ин 1:2 · время — «в начале»</li>
+          </ul>
+          <div class="mock-label" style="margin-top: 20px;">Заметки по стиху</div>
+          <ul class="mock-note">
+            <li>Иоанн · пролог — 4 абзаца</li>
+            <li>Проповеди — 1 абзац</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <p class="small muted" style="margin-top: 14px;">Схематичное изображение интерфейса. Реальные снимки экрана добавляются в <code>assets/screenshots</code>.</p>
+  </div>
+</section>
+
+<section class="section" id="privacy-block">
+  <div class="wrap">
+    <div class="section-head">
+      <h2>Данные остаются у вас</h2>
+      <p>У BibleNote нет своего сервера, учётных записей и подписки. Программа работает с вашими файлами на вашем компьютере.</p>
+    </div>
+
+    <ul class="facts prose">
+      <li>
+        <span class="k">Где лежит кэш заметок</span>
+        <span class="v">Файл <code>~/BibleNote/onenote-cache.sqlite</code>. Его можно удалить и пересобрать в любой момент.</span>
+      </li>
+      <li>
+        <span class="k">Где лежит ваша разметка</span>
+        <span class="v">Отдельный файл <code>~/BibleNote/biblenote-user.sqlite</code>, который переживает полное пересоздание кэша.</span>
+      </li>
+      <li>
+        <span class="k">Доступ к OneNote</span>
+        <span class="v">Только на чтение: разрешения <code>Notes.Read.All</code>, <code>User.Read</code> и <code>offline_access</code>. Программа ничего не изменяет в ваших тетрадях.</span>
+      </li>
+      <li>
+        <span class="k">Без учётной записи Microsoft</span>
+        <span class="v">Режим классического OneNote читает открытые на компьютере тетради напрямую, вход в Microsoft при этом не требуется.</span>
+      </li>
+      <li>
+        <span class="k">Телеметрия</span>
+        <span class="v">Программа не отправляет статистику использования и не требует подключения к интернету после синхронизации.</span>
+      </li>
+    </ul>
+  </div>
+</section>
+
+<section class="section">
+  <div class="wrap">
+    <div class="section-head">
+      <h2>С чего начать</h2>
+      <p>От установки до первого поиска по заметкам — четыре шага.</p>
+    </div>
+
+    <ol class="steps">
+      <li>
+        <h4>Установите программу</h4>
+        <p>Установщик для Windows или портативная сборка одним файлом. Отдельно устанавливать .NET или Node не нужно — всё уже внутри.</p>
+        <a href="download.html">Перейти к загрузке</a>
+      </li>
+      <li>
+        <h4>Выберите источник заметок</h4>
+        <p>Microsoft Graph — работает без установленного OneNote и требует входа в учётную запись. Классический OneNote — читает уже открытые тетради через COM, без входа.</p>
+      </li>
+      <li>
+        <h4>Выполните первую синхронизацию</h4>
+        <p>Первый проход скачивает содержимое страниц и потому идёт долго. Дальше работает инкрементальная синхронизация, которая проверяет только изменившиеся разделы.</p>
+      </li>
+      <li>
+        <h4>Изучайте</h4>
+        <p>Ищите по тексту заметок, открывайте страницы по библейской ссылке, читайте главу с разметкой и смотрите параллельные места, собранные из ваших же записей.</p>
+      </li>
+    </ol>
+  </div>
+</section>
+
+<section class="section">
+  <div class="wrap">
+    <div class="grid grid-2">
+      <div>
+        <h2>Ваши заметки — для ИИ-ассистента</h2>
+        <p class="muted">BibleNote содержит MCP-сервер, который открывает локальный кэш заметок совместимым ассистентам. Ассистент ищет по вашим тетрадям и цитирует их, но по-прежнему ничего не изменяет в OneNote.</p>
+        <p class="small muted">Доступны инструменты поиска по кэшу, чтения страницы, поиска страниц по библейской ссылке и подбора параллельных ссылок.</p>
+      </div>
+      <div>
+<pre><code>[mcp_servers.onenote]
+command = "node"
+args = ["C:/.../dist/server.js"]
+startup_timeout_sec = 20
+tool_timeout_sec = 120</code></pre>
+        <p class="small"><a href="docs.html#mcp">Настройка MCP-сервера</a></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="wrap center">
+    <h2>Попробуйте на своих тетрадях</h2>
+    <p class="muted" style="max-width: 520px; margin: 0 auto 24px;">Установка не изменяет ваши заметки: программа только читает их и строит собственный локальный указатель.</p>
+    <div class="btn-row" style="justify-content: center;">
+      <a class="btn btn-primary" href="download.html">Скачать BibleNote 4.0.51</a>
+      <a class="btn btn-secondary" href="docs.html">Документация</a>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="footer-grid">
+      <div>
+        <h4>BibleNote</h4>
+        <p class="small">Программа для изучения Библии вместе с личными заметками в OneNote.</p>
+      </div>
+      <div>
+        <h4>Продукт</h4>
+        <ul>
+          <li><a href="index.html#features">Возможности</a></li>
+          <li><a href="download.html">Скачать</a></li>
+          <li><a href="docs.html">Документация</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Проект</h4>
+        <ul>
+          <li><a href="https://github.com/AlexanderDemko/BibleNote">Исходный код</a></li>
+          <li><a href="https://github.com/AlexanderDemko/BibleNote/issues">Сообщить о проблеме</a></li>
+          <li><a href="terms.html">Лицензия MIT</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Правовое</h4>
+        <ul>
+          <li><a href="privacy.html">Конфиденциальность</a></li>
+          <li><a href="terms.html">Условия использования</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2011–2026 BibleNote</span>
+      <span>Microsoft, OneNote и Windows — товарные знаки Microsoft Corporation.</span>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

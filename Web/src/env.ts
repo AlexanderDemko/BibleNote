@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { defaultBibleNoteDir, migrateLegacyBibleNoteDirSync } from './paths.js';
 
 function existingEnvPaths(): string[] {
+  if (process.env.BIBLENOTE_TEST_ISOLATED === '1') return [];
   migrateLegacyBibleNoteDirSync();
   const paths = [
     process.env.ONENOTE_ENV_FILE,

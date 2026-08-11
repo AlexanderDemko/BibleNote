@@ -11,6 +11,7 @@ html, body { width:100%; height:100%; margin:0; overflow:hidden; background:#3a3
 .pdf-zoom { display:flex; align-items:center; gap:7px; color:#c9c1cf; white-space:nowrap; }
 .pdf-zoom input { width:120px; accent-color:var(--accent); cursor:pointer; }
 .pdf-zoom output { min-width:42px; color:var(--toolbar-ink); font-variant-numeric:tabular-nums; text-align:right; }
+.page-focus-mode .pdf-zoom { display:none; }
 .pdf-toolbar-spacer { flex:1; }
 #viewerContainer { position:absolute; inset:42px 0 0; overflow:auto; outline:none; }
 #viewerContainer:focus-visible { box-shadow:inset 0 0 0 2px var(--accent); }
@@ -26,4 +27,4 @@ html, body { width:100%; height:100%; margin:0; overflow:hidden; background:#3a3
 #error { color:#ff9b9f; }
 #error[hidden], #loading[hidden] { display:none; }
 @media (max-width:720px) { .pdf-zoom > span { display:none; } .pdf-zoom input { width:90px; } }
-@media (max-width:520px) { #fitWidth { font-size:0; } #fitWidth::after { content:attr(data-short-label); font-size:16px; } .pdf-zoom input { width:72px; } }
+@media (max-width:520px) { .pdf-zoom input { width:72px; } }

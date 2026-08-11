@@ -5,7 +5,9 @@ import {
   checkpointCacheDb,
   clearSyncState,
   defaultDbPath,
-  getCachedPage,
+  getCachedPageContent,
+  getCachedPageMetadata,
+  getCachedPageSyncState,
   markMissingPagesDeleted,
   markPageDeleted,
   markPageHtmlParsed,
@@ -31,10 +33,10 @@ import { folderSourcePaths } from './onenote-settings.js';
 import { runtimeLog, runtimeWarning } from './runtime-logging.js';
 import type { SyncOptions, SyncResult } from './sync.js';
 
-function shouldReadFile(cached: ReturnType<typeof getCachedPage>, page: FolderPage, options: SyncOptions): boolean {
+function shouldReadFile(cached: ReturnType<typeof getCachedPageSyncState>, page: FolderPage, options: SyncOptions): boolean {
   if (options.metadataOnly) return false;
   if (options.forceContent) return true;
-  if (!cached?.content_synced_at || cached.content_text == null || !cached.content_html) return true;
+  if (!cached?.content_synced_at || !cached.has_content_text || !cached.has_content_html) return true;
   if (page.links.folder.extractionVersion != null
     && page.cachedExtractionVersion !== page.links.folder.extractionVersion) return true;
   return (cached.content_source_modified_date_time ?? null) !== page.lastModifiedDateTime;
@@ -44,7 +46,7 @@ function countBibleReferences(result: Awaited<ReturnType<typeof parsePageWithBib
   return (result.paragraphs ?? []).reduce((sum, paragraph) => sum + (paragraph.references?.length ?? 0), 0);
 }
 
-function mergeCachedFolderDiagnostics(cached: ReturnType<typeof getCachedPage>, page: FolderPage): void {
+function mergeCachedFolderDiagnostics(cached: ReturnType<typeof getCachedPageMetadata>, page: FolderPage): void {
   if (!cached?.links_json) return;
   try {
     const links = JSON.parse(cached.links_json);
@@ -141,7 +143,7 @@ export async function syncFolderCache(options: SyncOptions = {}): Promise<SyncRe
       for (const group of sectionGroups) upsertSectionGroup(db, group, syncedAt);
       for (const section of sections) upsertSection(db, section, syncedAt);
       for (const page of pages) {
-        mergeCachedFolderDiagnostics(getCachedPage(db, page.id), page);
+        mergeCachedFolderDiagnostics(getCachedPageMetadata(db, page.id), page);
         upsertPageMetadata(db, page, syncedAt);
       }
       for (const section of sections) {
@@ -159,7 +161,7 @@ export async function syncFolderCache(options: SyncOptions = {}): Promise<SyncRe
     options.onProgress?.({ phase:'sections', sections:sections.length, sectionGroups:sectionGroups.length });
     options.onProgress?.({ phase:'pages', pages:pages.length, sectionTotal:sections.length });
 
-    const pagesToRead = pages.filter(page => shouldReadFile(getCachedPage(db, page.id), page, options));
+    const pagesToRead = pages.filter(page => shouldReadFile(getCachedPageSyncState(db, page.id), page, options));
     const contentSkipped = pages.length - pagesToRead.length;
     let contentDownloaded = 0;
     let contentErrors = 0;
@@ -226,23 +228,28 @@ export async function syncFolderCache(options: SyncOptions = {}): Promise<SyncRe
       });
       if (bibleConfig.enabled) {
         const candidates = pages
-          .map(page => getCachedPage(db, page.id))
-          .filter(page => Boolean(page?.content_text && page.content_html && page.content_hash && !page.deleted_at));
+          .map(page => getCachedPageSyncState(db, page.id))
+          .filter((page): page is NonNullable<ReturnType<typeof getCachedPageSyncState>> =>
+            Boolean(page?.has_nonempty_content_text && page.has_content_html && page.content_hash && !page.deleted_at));
         const pagesToParse = candidates.filter(page => shouldParseBibleRefs(
-          db, page!.id, page!.content_hash!, bibleConfig.module, bibleParserVersion, options.forceBibleParse
+          db, page.id, page.content_hash!, bibleConfig.module, bibleParserVersion, options.forceBibleParse
         ));
         bibleRefsParseSkipped = candidates.length - pagesToParse.length;
         options.onProgress?.({
           phase:'bible-parse', bibleParseDone:0, bibleParseTotal:pagesToParse.length,
           bibleParseSkipped:bibleRefsParseSkipped
         });
-        for (const page of pagesToParse) {
+        for (const candidate of pagesToParse) {
+          const page = getCachedPageContent(db, candidate.id);
           try {
+            if (!page?.content_text || !page.content_html || !page.content_hash || page.deleted_at) {
+              throw new Error(`Cached page content is unavailable for Bible parsing: ${candidate.id}`);
+            }
             const result = await parsePageWithBibleNote({
               apiUrl:bibleConfig.apiUrl,
-              pageId:page!.id,
-              title:page!.title,
-              html:page!.content_html,
+              pageId:page.id,
+              title:page.title,
+              html:page.content_html,
               module:bibleConfig.module,
               useCommaDelimiter:bibleConfig.useCommaDelimiter,
               timeoutMs:bibleConfig.timeoutMs,
@@ -250,16 +257,16 @@ export async function syncFolderCache(options: SyncOptions = {}): Promise<SyncRe
             });
             const parsedAt = nowIso();
             if (result.html) {
-              updatePageHtml(db, page!.id, result.html);
-              markPageHtmlParsed(db, page!.id, result.html, result.module || bibleConfig.module, bibleParserVersion, parsedAt);
+              updatePageHtml(db, page.id, result.html);
+              markPageHtmlParsed(db, page.id, result.html, result.module || bibleConfig.module, bibleParserVersion, parsedAt);
             }
-            upsertBibleParseResult(db, page!.id, page!.content_hash!, result, bibleParserVersion, parsedAt);
+            upsertBibleParseResult(db, page.id, page.content_hash, result, bibleParserVersion, parsedAt);
             bibleRefsRecognized += countBibleReferences(result);
             bibleRefsPagesParsed += 1;
           } catch (error) {
             bibleRefsParseErrors += 1;
             setBibleParseError(
-              db, page!.id, page!.content_hash, bibleConfig.module, bibleParserVersion,
+              db, candidate.id, candidate.content_hash, bibleConfig.module, bibleParserVersion,
               error instanceof Error ? error.message : String(error)
             );
           }

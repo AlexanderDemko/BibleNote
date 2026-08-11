@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import * as cheerio from 'cheerio';
 import fs from 'node:fs';
 import http from 'node:http';
 import os from 'node:os';
@@ -49,11 +50,93 @@ test('classic OneNote page XML becomes searchable renderable HTML', () => {
   const html = oneNoteComPageXmlToHtml(xml);
   const text = htmlToText(html);
 
-  assert.match(html, /<table>/);
+  assert.match(html, /<table\b/);
   assert.match(html, /class="onenote-com-page"/);
   assert.match(text, /Троица/);
   assert.match(text, /Иудейская пасха/);
   assert.match(text, /Уникальные черты Бога/);
+});
+
+test('classic OneNote table layout and appearance are preserved', () => {
+  const html = oneNoteComPageXmlToHtml(`<?xml version="1.0"?>
+    <one:Page xmlns:one="http://schemas.microsoft.com/office/onenote/2013/onenote" ID="{page}">
+      <one:Outline><one:OEChildren><one:OE>
+        <one:Table bordersVisible="true" hasHeaderRow="true">
+          <one:Columns>
+            <one:Column index="0" width="40.5"/>
+            <one:Column index="1" width="159.5"/>
+          </one:Columns>
+          <one:Row>
+            <one:Cell shadingColor="#B3B3B3"><one:OEChildren><one:OE><one:T><![CDATA[Number]]></one:T></one:OE></one:OEChildren></one:Cell>
+            <one:Cell shadingColor="#B3B3B3"><one:OEChildren><one:OE><one:T><![CDATA[Details]]></one:T></one:OE></one:OEChildren></one:Cell>
+          </one:Row>
+          <one:Row>
+            <one:Cell><one:OEChildren><one:OE><one:T><![CDATA[1]]></one:T></one:OE></one:OEChildren></one:Cell>
+            <one:Cell><one:OEChildren><one:OE><one:T><![CDATA[Text]]></one:T></one:OE></one:OEChildren></one:Cell>
+          </one:Row>
+        </one:Table>
+      </one:OE></one:OEChildren></one:Outline>
+    </one:Page>`);
+
+  const $ = cheerio.load(html);
+  const table = $('table').first();
+  assert.equal(table.hasClass('onenote-table-fixed'), true);
+  assert.equal(table.hasClass('onenote-table-bordered'), true);
+  assert.equal(table.attr('style'), 'width:400px');
+  assert.deepEqual(table.find('col').map((_, column) => $(column).attr('style')).get(), [
+    'width:20.25%',
+    'width:79.75%'
+  ]);
+  assert.equal(table.find('thead th').length, 2);
+  assert.equal(table.find('thead th').first().attr('style'), 'background-color:#B3B3B3');
+  assert.equal(table.find('tbody td').length, 2);
+});
+
+test('classic OneNote tables keep nested bullets and fit their container', () => {
+  const html = oneNoteComPageXmlToHtml(`<?xml version="1.0"?>
+    <one:Page xmlns:one="http://schemas.microsoft.com/office/onenote/2013/onenote" ID="{page}">
+      <one:QuickStyleDef index="1" name="p" fontColor="automatic" highlightColor="automatic" font="Calibri" fontSize="11.0"/>
+      <one:QuickStyleDef index="2" name="h2" fontColor="#366092" highlightColor="automatic" font="Calibri" fontSize="13.0" bold="true"/>
+      <one:Outline><one:OEChildren><one:OE>
+        <one:Table bordersVisible="true">
+          <one:Columns>
+            <one:Column index="0" width="266.75"/>
+            <one:Column index="1" width="280.25"/>
+          </one:Columns>
+          <one:Row><one:Cell><one:OEChildren><one:OE>
+            <one:T><![CDATA[Acts 1]]></one:T>
+            <one:OEChildren><one:OE quickStyleIndex="1">
+              <one:List><one:Bullet bullet="2" fontSize="11.0"/></one:List>
+              <one:T><![CDATA[Acts 1:5 — disciples will be baptized]]></one:T>
+            </one:OE></one:OEChildren>
+          </one:OE></one:OEChildren></one:Cell></one:Row>
+        </one:Table>
+      </one:OE><one:OEChildren>
+        <one:OE quickStyleIndex="1"><one:List><one:Number text="9."/></one:List><one:T><![CDATA[Девятый]]></one:T></one:OE>
+        <one:OE quickStyleIndex="1"><one:List><one:Number text="10."/></one:List><one:T><![CDATA[Десятый]]></one:T></one:OE>
+        <one:OE quickStyleIndex="1"><one:List><one:Number text="а)"/></one:List><one:T><![CDATA[Подпункт]]></one:T></one:OE>
+      </one:OEChildren><one:OE quickStyleIndex="1"><one:T><![CDATA[]]></one:T></one:OE>
+      <one:OE quickStyleIndex="2"><one:T><![CDATA[Вывод]]></one:T></one:OE></one:OEChildren></one:Outline>
+    </one:Page>`);
+
+  const $ = cheerio.load(html);
+  assert.equal($('.onenote-list-bullet').text(), 'Acts 1:5 — disciples will be baptized');
+  assert.match(html, /\.onenote-paragraph>\.onenote-children\{margin-left:1\.5em\}/);
+  assert.match(html, /\.onenote-list-bullet:before\{content:"•"/);
+  assert.match(html, /\.onenote-table\{border-collapse:collapse;max-width:100%/);
+  assert.match(html, /\.onenote-paragraph:empty\{min-height:1em\}/);
+  assert.match(html, /\.onenote-list-number:before\{content:attr\(data-onenote-number\);[^}]*white-space:nowrap/);
+  assert.deepEqual($('col').map((_, column) => $(column).attr('style')).get(), [
+    `width:${266.75 / 547 * 100}%`,
+    `width:${280.25 / 547 * 100}%`
+  ]);
+  assert.equal($('.onenote-paragraph').filter((_, element) => $(element).text() === 'Вывод').attr('style'),
+    'color:#366092;background-color:transparent;font-family:Calibri;font-size:13pt;font-weight:bold;font-style:normal;text-decoration:none');
+  assert.equal($('.onenote-list-bullet').first().attr('style'),
+    'color:initial;background-color:transparent;font-family:Calibri;font-size:11pt;font-weight:normal;font-style:normal;text-decoration:none');
+  assert.deepEqual($('.onenote-list-number').map((_, element) => $(element).attr('data-onenote-number')).get(), [
+    '9.', '10.', 'а)'
+  ]);
 });
 
 test('unsafe inline markup from OneNote is removed before cached rendering', () => {

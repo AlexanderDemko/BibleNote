@@ -90,10 +90,11 @@ namespace BibleNote.Services.VerseParsing
 
                     if (!this.docParseContext.DocumentId.IsReadonly && !parseString.IsReadonly)
                     {
-                        if (!NodeIsLink(verseNode.NodeEntry.Node.GetParentNode()))
+                        var linkNode = FindParentLink(verseNode.NodeEntry.Node);
+                        if (linkNode == null)
                             InsertVerseLink(verseNode, verseEntry);
                         else
-                            UpdateLinkNode(verseNode.NodeEntry.Node.GetParentNode(), verseEntry);
+                            UpdateLinkNode(linkNode, verseEntry);
                     }
 
                     paragraphContextEditor.ParseResult.VerseEntries.Add(verseEntry);
@@ -128,7 +129,21 @@ namespace BibleNote.Services.VerseParsing
 
         private bool NodeIsLink(IXmlNode node)
         {
-            return node.NodeType == IXmlNodeType.Element && node.Name == "a";
+            return node?.NodeType == IXmlNodeType.Element && node.Name == "a";
+        }
+
+        private IXmlNode FindParentLink(IXmlNode node)
+        {
+            var parentNode = node?.GetParentNode();
+            while (parentNode != null && parentNode.NodeType != IXmlNodeType.Document)
+            {
+                if (NodeIsLink(parentNode))
+                    return parentNode;
+
+                parentNode = parentNode.GetParentNode();
+            }
+
+            return null;
         }
 
         private void InsertVerseLink(VerseInNodeEntry verseInNodeEntry, VerseEntry verseEntry)

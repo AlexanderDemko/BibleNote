@@ -1,3 +1,10 @@
+import {
+  normalizedPdfText,
+  pdfLinkMatchesPage,
+  pdfReferencePattern,
+  preferredPdfLinkMatches
+} from './pdf-link-matching.js';
+
 const params = new URLSearchParams(location.search);
 const pageId = params.get('id') || '';
 const loading = document.getElementById('loading');
@@ -10,7 +17,6 @@ const pageNumber = document.getElementById('pageNumber');
 const pageCount = document.getElementById('pageCount');
 const pdfZoom = document.getElementById('pdfZoom');
 const pdfZoomValue = document.getElementById('pdfZoomValue');
-const fitWidth = document.getElementById('fitWidth');
 
 let pdfViewer;
 let pdfDocument;
@@ -23,16 +29,55 @@ let activeFindKind = '';
 let pageFindQuery = '';
 let requestedZoom = 1;
 let appliedZoom = 1;
-let pageScaleMode = 'page-fit';
 let pdfContext = { bibleLinks:[], targets:[] };
 let targetFallbackTimer;
 let targetSearchToken = 0;
+let targetSearchHasMatches = false;
+let activeTargetKey = '';
 let mainAlignmentTimer;
 let mainSearchRunToken = 0;
+let pendingPageViewState;
 const mainSearch = {
   key:'', source:'', flags:'', mode:'and', originalQuery:'', query:'', entireWord:false,
   desiredIndex:0, count:0, index:-1, startedKey:''
 };
+
+function pageViewState() {
+  return {
+    kind:'pdf',
+    pageNumber:Number(pdfViewer?.currentPageNumber) || Number(pageNumber.value) || 1,
+    zoom:Number(requestedZoom) || 1,
+    scrollTop:Number(viewerContainer.scrollTop) || 0,
+    scrollLeft:Number(viewerContainer.scrollLeft) || 0
+  };
+}
+
+function reportPageViewState(requestId) {
+  parent.postMessage({
+    type:'onenote-page-view-state',
+    requestId:String(requestId || ''),
+    ...pageViewState()
+  }, '*');
+}
+
+function restorePageViewState(state) {
+  if (!state) return;
+  pendingPageViewState = state;
+  if (!pdfViewer || !pdfDocument) return;
+  const targetPage = Math.max(1, Math.min(pdfDocument.numPages, Number(state.pageNumber) || 1));
+  const zoom = Number(state.zoom);
+  const scrollTop = Math.max(0, Number(state.scrollTop) || 0);
+  const scrollLeft = Math.max(0, Number(state.scrollLeft) || 0);
+  if (zoom > 0) applyRelativeZoom(zoom);
+  pdfViewer.currentPageNumber = targetPage;
+  const restore = () => {
+    viewerContainer.scrollTop = scrollTop;
+    viewerContainer.scrollLeft = scrollLeft;
+  };
+  requestAnimationFrame(restore);
+  setTimeout(restore, 80);
+  setTimeout(restore, 240);
+}
 
 function reportPageFind(matchesCount = {}) {
   parent.postMessage({
@@ -145,6 +190,13 @@ function handleFindMatches(matchesCount = {}) {
     reportPageFind(matchesCount);
     return;
   }
+  if (activeFindKind === 'target') {
+    if (Math.max(0, Number(matchesCount.total) || 0) > 0) {
+      targetSearchHasMatches = true;
+      clearTimeout(targetFallbackTimer);
+    }
+    return;
+  }
   if (activeFindKind !== 'main') return;
   const nextCount = Math.max(0, Number(matchesCount.total) || 0);
   const countChanged = nextCount !== mainSearch.count;
@@ -216,82 +268,63 @@ function runMainSearch(data) {
   scheduleMainAlignment();
 }
 
-function normalizedText(value) {
-  return String(value || '')
-    .replace(/[\u00ad\u200b]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-function runTargetSearch(paragraphIndex, targetIndex) {
-  if (activeFindKind === 'main' && mainSearch.key) return;
+function runTargetSearch(paragraphIndex, targetIndex, forceTarget = false) {
+  if (activeFindKind === 'main' && mainSearch.key) {
+    if (!forceTarget) return;
+    ++mainSearchRunToken;
+    clearTimeout(mainAlignmentTimer);
+    mainSearch.key = '';
+    mainSearch.originalQuery = '';
+    mainSearch.query = '';
+    mainSearch.startedKey = '';
+    mainSearch.count = 0;
+    mainSearch.index = -1;
+    dispatchFind('');
+    reportMainSearch();
+  }
   const targets = Array.isArray(pdfContext.targets) ? pdfContext.targets : [];
   const matching = targets.filter(target => Number(target?.paragraphIndex) === Number(paragraphIndex));
   const target = targets[Number(targetIndex)] || matching[0];
   if (!target) return;
-  const primary = normalizedText(target.highlightText || target.query);
-  const fallback = normalizedText(target.query);
+  const primary = normalizedPdfText(target.query || target.highlightText);
+  const fallback = normalizedPdfText(target.highlightText);
   if (!primary && !fallback) return;
+  const targetKey = JSON.stringify({ paragraphIndex, targetIndex, primary, fallback });
+  if (activeFindKind === 'target' && activeTargetKey === targetKey && targetSearchHasMatches) return;
   clearTimeout(targetFallbackTimer);
   const token = ++targetSearchToken;
+  targetSearchHasMatches = false;
+  activeTargetKey = targetKey;
   activeFindKind = 'target';
   dispatchFind(primary || fallback, { entireWord:false });
   if (fallback && fallback !== primary) {
     targetFallbackTimer = setTimeout(() => {
-      if (token !== targetSearchToken || activeFindKind !== 'target') return;
+      if (token !== targetSearchToken || activeFindKind !== 'target' || targetSearchHasMatches) return;
       dispatchFind(fallback, { entireWord:false });
-    }, 1600);
+    }, 900);
   }
 }
 
-function applyRelativeZoom(zoom) {
-  requestedZoom = Math.max(0.5, Math.min(2, Number(zoom) || 1));
+function applyRelativeZoom(zoom, notifyParent = false) {
+  requestedZoom = Math.max(0.5, Math.min(3, Number(zoom) || 1));
   const zoomPercent = Math.round(requestedZoom * 100);
   pdfZoom.value = String(zoomPercent);
   pdfZoomValue.value = zoomPercent + '%';
   pdfZoomValue.textContent = pdfZoomValue.value;
+  if (notifyParent) parent.postMessage({ type:'onenote-page-zoom-change', percent:zoomPercent }, '*');
   if (!pdfViewer?.pagesCount) return;
   pdfViewer.currentScale = pdfViewer.currentScale * (requestedZoom / appliedZoom);
   appliedZoom = requestedZoom;
 }
 
-function setPageScaleMode(mode, resetZoom = true) {
-  pageScaleMode = mode === 'page-width' ? 'page-width' : 'page-fit';
-  if (pdfViewer?.pagesCount) pdfViewer.currentScaleValue = pageScaleMode;
+function initializePageScale(resetZoom = true) {
+  if (pdfViewer?.pagesCount) pdfViewer.currentScaleValue = 'page-fit';
   appliedZoom = 1;
   if (resetZoom) requestedZoom = 1;
   const zoomPercent = Math.round(requestedZoom * 100);
   pdfZoom.value = String(zoomPercent);
   pdfZoomValue.value = zoomPercent + '%';
   pdfZoomValue.textContent = pdfZoomValue.value;
-  const widthMode = pageScaleMode === 'page-width';
-  fitWidth.textContent = widthMode ? 'Страница целиком' : 'По ширине';
-  fitWidth.title = widthMode ? 'Показать страницу целиком' : 'Показать страницу по ширине';
-  fitWidth.setAttribute('aria-label', fitWidth.title);
-  fitWidth.setAttribute('aria-pressed', String(widthMode));
-  fitWidth.dataset.shortLabel = widthMode ? '↕' : '↔';
-}
-
-function referencePattern(value) {
-  const text = normalizedText(value);
-  if (!text) return undefined;
-  let source = '';
-  for (const character of text) {
-    if (/\s/u.test(character)) {
-      source += '\\s*';
-    } else if (/[:：,]/u.test(character)) {
-      source += '\\s*[:：,]\\s*';
-    } else if (/[-‐‑‒–—]/u.test(character)) {
-      source += '\\s*[-‐‑‒–—]\\s*';
-    } else {
-      source += character.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    }
-  }
-  try {
-    return new RegExp(source, 'giu');
-  } catch {
-    return undefined;
-  }
 }
 
 function mappedTextLayer(layer) {
@@ -375,8 +408,10 @@ function applyBibleLinksToLayer(layer) {
   const page = layer?.closest('.page');
   if (!page) return;
   page.querySelector(':scope > .pdf-bible-link-layer')?.remove();
+  const renderedPageNumber = Number(page.dataset.pageNumber);
   const links = (Array.isArray(pdfContext.bibleLinks) ? pdfContext.bibleLinks : [])
-    .filter(link => link?.text && link?.href)
+    .filter(link => link?.text && link?.href
+      && pdfLinkMatchesPage(link.pageNumber, renderedPageNumber))
     .sort((left, right) => String(right.text).length - String(left.text).length);
   if (links.length === 0) return;
   const mapped = mappedTextLayer(layer);
@@ -386,14 +421,17 @@ function applyBibleLinksToLayer(layer) {
   overlay.setAttribute('aria-label', 'Библейские ссылки');
   const occupied = [];
   for (const link of links) {
-    const pattern = referencePattern(link.text);
+    const pattern = pdfReferencePattern(link.text);
     if (!pattern) continue;
-    for (const match of mapped.text.matchAll(pattern)) {
+    const matches = [...mapped.text.matchAll(pattern)];
+    const preferred = preferredPdfLinkMatches(matches, link.occurrenceIndex);
+    for (const match of preferred.matches) {
       const start = Number(match.index) || 0;
       const end = start + match[0].length;
       if (occupied.some(range => start < range.end && end > range.start)) continue;
       occupied.push({ start, end });
       addBibleLinkRect(layer, overlay, match, link, mapped.positions);
+      if (preferred.occurrenceSpecific) break;
     }
   }
   if (overlay.childElementCount > 0) page.append(overlay);
@@ -406,6 +444,9 @@ function refreshBibleLinks() {
 window.addEventListener('message', event => {
   const data = event.data || {};
   if (data.type === 'onenote-html-zoom') applyRelativeZoom(data.zoom);
+  if (data.type === 'onenote-page-focus-mode') {
+    document.documentElement.classList.toggle('page-focus-mode', Boolean(data.enabled));
+  }
   if (data.type === 'onenote-page-find') runPageFind(data.query);
   if (data.type === 'onenote-page-find-next' && String(data.query || '') === pageFindQuery) {
     runPageFind(pageFindQuery, true, Number(data.delta) < 0);
@@ -420,13 +461,20 @@ window.addEventListener('message', event => {
     refreshBibleLinks();
   }
   if (data.type === 'onenote-scroll-target-paragraph') {
-    runTargetSearch(data.paragraphIndex, data.targetIndex);
+    runTargetSearch(data.paragraphIndex, data.targetIndex, data.forceTarget === true);
   }
   if (data.type === 'onenote-clear-target-paragraphs' && activeFindKind === 'target') {
     ++targetSearchToken;
     clearTimeout(targetFallbackTimer);
     dispatchFind('');
     activeFindKind = '';
+    activeTargetKey = '';
+  }
+  if (data.type === 'onenote-page-view-state-request') {
+    reportPageViewState(data.requestId);
+  }
+  if (data.type === 'onenote-page-view-state-restore') {
+    restorePageViewState(data.state);
   }
 });
 
@@ -436,6 +484,17 @@ window.addEventListener('keydown', event => {
     parent.postMessage({ type:'onenote-page-find-open' }, '*');
   }
 });
+
+window.addEventListener('wheel', event => {
+  if (!event.ctrlKey || event.altKey || !event.deltaY) return;
+  event.preventDefault();
+  const delta = event.deltaMode === WheelEvent.DOM_DELTA_LINE
+    ? event.deltaY * 16
+    : event.deltaMode === WheelEvent.DOM_DELTA_PAGE
+      ? event.deltaY * innerHeight
+      : event.deltaY;
+  applyRelativeZoom(requestedZoom * Math.exp(-delta * 0.0025), true);
+}, { passive:false });
 
 try {
   if (!pageId) throw new Error('Не указан документ PDF.');
@@ -458,8 +517,9 @@ try {
   });
   linkService.setViewer(pdfViewer);
   eventBus.on('pagesinit', () => {
-    setPageScaleMode('page-fit', false);
+    initializePageScale(false);
     applyRelativeZoom(requestedZoom);
+    if (pendingPageViewState) restorePageViewState(pendingPageViewState);
     loading.hidden = true;
     parent.postMessage({ type:'onenote-html-ready' }, '*');
   });
@@ -489,10 +549,7 @@ try {
     const target = Math.max(1, Math.min(pdfViewer.pagesCount, Number(pageNumber.value) || 1));
     pdfViewer.currentPageNumber = target;
   });
-  pdfZoom.addEventListener('input', () => applyRelativeZoom(Number(pdfZoom.value) / 100));
-  fitWidth.addEventListener('click', () => {
-    setPageScaleMode(pageScaleMode === 'page-width' ? 'page-fit' : 'page-width');
-  });
+  pdfZoom.addEventListener('input', () => applyRelativeZoom(Number(pdfZoom.value) / 100, true));
   const loadingTask = pdfjsLib.getDocument({ url:'/api/page-pdf?id=' + encodeURIComponent(pageId) });
   pdfDocument = await loadingTask.promise;
   pageNumber.max = String(pdfDocument.numPages);

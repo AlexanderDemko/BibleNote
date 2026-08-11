@@ -444,6 +444,8 @@ function rerunSearch() {
   activeSearchQuery = query;
   if (query) renderSearch(query).catch(showError);
   else {
+    activeSearchAbortController?.abort();
+    activeSearchAbortController = undefined;
     renderNotesList().catch(showError);
     updateOpenPageSearchMatches(null, '');
   }

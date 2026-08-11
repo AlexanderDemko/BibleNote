@@ -3,12 +3,14 @@ import { execFile } from 'node:child_process';
 import os from 'node:os';
 import path from 'node:path';
 import * as cheerio from 'cheerio';
+import JSZip from 'jszip';
 import mammoth from 'mammoth';
 import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs';
 import { htmlToText } from './html.js';
 
 export const folderSourceExtensions = new Set(['.html', '.htm', '.txt', '.doc', '.docx', '.pdf']);
-export const pdfExtractionVersion = 3;
+export const pdfExtractionVersion = 4;
+export const wordExtractionVersion = 1;
 
 export type FolderExtractionQuality = 'textual' | 'heuristic' | 'requires_ocr';
 
@@ -177,6 +179,324 @@ function safeDocumentHtml(rawHtml: string, title: string): string {
   return $.html();
 }
 
+type WordRunMetadata = {
+  text: string;
+  color?: string;
+};
+
+type WordParagraphLayout = {
+  start?: number;
+  end?: number;
+  firstLine?: number;
+  hanging?: number;
+  before?: number;
+  after?: number;
+  alignment?: string;
+  fontSize?: number;
+  bold?: boolean;
+};
+
+type WordParagraphMetadata = {
+  text: string;
+  styleName: string;
+  directNumId?: string;
+  layout: WordParagraphLayout;
+  runs: WordRunMetadata[];
+};
+
+type WordStyleMetadata = {
+  basedOn?: string;
+  name: string;
+  paragraph: WordParagraphLayout;
+  run: Pick<WordParagraphLayout, 'fontSize' | 'bold'> & { color?: string };
+};
+
+function wordXmlChild($: cheerio.CheerioAPI, element: any, name: string): cheerio.Cheerio<any> {
+  return $(element).children(`w\\:${name}`).first();
+}
+
+function wordXmlValue(element: cheerio.Cheerio<any>, name = 'w:val'): string | undefined {
+  const value = element.attr(name) ?? element.attr(name.replace(/^w:/, ''));
+  return value == null || value === '' ? undefined : value;
+}
+
+function wordXmlNumber(value: string | undefined): number | undefined {
+  if (value == null || !/^-?\d+(?:\.\d+)?$/u.test(value)) return undefined;
+  const numberValue = Number(value);
+  return Number.isFinite(numberValue) ? numberValue : undefined;
+}
+
+function wordBooleanProperty(element: cheerio.Cheerio<any>): boolean | undefined {
+  if (!element.length) return undefined;
+  const value = wordXmlValue(element);
+  return value == null || !['0', 'false', 'off', 'none'].includes(value.toLocaleLowerCase('en-US'));
+}
+
+function mergeDefined<T extends object>(base: T, override: Partial<T>): T {
+  const result = { ...base };
+  for (const [key, value] of Object.entries(override)) {
+    if (value !== undefined) (result as Record<string, unknown>)[key] = value;
+  }
+  return result;
+}
+
+function readWordParagraphLayout($: cheerio.CheerioAPI, properties: cheerio.Cheerio<any>): WordParagraphLayout {
+  if (!properties.length) return {};
+  const indentation = properties.children('w\\:ind').first();
+  const spacing = properties.children('w\\:spacing').first();
+  const runProperties = properties.children('w\\:rPr').first();
+  const fontSize = wordXmlNumber(wordXmlValue(runProperties.children('w\\:sz').first()));
+  return {
+    start:wordXmlNumber(indentation.attr('w:start') ?? indentation.attr('w:left')),
+    end:wordXmlNumber(indentation.attr('w:end') ?? indentation.attr('w:right')),
+    firstLine:wordXmlNumber(indentation.attr('w:firstLine')),
+    hanging:wordXmlNumber(indentation.attr('w:hanging')),
+    before:wordXmlNumber(spacing.attr('w:before')),
+    after:wordXmlNumber(spacing.attr('w:after')),
+    alignment:wordXmlValue(properties.children('w\\:jc').first()),
+    fontSize:fontSize == null ? undefined : fontSize / 2,
+    bold:wordBooleanProperty(runProperties.children('w\\:b').first())
+  };
+}
+
+function readWordRunStyle($: cheerio.CheerioAPI, properties: cheerio.Cheerio<any>): WordStyleMetadata['run'] {
+  if (!properties.length) return {};
+  const fontSize = wordXmlNumber(wordXmlValue(properties.children('w\\:sz').first()));
+  const rawColor = wordXmlValue(properties.children('w\\:color').first());
+  const color = rawColor && /^[0-9a-f]{6}$/iu.test(rawColor) ? rawColor.toUpperCase() : undefined;
+  return {
+    color,
+    fontSize:fontSize == null ? undefined : fontSize / 2,
+    bold:wordBooleanProperty(properties.children('w\\:b').first())
+  };
+}
+
+function wordParagraphText($: cheerio.CheerioAPI, paragraph: any): string {
+  return $(paragraph).find('w\\:t,w\\:tab,w\\:br').toArray()
+    .filter(element => $(element).parents('w\\:p').first().get(0) === paragraph)
+    .map(element => {
+      const name = String((element as any).tagName || (element as any).name || '').replace(/^.*:/u, '');
+      return name === 't' ? $(element).text() : name === 'tab' ? '\t' : '\n';
+    }).join('');
+}
+
+async function readWordDocumentMetadata(buffer: Buffer): Promise<WordParagraphMetadata[]> {
+  const zip = await JSZip.loadAsync(buffer);
+  const documentSource = await zip.file('word/document.xml')?.async('text');
+  if (!documentSource) return [];
+  const stylesSource = await zip.file('word/styles.xml')?.async('text');
+  const $document = cheerio.load(documentSource, { xmlMode:true });
+  const $styles = cheerio.load(stylesSource || '<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"/>', { xmlMode:true });
+  const styles = new Map<string, WordStyleMetadata>();
+  $styles('w\\:style').each((_, element) => {
+    const style = $styles(element);
+    const styleId = style.attr('w:styleId') ?? style.attr('styleId');
+    if (!styleId) return;
+    styles.set(styleId, {
+      basedOn:wordXmlValue(style.children('w\\:basedOn').first()),
+      name:wordXmlValue(style.children('w\\:name').first()) || '',
+      paragraph:readWordParagraphLayout($styles, style.children('w\\:pPr').first()),
+      run:readWordRunStyle($styles, style.children('w\\:rPr').first())
+    });
+  });
+  const resolvedStyles = new Map<string, WordStyleMetadata>();
+  const resolveStyle = (styleId: string | undefined, active = new Set<string>()): WordStyleMetadata => {
+    if (!styleId) return { name:'', paragraph:{}, run:{} };
+    const cached = resolvedStyles.get(styleId);
+    if (cached) return cached;
+    const own = styles.get(styleId);
+    if (!own || active.has(styleId)) return own || { name:'', paragraph:{}, run:{} };
+    active.add(styleId);
+    const parent = resolveStyle(own.basedOn, active);
+    active.delete(styleId);
+    const resolved = {
+      basedOn:own.basedOn,
+      name:own.name || parent.name,
+      paragraph:mergeDefined(parent.paragraph, own.paragraph),
+      run:mergeDefined(parent.run, own.run)
+    };
+    resolvedStyles.set(styleId, resolved);
+    return resolved;
+  };
+  const docDefaults = readWordRunStyle(
+    $styles,
+    $styles('w\\:docDefaults').first().find('w\\:rPrDefault > w\\:rPr').first()
+  );
+
+  return $document('w\\:p').toArray().map(paragraph => {
+    const paragraphProperties = wordXmlChild($document, paragraph, 'pPr');
+    const styleId = wordXmlValue(paragraphProperties.children('w\\:pStyle').first());
+    const paragraphStyle = resolveStyle(styleId);
+    const layout = mergeDefined(paragraphStyle.paragraph, readWordParagraphLayout($document, paragraphProperties));
+    const directNumId = wordXmlValue(paragraphProperties.children('w\\:numPr').first().children('w\\:numId').first());
+    const runs = $document(paragraph).find('w\\:r').toArray()
+      .filter(run => $document(run).parents('w\\:p').first().get(0) === paragraph)
+      .map(run => {
+        const runProperties = wordXmlChild($document, run, 'rPr');
+        const runStyleId = wordXmlValue(runProperties.children('w\\:rStyle').first());
+        const inheritedRun = mergeDefined(docDefaults, mergeDefined(paragraphStyle.run, resolveStyle(runStyleId).run));
+        const runStyle = mergeDefined(inheritedRun, readWordRunStyle($document, runProperties));
+        return {
+          text:$document(run).find('w\\:t').toArray().map(textNode => $document(textNode).text()).join(''),
+          color:runStyle.color
+        };
+      });
+    return {
+      text:wordParagraphText($document, paragraph),
+      styleName:paragraphStyle.name,
+      directNumId,
+      layout:mergeDefined(layout, paragraphStyle.run),
+      runs
+    };
+  });
+}
+
+function wordElementText(element: any): string {
+  if (element?.type === 'text') return String(element.value || '');
+  if (element?.type === 'tab') return '\t';
+  return Array.isArray(element?.children) ? element.children.map(wordElementText).join('') : '';
+}
+
+function wordPoints(twips: number): string {
+  return `${Math.round((twips / 20) * 100) / 100}pt`;
+}
+
+function wordParagraphCss(layout: WordParagraphLayout): string {
+  const declarations: string[] = [];
+  const alignment = { both:'justify', distribute:'justify' }[layout.alignment || ''] || layout.alignment;
+  if (['left', 'right', 'center', 'justify'].includes(alignment || '')) declarations.push(`text-align:${alignment}`);
+  if (layout.start) declarations.push(`margin-left:${wordPoints(layout.start)}`);
+  if (layout.end) declarations.push(`margin-right:${wordPoints(layout.end)}`);
+  if (layout.firstLine) declarations.push(`text-indent:${wordPoints(layout.firstLine)}`);
+  else if (layout.hanging) declarations.push(`text-indent:-${wordPoints(layout.hanging)}`);
+  if (layout.before != null) declarations.push(`margin-top:${wordPoints(layout.before)}`);
+  if (layout.after != null) declarations.push(`margin-bottom:${wordPoints(layout.after)}`);
+  if (layout.fontSize) declarations.push(`font-size:${layout.fontSize}pt`);
+  if (layout.bold) declarations.push('font-weight:700');
+  return declarations.join(';');
+}
+
+function wordHeadingTag(styleName: string): string {
+  const match = /^heading\s+([1-6])$/iu.exec(styleName.trim());
+  return match ? `h${match[1]}` : 'p';
+}
+
+function wordContinuationPath(level: number): string {
+  return Array.from({ length:level + 1 }, () => 'ol|ul > li').join(' > ')
+    + ' > p.bn-word-list-continuation:fresh';
+}
+
+function createWordDocumentTransform(metadata: WordParagraphMetadata[], styleMap: string[]): (document: any) => any {
+  let paragraphIndex = 0;
+  const styleRules = new Map<string, string>();
+  const listIndents: number[] = [];
+  const ensureRule = (key: string, rule: string): string => {
+    const existing = styleRules.get(key);
+    if (existing) return existing;
+    const styleId = `BibleNoteWord${styleRules.size + 1}`;
+    styleRules.set(key, styleId);
+    styleMap.push(rule.replace('{styleId}', styleId));
+    return styleId;
+  };
+  const transformParagraphChildren = (element: any, paragraph: WordParagraphMetadata): any[] => {
+    let runIndex = 0;
+    const visit = (child: any): any => {
+      if (child?.type === 'run') {
+        const runText = wordElementText(child);
+        let matchIndex = paragraph.runs.findIndex((run, index) => index >= runIndex && index < runIndex + 8 && run.text === runText);
+        if (matchIndex < 0) matchIndex = runIndex;
+        const sourceRun = paragraph.runs[matchIndex];
+        runIndex = Math.min(paragraph.runs.length, matchIndex + 1);
+        const transformed = Array.isArray(child.children)
+          ? { ...child, children:child.children.map(visit) }
+          : child;
+        if (!sourceRun?.color) return transformed;
+        const styleId = ensureRule(
+          `color:${sourceRun.color}`,
+          `r.{styleId} => span[style='color:#${sourceRun.color}']`
+        );
+        return { ...transformed, styleId };
+      }
+      return Array.isArray(child?.children) ? { ...child, children:child.children.map(visit) } : child;
+    };
+    return (element.children || []).map(visit);
+  };
+  const visit = (element: any): any => {
+    if (element?.type === 'paragraph') {
+      const elementText = wordElementText(element).replace(/\s+/gu, ' ').trim();
+      let matchingIndex = metadata.findIndex((paragraph, index) =>
+        index >= paragraphIndex && paragraph.text.replace(/\s+/gu, ' ').trim() === elementText
+      );
+      if (matchingIndex < 0) matchingIndex = paragraphIndex;
+      const paragraph = metadata[matchingIndex] || { text:'', styleName:'', layout:{}, runs:[] };
+      paragraphIndex = Math.min(metadata.length, matchingIndex + 1);
+      let transformed = { ...element, children:transformParagraphChildren(element, paragraph) };
+      const start = Number(paragraph.layout.start);
+      if (element.numbering) {
+        let level = Number(element.numbering.level) || 0;
+        if (Number.isFinite(start) && start > 0) {
+          const matchingLevel = listIndents.findIndex(indent => Math.abs(indent - start) <= 20);
+          if (matchingLevel >= 0) {
+            listIndents.splice(matchingLevel + 1);
+            level = matchingLevel;
+          } else if (listIndents.length === 0 || start > listIndents[listIndents.length - 1] + 20) {
+            listIndents.push(start);
+            level = listIndents.length - 1;
+          } else {
+            while (listIndents.length > 0 && start < listIndents[listIndents.length - 1] - 20) listIndents.pop();
+            if (listIndents.length === 0) listIndents.push(start);
+            else listIndents[listIndents.length - 1] = start;
+            level = listIndents.length - 1;
+          }
+        }
+        transformed = { ...transformed, numbering:{ ...element.numbering, level } };
+        return transformed;
+      }
+      if (paragraph.directNumId === '0' && Number.isFinite(start) && start > 0) {
+        const level = listIndents.findIndex(indent => Math.abs(indent - start) <= 20);
+        if (level >= 0) {
+          const styleId = ensureRule(
+            `continuation:${level}`,
+            `p.{styleId} => ${wordContinuationPath(level)}`
+          );
+          return { ...transformed, styleId };
+        }
+      }
+      if (paragraph.text.trim()) listIndents.splice(0);
+      const css = wordParagraphCss(paragraph.layout);
+      if (!css) return transformed;
+      const tag = wordHeadingTag(paragraph.styleName);
+      const styleId = ensureRule(
+        `paragraph:${tag}:${css}`,
+        `p.{styleId} => ${tag}[style='${css}']:fresh`
+      );
+      return { ...transformed, styleId };
+    }
+    return Array.isArray(element?.children) ? { ...element, children:element.children.map(visit) } : element;
+  };
+  return visit;
+}
+
+function addWordDocumentStyles(html: string): string {
+  const $ = cheerio.load(html);
+  $('head').append('<style data-biblenote-word>ol ol{list-style-type:lower-alpha}ol ol ol{list-style-type:lower-roman}.bn-word-list-continuation{margin:.35em 0 .7em}</style>');
+  return $.html();
+}
+
+async function convertWordDocument(docxPath: string, title: string): Promise<{ html: string; messages: Array<{ message: string }> }> {
+  const buffer = await fs.readFile(docxPath);
+  const metadata = await readWordDocumentMetadata(buffer);
+  const styleMap: string[] = [];
+  const result = await mammoth.convertToHtml(
+    { buffer },
+    { styleMap, transformDocument:createWordDocumentTransform(metadata, styleMap) }
+  );
+  return {
+    html:addWordDocumentStyles(safeDocumentHtml(result.value, title)),
+    messages:result.messages
+  };
+}
+
 type TextTreeNode = { text?: string; children: TextTreeNode[] };
 
 function plainTextToHtml(text: string, title: string): string {
@@ -335,6 +655,7 @@ function pdfReadingOrderLines(lines: PdfLine[], pageWidth: number): PdfLine[] {
 function pdfParagraphs(lines: PdfLine[]): string[] {
   if (lines.length === 0) return [];
   const typicalHeight = Math.max(1, median(lines.map(line => line.height)));
+  const paragraphIndent = Math.max(3, typicalHeight * 0.55);
   const paragraphs: string[] = [];
   let current = '';
   let previous: PdfLine | undefined;
@@ -342,9 +663,13 @@ function pdfParagraphs(lines: PdfLine[]): string[] {
     const text = pdfLineText(line);
     if (!text) continue;
     const verticalGap = previous ? previous.y - line.y : 0;
+    const indentation = previous
+      ? pdfLineBounds(line).start - pdfLineBounds(previous).start
+      : 0;
     const beginsParagraph = Boolean(previous && (
       verticalGap > Math.max(6, typicalHeight * 1.55)
       || line.y - previous.y > Math.max(6, typicalHeight * 1.55)
+      || indentation > paragraphIndent
     ));
     if (beginsParagraph && current) {
       paragraphs.push(current.trim());
@@ -444,8 +769,8 @@ export async function extractFolderFile(filePath: string, options: FolderExtract
         docxPath = path.join(temporaryDirectory, `${path.basename(filePath, extension)}.docx`);
         await (options.legacyDocConverter ?? convertLegacyDocWithWordCom)(filePath, docxPath);
       }
-      const result = await mammoth.convertToHtml({ path:docxPath });
-      const html = safeDocumentHtml(result.value, title);
+      const result = await convertWordDocument(docxPath, title);
+      const html = result.html;
       return {
         format:extension === '.doc' ? 'doc' : 'docx',
         html,

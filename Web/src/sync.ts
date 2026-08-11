@@ -10,7 +10,9 @@ import {
   checkpointCacheDb,
   clearSyncState,
   defaultDbPath,
-  getCachedPage,
+  getCachedPageContent,
+  getCachedPageMetadata,
+  getCachedPageSyncState,
   getSyncState,
   listCachedPagesForBibleParse,
   listCachedPagesNeedingBibleParse,
@@ -40,7 +42,7 @@ import {
   upsertSection,
   upsertSectionGroup
 } from './cache.js';
-import type { PageRow, SectionRow } from './cache.js';
+import type { CachedPageMetadata, CachedPageSyncState, PageRow, SectionRow } from './cache.js';
 import { graphJson, graphListAll, graphText, setGraphRetryObserver } from './graph.js';
 import { configuredDataSources, folderPathsForSource, type ConfiguredDataSource, type OneNoteDataSource } from './onenote-settings.js';
 import { syncOneNoteComCache } from './sync-com.js';
@@ -338,7 +340,7 @@ export async function reparseCachedBibleReferences(options: SyncOptions = {}): P
 }
 
 export function shouldRefreshContent(
-  cached: ReturnType<typeof getCachedPage>,
+  cached: CachedPageSyncState | PageRow | undefined,
   page: Page,
   options: SyncOptions,
   nowMs = Date.now()
@@ -356,7 +358,10 @@ export function shouldRefreshContent(
     }
   }
   if (!cached.content_synced_at) return true;
-  if (!cached.content_html) return true;
+  const hasContentHtml = 'has_content_html' in cached
+    ? Boolean(cached.has_content_html)
+    : Boolean(cached.content_html);
+  if (!hasContentHtml) return true;
   if ((cached.content_source_modified_date_time ?? null) !== (page.lastModifiedDateTime ?? null)) return true;
 
   const refreshOlderThanHours = options.refreshOlderThanHours ?? 0;
@@ -369,7 +374,7 @@ export function shouldRefreshContent(
 }
 
 export function shouldRefreshRecentlyOpenedContent(
-  cached: PageRow | undefined,
+  cached: CachedPageMetadata | undefined,
   openedAt: string,
   maxContentAgeHours = defaultRecentlyOpenedRefreshHours,
   nowMs = Date.now()
@@ -404,19 +409,19 @@ export function isTerminalPageFetchError(error: unknown): boolean {
     || message.includes('"code":"20102"');
 }
 
-function retryAfterForPageFetchError(page: PageRow | undefined, failedAt: string): string {
+function retryAfterForPageFetchError(page: CachedPageMetadata | undefined, failedAt: string): string {
   const previousErrors = Math.max(0, page?.fetch_error_count ?? 0);
   const delayHours = Math.min(24 * 7, 2 ** Math.min(previousErrors, 8));
   return new Date(new Date(failedAt).getTime() + delayHours * 60 * 60 * 1000).toISOString();
 }
 
-function shouldRetryCachedFetchError(page: PageRow, nowMs = Date.now()): boolean {
+function shouldRetryCachedFetchError(page: CachedPageMetadata, nowMs = Date.now()): boolean {
   if (!page.fetch_error || page.fetch_error_terminal === 1) return false;
   if (!page.fetch_retry_after) return true;
   return new Date(page.fetch_retry_after).getTime() <= nowMs;
 }
 
-function cachedRowToPage(page: PageRow): Page {
+function cachedRowToPage(page: CachedPageMetadata): Page {
   return {
     id: page.id,
     title: page.title ?? undefined,
@@ -902,11 +907,11 @@ async function syncGraphCache(options: SyncOptions = {}): Promise<SyncResult> {
   let deletedPagesMarked = 0;
 
   if (targetedPage) {
-    const cachedTargetPage = getCachedPage(db, targetedPage.id);
+    const cachedTargetPage = getCachedPageSyncState(db, targetedPage.id);
     targetedPage.orderIndex = cachedTargetPage?.order_index
       ?? (Number.isFinite(targetedPage.order) ? Number(targetedPage.order) : undefined);
     seenPageIds.add(targetedPage.id);
-    if (shouldRefreshContent(getCachedPage(db, targetedPage.id), targetedPage, options)) {
+    if (shouldRefreshContent(cachedTargetPage, targetedPage, options)) {
       pagesNeedingContent.add(targetedPage.id);
     }
     upsertPageMetadata(db, targetedPage, syncedAt);
@@ -947,8 +952,9 @@ async function syncGraphCache(options: SyncOptions = {}): Promise<SyncResult> {
       assignOneNotePageOrder(items);
       for (const page of items) {
         seenPageIds.add(page.id);
+        const cachedPage = getCachedPageSyncState(db, page.id);
         if (changedSectionIds.has(section.id)
-          || shouldRefreshContent(getCachedPage(db, page.id), page, options)) {
+          || shouldRefreshContent(cachedPage, page, options)) {
           pagesNeedingContent.add(page.id);
         }
         upsertPageMetadata(db, page, syncedAt);
@@ -996,7 +1002,7 @@ async function syncGraphCache(options: SyncOptions = {}): Promise<SyncResult> {
     recentlyOpened:0,
     rolling:0
   };
-  const addCachedContentCandidate = (cachedPage: PageRow, reason: keyof typeof supplementalContentCandidates): boolean => {
+  const addCachedContentCandidate = (cachedPage: CachedPageMetadata, reason: keyof typeof supplementalContentCandidates): boolean => {
     if (pageIds.has(cachedPage.id)) {
       pagesNeedingContent.add(cachedPage.id);
       return false;
@@ -1030,7 +1036,7 @@ async function syncGraphCache(options: SyncOptions = {}): Promise<SyncResult> {
     let recentlyOpenedAdded = 0;
     for (const access of listPageAccess(db)) {
       if (recentlyOpenedAdded >= 25 || (maxPages && pages.length >= maxPages)) break;
-      const cachedPage = getCachedPage(db, access.page_id);
+      const cachedPage = getCachedPageMetadata(db, access.page_id);
       if (selectedNotebookIdSet && (!cachedPage?.parent_notebook_id || !selectedNotebookIdSet.has(cachedPage.parent_notebook_id))) continue;
       if (!shouldRefreshRecentlyOpenedContent(cachedPage, access.last_opened_at, recentlyOpenedRefreshHours)) continue;
       if (cachedPage && addCachedContentCandidate(cachedPage, 'recentlyOpened')) recentlyOpenedAdded += 1;
@@ -1108,7 +1114,7 @@ async function syncGraphCache(options: SyncOptions = {}): Promise<SyncResult> {
         contentErrors += 1;
         const failedAt = nowIso();
         const terminal = isTerminalPageFetchError(error);
-        const cachedPage = getCachedPage(db, page.id);
+        const cachedPage = getCachedPageMetadata(db, page.id);
         const retryAfter = terminal ? null : retryAfterForPageFetchError(cachedPage, failedAt);
         setPageFetchError(db, page.id, error?.message ?? String(error), {
           failedAt,
@@ -1147,8 +1153,8 @@ async function syncGraphCache(options: SyncOptions = {}): Promise<SyncResult> {
 
     if (bibleConfig.enabled) {
       const parseCandidatesById = new Map(pages
-        .map(page => getCachedPage(db, page.id))
-        .filter((page): page is NonNullable<ReturnType<typeof getCachedPage>> => Boolean(page?.content_text && page.content_hash && !page.deleted_at))
+        .map(page => getCachedPageSyncState(db, page.id))
+        .filter((page): page is NonNullable<ReturnType<typeof getCachedPageSyncState>> => Boolean(page?.has_nonempty_content_text && page.content_hash && !page.deleted_at))
         .map(page => [page.id, page]));
       let incrementalCandidatesAdded = 0;
       if (options.incrementalMetadata) {
@@ -1185,8 +1191,12 @@ async function syncGraphCache(options: SyncOptions = {}): Promise<SyncResult> {
         message: 'Parsing Bible references with BibleNote'
       });
 
-      await mapWithConcurrency(pagesToParse, Math.min(concurrency, 2), async page => {
+      await mapWithConcurrency(pagesToParse, Math.min(concurrency, 2), async candidate => {
+        const page = getCachedPageContent(db, candidate.id);
         try {
+          if (!page?.content_text || !page.content_hash || page.deleted_at) {
+            throw new Error(`Cached page content is unavailable for Bible parsing: ${candidate.id}`);
+          }
           const htmlForBibleNote = page.content_html;
           runtimeLog('sync-core', 'Parsing page with BibleNote', {
             pageId: page.id,
@@ -1230,13 +1240,13 @@ async function syncGraphCache(options: SyncOptions = {}): Promise<SyncResult> {
           bibleRefsParseErrors += 1;
           setBibleParseError(
             db,
-            page.id,
-            page.content_hash,
+            candidate.id,
+            candidate.content_hash,
             bibleConfig.module,
             bibleParserVersion,
             error?.message ?? String(error)
           );
-          runtimeLog('sync-core', 'BibleNote page parse failed', { pageId: page.id, title: page.title, error: error?.stack ?? error?.message ?? String(error) });
+          runtimeLog('sync-core', 'BibleNote page parse failed', { pageId:candidate.id, title:candidate.title, error: error?.stack ?? error?.message ?? String(error) });
         }
 
         const done = bibleRefsPagesParsed + bibleRefsParseErrors;

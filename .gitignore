@@ -17,6 +17,7 @@ vendor/
 *.sqlite
 *.sqlite-shm
 *.sqlite-wal
+*.db
 *.db-shm
 *.db-wal
 msal-cache.json

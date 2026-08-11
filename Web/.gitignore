@@ -6,5 +6,6 @@ release/
 *.sqlite
 *.sqlite-shm
 *.sqlite-wal
+*.db
 msal-cache.json
 npm-debug.log*

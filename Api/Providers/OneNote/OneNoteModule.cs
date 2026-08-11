@@ -14,7 +14,6 @@ namespace BibleNote.Providers.OneNote
             services
                 .AddTransient<IOneNoteDocumentConnector, OneNoteDocumentConnector>()
                 .AddTransient<OneNoteProvider>()
-                .AddTransient<OneNoteNavigationProvider>()
                 .AddScoped<IOneNoteAppWrapper, OneNoteAppWrapper>()
                 .AddTransient<INotebookIterator, NotebookIterator>()
                 ;

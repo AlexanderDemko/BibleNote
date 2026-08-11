@@ -1,22 +1,31 @@
 ﻿using System;
+using System.IO;
 using System.Reflection;
 using BibleNote.Common.DiContainer;
-using BibleNote.Middleware;
-using BibleNote.Providers.FileSystem.Navigation;
 using BibleNote.Providers.Html;
 using BibleNote.Providers.OneNote;
 using BibleNote.Services;
 using BibleNote.Services.Configuration.Contracts;
 using BibleNote.Services.ModulesManager.Contracts;
-using BibleNote.Services.ModulesManager.Models.Exceptions;
 using BibleNote.Tests.Mocks;
-using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace BibleNote.Tests.TestsBase
 {
     public abstract class TestsBase
     {
+        private static readonly object TestModulesLock = new object();
+        private static readonly string IsolatedDataDirectory = CreateIsolatedDataDirectory();
+        private static bool testModulesInitialized;
+
+        static TestsBase()
+        {
+            Environment.SetEnvironmentVariable("BIBLENOTE_DATA_DIR", IsolatedDataDirectory);
+            AppDomain.CurrentDomain.ProcessExit += (_, __) => DeleteIsolatedDataDirectory();
+        }
+
+        protected static string TestDataDirectory => IsolatedDataDirectory;
+
         protected ServiceProvider ServiceProvider { get; set; }
         protected IModulesManager ModulesManager { get; set; }
         protected IConfigurationManager MockConfigurationManager { get; set; }        
@@ -29,11 +38,8 @@ namespace BibleNote.Tests.TestsBase
                .AddApplicatonServices<ServicesModule>()       
                .AddApplicatonServices<HtmlModule>()
                .AddApplicatonServices<OneNoteModule>()
-               .AddApplicatonServices<FileNavigationModule>()
                //.AddLogging(configure => configure.AddConsole())
                .AddSingleton(sp => MockConfigurationManager);
-
-            services.AddMediatR(typeof(MiddlewareModule).Assembly);
 
             registerServicesAction?.Invoke(services);
 
@@ -43,14 +49,44 @@ namespace BibleNote.Tests.TestsBase
 
             ModulesManager = ServiceProvider.GetService<IModulesManager>();
 
-            try
+            InitializeTestModules();
+        }
+
+        private void InitializeTestModules()
+        {
+            lock (TestModulesLock)
             {
-                ModulesManager.GetCurrentModuleInfo();
-            }
-            catch (ModuleNotFoundException)
-            {
+                if (testModulesInitialized)
+                    return;
+
                 ModulesManager.UploadModule(ResolveApiFilePath("Modules", "rst", "rst.bnm"), "rst");
                 ModulesManager.UploadModule(ResolveApiFilePath("Modules", "kjv", "kjv.bnm"), "kjv");
+                testModulesInitialized = true;
+            }
+        }
+
+        private static string CreateIsolatedDataDirectory()
+        {
+            var directory = Path.Combine(Path.GetTempPath(), "BibleNote.Tests", Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(directory);
+            return directory;
+        }
+
+        private static void DeleteIsolatedDataDirectory()
+        {
+            try
+            {
+                var testRoot = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "BibleNote.Tests"))
+                    .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+                    + Path.DirectorySeparatorChar;
+                var directory = Path.GetFullPath(IsolatedDataDirectory);
+                if (directory.StartsWith(testRoot, StringComparison.OrdinalIgnoreCase))
+                    Directory.Delete(directory, true);
+            }
+            catch
+            {
+                // A failed test process may still hold module files. The unique temp directory
+                // is safe to leave for the operating system's normal temp cleanup.
             }
         }
 

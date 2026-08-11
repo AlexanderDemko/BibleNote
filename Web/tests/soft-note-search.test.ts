@@ -66,6 +66,10 @@ test('phrase note search accepts punctuation between consecutive words', () => {
         parent_notebook_id, parent_notebook_name, parent_section_name
       ) VALUES (?, ?, ?, '2026-08-03T00:00:00Z', 'notebook-1', 'Notebook', 'Section')
     `).run('phrase-page', 'К Ефесянам', '1 Павел, апостол Христа Иисуса.');
+    db.prepare(`
+      INSERT INTO pages_fts(page_id, title, content, notebook, section)
+      VALUES (?, ?, ?, 'Notebook', 'Section')
+    `).run('phrase-page', 'К Ефесянам', '1 Павел, апостол Христа Иисуса.');
 
     const results = searchCacheAdvanced(db, 'павел апостол христа', {
       mode:'phrase',
@@ -76,6 +80,46 @@ test('phrase note search accepts punctuation between consecutive words', () => {
 
     assert.deepEqual(results.map(result => result.id), ['phrase-page']);
     assert.match(String(results[0].snippet), /Павел, апостол Христа/u);
+  } finally {
+    db.close();
+  }
+});
+
+test('note search can be limited to selected sections', () => {
+  const db = openCacheDb(':memory:');
+  try {
+    const insertPage = db.prepare(`
+      INSERT INTO pages(
+        id, title, content_text, last_modified_date_time,
+        parent_notebook_id, parent_notebook_name, parent_section_id, parent_section_name
+      ) VALUES (?, ?, ?, '2026-08-09T00:00:00Z', 'notebook-1', 'Notebook', ?, ?)
+    `);
+    const insertFts = db.prepare(`
+      INSERT INTO pages_fts(page_id, title, content, notebook, section)
+      VALUES (?, ?, ?, 'Notebook', ?)
+    `);
+    const addPage = (id: string, sectionId: string, section: string) => {
+      insertPage.run(id, `Заметка ${id}`, 'общий искомый текст', sectionId, section);
+      insertFts.run(id, `Заметка ${id}`, 'общий искомый текст', section);
+    };
+    addPage('inside', 'section-inside', 'Inside');
+    addPage('outside', 'section-outside', 'Outside');
+
+    const relaxed = searchCacheRelaxed(db, 'общий искомый', {
+      notebookIds:['notebook-1'],
+      sectionIds:['section-inside'],
+      limit:10
+    });
+    assert.deepEqual(relaxed.map(result => result.id), ['inside']);
+
+    const phrase = searchCacheAdvanced(db, 'общий искомый', {
+      mode:'phrase',
+      caseSensitive:false,
+      notebookIds:['notebook-1'],
+      sectionIds:['section-inside'],
+      limit:10
+    });
+    assert.deepEqual(phrase.map(result => result.id), ['inside']);
   } finally {
     db.close();
   }

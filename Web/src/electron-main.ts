@@ -452,6 +452,61 @@ async function startControlServer(): Promise<void> {
       });
       return;
     }
+    if (url.pathname === '/folder-page/open' && request.method === 'POST') {
+      if (request.headers.origin) {
+        send(403, { error:'Browser-originated file open requests are not allowed.' });
+        return;
+      }
+      const requestedPath = (url.searchParams.get('path') || '').trim();
+      let target = '';
+      try {
+        if (!requestedPath || requestedPath.length > 32_768 || !path.isAbsolute(requestedPath)) {
+          throw new Error('A valid absolute file path is required.');
+        }
+        target = fs.realpathSync(requestedPath);
+        if (!fs.statSync(target).isFile()) throw new Error('The original file is not available.');
+      } catch (error) {
+        send(400, { error:error instanceof Error ? error.message : String(error) });
+        return;
+      }
+      if (url.searchParams.get('reveal') === '1') {
+        shell.showItemInFolder(target);
+        send(200, { opened:true, revealed:true });
+        return;
+      }
+      shell.openPath(target).then(errorMessage => {
+        if (errorMessage) send(500, { error:errorMessage });
+        else send(200, { opened:true });
+      }).catch(error => {
+        send(500, { error:error instanceof Error ? error.message : String(error) });
+      });
+      return;
+    }
+    if (url.pathname === '/folder-item/open' && request.method === 'POST') {
+      if (request.headers.origin) {
+        send(403, { error:'Browser-originated folder open requests are not allowed.' });
+        return;
+      }
+      const requestedPath = (url.searchParams.get('path') || '').trim();
+      let target = '';
+      try {
+        if (!requestedPath || requestedPath.length > 32_768 || !path.isAbsolute(requestedPath)) {
+          throw new Error('A valid absolute folder path is required.');
+        }
+        target = fs.realpathSync(requestedPath);
+        if (!fs.statSync(target).isDirectory()) throw new Error('The original folder is not available.');
+      } catch (error) {
+        send(400, { error:error instanceof Error ? error.message : String(error) });
+        return;
+      }
+      shell.openPath(target).then(errorMessage => {
+        if (errorMessage) send(500, { error:errorMessage });
+        else send(200, { opened:true });
+      }).catch(error => {
+        send(500, { error:error instanceof Error ? error.message : String(error) });
+      });
+      return;
+    }
     if (url.pathname === '/select-folder' && request.method === 'POST') {
       const owner = mainWindow && !mainWindow.isDestroyed() ? mainWindow : undefined;
       const initialFolderPath = lastFolderPickerPath || app.getPath('desktop');

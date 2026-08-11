@@ -7,9 +7,9 @@ import * as z from 'zod/v4';
 import { bibleParseConfigFromEnv, bibleParserVersion, getVerseTextWithBibleNote, parsePageWithBibleNote, type BibleVerseText } from './bible.js';
 import { bibleNoteBooks, bibleNoteCurrentOneNotePage, bibleNoteHealth, bibleNoteModules, bibleNoteOneNotePageLink, bibleNoteParallelVerseText, bibleNoteQuickAnalyzeCurrentPage, bibleNoteSearchText, electronControl, ensureBibleNoteAvailable, parseExternalBibleRef, uploadBibleNoteModule, type OneNoteCurrentPage } from './biblenote-gateway.js';
 import { cacheUiPageHtml, serveCacheUiAsset } from './cache-ui-assets.js';
-import { cacheStatistics, cacheStatus, defaultDbPath, findCachedGraphSectionIdByOneNoteGuid, findCachedPageByOneNoteGuid, findParallelBibleReferenceNotes, findParallelBibleReferences, getBibleParseState, getCachedPage, getSyncState, listSyncHistory, markPageHtmlParsed, markPageOpened, openCacheDb, readCachedPage, recordSyncHistory, searchBibleReferenceNotesByWeight, searchCacheAdvanced, searchCacheRelaxed, shouldParseBibleRefs, shouldParsePageHtml, updatePageHtml, upsertBibleParseResult, type SyncHistoryStatus } from './cache.js';
+import { cacheStatistics, cacheStatus, defaultDbPath, findCachedGraphSectionIdByOneNoteGuid, findCachedPageByOneNoteGuid, findParallelBibleReferenceNotes, findParallelBibleReferences, getBibleParseState, getCachedPageContent, getCachedPageMetadata, getCachedPageStatus, getSyncState, listSyncHistory, markPageHtmlParsed, markPageOpened, openCacheDb, readCachedPage, recordSyncHistory, searchBibleReferenceNotesByWeight, searchCacheAdvanced, searchCacheRelaxed, shouldParseBibleRefs, shouldParsePageHtml, updatePageHtml, upsertBibleParseResult, type SyncHistoryStatus } from './cache.js';
 import { visibleBibleRefSql, visibleBibleScopeSql } from './cache-sql.js';
-import { hasRenderableHtmlBody } from './html.js';
+import { hasRenderableHtmlBody, pdfBibleLinksFromHtml } from './html.js';
 import { oneNoteImage } from './image-proxy.js';
 import { createInductiveAnnotations, createInductiveRelation, createInductiveStyle, deleteInductiveAnnotation, deleteInductiveRelation, importInductiveMarkings, listAllInductiveAnnotations, listAllInductiveRelations, listInductiveAnnotations, listInductiveRelations, listInductiveStyles, openInductiveDb, updateInductiveRelation, updateInductiveStyle, type InductiveAnnotationInput, type InductiveImportPayload } from './inductive-markings.js';
 import { graphListAll } from './graph.js';
@@ -20,7 +20,7 @@ import { loadOneNoteComSnapshot } from './onenote-com.js';
 import { extractOneNotePageGuid, extractOneNotePageTitle, extractOneNoteSectionGuid, findGraphPageForOneNoteClientPage, findGraphSectionForOneNoteClientPage, type OneNoteLinkedSection } from './onenote-page-link.js';
 import { configureRuntimeLogging, readRuntimeLoggingSettings, runtimeLog, saveRuntimeLoggingSettings } from './runtime-logging.js';
 import { SingleFlight } from './single-flight.js';
-import { loadOneNoteSectionPages, syncOneNoteCache, type SyncProgressEvent, type SyncResult } from './sync.js';
+import { loadOneNoteSectionPages, syncOneNoteCache, type SyncOptions, type SyncProgressEvent, type SyncResult } from './sync.js';
 
 type UiOptions = {
   dbPath: string;
@@ -78,14 +78,15 @@ function comparableFolderPath(folderPath: string): string {
   return process.platform === 'win32' ? resolved.toLowerCase() : resolved;
 }
 
-function configuredPdfPath(db: CacheDb, pageId: string): string | undefined {
-  const row = getCachedPage(db, pageId);
+function configuredFolderFilePath(db: CacheDb, pageId: string): string | undefined {
+  const row = getCachedPageMetadata(db, pageId);
   if (!row || row.deleted_at || !row.links_json) return undefined;
   let candidatePath = '';
   try {
     const folder = JSON.parse(row.links_json)?.folder;
-    if (folder?.extension !== '.pdf' || typeof folder.path !== 'string') return undefined;
+    if (typeof folder?.path !== 'string') return undefined;
     candidatePath = fs.realpathSync(folder.path);
+    if (!fs.statSync(candidatePath).isFile()) return undefined;
   } catch {
     return undefined;
   }
@@ -102,6 +103,88 @@ function configuredPdfPath(db: CacheDb, pageId: string): string | undefined {
       }
     });
   return belongsToConfiguredRoot ? candidatePath : undefined;
+}
+
+function configuredPdfPath(db: CacheDb, pageId: string): string | undefined {
+  const filePath = configuredFolderFilePath(db, pageId);
+  return filePath && path.extname(filePath).toLowerCase() === '.pdf' ? filePath : undefined;
+}
+
+function isConfiguredFolderPath(candidatePath: string, allowRoot: boolean): boolean {
+  return configuredDataSources()
+    .filter(source => source.type === 'folder')
+    .flatMap(folderPathsForSource)
+    .some(folderPath => {
+      try {
+        const rootPath = fs.realpathSync(folderPath);
+        const relativePath = path.relative(rootPath, candidatePath);
+        return (allowRoot && relativePath === '')
+          || (relativePath !== ''
+            && !relativePath.startsWith(`..${path.sep}`)
+            && relativePath !== '..'
+            && !path.isAbsolute(relativePath));
+      } catch {
+        return false;
+      }
+    });
+}
+
+function configuredHierarchyFolderPath(
+  db: CacheDb,
+  kind: 'section' | 'group',
+  id: string
+): string | undefined {
+  const row = kind === 'section'
+    ? db.prepare(`
+        SELECT s.links_json AS linksJson, NULL AS notebookLinksJson, NULL AS groupPath
+        FROM sections s WHERE s.id = ?
+      `).get(id) as { linksJson?: string; notebookLinksJson?: string; groupPath?: string } | undefined
+    : db.prepare(`
+        SELECT NULL AS linksJson, n.links_json AS notebookLinksJson, g.section_group_path AS groupPath
+        FROM section_groups g
+        LEFT JOIN notebooks n ON n.id = g.parent_notebook_id
+        WHERE g.id = ?
+      `).get(id) as { linksJson?: string; notebookLinksJson?: string; groupPath?: string } | undefined;
+  if (!row) return undefined;
+  let requestedPath = '';
+  try {
+    if (kind === 'section') {
+      requestedPath = JSON.parse(row.linksJson || '{}')?.folderPath || '';
+    } else {
+      const rootPath = JSON.parse(row.notebookLinksJson || '{}')?.folderPath;
+      if (typeof rootPath === 'string' && rootPath) {
+        const relativeParts = String(row.groupPath || '').split(' / ').filter(Boolean);
+        requestedPath = path.join(rootPath, ...relativeParts);
+      }
+    }
+    if (!requestedPath) return undefined;
+    const candidatePath = fs.realpathSync(requestedPath);
+    if (!fs.statSync(candidatePath).isDirectory()) return undefined;
+    return isConfiguredFolderPath(candidatePath, true) ? candidatePath : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function sectionIdsInGroup(db: CacheDb, groupId: string): string[] {
+  return (db.prepare(`
+    WITH RECURSIVE group_tree(id) AS (
+      SELECT id FROM section_groups WHERE id = ?
+      UNION
+      SELECT child.id
+      FROM section_groups child
+      JOIN group_tree parent ON child.parent_section_group_id = parent.id
+    )
+    SELECT s.id
+    FROM sections s
+    WHERE s.parent_section_group_id IN (SELECT id FROM group_tree)
+    ORDER BY s.section_group_path COLLATE NOCASE, s.order_index IS NULL, s.order_index, s.display_name COLLATE NOCASE
+  `).all(groupId) as Array<{ id: string }>).map(row => row.id);
+}
+
+function hierarchySourceType(notebookId: string | null | undefined): 'folder' | 'com' | 'graph' {
+  const value = String(notebookId || '');
+  return value.startsWith('folder:notebook:') ? 'folder' : value.trim().startsWith('{') ? 'com' : 'graph';
 }
 
 function servePdfFile(request: IncomingMessage, response: ServerResponse, filePath: string): void {
@@ -175,6 +258,7 @@ const syncRequestSchema = z.object({
   concurrency: z.number().int().min(1).max(3).optional(),
   refreshOlderThanHours: z.number().int().min(0).max(1_000_000).optional(),
   notebookIds: z.array(z.string().min(1)).max(1000).optional(),
+  sectionGroupId: z.string().min(1).optional(),
   sectionId: z.string().min(1).optional(),
   pageId: z.string().min(1).optional(),
   bibleModule: z.string().min(1).optional(),
@@ -192,6 +276,7 @@ type SyncRequest = z.infer<typeof syncRequestSchema>;
 function syncHistoryMode(body: SyncRequest): string {
   if (body.localBibleReparse) return 'bible-reparse';
   if (body.pageId) return 'page';
+  if (body.sectionGroupId) return 'section-group';
   if (body.sectionId) return 'section';
   if (body.replaceAll) return 'rebuild';
   if (body.metadataOnly) return 'metadata';
@@ -204,6 +289,10 @@ function syncHistoryScope(db: CacheDb, body: SyncRequest): string {
   if (body.pageId) {
     const row = db.prepare('SELECT title FROM pages WHERE id = ?').get(body.pageId) as { title?: string } | undefined;
     return row?.title ? `Страница «${row.title}»` : 'Одна страница';
+  }
+  if (body.sectionGroupId) {
+    const row = db.prepare('SELECT display_name AS name FROM section_groups WHERE id = ?').get(body.sectionGroupId) as { name?: string } | undefined;
+    return row?.name ? `Папка «${row.name}»` : 'Одна папка';
   }
   if (body.sectionId) {
     const row = db.prepare('SELECT display_name AS name FROM sections WHERE id = ?').get(body.sectionId) as { name?: string } | undefined;
@@ -243,6 +332,28 @@ function syncHistoryStatus(result: SyncResult): SyncHistoryStatus {
   return result.contentErrors || result.sectionScanErrors || result.bibleRefsParseErrors
     ? 'completed_with_errors'
     : 'success';
+}
+
+function combineSyncResults(results: SyncResult[]): SyncResult {
+  if (results.length === 0) throw new Error('The selected folder does not contain sections to synchronize.');
+  const first = results[0];
+  const last = results[results.length - 1];
+  const numericKeys = [
+    'notebooks', 'sections', 'sectionGroups', 'pages', 'contentDownloaded', 'contentSkipped',
+    'contentErrors', 'sectionScanErrors', 'bibleRefsPagesParsed', 'bibleRefsParseSkipped',
+    'bibleRefsParseErrors', 'bibleRefsRecognized', 'deletedPagesMarked'
+  ] as const;
+  const combined: SyncResult = {
+    ...last,
+    dbPath:last.dbPath || first.dbPath,
+    cacheReset:results.some(result => result.cacheReset),
+    startedAt:first.startedAt,
+    finishedAt:last.finishedAt
+  };
+  for (const key of numericKeys) {
+    combined[key] = results.reduce((total, result) => total + Number(result[key] || 0), 0);
+  }
+  return combined;
 }
 
 function saveSyncHistory(
@@ -494,6 +605,21 @@ function json(response: ServerResponse, status: number, value: unknown): void {
   response.end(JSON.stringify(value));
 }
 
+const stateChangingMethods = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+
+export function isCrossOriginStateChangingApiRequest(
+  request: Pick<IncomingMessage, 'method' | 'headers'>,
+  pathname: string,
+  fallbackPort: number
+): boolean {
+  if (!pathname.startsWith('/api/')) return false;
+  if (!stateChangingMethods.has(request.method ?? '')) return false;
+  const origin = request.headers.origin;
+  if (!origin) return false;
+  const ownOrigin = `http://${request.headers.host ?? `127.0.0.1:${fallbackPort}`}`;
+  return origin !== ownOrigin;
+}
+
 function page(response: ServerResponse): void {
   response.writeHead(200, {
     'Content-Type': 'text/html; charset=utf-8',
@@ -581,7 +707,7 @@ export function startCacheUi(options: UiOptions): http.Server {
 
   function cachedCurrentOneNotePage(currentPage: OneNoteCurrentPage): ResolvedOneNotePage | undefined {
     const db = requireDb();
-    const exactPage = currentPage.pageId ? getCachedPage(db, currentPage.pageId) : undefined;
+    const exactPage = currentPage.pageId ? getCachedPageMetadata(db, currentPage.pageId) : undefined;
     const currentPageGuid = extractOneNotePageGuid(currentPage.clientUrl)
       ?? extractOneNotePageGuid(currentPage.pageId);
     const cachedPage = exactPage && !exactPage.deleted_at
@@ -759,7 +885,7 @@ export function startCacheUi(options: UiOptions): http.Server {
     const key = `${pageId}\u0000${module}`;
     const flight = pageHtmlRefreshes.run(key, async () => {
       const db = requireDb();
-      const sourceRow = getCachedPage(db, pageId);
+      const sourceRow = getCachedPageContent(db, pageId);
       if (!sourceRow?.content_html || sourceRow.deleted_at) return;
       if (!shouldParsePageHtml(db, pageId, sourceRow.content_html, module, bibleParserVersion)) return;
 
@@ -779,7 +905,7 @@ export function startCacheUi(options: UiOptions): http.Server {
         updateHtml: true
       });
 
-      const currentRow = getCachedPage(db, pageId);
+      const currentRow = getCachedPageContent(db, pageId);
       if (!currentRow?.content_html || currentRow.deleted_at) return;
       if (currentRow.content_html !== sourceHtml || currentRow.content_hash !== sourceContentHash) {
         runtimeLog('http', 'Skipped stale background page HTML refresh', { pageId, module });
@@ -837,6 +963,9 @@ export function startCacheUi(options: UiOptions): http.Server {
           });
         }
       });
+      if (isCrossOriginStateChangingApiRequest(request, url.pathname, options.port)) {
+        return json(response, 403, { error:'Cross-origin state-changing requests are not allowed.' });
+      }
       if (request.method === 'GET' && serveCacheUiAsset(url.pathname, response)) return;
       if (request.method === 'GET' && (url.pathname === '/' || url.pathname.startsWith('/page/') || url.pathname.startsWith('/bible/'))) return page(response);
       if (url.pathname === '/api/onenote-image' && request.method === 'GET') {
@@ -853,17 +982,9 @@ export function startCacheUi(options: UiOptions): http.Server {
         return json(response, 200, readRuntimeLoggingSettings());
       }
       if (url.pathname === '/api/runtime-settings' && request.method === 'PUT') {
-        const ownOrigin = `http://${request.headers.host ?? `127.0.0.1:${options.port}`}`;
-        if (request.headers.origin && request.headers.origin !== ownOrigin) {
-          return json(response, 403, { error: 'Cross-origin runtime settings requests are not allowed.' });
-        }
         return json(response, 200, await saveRuntimeLoggingSettings(await readJsonBody(request)));
       }
       if (url.pathname === '/api/runtime-log' && request.method === 'POST') {
-        const ownOrigin = `http://${request.headers.host ?? `127.0.0.1:${options.port}`}`;
-        if (request.headers.origin && request.headers.origin !== ownOrigin) {
-          return json(response, 403, { error: 'Cross-origin runtime log requests are not allowed.' });
-        }
         const body = await readJsonBody(request);
         runtimeLog('ui', typeof body.action === 'string' ? body.action : 'event', body.details);
         return json(response, 200, {});
@@ -872,10 +993,6 @@ export function startCacheUi(options: UiOptions): http.Server {
         return json(response, 200, readOneNoteAccessSettings());
       }
       if (url.pathname === '/api/onenote/access-settings' && request.method === 'PUT') {
-        const ownOrigin = `http://${request.headers.host ?? `127.0.0.1:${options.port}`}`;
-        if (request.headers.origin && request.headers.origin !== ownOrigin) {
-          return json(response, 403, { error: 'Cross-origin OneNote settings requests are not allowed.' });
-        }
         const previous = configuredDataSources();
         const saved = await saveOneNoteAccessSettings(await readJsonBody(request));
         const removed = cachedSourceScopesRemovedBySettingsChange(previous, saved.sources);
@@ -883,10 +1000,6 @@ export function startCacheUi(options: UiOptions): http.Server {
         return json(response, 200, { ...saved, removedNotebookCount });
       }
       if (url.pathname === '/api/system/select-folder' && request.method === 'POST') {
-        const ownOrigin = `http://${request.headers.host ?? `127.0.0.1:${options.port}`}`;
-        if (request.headers.origin && request.headers.origin !== ownOrigin) {
-          return json(response, 403, { error: 'Cross-origin folder selection requests are not allowed.' });
-        }
         return json(response, 200, await electronControl('/select-folder', 'POST'));
       }
       if (url.pathname === '/api/onenote/login/status' && request.method === 'GET') {
@@ -919,10 +1032,6 @@ export function startCacheUi(options: UiOptions): http.Server {
         return json(response, 200, microsoftLoginState);
       }
       if (url.pathname === '/api/onenote/login/start' && request.method === 'POST') {
-        const ownOrigin = `http://${request.headers.host ?? `127.0.0.1:${options.port}`}`;
-        if (request.headers.origin && request.headers.origin !== ownOrigin) {
-          return json(response, 403, { error: 'Cross-origin Microsoft login requests are not allowed.' });
-        }
         if (!microsoftLoginPromise) {
           microsoftLoginState = { status:'starting' };
           microsoftLoginPromise = acquireTokenByDeviceCode(deviceCode => {
@@ -977,10 +1086,6 @@ export function startCacheUi(options: UiOptions): http.Server {
         });
       }
       if (url.pathname === '/api/system/open-external' && request.method === 'POST') {
-        const ownOrigin = `http://${request.headers.host ?? `127.0.0.1:${options.port}`}`;
-        if (request.headers.origin && request.headers.origin !== ownOrigin) {
-          return json(response, 403, { error: 'Cross-origin external navigation requests are not allowed.' });
-        }
         const body = await readJsonBody(request);
         const target = typeof body.url === 'string' ? body.url : '';
         const parsed = new URL(target);
@@ -990,10 +1095,6 @@ export function startCacheUi(options: UiOptions): http.Server {
         return json(response, 200, await electronControl(`/open-external?url=${encodeURIComponent(parsed.toString())}`, 'POST'));
       }
       if (url.pathname === '/api/system/open-onenote-page' && request.method === 'POST') {
-        const ownOrigin = `http://${request.headers.host ?? `127.0.0.1:${options.port}`}`;
-        if (request.headers.origin && request.headers.origin !== ownOrigin) {
-          return json(response, 403, { error: 'Cross-origin OneNote navigation requests are not allowed.' });
-        }
         const body = await readJsonBody(request);
         let target = typeof body.url === 'string' ? body.url.trim() : '';
         const pageId = typeof body.pageId === 'string' ? body.pageId.trim() : '';
@@ -1025,10 +1126,6 @@ export function startCacheUi(options: UiOptions): http.Server {
         return json(response, 200, await electronControl('/protocol/status'));
       }
       if (url.pathname === '/api/system/protocol/register' && request.method === 'POST') {
-        const ownOrigin = `http://${request.headers.host ?? `127.0.0.1:${options.port}`}`;
-        if (request.headers.origin && request.headers.origin !== ownOrigin) {
-          return json(response, 403, { error: 'Cross-origin protocol requests are not allowed.' });
-        }
         return json(response, 200, await electronControl('/protocol/register', 'POST'));
       }
       if (url.pathname === '/api/system/onenote-integration' && request.method === 'GET') {
@@ -1039,25 +1136,13 @@ export function startCacheUi(options: UiOptions): http.Server {
           || url.pathname === '/api/system/onenote-integration/disable')
         && request.method === 'POST'
       ) {
-        const ownOrigin = `http://${request.headers.host ?? `127.0.0.1:${options.port}`}`;
-        if (request.headers.origin && request.headers.origin !== ownOrigin) {
-          return json(response, 403, { error: 'Cross-origin OneNote integration requests are not allowed.' });
-        }
         const action = url.pathname.endsWith('/enable') ? 'install' : 'uninstall';
         return json(response, 200, await electronControl(`/onenote-integration/${action}`, 'POST'));
       }
       if (url.pathname === '/api/ribbon/quick-analyze' && request.method === 'POST') {
-        const ownOrigin = `http://${request.headers.host ?? `127.0.0.1:${options.port}`}`;
-        if (request.headers.origin && request.headers.origin !== ownOrigin) {
-          return json(response, 403, { error: 'Cross-origin Ribbon requests are not allowed.' });
-        }
         return json(response, 200, await bibleNoteQuickAnalyzeCurrentPage());
       }
       if (url.pathname === '/api/ribbon/current-page' && request.method === 'POST') {
-        const ownOrigin = `http://${request.headers.host ?? `127.0.0.1:${options.port}`}`;
-        if (request.headers.origin && request.headers.origin !== ownOrigin) {
-          return json(response, 403, { error: 'Cross-origin Ribbon requests are not allowed.' });
-        }
         const currentPage = await bibleNoteCurrentOneNotePage();
         return json(response, 200, {
           currentPage:{
@@ -1067,10 +1152,6 @@ export function startCacheUi(options: UiOptions): http.Server {
         });
       }
       if (url.pathname === '/api/ribbon/open-current' && request.method === 'POST') {
-        const ownOrigin = `http://${request.headers.host ?? `127.0.0.1:${options.port}`}`;
-        if (request.headers.origin && request.headers.origin !== ownOrigin) {
-          return json(response, 403, { error: 'Cross-origin Ribbon requests are not allowed.' });
-        }
         const currentOneNotePage = await bibleNoteCurrentOneNotePage();
         const operationKey = currentOneNotePageKey(currentOneNotePage);
         const cachedPage = cachedCurrentOneNotePage(currentOneNotePage);
@@ -1086,10 +1167,6 @@ export function startCacheUi(options: UiOptions): http.Server {
         return json(response, 200, result);
       }
       if (url.pathname === '/api/ribbon/analyze-current' && request.method === 'POST') {
-        const ownOrigin = `http://${request.headers.host ?? `127.0.0.1:${options.port}`}`;
-        if (request.headers.origin && request.headers.origin !== ownOrigin) {
-          return json(response, 403, { error: 'Cross-origin Ribbon requests are not allowed.' });
-        }
         const currentOneNotePage = await bibleNoteCurrentOneNotePage();
         const operation = ribbonCurrentPageOperations.run(
           currentOneNotePageKey(currentOneNotePage),
@@ -1098,10 +1175,6 @@ export function startCacheUi(options: UiOptions): http.Server {
         return json(response, 200, await operation.promise);
       }
       if (url.pathname === '/api/system/main-bible-action' && request.method === 'POST') {
-        const ownOrigin = `http://${request.headers.host ?? `127.0.0.1:${options.port}`}`;
-        if (request.headers.origin && request.headers.origin !== ownOrigin) {
-          return json(response, 403, { error: 'Cross-origin Bible actions are not allowed.' });
-        }
         const body = await readJsonBody(request);
         const action = body.action === 'reader' || body.action === 'notes' ? body.action : undefined;
         const ref = body.ref;
@@ -1112,10 +1185,6 @@ export function startCacheUi(options: UiOptions): http.Server {
         return json(response, 200, await electronControl(`/main/bible-action?${params.toString()}`, 'POST'));
       }
       if (url.pathname === '/api/biblenote/modules/upload' && request.method === 'POST') {
-        const ownOrigin = `http://${request.headers.host ?? `127.0.0.1:${options.port}`}`;
-        if (request.headers.origin && request.headers.origin !== ownOrigin) {
-          return json(response, 403, { error: 'Cross-origin module upload requests are not allowed.' });
-        }
         const body = uploadBibleNoteModuleRequestSchema.parse(await readJsonBody(request));
         return json(response, 200, await uploadBibleNoteModule(body.fileName, body.contentBase64));
       }
@@ -1135,19 +1204,11 @@ export function startCacheUi(options: UiOptions): http.Server {
         });
       }
       if (url.pathname === '/api/inductive/styles' && request.method === 'POST') {
-        const ownOrigin = `http://${request.headers.host ?? `127.0.0.1:${options.port}`}`;
-        if (request.headers.origin && request.headers.origin !== ownOrigin) {
-          return json(response, 403, { error:'Cross-origin inductive marking requests are not allowed.' });
-        }
         const body = inductiveStyleRequestSchema.parse(await readJsonBody(request));
         return json(response, 201, { style:createInductiveStyle(inductiveDb, body) });
       }
       const inductiveStyleUpdateMatch = url.pathname.match(/^\/api\/inductive\/styles\/([^/]+)$/);
       if (inductiveStyleUpdateMatch && request.method === 'PATCH') {
-        const ownOrigin = `http://${request.headers.host ?? `127.0.0.1:${options.port}`}`;
-        if (request.headers.origin && request.headers.origin !== ownOrigin) {
-          return json(response, 403, { error:'Cross-origin inductive marking requests are not allowed.' });
-        }
         const body = inductiveStyleRequestSchema.parse(await readJsonBody(request));
         const style = updateInductiveStyle(inductiveDb, decodeURIComponent(inductiveStyleUpdateMatch[1]), body);
         return style
@@ -1155,10 +1216,6 @@ export function startCacheUi(options: UiOptions): http.Server {
           : json(response, 404, { error:'Inductive marking style not found.' });
       }
       if (url.pathname === '/api/inductive/import' && request.method === 'POST') {
-        const ownOrigin = `http://${request.headers.host ?? `127.0.0.1:${options.port}`}`;
-        if (request.headers.origin && request.headers.origin !== ownOrigin) {
-          return json(response, 403, { error:'Cross-origin inductive marking requests are not allowed.' });
-        }
         const body = inductiveImportSchema.parse(await readJsonBody(request));
         return json(response, 200, {
           imported:importInductiveMarkings(inductiveDb, body as InductiveImportPayload)
@@ -1176,10 +1233,6 @@ export function startCacheUi(options: UiOptions): http.Server {
         });
       }
       if (url.pathname === '/api/inductive/annotations' && request.method === 'POST') {
-        const ownOrigin = `http://${request.headers.host ?? `127.0.0.1:${options.port}`}`;
-        if (request.headers.origin && request.headers.origin !== ownOrigin) {
-          return json(response, 403, { error:'Cross-origin inductive marking requests are not allowed.' });
-        }
         const body = inductiveAnnotationsRequestSchema.parse(await readJsonBody(request));
         return json(response, 201, {
           annotations:createInductiveAnnotations(inductiveDb, body.annotations as InductiveAnnotationInput[])
@@ -1187,10 +1240,6 @@ export function startCacheUi(options: UiOptions): http.Server {
       }
       const inductiveDeleteMatch = url.pathname.match(/^\/api\/inductive\/annotations\/([^/]+)$/);
       if (inductiveDeleteMatch && request.method === 'DELETE') {
-        const ownOrigin = `http://${request.headers.host ?? `127.0.0.1:${options.port}`}`;
-        if (request.headers.origin && request.headers.origin !== ownOrigin) {
-          return json(response, 403, { error:'Cross-origin inductive marking requests are not allowed.' });
-        }
         const id = decodeURIComponent(inductiveDeleteMatch[1]);
         return deleteInductiveAnnotation(inductiveDb, id)
           ? json(response, 200, { deleted:true, id })
@@ -1208,19 +1257,11 @@ export function startCacheUi(options: UiOptions): http.Server {
         });
       }
       if (url.pathname === '/api/inductive/relations' && request.method === 'POST') {
-        const ownOrigin = `http://${request.headers.host ?? `127.0.0.1:${options.port}`}`;
-        if (request.headers.origin && request.headers.origin !== ownOrigin) {
-          return json(response, 403, { error:'Cross-origin inductive relation requests are not allowed.' });
-        }
         const body = inductiveRelationRequestSchema.parse(await readJsonBody(request));
         return json(response, 201, { relation:createInductiveRelation(inductiveDb, body) });
       }
       const inductiveRelationMatch = url.pathname.match(/^\/api\/inductive\/relations\/([^/]+)$/);
       if (inductiveRelationMatch && request.method === 'PATCH') {
-        const ownOrigin = `http://${request.headers.host ?? `127.0.0.1:${options.port}`}`;
-        if (request.headers.origin && request.headers.origin !== ownOrigin) {
-          return json(response, 403, { error:'Cross-origin inductive relation requests are not allowed.' });
-        }
         const id = decodeURIComponent(inductiveRelationMatch[1]);
         const body = inductiveRelationRequestSchema.parse(await readJsonBody(request));
         const relation = updateInductiveRelation(inductiveDb, id, body);
@@ -1229,32 +1270,48 @@ export function startCacheUi(options: UiOptions): http.Server {
           : json(response, 404, { error:'Inductive relation was not found.' });
       }
       if (inductiveRelationMatch && request.method === 'DELETE') {
-        const ownOrigin = `http://${request.headers.host ?? `127.0.0.1:${options.port}`}`;
-        if (request.headers.origin && request.headers.origin !== ownOrigin) {
-          return json(response, 403, { error:'Cross-origin inductive relation requests are not allowed.' });
-        }
         const id = decodeURIComponent(inductiveRelationMatch[1]);
         return deleteInductiveRelation(inductiveDb, id)
           ? json(response, 200, { deleted:true, id })
           : json(response, 404, { error:'Inductive relation was not found.' });
       }
       const db = requireDb();
+      if (url.pathname === '/api/system/open-folder-page' && request.method === 'POST') {
+        const body = await readJsonBody(request);
+        const pageId = typeof body.pageId === 'string' ? body.pageId.trim() : '';
+        if (!pageId) return json(response, 400, { error:'A page id is required.' });
+        const filePath = configuredFolderFilePath(db, pageId);
+        if (!filePath) return json(response, 404, { error:'The original file is not available.' });
+        const params = new URLSearchParams({ path:filePath, reveal:body.reveal === true ? '1' : '0' });
+        return json(response, 200, await electronControl(`/folder-page/open?${params.toString()}`, 'POST'));
+      }
+      if (url.pathname === '/api/system/open-folder-hierarchy' && request.method === 'POST') {
+        const body = await readJsonBody(request);
+        const id = typeof body.id === 'string' ? body.id.trim() : '';
+        const kind = body.kind === 'section' || body.kind === 'group' ? body.kind : undefined;
+        if (!id || !kind) return json(response, 400, { error:'A valid hierarchy item is required.' });
+        const folderPath = configuredHierarchyFolderPath(db, kind, id);
+        if (!folderPath) return json(response, 404, { error:'The original folder is not available.' });
+        const params = new URLSearchParams({ path:folderPath });
+        return json(response, 200, await electronControl(`/folder-item/open?${params.toString()}`, 'POST'));
+      }
       if (url.pathname === '/api/sync' && request.method === 'POST') {
-        const ownOrigin = `http://${request.headers.host ?? `127.0.0.1:${options.port}`}`;
-        if (request.headers.origin && request.headers.origin !== ownOrigin) {
-          return json(response, 403, { error: 'Cross-origin sync requests are not allowed.' });
-        }
         if (syncState.status === 'running') return json(response, 409, { error: 'Synchronization is already running.' });
         const body = syncRequestSchema.parse(await readJsonBody(request));
         const maxPages = body.maxPages;
         const concurrency = body.concurrency ?? 1;
         const refreshOlderThanHours = body.refreshOlderThanHours;
         const notebookIds = body.notebookIds ? [...new Set(body.notebookIds)] : undefined;
+        const sectionGroupId = body.sectionGroupId;
         const sectionId = body.sectionId;
         const pageId = body.pageId;
         const bibleModule = body.bibleModule;
-        const scopeCount = Number(Boolean(notebookIds)) + Number(Boolean(sectionId)) + Number(Boolean(pageId));
-        if (scopeCount > 1) throw new Error('Specify only one sync scope: notebookIds, sectionId, or pageId.');
+        const scopeCount = Number(Boolean(notebookIds)) + Number(Boolean(sectionGroupId)) + Number(Boolean(sectionId)) + Number(Boolean(pageId));
+        if (scopeCount > 1) throw new Error('Specify only one sync scope: notebookIds, sectionGroupId, sectionId, or pageId.');
+        const sectionGroupSectionIds = sectionGroupId ? sectionIdsInGroup(db, sectionGroupId) : [];
+        if (sectionGroupId && sectionGroupSectionIds.length === 0) {
+          throw new Error('The selected folder does not contain sections to synchronize.');
+        }
         const startedAt = new Date().toISOString();
         syncState = { status: 'running', startedAt, progress: { phase: 'starting', message: 'Подготовка' } };
         runtimeLog('sync', 'Sync started', {
@@ -1270,10 +1327,11 @@ export function startCacheUi(options: UiOptions): http.Server {
           incrementalMetadata: body.incrementalMetadata === true,
           bibleModule,
           notebookIds,
+          sectionGroupId,
           sectionId,
           pageId
         });
-        void syncOneNoteCache({
+        const syncOptions: SyncOptions = {
           dbPath: options.dbPath,
           maxPages,
           concurrency,
@@ -1287,13 +1345,31 @@ export function startCacheUi(options: UiOptions): http.Server {
           incrementalMetadata: body.incrementalMetadata === true,
           bibleModule,
           notebookIds,
-          sectionId,
           pageId,
           onProgress: progress => {
             runtimeLog('sync-progress', progress.phase || 'progress', progress);
             syncState = { ...syncState, progress };
           }
-        }).then(result => {
+        };
+        const syncWork = sectionGroupId
+          ? async () => {
+              const results: SyncResult[] = [];
+              for (const [index, scopedSectionId] of sectionGroupSectionIds.entries()) {
+                syncState = {
+                  ...syncState,
+                  progress:{
+                    phase:'sections',
+                    sections:index,
+                    sectionTotal:sectionGroupSectionIds.length,
+                    message:`Синхронизация раздела ${index + 1} из ${sectionGroupSectionIds.length}`
+                  }
+                };
+                results.push(await syncOneNoteCache({ ...syncOptions, sectionId:scopedSectionId }));
+              }
+              return combineSyncResults(results);
+            }
+          : () => syncOneNoteCache({ ...syncOptions, sectionId });
+        void syncWork().then(result => {
           const finishedAt = new Date().toISOString();
           console.log(`Sync completed: pages=${result.pages}, contentDownloaded=${result.contentDownloaded}, bibleRefsRecognized=${result.bibleRefsRecognized}, contentErrors=${result.contentErrors}, bibleParseErrors=${result.bibleRefsParseErrors}`);
           runtimeLog('sync', 'Sync completed', result);
@@ -1315,10 +1391,6 @@ export function startCacheUi(options: UiOptions): http.Server {
         return json(response, 202, syncState);
       }
       if (url.pathname === '/api/notebook-display-name' && request.method === 'PATCH') {
-        const ownOrigin = `http://${request.headers.host ?? `127.0.0.1:${options.port}`}`;
-        if (request.headers.origin && request.headers.origin !== ownOrigin) {
-          return json(response, 403, { error: 'Cross-origin cache changes are not allowed.' });
-        }
         const body = notebookDisplayNameRequestSchema.parse(await readJsonBody(request));
         const customDisplayName = typeof body.displayName === 'string' ? body.displayName.trim() || null : null;
         if (customDisplayName && customDisplayName.length > 120) throw new Error('displayName must not exceed 120 characters.');
@@ -1397,6 +1469,17 @@ export function startCacheUi(options: UiOptions): http.Server {
         if (!['and', 'phrase', 'regex'].includes(mode)) throw new Error(`Unknown search mode: ${mode}`);
         const bibleConfig = bibleParseConfigFromEnv();
         const module = url.searchParams.get('module')?.trim() || bibleConfig.module;
+        if (mode !== 'regex' && /(?:\d|:|bnVerse:|isbtBibleVerse:)/i.test(query)) {
+          try {
+            const parsedRef = await parseExternalBibleRef(query, module);
+            if (Number.isInteger(Number(parsedRef.bookIndex))
+              && Number.isInteger(Number(parsedRef.chapter))) {
+              return json(response, 200, []);
+            }
+          } catch {
+            // An ordinary text query containing numbers still belongs in Bible text search.
+          }
+        }
         await ensureBibleNoteAvailable();
         return json(response, 200, await bibleNoteSearchText({
           module,
@@ -1521,7 +1604,9 @@ export function startCacheUi(options: UiOptions): http.Server {
             entryOptions: row.entryOptions
           });
         }
-        return json(response, 200, { pageId, paragraphs:[...paragraphs.values()] });
+        const page = getCachedPageContent(db, pageId, 'html');
+        const pdfBibleLinks = pdfBibleLinksFromHtml(page?.content_html || '');
+        return json(response, 200, { pageId, paragraphs:[...paragraphs.values()], pdfBibleLinks });
       }
       if (url.pathname === '/api/bible/search') {
         const query = (url.searchParams.get('q') ?? '').trim();
@@ -1833,6 +1918,91 @@ export function startCacheUi(options: UiOptions): http.Server {
         `).all(required(url, 'notebookId'));
         return json(response, 200, rows);
       }
+      if (url.pathname === '/api/section-info') {
+        const id = required(url, 'id');
+        const item = db.prepare(`
+          SELECT
+            s.id,
+            s.display_name AS displayName,
+            s.parent_notebook_id AS notebookId,
+            COALESCE(n.custom_display_name, s.parent_notebook_name) AS notebookName,
+            s.parent_section_group_id AS parentGroupId,
+            s.section_group_path AS groupPath,
+            s.last_modified_date_time AS lastModifiedDateTime,
+            s.synced_at AS syncedAt,
+            s.pages_scanned_at AS scannedAt,
+            s.pages_scan_complete AS scanComplete,
+            s.pages_scan_error AS scanError,
+            s.links_json AS linksJson,
+            COUNT(p.id) AS pageCount
+          FROM sections s
+          LEFT JOIN notebooks n ON n.id = s.parent_notebook_id
+          LEFT JOIN pages p ON p.parent_section_id = s.id AND p.deleted_at IS NULL
+          WHERE s.id = ?
+          GROUP BY s.id
+        `).get(id) as Record<string, any> | undefined;
+        if (!item) return json(response, 404, { error:'Section is not in the local cache.' });
+        let links: Record<string, unknown> | undefined;
+        try { links = item.linksJson ? JSON.parse(item.linksJson) : undefined; } catch { links = undefined; }
+        const folderPath = configuredHierarchyFolderPath(db, 'section', id);
+        if (folderPath) links = { ...(links || {}), folderPath };
+        const { linksJson:_, ...result } = item;
+        return json(response, 200, {
+          ...result,
+          type:'section',
+          sourceType:hierarchySourceType(item.notebookId),
+          links
+        });
+      }
+      if (url.pathname === '/api/section-group-info') {
+        const id = required(url, 'id');
+        const item = db.prepare(`
+          SELECT
+            g.id,
+            g.display_name AS displayName,
+            g.parent_notebook_id AS notebookId,
+            COALESCE(n.custom_display_name, g.parent_notebook_name) AS notebookName,
+            g.parent_section_group_id AS parentGroupId,
+            g.section_group_path AS groupPath,
+            g.last_modified_date_time AS lastModifiedDateTime,
+            g.synced_at AS syncedAt
+          FROM section_groups g
+          LEFT JOIN notebooks n ON n.id = g.parent_notebook_id
+          WHERE g.id = ?
+        `).get(id) as Record<string, any> | undefined;
+        if (!item) return json(response, 404, { error:'Folder is not in the local cache.' });
+        const groupIds = (db.prepare(`
+          WITH RECURSIVE group_tree(id) AS (
+            SELECT id FROM section_groups WHERE id = ?
+            UNION
+            SELECT child.id
+            FROM section_groups child
+            JOIN group_tree parent ON child.parent_section_group_id = parent.id
+          )
+          SELECT id FROM group_tree
+        `).all(id) as Array<{ id:string }>).map(row => row.id);
+        const sectionIds = sectionIdsInGroup(db, id);
+        let pageCount = 0;
+        if (sectionIds.length > 0) {
+          const placeholders = sectionIds.map(() => '?').join(', ');
+          pageCount = Number((db.prepare(`
+            SELECT COUNT(*) AS value FROM pages
+            WHERE deleted_at IS NULL AND parent_section_id IN (${placeholders})
+          `).get(...sectionIds) as { value?: number } | undefined)?.value || 0);
+        }
+        const folderPath = configuredHierarchyFolderPath(db, 'group', id);
+        return json(response, 200, {
+          ...item,
+          type:'group',
+          sourceType:hierarchySourceType(item.notebookId),
+          links:folderPath ? { folderPath } : undefined,
+          groupIds,
+          sectionIds,
+          childGroupCount:Math.max(0, groupIds.length - 1),
+          sectionCount:sectionIds.length,
+          pageCount
+        });
+      }
       if (url.pathname === '/api/pages') {
         const rows = db.prepare(`
           SELECT id, title, order_index AS orderIndex, page_level AS pageLevel,
@@ -1861,6 +2031,7 @@ export function startCacheUi(options: UiOptions): http.Server {
             COALESCE(n.custom_display_name, p.parent_notebook_name) AS notebook,
             p.parent_section_name AS section,
             s.section_group_path AS sectionGroupPath,
+            json_extract(p.links_json, '$.folder.extension') AS fileExtension,
             COALESCE(p.last_modified_date_time, p.created_date_time, p.metadata_synced_at) AS modifiedAt,
             pa.last_opened_at AS openedAt,
             p.content_text IS NOT NULL AS hasContent,
@@ -1886,6 +2057,21 @@ export function startCacheUi(options: UiOptions): http.Server {
       }
       if (url.pathname === '/api/search') {
         const notebookIds = url.searchParams.getAll('notebookId').filter(Boolean);
+        const requestedSectionId = url.searchParams.get('sectionId')?.trim() || undefined;
+        const requestedSectionGroupId = url.searchParams.get('sectionGroupId')?.trim() || undefined;
+        if (requestedSectionId && requestedSectionGroupId) {
+          throw new Error('Specify only one search scope: sectionId or sectionGroupId.');
+        }
+        let scopedSectionIds: string[] | undefined;
+        if (requestedSectionId) {
+          const exists = db.prepare('SELECT 1 FROM sections WHERE id = ?').get(requestedSectionId);
+          if (!exists) throw new Error('The selected section is not in the local cache.');
+          scopedSectionIds = [requestedSectionId];
+        } else if (requestedSectionGroupId) {
+          const exists = db.prepare('SELECT 1 FROM section_groups WHERE id = ?').get(requestedSectionGroupId);
+          if (!exists) throw new Error('The selected folder is not in the local cache.');
+          scopedSectionIds = sectionIdsInGroup(db, requestedSectionGroupId);
+        }
         let query = required(url, 'q');
         let mode = url.searchParams.get('mode') ?? 'and';
         const caseSensitive = url.searchParams.get('caseSensitive') === 'true';
@@ -1929,13 +2115,15 @@ export function startCacheUi(options: UiOptions): http.Server {
           ? searchCacheRelaxed(db, query, {
               limit:100,
               caseSensitive,
-              notebookIds:notebookIds.length > 0 ? notebookIds : undefined
+              notebookIds:notebookIds.length > 0 ? notebookIds : undefined,
+              sectionIds:scopedSectionIds
             })
           : searchCacheAdvanced(db, query, {
               limit:100,
               mode:mode as 'and' | 'phrase' | 'regex',
               caseSensitive,
-              notebookIds
+              notebookIds,
+              sectionIds:scopedSectionIds
             });
         const resultsById = new Map<string, Record<string, unknown>>();
         const addResult = (item: Record<string, any>) => {
@@ -2132,6 +2320,20 @@ export function startCacheUi(options: UiOptions): http.Server {
             });
           }
         }
+        if (scopedSectionIds) {
+          const allowedPageIds = new Set<string>();
+          if (scopedSectionIds.length > 0) {
+            const placeholders = scopedSectionIds.map(() => '?').join(', ');
+            const rows = db.prepare(`
+              SELECT id FROM pages
+              WHERE deleted_at IS NULL AND parent_section_id IN (${placeholders})
+            `).all(...scopedSectionIds) as Array<{ id:string }>;
+            for (const row of rows) allowedPageIds.add(row.id);
+          }
+          for (const resultId of resultsById.keys()) {
+            if (!allowedPageIds.has(resultId)) resultsById.delete(resultId);
+          }
+        }
         const resultIds = [...resultsById.keys()];
         if (resultIds.length > 0) {
           const placeholders = resultIds.map(() => '?').join(', ');
@@ -2178,24 +2380,27 @@ export function startCacheUi(options: UiOptions): http.Server {
       if (url.pathname === '/api/page') {
         const pageId = required(url, 'id');
         const cached = readCachedPage(db, pageId, false, 2_000_000);
-        const row = getCachedPage(db, pageId);
+        const row = getCachedPageContent(db, pageId, 'html');
         markPageOpened(db, pageId);
         const text = typeof cached.text === 'string'
           ? cached.text.replace(/[\t ]+\n/g, '\n').replace(/\n{3,}/g, '\n\n')
           : cached.text;
         const hasHtml = Boolean(row?.content_html && hasRenderableHtmlBody(row.content_html));
         const normalizedText = typeof text === 'string' ? text.trim() : '';
-        const normalizedTitle = typeof row?.title === 'string' ? row.title.trim() : '';
+        const normalizedTitle = typeof cached.title === 'string' ? cached.title.trim() : '';
         const isEmpty = !cached.fetchError && !hasHtml && (!normalizedText || normalizedText === normalizedTitle);
         return json(response, 200, { ...cached, text, hasHtml, isEmpty });
       }
+      if (url.pathname === '/api/page-info') {
+        return json(response, 200, readCachedPage(db, required(url, 'id'), false, 0));
+      }
       if (url.pathname === '/api/page-status') {
         const pageId = required(url, 'id');
-        const row = getCachedPage(db, pageId);
+        const row = getCachedPageStatus(db, pageId);
         if (!row || row.deleted_at) return json(response, 404, { error: 'Page is not in the local cache.' });
         markPageOpened(db, pageId);
         return json(response, 200, {
-          hasContent: row.content_text != null,
+          hasContent: Boolean(row.has_content),
           contentSyncedAt: row.content_synced_at,
           fetchError: row.fetch_error
         });
@@ -2209,7 +2414,7 @@ export function startCacheUi(options: UiOptions): http.Server {
       }
       if (url.pathname === '/api/page-html') {
         const pageId = required(url, 'id');
-        const row = getCachedPage(db, pageId);
+        const row = getCachedPageContent(db, pageId, 'html');
         if (!row || row.deleted_at) return json(response, 404, { error: 'Page is not in the active cache.' });
         if (!row.content_html) return json(response, 404, { error: 'HTML is not cached for this page.' });
         if (url.searchParams.get('raw') === '1') return json(response, 200, { id: pageId, html: row.content_html });

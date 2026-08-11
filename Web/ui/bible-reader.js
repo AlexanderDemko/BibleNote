@@ -2084,6 +2084,9 @@ function renderBibleReaderChapter(result, highlightRef, translations = []) {
 }
 
 async function openBibleReaderChapter(options = {}) {
+  if (typeof captureCurrentPageViewHistoryState === 'function') {
+    await captureCurrentPageViewHistoryState();
+  }
   const location = currentBibleReaderLocation();
   if (!location.book || !Number.isInteger(location.chapter) || location.chapter <= 0) {
     bibleReaderStatusEl.textContent = 'Выберите модуль, книгу и главу.';

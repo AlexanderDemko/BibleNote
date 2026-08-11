@@ -1,0 +1,14 @@
+process.env.BIBLENOTE_TEST_ISOLATED = '1';
+
+for (const key of [
+  'BIBLENOTE_API_URL',
+  'BIBLENOTE_DATA_SOURCES',
+  'BIBLENOTE_EXE_PATH',
+  'ONENOTE_CACHE_DB',
+  'ONENOTE_DATA_SOURCE',
+  'ONENOTE_ENV_FILE',
+  'ONENOTE_FOLDER_PATHS',
+  'ONENOTE_TOKEN_CACHE'
+]) {
+  delete process.env[key];
+}

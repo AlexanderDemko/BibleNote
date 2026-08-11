@@ -5,6 +5,7 @@ import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import vm from 'node:vm';
 import { cacheUiPageHtml } from '../src/cache-ui-assets.js';
+import { pdfLinkMatchesPage, pdfReferencePattern, preferredPdfLinkMatches } from '../ui/pdf-link-matching.js';
 
 const uiDirectory = fileURLToPath(new URL('../ui/', import.meta.url));
 
@@ -38,16 +39,67 @@ test('PDF viewer assets and the visual PDF route are packaged', () => {
   assert.match(viewerScript, /onenote-main-search-result/);
   assert.match(viewerScript, /onenote-pdf-context/);
   assert.match(viewerScript, /pdf-bible-link/);
-  assert.equal(viewerScript.includes("if (activeFindKind === 'main' && mainSearch.key) return;"), true);
   assert.equal(viewerScript.includes('scheduleMainAlignment(countChanged ? 180 : 0);'), true);
   assert.equal(viewerStyles.includes('.textLayer .highlight { --highlight-bg-color:rgba(255,211,61,.64); --highlight-selected-bg-color:rgba(167,100,223,.78);'), true);
   assert.equal(viewerStyles.includes('.textLayer .highlight.selected { outline:2px solid #7a35b7;'), true);
   assert.match(treePages, /\/ui\/pdf-viewer\.html\?id=/);
-  assert.match(treePages, /const preferHtmlView = page\.hasHtml && defaultPageViewMode\(\) === 'html';/);
   assert.match(treePages, /postPdfFrameContext\(htmlFrame, pdfContext\)/);
   assert.equal(treePages.includes('void setPageVisualView(false)'), false);
   assert.match(cacheUi, /url\.pathname === '\/api\/page-pdf'/);
   assert.match(assets, /pdf\.worker\.min\.mjs/);
+});
+
+test('PDF Bible-link matching does not find a short reference inside a larger number', () => {
+  const matches = (text: string, reference: string) => [...text.matchAll(pdfReferencePattern(reference)!)].length;
+  assert.deepEqual({
+    manuscript:matches('G 1739mg', '17'),
+    standalone:matches('see (17), then', '17'),
+    verseOnlyInsideChapterVerse:matches('1:5', ':5'),
+    verseOnlyStandalone:matches('verse :5', ':5'),
+    longerChapter:matches('11:3', '1:3'),
+    longerVerse:matches('1:30', '1:3'),
+    exactChapterVerse:matches('(1:3)', '1:3')
+  }, {
+    manuscript:0,
+    standalone:1,
+    verseOnlyInsideChapterVerse:0,
+    verseOnlyStandalone:1,
+    longerChapter:0,
+    longerVerse:0,
+    exactChapterVerse:1
+  });
+});
+
+test('PDF Bible-link occurrence matching falls back to the next free match', () => {
+  const matches = [{ index:2 }, { index:12 }, { index:22 }];
+  const preferred = preferredPdfLinkMatches(matches, 1);
+  assert.equal(preferred.occurrenceSpecific, true);
+  assert.deepEqual(preferred.matches, [matches[1], matches[0], matches[2]]);
+  assert.equal(pdfLinkMatchesPage(null, 2), true);
+  assert.equal(pdfLinkMatchesPage(undefined, 2), true);
+  assert.equal(pdfLinkMatchesPage(1, 2), false);
+  assert.equal(pdfLinkMatchesPage(2, 2), true);
+});
+
+test('PDF page context keeps distinct page-local targets for identical verse-only text', () => {
+  const treePages = fs.readFileSync(path.join(uiDirectory, 'tree-pages.js'), 'utf8');
+  const helperStart = treePages.indexOf('function normalizedPdfAnchor');
+  const helperEnd = treePages.indexOf('\nfunction postPdfFrameContext', helperStart);
+  const context: Record<string, any> = { decodeHtmlText:(value: string) => value, result:undefined };
+  vm.runInNewContext(
+    treePages.slice(helperStart, helperEnd) + `
+      result = pdfPageContext({ pdfBibleLinks:[
+        { text:':5', href:'bnVerse:Ephesians 4:5', pageNumber:1, occurrenceIndex:0 },
+        { text:':5', href:'bnVerse:Hebrews 1:5', pageNumber:1, occurrenceIndex:1 },
+        { text:'17', href:'bnVerse:Ephesians 4:17', pageNumber:1, occurrenceIndex:0 }
+      ] });`,
+    context
+  );
+
+  assert.equal(JSON.stringify(context.result.bibleLinks), JSON.stringify([
+    { text:':5', href:'bnVerse:Ephesians 4:5', title:':5', pageNumber:1, occurrenceIndex:0 },
+    { text:':5', href:'bnVerse:Hebrews 1:5', title:':5', pageNumber:1, occurrenceIndex:1 }
+  ]));
 });
 
 test('PDF page context maps parsed Bible references to bnVerse links and paragraph targets', () => {
@@ -221,7 +273,7 @@ test('OneNote Ribbon settings and binaries are Windows-only package features', (
   assert.equal(treePages.includes("body:JSON.stringify({ url:target, pageId:localPageId })"), true);
   assert.equal(cacheUi.includes('await bibleNoteOneNotePageLink(pageId)'), true);
   assert.equal(treePages.includes('class="onenote-logo"'), true);
-  assert.equal(cacheUi.includes('const exactPage = currentPage.pageId ? getCachedPage(db, currentPage.pageId) : undefined;'), true);
+  assert.equal(cacheUi.includes('const exactPage = currentPage.pageId ? getCachedPageMetadata(db, currentPage.pageId) : undefined;'), true);
   assert.equal(cacheUi.includes('return json(response, 200, { currentPage:cachedPage, needsBackgroundSync:true });'), true);
   assert.equal(electronMain.includes("const response = await fetchOneNoteRibbonRoute('analyze-current');"), true);
   assert.equal(electronMain.includes('if (body?.needsBackgroundSync === true)'), true);
@@ -398,7 +450,6 @@ test('main search clear button uses a pointer cursor', () => {
 test('typing in the main search updates open-page matches without reopening the page', () => {
   const navigationSearch = fs.readFileSync(path.join(uiDirectory, 'navigation-search.js'), 'utf8');
   const treePages = fs.readFileSync(path.join(uiDirectory, 'tree-pages.js'), 'utf8');
-  const apiPageView = fs.readFileSync(path.join(uiDirectory, 'api-page-view.js'), 'utf8');
   const rerunStart = navigationSearch.indexOf('function rerunSearch()');
   const rerunEnd = navigationSearch.indexOf('\n}', rerunStart) + 2;
   const rerun = navigationSearch.slice(rerunStart, rerunEnd);
@@ -406,13 +457,9 @@ test('typing in the main search updates open-page matches without reopening the 
   assert.equal(rerun.includes('openPage('), false);
   assert.equal(treePages.includes('article.updateSearchMatches ='), true);
   assert.equal(treePages.includes("type:'onenote-set-target-paragraphs'"), true);
-  assert.equal(apiPageView.includes('if(data.type==="onenote-set-target-paragraphs")'), true);
   assert.equal(treePages.includes("type:'onenote-main-search'"), true);
   assert.equal(treePages.includes('scrollToFirst:Boolean(query)'), true);
   assert.equal(treePages.includes('postHtmlFrameMainSearch(htmlFrame, currentInlineSearchQuery, activeMatchIndex, true)'), true);
-  assert.equal(apiPageView.includes('if(data.type==="onenote-main-search")'), true);
-  assert.equal(apiPageView.includes('[data-onenote-main-search-current]'), true);
-  assert.equal(apiPageView.includes('type:"onenote-main-search-result"'), true);
   assert.equal(treePages.includes("data.type !== 'onenote-main-search-result'"), true);
   assert.equal(treePages.includes('htmlSearchMatchCount'), true);
   assert.equal(treePages.includes('showingHtml && !navigationUsesParagraphTargets && htmlSearchResultsReady'), true);
@@ -423,11 +470,65 @@ test('Ctrl+F opens page find from the main document and HTML frame in any keyboa
   const apiPageView = fs.readFileSync(path.join(uiDirectory, 'api-page-view.js'), 'utf8');
 
   assert.equal(navigationSearch.includes("event.code === 'KeyF' || key === 'f'"), true);
-  assert.equal(apiPageView.includes('event.code==="KeyF"||key==="f"'), true);
-  assert.equal(apiPageView.includes('parent.postMessage({type:"onenote-page-find-open"},"*")'), true);
   assert.equal(apiPageView.includes("if (data.type === 'onenote-page-find-open')"), true);
   assert.equal(apiPageView.includes('event.source !== frame.contentWindow'), true);
   assert.equal(apiPageView.includes('openPageFind();'), true);
+});
+
+test('HTML frame keeps document fragment links inside the document', () => {
+  const bridge = fs.readFileSync(path.join(uiDirectory, 'page-frame-bridge.js'), 'utf8');
+  const helperStart = bridge.indexOf('function decodeSafe');
+  const helperEnd = bridge.indexOf("document.addEventListener('click'", helperStart);
+  const scrolled: unknown[] = [];
+  const footnote = { scrollIntoView:(options: unknown) => scrolled.push(options) };
+  const context: Record<string, any> = {
+    document:{
+      getElementById:(id: string) => id === 'footnote-100' ? footnote : null,
+      getElementsByName:() => []
+    },
+    results:undefined
+  };
+
+  assert.ok(helperStart >= 0 && helperEnd > helperStart, 'frame link helpers are missing');
+  vm.runInNewContext(
+    bridge.slice(helperStart, helperEnd) + `
+      const link = href => ({ getAttribute:name => name === 'href' ? href : null });
+      results = {
+        footnote:scrollInternalDocumentLink(link('#footnote-100')),
+        missing:scrollInternalDocumentLink(link('#missing')),
+        external:scrollInternalDocumentLink(link('https://example.com/'))
+      };`,
+    context
+  );
+
+  assert.equal(context.results.footnote, true);
+  assert.equal(context.results.missing, true);
+  assert.equal(context.results.external, false);
+  assert.equal(JSON.stringify(scrolled), JSON.stringify([{ block:'center' }]));
+});
+
+test('HTML match navigation uses a stable sticky presentation', () => {
+  const treePages = fs.readFileSync(path.join(uiDirectory, 'tree-pages.js'), 'utf8');
+  const styles = fs.readFileSync(path.join(uiDirectory, 'styles.css'), 'utf8');
+  const helperStart = treePages.indexOf('function updateHtmlMatchNavigationPresentation');
+  const helperEnd = treePages.indexOf('\nfunction scrollHtmlFrameToTargetParagraph', helperStart);
+  const classes = new Map<string, boolean>();
+  const context: Record<string, any> = {
+    matchNav:{ classList:{ toggle:(name: string, enabled: boolean) => classes.set(name, enabled) } },
+    result:undefined
+  };
+
+  assert.ok(helperStart >= 0 && helperEnd > helperStart, 'match navigation helper is missing');
+  vm.runInNewContext(
+    treePages.slice(helperStart, helperEnd)
+      + '\nresult = updateHtmlMatchNavigationPresentation(matchNav, true, {}, false);',
+    context
+  );
+
+  assert.equal(context.result, true);
+  assert.equal(classes.get('html-match-nav-overlay'), true);
+  assert.equal(classes.get('pdf-match-nav-overlay'), false);
+  assert.match(styles, /\.match-nav\.html-match-nav-overlay \{ position:sticky;[^}]*top:10px;/);
 });
 
 test('full page mode provides page navigation and an exit control', () => {
@@ -464,10 +565,6 @@ test('full page mode preserves Bible and Ctrl+F searches', () => {
   assert.equal(styles.includes('.page-focus-mode .page-find-widget { z-index:46; top:64px; right:16px; }'), true);
   assert.equal(styles.includes('.page-focus-mode .page.html-view-active > :not(.html-frame):not(.match-nav) { display:none; }'), true);
   assert.equal(treePages.includes("if (isPdfPage) article.classList.add('pdf-page');"), true);
-  assert.equal(treePages.includes("matchNav.classList.toggle('html-match-nav-overlay', shouldOverlay);"), true);
-  assert.equal(treePages.includes('const top = Math.max(0, htmlFrame.offsetTop - matchNav.offsetHeight - 8);'), true);
-  assert.equal(styles.includes(':root:not(.page-focus-mode) .match-nav.html-match-nav-overlay { position:absolute; top:var(--html-match-nav-top, 0); right:10px; left:auto; margin:0; transform:none; }'), true);
-  assert.equal(styles.includes('.page-focus-mode:has(.page.pdf-page.html-view-active) .page-focus-toolbar { right:170px; width:min(680px, calc(100vw - 186px)); }'), true);
   assert.equal(styles.includes('.page.pdf-page.html-view-active > .folder-quality { display:none; }'), true);
   assert.equal(styles.includes('.page-focus-mode .page.html-view-active > .match-nav { position:fixed; z-index:44; top:60px; left:16px; margin:0; }'), true);
   assert.equal(styles.includes('@media (min-width:960px) { .page-focus-mode .page.html-view-active > .match-nav { top:8px; } }'), true);
@@ -548,9 +645,14 @@ test('notes panel can switch between the OneNote structure and recent pages', ()
   assert.equal(cacheUi.includes("url.pathname === '/api/recent-pages'"), true);
   assert.equal(cacheUi.includes('AND p.fetch_error IS NULL'), true);
   assert.equal(cacheUi.includes('LEFT JOIN page_access pa ON pa.page_id = p.id'), true);
+  assert.equal(cacheUi.includes("json_extract(p.links_json, '$.folder.extension') AS fileExtension"), true);
   assert.equal(cacheUi.includes("THEN 'opened' ELSE 'modified' END AS recentReason"), true);
   assert.equal(cacheUi.includes('ORDER BY recentAt DESC'), true);
   assert.equal(treePages.includes("page.recentReason === 'opened' ? 'открыта здесь ' : 'изменена '"), true);
+  assert.equal(treePages.includes("typeIcons.className = 'recent-page-type-icons'"), true);
+  assert.equal(treePages.includes('typeIcons.append(sourceTypeIcon(sourceType))'), true);
+  assert.equal(treePages.includes('fileTypeIcon(page.fileExtension, sourceType)'), true);
+  assert.equal(styles.includes('.recent-page-type-icons .file-type-icon'), true);
   assert.equal(treePages.includes('notesViewSwitch.hidden = Boolean(activeSearchQuery)'), true);
   assert.equal(styles.includes('.notes-view-switch[hidden] { display:none !important; }'), true);
   assert.equal(styles.includes('top:8px; right:2px; display:flex'), true);
@@ -601,7 +703,7 @@ test('page Bible references expose usage, context, reader, and note search actio
   assert.equal(render.includes("'Открыть в Библии'"), true);
   assert.equal(render.includes("'Поиск заметок'"), true);
   assert.equal(render.includes('<svg viewBox="0 0 24 24"'), true);
-  assert.equal(render.includes('showBiblePageRefUsage(paragraphIndexes)'), true);
+  assert.equal(render.includes('showBiblePageRefUsage(paragraphIndexes, bibleOccurrences)'), true);
   assert.equal(render.includes('showBibleTextContext({ ref })'), true);
   assert.equal(render.includes('openBibleTextInReader(ref)'), true);
   assert.equal(render.includes('showBibleReaderVerseNotes(ref)'), true);
@@ -609,7 +711,7 @@ test('page Bible references expose usage, context, reader, and note search actio
 
 test('page Bible reference usage opens every source paragraph in the match navigator', () => {
   const bibleReferences = fs.readFileSync(path.join(uiDirectory, 'bible-references.js'), 'utf8');
-  const functionStart = bibleReferences.indexOf('function showBiblePageRefUsage(paragraphIndexes)');
+  const functionStart = bibleReferences.indexOf('function showBiblePageRefUsage(paragraphIndexes, bibleOccurrences = [])');
   const functionEnd = bibleReferences.indexOf('function createBibleRefAction', functionStart);
   const updates: any[] = [];
   const context = {
@@ -621,13 +723,16 @@ test('page Bible reference usage opens every source paragraph in the match navig
   assert.ok(functionStart >= 0 && functionEnd > functionStart, 'showBiblePageRefUsage is missing');
   vm.runInNewContext(
     bibleReferences.slice(functionStart, functionEnd)
-      + '\nshowBiblePageRefUsage([8, 8, 3]);',
+      + '\nshowBiblePageRefUsage([8, 8, 3], [{ paragraphIndex:8, startIndex:4, endIndex:12 }, { paragraphIndex:8, startIndex:4, endIndex:12 }, { paragraphIndex:3, startIndex:1, endIndex:6 }]);',
     context
   );
 
   assert.equal(JSON.stringify(updates), JSON.stringify([{
     paragraphIndexes:[8, 3],
-    bibleOccurrences:[],
+    bibleOccurrences:[
+      { paragraphIndex:8, startIndex:4, endIndex:12 },
+      { paragraphIndex:3, startIndex:1, endIndex:6 }
+    ],
     query:'',
     bibleResult:true,
     scrollToFirst:true
@@ -662,6 +767,80 @@ test('HTML paragraph navigation is not overwritten by the HTML text-search count
   assert.equal(openPage.includes('if (initialNavigationCount === 0) return;'), true);
 });
 
+test('PDF Bible targets override a stale text search and prefer the exact reference', () => {
+  const treePages = fs.readFileSync(path.join(uiDirectory, 'tree-pages.js'), 'utf8');
+  const pdfViewer = fs.readFileSync(path.join(uiDirectory, 'pdf-viewer.js'), 'utf8');
+  const functionStart = pdfViewer.indexOf('function runTargetSearch(');
+  const functionEnd = pdfViewer.indexOf('\nfunction applyRelativeZoom(', functionStart);
+  const dispatched: Array<{ query: string; options?: Record<string, unknown> }> = [];
+  const context: Record<string, any> = {
+    activeFindKind:'main',
+    activeTargetKey:'',
+    targetSearchHasMatches:false,
+    targetFallbackTimer:{ name:'old-target-timer' },
+    targetSearchToken:0,
+    mainAlignmentTimer:{ name:'main-alignment-timer' },
+    mainSearchRunToken:0,
+    mainSearch:{
+      key:'stale search', originalQuery:'stale search', query:'stale search',
+      startedKey:'stale search', count:3, index:1
+    },
+    pdfContext:{ targets:[{
+      paragraphIndex:7,
+      query:'Deut 17:19',
+      highlightText:'BibleNote PDF viewer Deut 17:19'
+    }] },
+    normalizedPdfText:(value: string) => String(value || '').replace(/\s+/g, ' ').trim(),
+    clearTimeout:() => undefined,
+    dispatchFind:(query: string, options?: Record<string, unknown>) => dispatched.push({ query, options }),
+    reportMainSearch:() => undefined,
+    setTimeout:(callback: () => void, delay: number) => {
+      context.fallback = { callback, delay };
+      return { name:'new-target-timer' };
+    },
+    result:undefined
+  };
+
+  assert.ok(functionStart >= 0 && functionEnd > functionStart, 'runTargetSearch is missing');
+  assert.equal(treePages.includes('forceTarget\n  },'), true);
+  assert.equal(treePages.includes('!currentInlineSearchQuery'), true);
+  vm.runInNewContext(
+    pdfViewer.slice(functionStart, functionEnd) + `
+      runTargetSearch(7, 0, true);
+      targetSearchHasMatches = true;
+      fallback.callback();
+      result = {
+        activeFindKind,
+        mainSearch,
+        mainSearchRunToken,
+        targetSearchToken,
+        targetSearchHasMatches,
+        activeTargetKey,
+        fallbackDelay:fallback.delay
+      };`,
+    context
+  );
+
+  assert.equal(JSON.stringify(dispatched), JSON.stringify([
+    { query:'' },
+    { query:'Deut 17:19', options:{ entireWord:false } }
+  ]));
+  assert.deepEqual(JSON.parse(JSON.stringify(context.result)), {
+    activeFindKind:'target',
+    mainSearch:{ key:'', originalQuery:'', query:'', startedKey:'', count:0, index:-1 },
+    mainSearchRunToken:1,
+    targetSearchToken:1,
+    targetSearchHasMatches:true,
+    activeTargetKey:JSON.stringify({
+      paragraphIndex:7,
+      targetIndex:0,
+      primary:'Deut 17:19',
+      fallback:'BibleNote PDF viewer Deut 17:19'
+    }),
+    fallbackDelay:900
+  });
+});
+
 test('note search results show source and document type icons', () => {
   const treePages = fs.readFileSync(path.join(uiDirectory, 'tree-pages.js'), 'utf8');
   const cacheUi = fs.readFileSync(path.join(uiDirectory, '..', 'src', 'cache-ui.ts'), 'utf8');
@@ -680,18 +859,6 @@ test('note search results show source and document type icons', () => {
   assert.equal(treePages.includes("{ key:'onenote', label:'N', title:'OneNote' }"), true);
   assert.equal(cacheUi.includes("json_extract(links_json, '$.folder.extension') AS fileExtension"), true);
   assert.equal(cacheUi.includes('if (result) result.fileExtension = fileType.fileExtension;'), true);
-});
-
-test('closing HTML paragraph navigation cancels delayed highlights and clears every highlight layer', () => {
-  const treePages = fs.readFileSync(path.join(uiDirectory, 'tree-pages.js'), 'utf8');
-  const apiPageView = fs.readFileSync(path.join(uiDirectory, 'api-page-view.js'), 'utf8');
-
-  assert.equal(treePages.includes("postHtmlFrameMainSearch(htmlFrame, '', 0, false)"), true);
-  assert.equal(apiPageView.includes('function clearTargetScrollTimers()'), true);
-  assert.equal(apiPageView.includes('[data-onenote-target-paragraph],[data-onenote-target-paragraph-current]'), true);
-  assert.equal(apiPageView.includes('[data-onenote-target-match],[data-onenote-target-match-current]'), true);
-  assert.equal(apiPageView.includes('clearTargetParagraphs(){clearTargetScrollTimers();'), true);
-  assert.equal(apiPageView.includes('clearTargetScrollTimers();scrollTargetParagraph(index,paragraphIndex)'), true);
 });
 
 test('showing verse notes leaves full page mode so search results are visible', () => {
@@ -993,18 +1160,6 @@ test('verse-reference arrows retain separate occurrences inside one paragraph', 
   ]));
 });
 
-test('HTML verse-reference arrows prefer the occurrence paragraph over an unrelated navigation index', () => {
-  const apiPageView = fs.readFileSync(path.join(uiDirectory, 'api-page-view.js'), 'utf8');
-  const scrollFunction = apiPageView.match(/function scrollTargetParagraph\(index,paragraphIndex\)\{[^']+/)?.[0] || '';
-
-  assert.ok(scrollFunction, 'scrollTargetParagraph bridge is missing');
-  assert.ok(
-    scrollFunction.indexOf('data-onenote-paragraph-index')
-      < scrollFunction.indexOf('data-onenote-target-paragraph-index'),
-    'paragraph fallback must run before the positional paragraph target'
-  );
-});
-
 test('Bible paragraph targets decode cached HTML entities before matching page text', () => {
   const bibleReferences = fs.readFileSync(path.join(uiDirectory, 'bible-references.js'), 'utf8');
   const functionStart = bibleReferences.indexOf('function bibleParagraphRanges');
@@ -1081,6 +1236,7 @@ test('revealing a page in the tree clears the current target without reopening t
 test('opening a page shows a loading state until its HTML is rendered', () => {
   const treePages = fs.readFileSync(path.join(uiDirectory, 'tree-pages.js'), 'utf8');
   const apiPageView = fs.readFileSync(path.join(uiDirectory, 'api-page-view.js'), 'utf8');
+  const pageFrameBridge = fs.readFileSync(path.join(uiDirectory, 'page-frame-bridge.js'), 'utf8');
   const handlerStart = treePages.indexOf('async function openPage(id, options = {})');
   const handlerEnd = treePages.indexOf('\n}', handlerStart) + 2;
 
@@ -1092,7 +1248,7 @@ test('opening a page shows a loading state until its HTML is rendered', () => {
   assert.ok(requestIndex > loadingIndex, 'page loading state must render before the page request');
   assert.equal(handler.includes("content.setAttribute('aria-busy', 'true')"), true);
   assert.equal(treePages.includes('await htmlFrameReady;'), true, 'HTML rendering must finish before the loading state is removed');
-  assert.equal(apiPageView.includes('type:"onenote-html-ready"'), true, 'the frame must report readiness before images finish');
+  assert.equal(pageFrameBridge.includes("type:'onenote-html-ready'"), true, 'the frame must report readiness before images finish');
   assert.equal(apiPageView.includes("image.setAttribute('loading', 'lazy')"), true, 'OneNote images must load lazily');
   assert.equal(apiPageView.includes("image.setAttribute('decoding', 'async')"), true, 'OneNote images must decode asynchronously');
   assert.equal(treePages.includes('content.replaceChildren(loading, article);'), true, 'default HTML view must remain covered by the loading state');
@@ -1165,4 +1321,27 @@ test('page Bible references are ordered by module position', () => {
       { ref:'Откровение 1:1', paragraphIndexes:[4] }
     ])
   );
+});
+
+test('grouped page Bible references retain every exact source occurrence', () => {
+  const bibleReferences = fs.readFileSync(path.join(uiDirectory, 'bible-references.js'), 'utf8');
+  const renderStart = bibleReferences.indexOf('function renderBiblePageRefs(data)');
+  const context = {
+    input:{ paragraphs:[
+      { index:2, references:[{ normalizedRef:'Genesis 1:1', bookIndex:1, chapter:1, verse:1, startIndex:4, endIndex:9 }] },
+      { index:5, references:[{ normalizedRef:'Genesis 1:1', bookIndex:1, chapter:1, verse:1, startIndex:12, endIndex:17 }] }
+    ] },
+    result:[] as Array<Record<string, number>>
+  };
+
+  vm.runInNewContext(
+    bibleReferences.slice(0, renderStart)
+      + '\nresult = orderedBiblePageRefs(input)[0].bibleOccurrences;',
+    context
+  );
+
+  assert.equal(JSON.stringify(context.result), JSON.stringify([
+    { paragraphIndex:2, startIndex:4, endIndex:9 },
+    { paragraphIndex:5, startIndex:12, endIndex:17 }
+  ]));
 });

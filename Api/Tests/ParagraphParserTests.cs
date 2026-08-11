@@ -491,6 +491,33 @@ namespace BibleNote.Tests
         }
 
         [TestMethod]
+        public void VersePartMarkersArePreservedWhileRangesUseWholeVerses()
+        {
+            CheckVerses(
+                "Мф. 1:1-17; Лк. 1:1-4; 3:23b-38; Ин. 1:1-18",
+                null,
+                null,
+                "Мф 1:1-17", "Лк 1:1-4", "Лк 3:23-38", "Ин 1:1-18");
+
+            CheckVerses(
+                "Лк 3:23б-38а",
+                "<a href='bnVerse:Луки 3:23-38'>Лк 3:23б-38а</a>",
+                null,
+                "Лк 3:23-38");
+
+            CheckVerses("Лк 3:23x-38", null, null, "Лк 3:23");
+        }
+
+        [TestMethod]
+        public void ExistingStyledBibleLinkIsUpdatedWithoutCreatingNestedAnchor()
+        {
+            var input = "<a href='isbtBibleVerse:old'><span>Лк. 1:1-4</span></a><span>; 3:23b-38</span>";
+            var expected = "<a href='bnVerse:Луки 1:1-4'><span>Лк. 1:1-4</span></a><span>; <a href='bnVerse:Луки 3:23-38'>3:23b-38</a></span>";
+
+            CheckVerses(input, expected, null, "Лк 1:1-4", "Лк 3:23-38");
+        }
+
+        [TestMethod]
         public void Test32()
         {
             CheckVerses("А в 1-м Ин. 5:20, 1-Тим 1:6, 1-Ин 1:1", null, null, "1Ин 5:20", "1Тим 1:6", "1Ин 1:1");

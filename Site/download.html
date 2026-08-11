@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Скачать BibleNote для Windows</title>
+<meta name="description" content="Установщик и портативная сборка BibleNote для Windows 10 и 11. Отдельно устанавливать .NET или Node не требуется.">
+<link rel="icon" href="assets/favicon.ico">
+<link rel="stylesheet" href="assets/styles.css">
+<script src="assets/site.js"></script>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="index.html"><img src="assets/logo.png" alt="">BibleNote</a>
+    <nav class="nav">
+      <a href="index.html#features">Возможности</a>
+      <a href="docs.html">Документация</a>
+      <a href="download.html" aria-current="page">Скачать</a>
+      <a class="nav-extra" href="https://github.com/AlexanderDemko/BibleNote">GitHub</a>
+      <button class="theme-toggle" type="button">Тёмная тема</button>
+    </nav>
+  </div>
+</header>
+
+<main>
+
+<section class="hero" style="padding-bottom: 32px;">
+  <div class="wrap">
+    <h1>Скачать BibleNote</h1>
+    <p class="lead">Версия 4.0.51 для Windows 10 и 11 (x64). Программа бесплатна, исходный код открыт по лицензии MIT.</p>
+  </div>
+</section>
+
+<section class="section" style="padding-top: 24px;">
+  <div class="wrap">
+    <div class="grid grid-2">
+      <article class="card">
+        <h3>Установщик</h3>
+        <p class="muted">Обычный способ. Создаёт ярлыки, ставится для текущего пользователя без прав администратора и позволяет выбрать папку установки.</p>
+        <p class="small muted">Файл: <code>BibleNote Setup 4.0.51.exe</code></p>
+        <a class="btn btn-primary" href="https://github.com/AlexanderDemko/BibleNote/releases/latest">Скачать установщик</a>
+      </article>
+      <article class="card">
+        <h3>Портативная сборка</h3>
+        <p class="muted">Один файл без установки — удобно скопировать на другой компьютер. При каждом запуске распаковывается во временную папку, поэтому стартует заметно медленнее установленной версии.</p>
+        <p class="small muted">Файл: <code>BibleNote 4.0.51.exe</code></p>
+        <a class="btn btn-secondary" href="https://github.com/AlexanderDemko/BibleNote/releases/latest">Скачать портативную сборку</a>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="wrap">
+    <div class="section-head">
+      <h2>Что нужно для работы</h2>
+    </div>
+    <ul class="facts prose">
+      <li>
+        <span class="k">Операционная система</span>
+        <span class="v">Windows 10 или Windows 11, 64 бита.</span>
+      </li>
+      <li>
+        <span class="k">.NET и Node.js</span>
+        <span class="v">Устанавливать отдельно не нужно: .NET-приложение собрано самодостаточно, Node входит в комплект.</span>
+      </li>
+      <li>
+        <span class="k">Режим Microsoft Graph</span>
+        <span class="v">Учётная запись Microsoft — личная или рабочая. Установленный OneNote при этом не требуется.</span>
+      </li>
+      <li>
+        <span class="k">Режим классического OneNote</span>
+        <span class="v">Настольный OneNote 2010, 2013 или 2016 с открытыми тетрадями. Вход в учётную запись Microsoft не нужен.</span>
+      </li>
+      <li>
+        <span class="k">Место на диске</span>
+        <span class="v">Зависит от объёма тетрадей: кэш хранит текст всех страниц, а при желании и их исходный HTML.</span>
+      </li>
+    </ul>
+  </div>
+</section>
+
+<section class="section">
+  <div class="wrap prose">
+    <h2>Первый запуск</h2>
+    <div class="note-box">
+      Сборки пока не подписаны сертификатом, поэтому Windows SmartScreen может показать предупреждение «Система Windows защитила ваш компьютер». Чтобы продолжить, нажмите «Подробнее», затем «Выполнить в любом случае».
+    </div>
+    <p>Проверить целостность скачанного файла можно в PowerShell:</p>
+<pre><code>Get-FileHash '.\BibleNote Setup 4.0.51.exe' -Algorithm SHA256</code></pre>
+    <p>Полученное значение должно совпадать с контрольной суммой, опубликованной на странице релиза.</p>
+    <p>После установки откройте раздел настроек, выберите источник заметок и запустите первую синхронизацию — подробности в <a href="docs.html#start">документации</a>.</p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="wrap prose">
+    <h2>Другие платформы</h2>
+    <p><strong>macOS.</strong> Экспериментальная сборка для Apple Silicon собирается из исходного кода. Интеграция с классическим OneNote в неё не входит: она доступна только в Windows.</p>
+    <p><strong>Linux.</strong> Готовых сборок нет.</p>
+    <p><strong>Сборка из исходников.</strong> Инструкции — в репозитории проекта на <a href="https://github.com/AlexanderDemko/BibleNote">GitHub</a>.</p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="wrap prose">
+    <h2>Предыдущая версия</h2>
+    <p>BibleNote 3 — надстройка для классического OneNote, выходившая с 2011 по 2020 год. Она больше не развивается, её возможности перенесены в четвёртую версию. Исходный код третьей версии сохранён в репозитории проекта.</p>
+  </div>
+</section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="footer-grid">
+      <div>
+        <h4>BibleNote</h4>
+        <p class="small">Программа для изучения Библии вместе с личными заметками в OneNote.</p>
+      </div>
+      <div>
+        <h4>Продукт</h4>
+        <ul>
+          <li><a href="index.html#features">Возможности</a></li>
+          <li><a href="download.html">Скачать</a></li>
+          <li><a href="docs.html">Документация</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Проект</h4>
+        <ul>
+          <li><a href="https://github.com/AlexanderDemko/BibleNote">Исходный код</a></li>
+          <li><a href="https://github.com/AlexanderDemko/BibleNote/issues">Сообщить о проблеме</a></li>
+          <li><a href="terms.html">Лицензия MIT</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Правовое</h4>
+        <ul>
+          <li><a href="privacy.html">Конфиденциальность</a></li>
+          <li><a href="terms.html">Условия использования</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2011–2026 BibleNote</span>
+      <span>Microsoft, OneNote и Windows — товарные знаки Microsoft Corporation.</span>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

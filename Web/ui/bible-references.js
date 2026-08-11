@@ -31,17 +31,30 @@ function orderedBiblePageRefs(data) {
     for (const ref of paragraph.references || []) {
       const key = biblePageRefKey(ref);
       const paragraphIndex = paragraph?.index;
+      const occurrence = Number.isInteger(paragraphIndex)
+        && Number.isInteger(ref?.startIndex)
+        && Number.isInteger(ref?.endIndex)
+        ? { paragraphIndex, startIndex:ref.startIndex, endIndex:ref.endIndex }
+        : undefined;
       const existing = key ? byKey.get(key) : undefined;
       if (existing) {
         if (Number.isInteger(paragraphIndex) && !existing.paragraphIndexes.includes(paragraphIndex)) {
           existing.paragraphIndexes.push(paragraphIndex);
+        }
+        if (occurrence && !existing.bibleOccurrences.some(current =>
+          current.paragraphIndex === occurrence.paragraphIndex
+          && current.startIndex === occurrence.startIndex
+          && current.endIndex === occurrence.endIndex
+        )) {
+          existing.bibleOccurrences.push(occurrence);
         }
         continue;
       }
       const item = {
         ref,
         sourceOrder:sourceOrder++,
-        paragraphIndexes:Number.isInteger(paragraphIndex) ? [paragraphIndex] : []
+        paragraphIndexes:Number.isInteger(paragraphIndex) ? [paragraphIndex] : [],
+        bibleOccurrences:occurrence ? [occurrence] : []
       };
       ordered.push(item);
       if (key) byKey.set(key, item);
@@ -62,18 +75,29 @@ function orderedBiblePageRefs(data) {
   );
 }
 
-function showBiblePageRefUsage(paragraphIndexes) {
+function showBiblePageRefUsage(paragraphIndexes, bibleOccurrences = []) {
   if (!selectedPageId) return;
   const uniqueIndexes = [];
   for (const paragraphIndex of paragraphIndexes || []) {
     if (Number.isInteger(paragraphIndex) && !uniqueIndexes.includes(paragraphIndex)) uniqueIndexes.push(paragraphIndex);
   }
   if (uniqueIndexes.length === 0) return;
+  const uniqueOccurrences = [];
+  for (const occurrence of bibleOccurrences || []) {
+    if (!Number.isInteger(occurrence?.paragraphIndex)
+      || !Number.isInteger(occurrence?.startIndex)
+      || !Number.isInteger(occurrence?.endIndex)) continue;
+    if (!uniqueOccurrences.some(current =>
+      current.paragraphIndex === occurrence.paragraphIndex
+      && current.startIndex === occurrence.startIndex
+      && current.endIndex === occurrence.endIndex
+    )) uniqueOccurrences.push(occurrence);
+  }
   const article = content.querySelector('.page[data-page-id="' + CSS.escape(selectedPageId) + '"]');
   if (!article || typeof article.updateSearchMatches !== 'function') return;
   article.updateSearchMatches({
     paragraphIndexes:uniqueIndexes,
-    bibleOccurrences:[],
+    bibleOccurrences:uniqueOccurrences,
     query:'',
     bibleResult:true,
     scrollToFirst:true
@@ -104,7 +128,7 @@ function renderBiblePageRefs(data) {
     if (section.open) loadBiblePageRefTexts(section).catch(error => console.warn(error));
     requestAnimationFrame(() => updateContentScrollbar?.());
   });
-  for (const { ref, paragraphIndexes } of orderedRefs) {
+  for (const { ref, paragraphIndexes, bibleOccurrences } of orderedRefs) {
     const block = document.createElement('div');
     block.className = 'bible-reference';
     const row = document.createElement('div');
@@ -126,7 +150,7 @@ function renderBiblePageRefs(data) {
     const usageButton = createBibleRefAction(
       'Показать в заметке',
       '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/><circle cx="12" cy="12" r="8"/></svg>',
-      () => showBiblePageRefUsage(paragraphIndexes),
+      () => showBiblePageRefUsage(paragraphIndexes, bibleOccurrences),
       {
         ariaLabel:'Показать, где в заметке используется ' + refLabel,
         disabled:paragraphIndexes.length === 0

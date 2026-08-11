@@ -23,6 +23,8 @@ const scriptNames = [
   'layout.js',
   'settings.js',
   'api-page-view.js',
+  'page-frame-bridge.js',
+  'pdf-link-matching.js',
   'pdf-viewer.js',
   'notebooks-log.js',
   'bible-reader.js',
