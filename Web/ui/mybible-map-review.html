@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BibleNote — проверка соответствия стихов</title>
+  <link rel="stylesheet" href="/mybible-map-review.css">
+</head>
+<body>
+  <header>
+    <div>
+      <p class="eyebrow">BibleNote · Модули Библии</p>
+      <h1>Проверка соответствия стихов</h1>
+      <p id="module-pair" class="subtitle">Загрузка карты…</p>
+    </div>
+    <div class="header-actions">
+      <button id="validate" class="secondary">Перепроверить карту</button>
+      <button id="build-module" class="primary" type="button" hidden disabled>Собрать модуль BibleNote</button>
+    </div>
+  </header>
+
+  <main>
+    <section id="summary" class="summary" aria-label="Сводка"></section>
+    <section id="completion" class="completion" hidden aria-live="polite"></section>
+
+    <section class="workspace">
+      <aside class="groups-panel">
+        <div class="filters">
+          <input id="search" type="search" placeholder="Книга, координата, тип…" aria-label="Поиск групп">
+          <select id="status-filter" aria-label="Статус">
+            <option value="">Все статусы</option>
+            <option value="candidate" selected>Ожидают проверки</option>
+            <option value="confirmed">Подтверждены</option>
+            <option value="rejected">Отклонены</option>
+          </select>
+          <select id="confidence-filter" aria-label="Надёжность">
+            <option value="">Любая надёжность</option>
+            <option value="high">Высокая</option>
+            <option value="medium">Средняя</option>
+            <option value="low">Низкая</option>
+          </select>
+        </div>
+        <p id="filter-count" class="muted"></p>
+        <div id="groups" class="groups" role="list"></div>
+      </aside>
+
+      <section id="detail" class="detail empty">
+        <p>Выберите группу слева. Здесь появятся доказательства и тексты стихов из обоих модулей.</p>
+      </section>
+    </section>
+  </main>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script type="module" src="/mybible-map-review.js"></script>
+</body>
+</html>

@@ -104,8 +104,8 @@ function bibleTextDialogClickIsOutside(event) {
     || event.clientY > rect.bottom;
 }
 bibleTextDialog.addEventListener('click', event => {
-  if (!bibleTextDialogClickIsOutside(event)) return;
-  if (bibleVersePopupMode) window.close(); else bibleTextDialog.close();
+  if (bibleVersePopupMode || !bibleTextDialogClickIsOutside(event)) return;
+  bibleTextDialog.close();
 });
 bibleTextDialog.addEventListener('cancel', event => {
   if (!bibleVersePopupMode) return;
@@ -114,12 +114,12 @@ bibleTextDialog.addEventListener('cancel', event => {
 });
 bibleTextBackButton.addEventListener('click', () => navigateBibleTextHistory(-1).catch(showError));
 bibleTextForwardButton.addEventListener('click', () => navigateBibleTextHistory(1).catch(showError));
-async function openBibleActionInMain(action) {
-  if (!currentBibleTextRef) return;
+async function openBibleActionInMain(action, ref = currentBibleTextRef) {
+  if (!ref) return;
   await api('/api/system/main-bible-action', {
     method:'POST',
     headers:{ 'Content-Type':'application/json' },
-    body:JSON.stringify({ action, ref:currentBibleTextRef })
+    body:JSON.stringify({ action, ref })
   });
   window.close();
 }
@@ -145,89 +145,148 @@ notebookNameInput.addEventListener('keydown', event => {
   }
 });
 
-async function loadDownloadLog(resetOffset) {
-  if (resetOffset) logOffset = 0;
-  logListEl.replaceChildren();
+let downloadLogLoadPromise;
+let renderedLogTotal = 0;
+let renderedLogRowCount = 0;
+
+function setDownloadLogLoading(loading) {
+  refreshLogButton.disabled = loading;
+  refreshLogButton.textContent = loading ? 'Обновление…' : 'Обновить';
+  logListEl.setAttribute('aria-busy', String(loading));
+  if (loading) {
+    logPrevButton.disabled = true;
+    logNextButton.disabled = true;
+    logStatusEl.classList.remove('error');
+    logStatusEl.textContent = 'Обновление истории…';
+    return;
+  }
+  logPrevButton.disabled = logOffset === 0;
+  logNextButton.disabled = renderedLogRowCount === 0 || logOffset + renderedLogRowCount >= renderedLogTotal;
+}
+
+async function requestDownloadLogPage(requestedOffset) {
   const params = new URLSearchParams({
     limit:String(logLimit),
-    offset:String(logOffset)
+    offset:String(requestedOffset)
   });
-  const result = await api('/api/sync-history?' + params.toString());
-  const latest = result.rows[0];
-  logSummaryEl.textContent = result.total === 0
-    ? 'История синхронизаций'
-    : 'История: ' + result.total + ' ' + pluralRu(result.total, 'запуск', 'запуска', 'запусков')
-      + (latest?.startedAt ? ' · последняя ' + formatDate(latest.startedAt) : '');
-  for (const item of result.rows) {
-    const row = document.createElement('article');
-    row.className = 'sync-history-row ' + item.status;
-    const title = document.createElement('div');
-    title.className = 'sync-history-title';
-    const badge = document.createElement('span');
-    badge.className = 'log-badge ' + item.status;
-    const label = document.createElement('span');
-    label.textContent = item.status === 'failed'
-      ? 'Синхронизация не завершена'
-      : item.status === 'completed_with_errors'
-        ? 'Завершено с ошибками'
-        : 'Синхронизация завершена';
-    const date = document.createElement('time');
-    date.dateTime = item.startedAt;
-    date.textContent = formatDate(item.startedAt);
-    title.append(badge, label, date);
+  return api('/api/sync-history?' + params.toString());
+}
 
-    const context = document.createElement('div');
-    context.className = 'sync-history-context';
-    context.textContent = syncHistoryModeLabel(item.mode) + ' · ' + (item.scope || 'Все источники')
-      + ' · ' + formatSyncDuration(item.startedAt, item.finishedAt);
-
-    const metrics = document.createElement('div');
-    metrics.className = 'sync-history-metrics';
-    const values = item.result || {};
-    const errorCount = Number(values.contentErrors || 0)
-      + Number(values.sectionScanErrors || 0)
-      + Number(values.bibleRefsParseErrors || 0);
-    const metricValues = item.mode === 'bible-reparse'
-      ? [
-          ['обработано', values.bibleRefsPagesParsed || 0],
-          ['без изменений', values.bibleRefsParseSkipped || 0],
-          ['ссылок', values.bibleRefsRecognized || 0]
-        ]
-      : [
-          ['проверено', values.pages || 0],
-          ['загружено', values.contentDownloaded || 0],
-          ['без изменений', values.contentSkipped || 0],
-          ['ссылок', values.bibleRefsRecognized || 0]
-        ];
-    if (errorCount > 0 || item.status === 'failed') metricValues.push(['ошибок', errorCount || 1]);
-    for (const [metricLabel, metricValue] of metricValues) {
-      const metric = document.createElement('span');
-      const value = document.createElement('strong');
-      value.textContent = Number(metricValue).toLocaleString('ru-RU');
-      metric.append(value, ' ' + metricLabel);
-      metrics.append(metric);
+async function performDownloadLogLoad(resetOffset, targetOffset) {
+  let requestedOffset = resetOffset
+    ? 0
+    : Number.isInteger(targetOffset) && targetOffset >= 0
+      ? targetOffset
+      : logOffset;
+  setDownloadLogLoading(true);
+  try {
+    let result = await requestDownloadLogPage(requestedOffset);
+    const maximumOffset = result.total > 0
+      ? Math.floor((result.total - 1) / logLimit) * logLimit
+      : 0;
+    if (requestedOffset > maximumOffset) {
+      requestedOffset = maximumOffset;
+      result = await requestDownloadLogPage(requestedOffset);
     }
+    logOffset = requestedOffset;
+    renderedLogTotal = result.total;
+    renderedLogRowCount = result.rows.length;
+    const nextRows = document.createDocumentFragment();
+    const latest = result.rows[0];
+    logSummaryEl.textContent = result.total === 0
+      ? 'История синхронизаций'
+      : 'История: ' + result.total + ' ' + pluralRu(result.total, 'запуск', 'запуска', 'запусков')
+        + (latest?.startedAt ? ' · последняя ' + formatDate(latest.startedAt) : '');
+    for (const item of result.rows) {
+      const row = document.createElement('article');
+      row.className = 'sync-history-row ' + item.status;
+      const title = document.createElement('div');
+      title.className = 'sync-history-title';
+      const badge = document.createElement('span');
+      badge.className = 'log-badge ' + item.status;
+      const label = document.createElement('span');
+      label.textContent = item.status === 'failed'
+        ? 'Синхронизация не завершена'
+        : item.status === 'completed_with_errors'
+          ? 'Завершено с ошибками'
+          : 'Синхронизация завершена';
+      const date = document.createElement('time');
+      date.dateTime = item.startedAt;
+      date.textContent = formatDate(item.startedAt);
+      title.append(badge, label, date);
 
-    row.append(title, context, metrics);
-    if (item.error) {
-      const error = document.createElement('div');
-      error.className = 'sync-history-error';
-      error.textContent = item.error;
-      row.append(error);
+      const context = document.createElement('div');
+      context.className = 'sync-history-context';
+      context.textContent = syncHistoryModeLabel(item.mode) + ' · ' + (item.scope || 'Все источники')
+        + ' · ' + formatSyncDuration(item.startedAt, item.finishedAt);
+
+      const metrics = document.createElement('div');
+      metrics.className = 'sync-history-metrics';
+      const values = item.result || {};
+      const errorCount = Number(values.contentErrors || 0)
+        + Number(values.sectionScanErrors || 0)
+        + Number(values.bibleRefsParseErrors || 0);
+      const metricValues = item.mode === 'bible-reparse'
+        ? [
+            ['обработано', values.bibleRefsPagesParsed || 0],
+            ['без изменений', values.bibleRefsParseSkipped || 0],
+            ['ссылок', values.bibleRefsRecognized || 0]
+          ]
+        : [
+            ['проверено', values.pages || 0],
+            ['загружено', values.contentDownloaded || 0],
+            ['без изменений', values.contentSkipped || 0],
+            ['ссылок', values.bibleRefsRecognized || 0]
+          ];
+      if (errorCount > 0 || item.status === 'failed') metricValues.push(['ошибок', errorCount || 1]);
+      for (const [metricLabel, metricValue] of metricValues) {
+        const metric = document.createElement('span');
+        const value = document.createElement('strong');
+        value.textContent = Number(metricValue).toLocaleString('ru-RU');
+        metric.append(value, ' ' + metricLabel);
+        metrics.append(metric);
+      }
+
+      row.append(title, context, metrics);
+      if (item.error) {
+        const error = document.createElement('div');
+        error.className = 'sync-history-error';
+        error.textContent = item.error;
+        row.append(error);
+      }
+      nextRows.append(row);
     }
-    logListEl.append(row);
+    if (result.rows.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'sync-state';
+      empty.textContent = 'История пока пуста. Она появится после первой синхронизации.';
+      nextRows.append(empty);
+    }
+    logListEl.replaceChildren(nextRows);
+    const first = result.total === 0 ? 0 : logOffset + 1;
+    const last = Math.min(logOffset + result.rows.length, result.total);
+    logPageEl.textContent = first + '–' + last + ' из ' + result.total;
+    logStatusEl.textContent = '';
+  } catch (error) {
+    console.warn(error);
+    logStatusEl.classList.add('error');
+    logStatusEl.textContent = 'Не удалось обновить историю: ' + (error?.message || String(error));
+    if (logListEl.childElementCount === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'sync-state';
+      empty.textContent = 'История временно недоступна. Повторите попытку позже.';
+      logListEl.append(empty);
+    }
+  } finally {
+    setDownloadLogLoading(false);
   }
-  if (result.rows.length === 0) {
-    const empty = document.createElement('div');
-    empty.className = 'sync-state';
-    empty.textContent = 'История пока пуста. Она появится после первой синхронизации.';
-    logListEl.append(empty);
-  }
-  const first = result.total === 0 ? 0 : logOffset + 1;
-  const last = Math.min(logOffset + result.rows.length, result.total);
-  logPageEl.textContent = first + '–' + last + ' из ' + result.total;
-  logPrevButton.disabled = logOffset === 0;
-  logNextButton.disabled = logOffset + result.rows.length >= result.total;
+}
+
+function loadDownloadLog(resetOffset, targetOffset) {
+  if (downloadLogLoadPromise) return downloadLogLoadPromise;
+  downloadLogLoadPromise = performDownloadLogLoad(resetOffset, targetOffset)
+    .finally(() => { downloadLogLoadPromise = undefined; });
+  return downloadLogLoadPromise;
 }
 
 function syncHistoryModeLabel(mode) {
@@ -258,10 +317,8 @@ function formatSyncDuration(startedAt, finishedAt) {
 
 refreshLogButton.addEventListener('click', () => loadDownloadLog(false).catch(showError));
 logPrevButton.addEventListener('click', () => {
-  logOffset = Math.max(0, logOffset - logLimit);
-  loadDownloadLog(false).catch(showError);
+  loadDownloadLog(false, Math.max(0, logOffset - logLimit)).catch(showError);
 });
 logNextButton.addEventListener('click', () => {
-  logOffset += logLimit;
-  loadDownloadLog(false).catch(showError);
+  loadDownloadLog(false, logOffset + logLimit).catch(showError);
 });

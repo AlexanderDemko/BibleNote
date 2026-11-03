@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<one:Page xmlns:one="http://schemas.microsoft.com/office/onenote/2013/onenote">
+  <one:QuickStyleDef index="1" name="p" font="Calibri" fontSize="12.0" spaceBefore="0.0" spaceAfter="0.0"/>
+  <one:Outline><one:OEChildren>
+    <one:OE quickStyleIndex="1" spaceAfter="12.0"><one:T>Первый абзац.</one:T></one:OE>
+    <one:OE quickStyleIndex="1" spaceAfter="12.0">
+      <one:T style="font-size:12pt">Пусть Господь сохранит наши сердца в чистоте, а брак в целостности и любви.</one:T>
+      <one:OEChildren>
+        <one:OE quickStyleIndex="1" spaceBefore="27.0" spaceAfter="9.0" spaceBetween="24.0" style="font-size:18pt">
+          <one:List><one:Number text="1."/></one:List>
+          <one:T><![CDATA[<span style="font-weight:bold">Божий замысел об интимной близости</span>]]></one:T>
+        </one:OE>
+      </one:OEChildren>
+    </one:OE>
+    <one:OE quickStyleIndex="1" spaceAfter="12.0"><one:T>В Библии говорится о многом, но о многом и нет.</one:T></one:OE>
+  </one:OEChildren></one:Outline>
+</one:Page>

@@ -13,6 +13,7 @@ namespace BibleNote.Providers.OneNote.Contracts
         Task<string> GetCurrentPageIdAsync();
         Task<OneNoteCurrentPageInfo> GetCurrentPageInfoAsync();
         Task<string> GetHyperlinkToObjectAsync(string hierarchyId, string objectId = "");
+        Task NavigateToAsync(string hierarchyId);
         Task<string> GetCurrentSectionIdAsync();
         Task UpdatePageContentAsync(XDocument pageDoc);
         Task<OneNoteHierarchyInfo> GetHierarchyInfoAsync(string hierarchyId);

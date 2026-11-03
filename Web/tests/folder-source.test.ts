@@ -329,6 +329,40 @@ test('folder quick sync refreshes a cached PDF after the extraction algorithm ch
   }
 });
 
+test('folder quick sync re-extracts unchanged Word files when figure layout handling changes', async () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'biblenote-folder-word-version-'));
+  const dbPath = path.join(directory, 'cache.sqlite');
+  const notesPath = path.join(directory, 'notes');
+  fs.mkdirSync(notesPath);
+  await writeMinimalDocx(path.join(notesPath, 'document.docx'));
+  const previousSources = process.env.BIBLENOTE_DATA_SOURCES;
+  process.env.BIBLENOTE_DATA_SOURCES = Buffer.from(JSON.stringify([
+    { type:'folder', displayName:'Word test', folderPaths:[notesPath] }
+  ]), 'utf8').toString('base64url');
+  try {
+    const first = await syncOneNoteCache({ dbPath, parseBibleRefs:false });
+    assert.equal(first.contentDownloaded, 1);
+    const db = openCacheDb(dbPath);
+    try {
+      const row = db.prepare('SELECT id, links_json FROM pages').get() as { id: string; links_json: string };
+      const links = JSON.parse(row.links_json);
+      links.folder.extractionVersion = wordExtractionVersion - 1;
+      db.prepare('UPDATE pages SET links_json = ? WHERE id = ?').run(JSON.stringify(links), row.id);
+    } finally {
+      db.close();
+    }
+    const refreshed = await syncOneNoteCache({ dbPath, parseBibleRefs:false });
+    assert.equal(refreshed.contentDownloaded, 1);
+    const unchanged = await syncOneNoteCache({ dbPath, parseBibleRefs:false });
+    assert.equal(unchanged.contentDownloaded, 0);
+    assert.equal(unchanged.contentSkipped, 1);
+  } finally {
+    if (previousSources == null) delete process.env.BIBLENOTE_DATA_SOURCES;
+    else process.env.BIBLENOTE_DATA_SOURCES = previousSources;
+    fs.rmSync(directory, { recursive:true, force:true });
+  }
+});
+
 test('folder extractors preserve useful structure and report PDF quality without OCR', async () => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'biblenote-folder-extract-'));
   try {

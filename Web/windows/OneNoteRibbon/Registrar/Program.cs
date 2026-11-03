@@ -237,8 +237,8 @@ namespace BibleNote.OneNoteRibbon.Registrar
         {
             using (var addInKey = root.CreateSubKey(@"Software\Microsoft\Office\OneNote\AddIns\" + variant.ProgId))
             {
-                addInKey.SetValue("Description", "BibleNote");
-                addInKey.SetValue("FriendlyName", "BibleNote");
+                addInKey.SetValue("Description", "Интеграция OneNote с приложением BibleNote 4");
+                addInKey.SetValue("FriendlyName", "BibleNote 4");
                 addInKey.SetValue("CommandLineSafe", 0, RegistryValueKind.DWord);
                 addInKey.SetValue("LoadBehavior", 3, RegistryValueKind.DWord);
             }

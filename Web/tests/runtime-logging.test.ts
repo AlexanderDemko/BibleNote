@@ -3,7 +3,43 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import { rotateRuntimeLogFiles } from '../src/runtime-logging.js';
+import {
+  configureRuntimeLogging,
+  readRuntimeLoggingSettings,
+  rotateRuntimeLogFiles,
+  saveRuntimeLoggingSettings
+} from '../src/runtime-logging.js';
+
+test('enabled runtime logging creates the log on startup', () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'biblenote-runtime-log-startup-'));
+  try {
+    fs.writeFileSync(path.join(directory, 'runtime-settings.json'), '{"verboseLogging":true}\n');
+    const settings = configureRuntimeLogging(directory);
+    assert.equal(settings.verboseLogging, true);
+    assert.equal(settings.logError, undefined);
+    assert.match(fs.readFileSync(settings.logPath, 'utf8'), /Extended logging active/);
+  } finally {
+    fs.rmSync(directory, { recursive:true, force:true });
+  }
+});
+
+test('runtime settings report a failed log write', async () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'biblenote-runtime-log-error-'));
+  try {
+    fs.mkdirSync(path.join(directory, 'extended.log'));
+    configureRuntimeLogging(directory);
+    const settings = await saveRuntimeLoggingSettings({ verboseLogging:true });
+    assert.equal(settings.verboseLogging, true);
+    assert.match(settings.logError ?? '', /EISDIR|EPERM|EACCES/);
+    assert.equal(readRuntimeLoggingSettings().logError, settings.logError);
+    fs.rmdirSync(path.join(directory, 'extended.log'));
+    const recovered = await saveRuntimeLoggingSettings({ verboseLogging:true });
+    assert.equal(recovered.logError, undefined);
+    assert.equal(fs.existsSync(recovered.logPath), true);
+  } finally {
+    fs.rmSync(directory, { recursive:true, force:true });
+  }
+});
 
 test('runtime log rotation keeps a bounded number of backups', () => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'biblenote-runtime-log-'));

@@ -82,6 +82,20 @@ export function openCacheDb(dbPath = defaultDbPath): Database.Database {
   return db;
 }
 
+export function cachedPageHtmlContains(
+  db: Database.Database,
+  pageId: string,
+  marker: string
+): boolean {
+  if (!marker) return false;
+  const row = db.prepare(`
+    SELECT COALESCE(instr(content_html, ?) > 0, 0) AS matches
+    FROM pages
+    WHERE id = ?
+  `).get(marker, pageId) as { matches: number } | undefined;
+  return Boolean(row?.matches);
+}
+
 export function checkpointCacheDb(
   db: Database.Database,
   mode: 'PASSIVE' | 'TRUNCATE' = 'PASSIVE'

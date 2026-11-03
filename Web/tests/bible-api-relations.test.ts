@@ -1,7 +1,12 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import test from 'node:test';
+import { once } from 'node:events';
 import type { BibleParseResult } from '../src/bible.js';
 import { findParallelBibleReferenceNotes, findParallelBibleReferences, openCacheDb, searchBibleReferenceNotesByWeight, upsertBibleParseResult } from '../src/cache.js';
+import { startCacheUi } from '../src/cache-ui.js';
 
 test('stores only Bible relations calculated and returned by the API', () => {
   const db = openCacheDb(':memory:');
@@ -291,7 +296,7 @@ test('returns range relations as exact verses and sums repeated contributions pe
       relatedChapter:9,
       relatedVerse:0,
       includeAuxiliaryRefs:true
-    }).length, 1);
+    }).length, 0);
     assert.equal(findParallelBibleReferenceNotes(db, {
       bookIndex:43,
       chapter:3,
@@ -313,5 +318,146 @@ test('returns range relations as exact verses and sums repeated contributions pe
     assert.equal(reverseRangeRows[0]?.relationWeight, 0.3333);
   } finally {
     db.close();
+  }
+});
+
+test('does not treat a truncated chapter prefix as an explicit parallel chapter reference', () => {
+  const db = openCacheDb(':memory:');
+  try {
+    db.prepare(`
+      INSERT INTO pages(
+        id, title, parent_notebook_id, parent_notebook_name, parent_section_name,
+        content_hash, metadata_synced_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run('chapter-prefix', 'Chapter prefix', 'notebook-1', 'Notebook', 'Section', 'hash-prefix', '2026-09-02T00:00:00Z');
+
+    const targetText = 'Точный стих Фил 1:24';
+    const dotText = 'Тема (Фил 1.19-26)';
+    const colonText = 'Тема (Фил 1:19-26)';
+    const commaText = 'Тема (Фил 1,19-26)';
+    const explicitText = 'Обзор Фил 2.';
+    const chapterRef = (text: string, chapter: number) => {
+      const originalText = `Фил ${chapter}`;
+      const startIndex = text.indexOf(originalText);
+      return {
+        originalText,
+        normalized:`Филиппийцам ${chapter}`,
+        bookIndex:50,
+        bookName:'К Филиппийцам',
+        chapter,
+        verse:0,
+        topChapter:chapter,
+        topVerse:0,
+        isChapter:true,
+        startIndex,
+        endIndex:startIndex + originalText.length - 1,
+        entryType:'BookChapter'
+      };
+    };
+
+    upsertBibleParseResult(db, 'chapter-prefix', 'hash-prefix', {
+      paragraphs:[
+        {
+          index:0,
+          text:targetText,
+          references:[{
+            originalText:'Фил 1:24', normalized:'Филиппийцам 1:24',
+            bookIndex:50, bookName:'К Филиппийцам', chapter:1, verse:24,
+            topChapter:1, topVerse:24,
+            startIndex:targetText.indexOf('Фил 1:24'),
+            endIndex:targetText.indexOf('Фил 1:24') + 'Фил 1:24'.length - 1,
+            entryType:'BookChapterVerse'
+          }]
+        },
+        { index:1, text:dotText, references:[chapterRef(dotText, 1)] },
+        { index:2, text:colonText, references:[chapterRef(colonText, 1)] },
+        { index:3, text:commaText, references:[chapterRef(commaText, 1)] },
+        { index:4, text:explicitText, references:[chapterRef(explicitText, 2)] }
+      ],
+      relations:[
+        { paragraphIndex:0, referenceIndex:0, verseId:50001024, relativeParagraphIndex:1, relativeReferenceIndex:0, relativeVerseId:50001000, relationWeight:1 },
+        { paragraphIndex:0, referenceIndex:0, verseId:50001024, relativeParagraphIndex:2, relativeReferenceIndex:0, relativeVerseId:50001000, relationWeight:1 },
+        { paragraphIndex:0, referenceIndex:0, verseId:50001024, relativeParagraphIndex:3, relativeReferenceIndex:0, relativeVerseId:50001000, relationWeight:1 },
+        { paragraphIndex:0, referenceIndex:0, verseId:50001024, relativeParagraphIndex:4, relativeReferenceIndex:0, relativeVerseId:50002000, relationWeight:1 }
+      ]
+    }, 'biblenote-http-v4', '2026-09-02T00:00:00Z');
+
+    const rows = findParallelBibleReferences(db, {
+      bookIndex:50,
+      chapter:1,
+      verse:24,
+      includeAuxiliaryRefs:true
+    });
+    assert.deepEqual(rows.map(row => row.relatedVerseId), [50002000]);
+
+    assert.equal(findParallelBibleReferenceNotes(db, {
+      bookIndex:50,
+      chapter:1,
+      verse:24,
+      relatedBookIndex:50,
+      relatedChapter:1,
+      relatedVerse:0,
+      includeAuxiliaryRefs:true
+    }).length, 0);
+    assert.equal(findParallelBibleReferenceNotes(db, {
+      bookIndex:50,
+      chapter:1,
+      verse:24,
+      relatedBookIndex:50,
+      relatedChapter:2,
+      relatedVerse:0,
+      includeAuxiliaryRefs:true
+    }).length, 1);
+  } finally {
+    db.close();
+  }
+});
+
+test('does not inflate an explicit chapter relation with every verse relation in that chapter', async () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'biblenote-parallel-chapter-'));
+  const dbPath = path.join(tempDir, 'cache.sqlite');
+  let server: ReturnType<typeof startCacheUi> | undefined;
+  try {
+    const db = openCacheDb(dbPath);
+    db.prepare(`
+      INSERT INTO pages(
+        id, title, parent_notebook_id, parent_notebook_name, parent_section_name,
+        content_hash, metadata_synced_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run('chapter-api', 'Chapter API', 'notebook-1', 'Notebook', 'Section', 'hash-api', '2026-09-02T00:00:00Z');
+    upsertBibleParseResult(db, 'chapter-api', 'hash-api', {
+      paragraphs:[
+        { index:0, text:'Фил 1:24', references:[{ originalText:'Фил 1:24', normalized:'Филиппийцам 1:24', bookIndex:50, bookName:'К Филиппийцам', chapter:1, verse:24, topChapter:1, topVerse:24 }] },
+        { index:1, text:'Фил 2', references:[{ originalText:'Фил 2', normalized:'Филиппийцам 2', bookIndex:50, bookName:'К Филиппийцам', chapter:2, verse:0, topChapter:2, topVerse:0, isChapter:true, entryType:'BookChapter', startIndex:0, endIndex:4 }] },
+        { index:2, text:'Фил 2:3', references:[{ originalText:'Фил 2:3', normalized:'Филиппийцам 2:3', bookIndex:50, bookName:'К Филиппийцам', chapter:2, verse:3, topChapter:2, topVerse:3 }] }
+      ],
+      relations:[
+        { paragraphIndex:0, referenceIndex:0, verseId:50001024, relativeParagraphIndex:1, relativeReferenceIndex:0, relativeVerseId:50002000, relationWeight:1 },
+        { paragraphIndex:0, referenceIndex:0, verseId:50001024, relativeParagraphIndex:2, relativeReferenceIndex:0, relativeVerseId:50002003, relationWeight:5 }
+      ]
+    }, 'biblenote-http-v4', '2026-09-02T00:00:00Z');
+    db.close();
+
+    server = startCacheUi({ dbPath, port:0 });
+    await once(server, 'listening');
+    const address = server.address();
+    assert.ok(address && typeof address === 'object');
+    const baseUrl = `http://127.0.0.1:${address.port}`;
+    const readyDeadline = Date.now() + 5000;
+    while (Date.now() < readyDeadline) {
+      const startup = await fetch(`${baseUrl}/api/startup`).then(response => response.json()) as { ready?: boolean };
+      if (startup.ready) break;
+      await new Promise(resolve => setTimeout(resolve, 50));
+    }
+
+    const result = await fetch(`${baseUrl}/api/bible/parallel?bookIndex=50&chapter=1&verse=24&limit=20&includeAux=1`)
+      .then(response => response.json()) as { rows:Array<Record<string, unknown>> };
+    const chapter = result.rows.find(row => Number(row.relatedVerseId) === 50002000);
+    assert.equal(chapter?.relationWeight, 1);
+    assert.equal(chapter?.relations, 1);
+    assert.equal(chapter?.pages, 1);
+  } finally {
+    if (server) await new Promise<void>(resolve => server!.close(() => resolve()));
+    fs.rmSync(tempDir, { recursive:true, force:true, maxRetries:5, retryDelay:50 });
   }
 });

@@ -152,8 +152,21 @@ test('@inductive создание, изменение и удаление свя
 
   const undo = page.locator('.inductive-undo-button');
   const redo = page.locator('.inductive-redo-button');
+  const hideAndShow = async () => {
+    await page.getByRole('button', { name:'Выключить режим разметки', exact:true }).click();
+    const undoTitle = await undo.getAttribute('title');
+    const redoTitle = await redo.getAttribute('title');
+    await page.getByRole('button', { name:'Скрыть разметку', exact:true }).click();
+    await expect(undo).toBeHidden();
+    await expect(redo).toBeHidden();
+    await page.getByRole('button', { name:'Показать разметку', exact:true }).click();
+    await expect(undo).toHaveAttribute('title', undoTitle!);
+    await expect(redo).toHaveAttribute('title', redoTitle!);
+    await page.getByRole('button', { name:'Включить режим разметки', exact:true }).click();
+  };
   await undo.click();
   await expect(page.locator('.inductive-relation-row')).toHaveCount(0);
+  await hideAndShow();
   await redo.click();
   await expect(page.locator('.inductive-relation-row')).toHaveCount(1);
 
@@ -172,6 +185,7 @@ test('@inductive создание, изменение и удаление свя
 
   await undo.click();
   await expect(page.locator('.inductive-relation-row')).toContainText('первая версия');
+  await hideAndShow();
   await redo.click();
   await expect(page.locator('.inductive-relation-row')).toContainText('вторая версия');
 

@@ -1,6 +1,12 @@
-const SIDEBAR_MIN_WIDTH = 220;
+const SIDEBAR_MIN_WIDTH = 280;
 let sidebarWidth = Number(localStorage.getItem('onenote.sidebarWidth')) || 390;
 let sidebarCollapsed = localStorage.getItem('onenote.sidebarCollapsed') === 'true';
+
+const bibleReaderPanel = document.querySelector('.bible-reader-panel');
+bibleReaderPanel.open = localStorage.getItem('biblenote.biblePanelOpen') !== 'false';
+bibleReaderPanel.addEventListener('toggle', () => {
+  localStorage.setItem('biblenote.biblePanelOpen', String(bibleReaderPanel.open));
+});
 
 function clampSidebarWidth(value) {
   return Math.round(Math.max(SIDEBAR_MIN_WIDTH, Math.min(value, Math.min(650, window.innerWidth * .65))));
@@ -63,7 +69,9 @@ sidebarResizer.addEventListener('keydown', event => {
 });
 window.addEventListener('resize', applySidebarState);
 
-function setupCustomScrollbar(scroller, rail) {
+function setupCustomScrollbar(scrollerSource, rail) {
+  const resolveScroller = typeof scrollerSource === 'function' ? scrollerSource : () => scrollerSource;
+  const initialScroller = resolveScroller();
   const thumb = rail.querySelector('.custom-scrollbar-thumb');
   let dragging = false;
   let dragStartY = 0;
@@ -71,6 +79,7 @@ function setupCustomScrollbar(scroller, rail) {
   const contentResizeObserver = new ResizeObserver(update);
 
   function measurements() {
+    const scroller = resolveScroller();
     const railHeight = rail.clientHeight;
     const scrollRange = Math.max(0, scroller.scrollHeight - scroller.clientHeight);
     const thumbHeight = scrollRange === 0
@@ -80,6 +89,7 @@ function setupCustomScrollbar(scroller, rail) {
   }
 
   function update() {
+    const scroller = resolveScroller();
     const value = measurements();
     const top = value.scrollRange > 0 ? value.travel * scroller.scrollTop / value.scrollRange : 0;
     thumb.style.height = value.thumbHeight + 'px';
@@ -94,7 +104,9 @@ function setupCustomScrollbar(scroller, rail) {
   }
 
   function observeContentSize() {
+    const scroller = resolveScroller();
     contentResizeObserver.disconnect();
+    contentResizeObserver.observe(scroller);
     for (const child of scroller.children) contentResizeObserver.observe(child);
     update();
   }
@@ -103,6 +115,7 @@ function setupCustomScrollbar(scroller, rail) {
     if (rail.classList.contains('inactive')) return;
     event.preventDefault();
     event.stopPropagation();
+    const scroller = resolveScroller();
     dragging = true;
     dragStartY = event.clientY;
     dragStartScrollTop = scroller.scrollTop;
@@ -112,6 +125,7 @@ function setupCustomScrollbar(scroller, rail) {
   document.addEventListener('pointermove', event => {
     if (!dragging) return;
     event.preventDefault();
+    const scroller = resolveScroller();
     const value = measurements();
     if (value.travel > 0) scroller.scrollTop = dragStartScrollTop + (event.clientY - dragStartY) * value.scrollRange / value.travel;
   });
@@ -122,12 +136,14 @@ function setupCustomScrollbar(scroller, rail) {
   });
   rail.addEventListener('pointerdown', event => {
     if (event.target === thumb || rail.classList.contains('inactive')) return;
+    const scroller = resolveScroller();
     const value = measurements();
     const rect = rail.getBoundingClientRect();
     const targetTop = Math.max(0, Math.min(value.travel, event.clientY - rect.top - value.thumbHeight / 2));
     scroller.scrollTop = value.travel > 0 ? targetTop * value.scrollRange / value.travel : 0;
   });
   rail.addEventListener('keydown', event => {
+    const scroller = resolveScroller();
     const page = Math.max(40, scroller.clientHeight * .85);
     if (event.key === 'ArrowDown') scroller.scrollBy({ top:40 });
     else if (event.key === 'ArrowUp') scroller.scrollBy({ top:-40 });
@@ -138,21 +154,30 @@ function setupCustomScrollbar(scroller, rail) {
     else return;
     event.preventDefault();
   });
-  scroller.addEventListener('scroll', update, { passive:true });
-  new ResizeObserver(update).observe(scroller);
+  if (typeof scrollerSource === 'function') {
+    document.addEventListener('scroll', event => {
+      if (event.target === resolveScroller()) update();
+    }, { passive:true, capture:true });
+  } else {
+    initialScroller.addEventListener('scroll', update, { passive:true });
+  }
+  new ResizeObserver(update).observe(initialScroller.parentElement || initialScroller);
   new ResizeObserver(update).observe(rail);
-  new MutationObserver(observeContentSize).observe(scroller, {
+  new MutationObserver(observeContentSize).observe(
+    typeof scrollerSource === 'function' ? (initialScroller.parentElement || initialScroller) : initialScroller,
+    {
     childList:true,
     subtree:true,
     attributes:true,
     characterData:true,
     attributeFilter:['open', 'hidden', 'class', 'style']
-  });
+    }
+  );
   observeContentSize();
   requestAnimationFrame(observeContentSize);
   return update;
 }
 
 const updateTreeScrollbar = setupCustomScrollbar(tree, treeScrollbar);
-const updateContentScrollbar = setupCustomScrollbar(content, contentScrollbar);
+const updateContentScrollbar = setupCustomScrollbar(() => content, contentScrollbar);
 applySidebarState();

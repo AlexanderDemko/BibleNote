@@ -1,7 +1,8 @@
 import Database from 'better-sqlite3';
-import { visibleBibleRefSql, visibleBibleScopeSql } from './cache-sql.js';
+import { completeBibleRefSql, visibleBibleRefSql, visibleBibleScopeSql } from './cache-sql.js';
 import type { BibleReferenceSearchResult, CacheSearchResult, NotebookRow, PageRow, SectionRow, WeightedBibleReferenceNote } from './cache-types.js';
 import { fromVerseId, toVerseId } from './cache-verse-id.js';
+import { registerBibleRangeLength } from './bible-range-length.js';
 
 export type CachedPageMetadata = Omit<PageRow, 'content_text' | 'content_html'>;
 export type CachedPageContent = Pick<
@@ -685,16 +686,18 @@ export function searchBibleReferenceNotesByWeight(
   const topVerse = options.topVerse ?? options.verse;
   const targetVerseId = toVerseId(options.bookIndex, options.chapter, options.verse);
   if (targetVerseId == null) throw new Error('bookIndex, chapter, and verse must identify a verse.');
+  registerBibleRangeLength(db);
 
   const filters = [
     'p.deleted_at IS NULL',
     'r.book_index = @bookIndex',
+    // Inclusive overlap: the stored reference starts before the query ends and ends after it starts.
     `(
-      (r.chapter < @chapter OR (r.chapter = @chapter AND COALESCE(r.verse, 0) <= @verse))
+      (r.chapter < @topChapter OR (r.chapter = @topChapter AND COALESCE(r.verse, 0) <= @topVerse))
       AND
-      (COALESCE(r.top_chapter, r.chapter) > @topChapter
-        OR (COALESCE(r.top_chapter, r.chapter) = @topChapter
-          AND COALESCE(r.top_verse, r.verse, 999) >= @topVerse))
+      (COALESCE(r.top_chapter, r.chapter) > @chapter
+        OR (COALESCE(r.top_chapter, r.chapter) = @chapter
+          AND COALESCE(r.top_verse, r.verse, 999) >= @verse))
     )`
   ];
   if (!options.includeAuxiliaryRefs) {
@@ -734,6 +737,8 @@ export function searchBibleReferenceNotesByWeight(
         r.paragraph_index,
         r.start_index,
         r.end_index,
+        r.module,
+        r.book_index,
         r.chapter,
         r.verse,
         COALESCE(r.top_chapter, r.chapter) AS top_chapter,
@@ -750,6 +755,7 @@ export function searchBibleReferenceNotesByWeight(
     ), matching_refs AS MATERIALIZED (
       SELECT
         id, page_id, paragraph_index, start_index, end_index,
+        module, book_index,
         chapter, verse, top_chapter, top_verse,
         normalized_ref, original_text
       FROM (
@@ -783,24 +789,6 @@ export function searchBibleReferenceNotesByWeight(
         AND all_ref.paragraph_index = mp.paragraph_index
         AND ${paragraphRefCountFilter}
       GROUP BY all_ref.page_id, all_ref.paragraph_index
-    ), counted_matching_refs AS MATERIALIZED (
-      SELECT id
-      FROM matching_refs
-      WHERE verse IS NULL OR top_chapter <> chapter
-    ), relation_ref_verses AS (
-      SELECT rel.verse_ref_id AS ref_id, rel.verse_id
-      FROM counted_matching_refs mr
-      CROSS JOIN paragraph_verse_relations rel INDEXED BY idx_bible_relations_verse_ref
-      WHERE rel.verse_ref_id = mr.id
-      UNION ALL
-      SELECT rel.relative_verse_ref_id AS ref_id, rel.relative_verse_id AS verse_id
-      FROM counted_matching_refs mr
-      CROSS JOIN paragraph_verse_relations rel INDEXED BY idx_bible_relations_relative_verse_ref
-      WHERE rel.relative_verse_ref_id = mr.id
-    ), relation_ref_verse_counts AS (
-      SELECT ref_id, COUNT(DISTINCT verse_id) AS verse_count
-      FROM relation_ref_verses
-      GROUP BY ref_id
     )
     SELECT
       mr.page_id AS id,
@@ -817,16 +805,10 @@ export function searchBibleReferenceNotesByWeight(
       MIN(pp.text) AS snippet,
       MIN(COALESCE(mr.normalized_ref, mr.original_text)) AS bibleRef,
       0 AS bibleMatchScore,
-      ROUND(SUM(
+      ROUND(COALESCE(SUM(
         (2.0 / (COALESCE(prc.reference_count, 1) + 1))
-        / CASE
-          WHEN mr.top_chapter = mr.chapter
-            AND mr.verse IS NOT NULL
-            AND mr.top_verse >= mr.verse
-            THEN mr.top_verse - mr.verse + 1
-          ELSE MAX(1, COALESCE(rvc.verse_count, 1))
-        END
-      ), 4) AS bibleWeight
+        / bible_range_length(mr.module, mr.book_index, mr.chapter, mr.verse, mr.top_chapter, mr.top_verse)
+      ), 0), 4) AS bibleWeight
     FROM matching_refs mr
     JOIN pages p ON p.id = mr.page_id
     LEFT JOIN notebooks n ON n.id = p.parent_notebook_id
@@ -834,7 +816,6 @@ export function searchBibleReferenceNotesByWeight(
     LEFT JOIN paragraph_ref_counts prc
       ON prc.page_id = mr.page_id
       AND prc.paragraph_index = mr.paragraph_index
-    LEFT JOIN relation_ref_verse_counts rvc ON rvc.ref_id = mr.id
     GROUP BY mr.page_id
     ORDER BY ${orderBy}
     LIMIT @limit
@@ -953,8 +934,12 @@ export function findParallelBibleReferences(
       FROM paragraph_verse_relations rel ${sourceRelationIndex}
       ${targetRelationJoin} paragraph_verse_refs target ON target.id = rel.verse_ref_id
       JOIN paragraph_verse_refs r ON r.id = rel.relative_verse_ref_id
+      JOIN page_paragraphs target_pp ON target_pp.page_id = target.page_id AND target_pp.paragraph_index = target.paragraph_index
+      JOIN page_paragraphs related_pp ON related_pp.page_id = r.page_id AND related_pp.paragraph_index = r.paragraph_index
       WHERE ${targetFilter}
         AND ${targetVisibilityFilter}
+        AND ${completeBibleRefSql('target', 'target_pp')}
+        AND ${completeBibleRefSql('r', 'related_pp')}
         ${sourceVerseFilter}
 
       UNION ALL
@@ -977,8 +962,12 @@ export function findParallelBibleReferences(
       FROM paragraph_verse_relations rel ${relativeRelationIndex}
       ${targetRelationJoin} paragraph_verse_refs target ON target.id = rel.relative_verse_ref_id
       JOIN paragraph_verse_refs r ON r.id = rel.verse_ref_id
+      JOIN page_paragraphs target_pp ON target_pp.page_id = target.page_id AND target_pp.paragraph_index = target.paragraph_index
+      JOIN page_paragraphs related_pp ON related_pp.page_id = r.page_id AND related_pp.paragraph_index = r.paragraph_index
       WHERE ${targetFilter}
         AND ${targetVisibilityFilter}
+        AND ${completeBibleRefSql('target', 'target_pp')}
+        AND ${completeBibleRefSql('r', 'related_pp')}
         ${relativeVerseFilter}
     ), candidate_ref_ids AS MATERIALIZED (
       SELECT target_ref_id AS ref_id
@@ -1097,6 +1086,7 @@ export function findParallelBibleReferenceNotes(
 ): Array<Record<string, unknown>> {
   const limit = Math.max(1, Math.min(options.limit ?? 50, 200));
   const verse = Number.isInteger(options.verse) && Number(options.verse) > 0 ? Number(options.verse) : undefined;
+  const relatedChapterOnly = Number(options.relatedVerse) === 0;
   const relatedVerse = Number.isInteger(options.relatedVerse) && Number(options.relatedVerse) > 0
     ? Number(options.relatedVerse)
     : undefined;
@@ -1123,8 +1113,13 @@ export function findParallelBibleReferenceNotes(
         (COALESCE(target.top_chapter, target.chapter) > @chapter OR (COALESCE(target.top_chapter, target.chapter) = @chapter AND COALESCE(target.top_verse, target.verse, 999) >= @verse))
       )
     `;
-  const relatedFilter = relatedVerse == null
-    ? 'r.book_index = @relatedBookIndex AND r.chapter = @relatedChapter'
+  const relatedFilter = relatedChapterOnly
+    ? `r.book_index = @relatedBookIndex
+      AND r.chapter = @relatedChapter
+      AND COALESCE(r.verse, 0) = 0
+      AND (COALESCE(r.is_chapter, 0) <> 0 OR COALESCE(r.entry_type, '') = 'BookChapter')`
+    : relatedVerse == null
+      ? 'r.book_index = @relatedBookIndex AND r.chapter = @relatedChapter'
     : `
       r.book_index = @relatedBookIndex
       AND (
@@ -1167,6 +1162,8 @@ export function findParallelBibleReferenceNotes(
   `;
   const pageFilters = [
     'p.deleted_at IS NULL',
+    completeBibleRefSql('target', 'tpp'),
+    completeBibleRefSql('related', 'rpp'),
     finalTargetVisibilityFilter,
     finalRelatedVisibilityFilter,
     pageVisibilityFilter
@@ -1181,7 +1178,7 @@ export function findParallelBibleReferenceNotes(
     pageFilters.push(`p.parent_notebook_id IN (${placeholders.join(', ')})`);
   }
 
-  return db.prepare(`
+  const rows = db.prepare(`
     WITH matched_relation_rows AS MATERIALIZED (
       SELECT
         rel.page_id,
@@ -1297,13 +1294,17 @@ export function findParallelBibleReferenceNotes(
       mr.related_paragraph_index AS relatedParagraphIndex,
       rpp.text AS relatedParagraphText,
       (
-        SELECT GROUP_CONCAT(DISTINCT all_ref.paragraph_index)
+        SELECT JSON_GROUP_ARRAY(DISTINCT JSON_OBJECT(
+          'paragraphIndex', all_ref.paragraph_index,
+          'startIndex', all_ref.start_index,
+          'endIndex', all_ref.end_index
+        ))
         FROM paragraph_verse_refs all_ref
         JOIN page_paragraphs all_pp ON all_pp.page_id = all_ref.page_id AND all_pp.paragraph_index = all_ref.paragraph_index
         WHERE all_ref.page_id = mr.page_id
           AND (${allPairFilter})
           AND ${allRefVisibilityFilter}
-      ) AS pairParagraphIndexes,
+      ) AS pairBibleOccurrences,
       MIN(related.original_text) AS relatedOriginalText,
       MIN(related.normalized_ref) AS relatedNormalizedRef,
       ROUND(SUM(mr.relation_weight), 4) AS relationWeight,
@@ -1325,6 +1326,19 @@ export function findParallelBibleReferenceNotes(
     ORDER BY relationWeight DESC, maxRelationWeight DESC, p.last_modified_date_time DESC, p.title COLLATE NOCASE
     LIMIT @limit
   `).all(params) as Array<Record<string, unknown>>;
+  return rows.map(row => {
+    const { pairBibleOccurrences, ...note } = row;
+    const bibleOccurrences = JSON.parse(String(pairBibleOccurrences || '[]')) as Array<{
+      paragraphIndex:number;
+      startIndex:number | null;
+      endIndex:number | null;
+    }>;
+    return {
+      ...note,
+      pairParagraphIndexes:[...new Set(bibleOccurrences.map(occurrence => occurrence.paragraphIndex))].join(','),
+      bibleOccurrences
+    };
+  });
 }
 
 export function searchCacheAdvanced(

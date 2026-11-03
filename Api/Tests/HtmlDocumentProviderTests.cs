@@ -79,5 +79,14 @@ namespace BibleNote.Tests
                 new string[] { "Ин 2:2" });
         }
 
+        [TestMethod]
+        public Task KeepsInlineReferencesTogetherInNestedLists()
+        {
+            return TestFileAsync("Html_NestedInlineParagraphs.html",
+                new[] { "1Фес 5:16-18", "Фил 4:4-7" },
+                new[] { "Фил 4:5", "1Фес 5:18" },
+                new[] { "Ин 3:16" });
+        }
+
     }
 }

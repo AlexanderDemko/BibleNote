@@ -45,3 +45,18 @@ export function preferredPdfLinkMatches(matches, occurrenceIndex) {
     occurrenceSpecific:true
   };
 }
+
+export function pdfLinkMatchRange(match, targetText) {
+  const matchStart = Number(match?.index);
+  const matchedText = String(match?.[0] || '');
+  if (!Number.isInteger(matchStart) || !matchedText) return undefined;
+  if (!targetText) return { start:matchStart, end:matchStart + matchedText.length };
+  const targetPattern = pdfReferencePattern(targetText);
+  if (!targetPattern) return undefined;
+  const targets = [...matchedText.matchAll(targetPattern)];
+  const target = [...targets].reverse().find(candidate =>
+    Number(candidate.index) + candidate[0].length === matchedText.length);
+  if (!target) return undefined;
+  const start = matchStart + Number(target.index);
+  return { start, end:start + target[0].length };
+}

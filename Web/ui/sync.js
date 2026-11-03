@@ -473,7 +473,16 @@ async function refreshSyncState() {
         await renderNotesList();
       } else if (completedContext?.pageId && selectedPageId === completedContext.pageId) {
         loadDownloadLog(false).catch(error => console.warn(error));
-        await openPage(completedContext.pageId, { updateUrl:false, paragraphIndex:currentTargetParagraphIndex });
+        const article = selectedPageArticle();
+        await openPage(completedContext.pageId, {
+          updateUrl:false,
+          rememberHistory:false,
+          paragraphIndex:currentTargetParagraphIndex,
+          paragraphIndexes:[...currentTargetParagraphIndexes],
+          bibleOccurrences:[...currentTargetBibleOccurrences],
+          visualView:article?.classList.contains('html-view-active'),
+          pageZoom:article ? articlePageZoom(article) : undefined
+        });
         await renderNotesList();
       } else {
         await loadNotebookSelector();
@@ -531,6 +540,16 @@ function showStartupWait(elapsedMs = 0) {
 async function waitForCacheReady() {
   const startedAt = Date.now();
   showStartupWait();
+  // Paint the shell before the server starts synchronous SQLite initialization.
+  // Hidden windows may not receive animation frames, so use a short fallback.
+  await new Promise(resolve => {
+    const fallback = setTimeout(resolve, 100);
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      clearTimeout(fallback);
+      resolve();
+    }));
+  });
+  await api('/api/startup', { method:'POST', timeoutMs:180000 });
   while (true) {
     const startup = await api('/api/startup', { timeoutMs:180000 });
     if (startup.ready) return;
@@ -541,6 +560,7 @@ async function waitForCacheReady() {
 }
 
 async function initializeApp() {
+  loadLegacyBibleStatus().catch(error => console.warn(error));
   try {
     await refreshRuntimeSettings().catch(error => console.warn(error));
     if (bibleVersePopupMode) {
@@ -550,6 +570,7 @@ async function initializeApp() {
       showBibleTextContextButton.disabled = true;
       if (!bibleTextDialog.open) bibleTextDialog.showModal();
       try {
+        await waitForCacheReady();
         await openExternalBibleRefFromUrl();
       } catch (error) {
         bibleTextContent.textContent = 'Не удалось открыть библейскую ссылку: ' + (error?.message || String(error));
@@ -565,7 +586,9 @@ async function initializeApp() {
       console.warn(error);
       bibleReaderStatusEl.textContent = error?.message || String(error);
     });
-    if (initialBibleLocation) await loadBibleModules;
+    const opensExternalLinkInReader = new URLSearchParams(location.search).has('openBibleRef')
+      && localStorage.getItem('biblenote.onenoteLinksOpenInBible') === 'true';
+    if (initialBibleLocation || opensExternalLinkInReader) await loadBibleModules;
     statusEl.textContent = cacheStatusText(status);
     const initialPageId = pageIdFromUrl();
     if (initialPageId) {
@@ -575,11 +598,17 @@ async function initializeApp() {
       await openBibleReaderLocation(initialBibleLocation, { replaceUrl:true, rememberHistory:false });
       await renderNotesList();
     } else {
-      renderEmptyPage();
+      const canRestoreTabs = !new URLSearchParams(location.search).has('openBibleRef')
+        && workspaceStartupMode() === 'restore';
+      if (!canRestoreTabs || !restoreWorkspaceSession()) renderEmptyPage();
+      // Readiness includes the active restored view, which may still be loading Bible modules.
+      await activeWorkspaceTab()?.pendingLoad;
       await renderNotesList();
     }
     loadDownloadLog(true).catch(error => console.warn(error));
     await openExternalBibleRefFromUrl();
+    workspaceSessionReady = true;
+    saveWorkspaceSession();
     openSetupWizardIfNeeded().catch(error => console.warn(error));
   } catch (error) {
     showError(error);

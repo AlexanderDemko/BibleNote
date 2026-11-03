@@ -554,6 +554,9 @@ namespace BibleNote.Application.Controllers
                     out var isPartOfBigVerse,
                     out var hasValueEvenIfEmpty);
 
+                var richText = isFullVerse && !isPartOfBigVerse && !pointer.PartIndex.HasValue
+                    ? GetRichVerseText(book, pointer.Chapter, verseIndex.Index)
+                    : null;
                 return new VerseTextItemResponse
                 {
                     Chapter = pointer.Chapter,
@@ -562,12 +565,13 @@ namespace BibleNote.Application.Controllers
                     Reference = verseIndex.TopIndex.HasValue
                         ? $"{pointer.Chapter}:{verseIndex.Index}-{verseIndex.TopIndex.Value}"
                         : $"{pointer.Chapter}:{verseIndex.Index}",
-                    Text = WebUtility.HtmlDecode(text),
+                    Text = richText?.Text ?? WebUtility.HtmlDecode(text),
                     IsFullVerse = isFullVerse,
                     IsPartOfBigVerse = isPartOfBigVerse || pointer.IsPartOfBigVerse,
                     HasValueEvenIfEmpty = hasValueEvenIfEmpty || pointer.HasValueEvenIfEmpty,
                     PartIndex = pointer.PartIndex,
-                    IsEmpty = isEmpty
+                    IsEmpty = isEmpty,
+                    RichText = richText
                 };
             }
             catch
@@ -752,6 +756,9 @@ namespace BibleNote.Application.Controllers
                 if (text == null || isEmpty)
                     return;
 
+                var richText = isFullVerse && !isPartOfBigVerse
+                    ? GetRichVerseText(book, chapter, verseIndex.Index)
+                    : null;
                 result.Add(new VerseTextItemResponse
                 {
                     Chapter = chapter,
@@ -760,10 +767,11 @@ namespace BibleNote.Application.Controllers
                     Reference = verseIndex.TopIndex.HasValue
                         ? $"{chapter}:{verseIndex.Index}-{verseIndex.TopIndex.Value}"
                         : $"{chapter}:{verseIndex.Index}",
-                    Text = WebUtility.HtmlDecode(text),
+                    Text = richText?.Text ?? WebUtility.HtmlDecode(text),
                     IsFullVerse = isFullVerse,
                     IsPartOfBigVerse = isPartOfBigVerse,
-                    HasValueEvenIfEmpty = hasValueEvenIfEmpty
+                    HasValueEvenIfEmpty = hasValueEvenIfEmpty,
+                    RichText = richText
                 });
             }
             catch
@@ -819,8 +827,9 @@ namespace BibleNote.Application.Controllers
                 {
                     if (IsHierarchy(node))
                     {
-                        foreach (var childNode in node.ChildNodes.ToList())
-                            ParseNode(parser, childNode, state == ElementType.Title || isReadonly, paragraphs);
+                        HtmlParagraphChildren.Parse(node,
+                            child => ParseNode(parser, child, state == ElementType.Title || isReadonly, paragraphs),
+                            paragraph => ParseParagraph(parser, paragraph, state == ElementType.Title || isReadonly, paragraphs));
                     }
                     else
                     {
@@ -837,6 +846,13 @@ namespace BibleNote.Application.Controllers
         private static void ParseParagraph(IDocumentParser parser, string html, List<ParagraphParseResult> paragraphs)
         {
             ParseParagraph(parser, new HtmlNodeWrapper(html), false, paragraphs);
+        }
+
+        private static VerseRichTextResponse GetRichVerseText(BIBLEBOOK book, int chapterNumber, int verseNumber)
+        {
+            var chapter = book.Chapters.FirstOrDefault(item => item.Index == chapterNumber);
+            var verse = chapter?.Verses.FirstOrDefault(item => item.Index == verseNumber);
+            return VerseRichTextProjector.Project(verse);
         }
 
         private static void ParseTextParagraph(IDocumentParser parser, string text, List<ParagraphParseResult> paragraphs)

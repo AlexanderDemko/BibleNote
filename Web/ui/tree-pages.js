@@ -279,10 +279,7 @@ async function renderRecentPages() {
       button.type = 'button';
       button.dataset.pageId = page.id;
       button.title = [page.notebook, page.sectionGroupPath, page.section, page.title].filter(Boolean).join(' / ');
-      button.onclick = async () => {
-        if (page.id === selectedPageId) return;
-        await openPage(page.id);
-      };
+      bindWorkspacePageOpen(button, page.id, {}, { ignoreIfActive:true });
 
       const sourceType = sourceTypeForNotebook(page.notebookId);
       const typeIcons = document.createElement('span');
@@ -558,6 +555,7 @@ function clearPageTargetHighlight(pageId) {
   content.querySelector('.match-nav')?.remove();
   content.querySelectorAll('.current-match').forEach(match => match.classList.remove('current-match'));
   content.querySelectorAll('.bible-paragraph-target').forEach(target => target.classList.remove('bible-paragraph-target'));
+  content.querySelectorAll('.bible-reference-target').forEach(target => target.classList.remove('bible-reference-target'));
   for (const mark of [...content.querySelectorAll('mark:not(.page-find-match)')]) {
     const parent = mark.parentNode;
     mark.replaceWith(...mark.childNodes);
@@ -672,7 +670,7 @@ async function renderPages(sectionId, target = tree, level = 2) {
       onSync:() => startTargetedSync({ pageId:page.id }, 'страницу «' + page.title + '»')
     });
     button.dataset.pageId = page.id;
-    button.onclick = () => openPage(page.id);
+    bindWorkspacePageOpen(button, page.id);
     target.append(button);
   }
 }
@@ -1084,9 +1082,13 @@ function bibleSearchResultCountLabel(value) {
   return count + ' ' + noun;
 }
 
-function searchWeightLabel(value) {
+function formatBibleWeight(value) {
   const numericWeight = Number(value || 0);
-  return 'вес ' + numericWeight.toFixed(4).replace(/\.?0+$/, '');
+  return numericWeight.toFixed(2).replace(/\.?0+$/, '').replace('.', ',');
+}
+
+function searchWeightLabel(value) {
+  return 'вес ' + formatBibleWeight(value);
 }
 
 function searchRelevanceLabel(value) {
@@ -1180,6 +1182,14 @@ function canonicalPageBibleOccurrences(occurrences, titleParagraphIndexes) {
   return result;
 }
 
+function highlightPageBibleOccurrences(root, occurrences) {
+  const keys = new Set(occurrences.map(bibleOccurrenceKey).filter(Boolean));
+  for (const link of root.querySelectorAll('[data-bible-occurrence]')) {
+    link.classList.toggle('bible-reference-target', keys.has(link.dataset.bibleOccurrence));
+    link.classList.remove('current-match');
+  }
+}
+
 function pageNavigationTargets(paragraphTargets, paragraphIndexes, bibleOccurrences = [], inlineRoot) {
   const targetByParagraphIndex = new Map();
   for (const target of paragraphTargets) {
@@ -1257,7 +1267,7 @@ function renderWeightedSearchResults(results) {
     button.type = 'button';
     button.dataset.pageId = page.id;
     button.title = [page.notebook, page.section, page.snippet].filter(Boolean).join(' / ');
-    button.addEventListener('click', () => openPage(page.id, {
+    bindWorkspacePageOpen(button, page.id, () => ({
       paragraphIndex:paragraphIndexes[0],
       paragraphIndexes,
       bibleOccurrences:searchResultBibleOccurrences(page),
@@ -1454,12 +1464,12 @@ function renderSearchResults(query, results, bibleResults = [], hasSelectedNoteb
         });
         const paragraphIndexes = searchResultParagraphIndexes(page);
         button.dataset.pageId = page.id;
-        button.onclick = () => openPage(page.id, {
+        bindWorkspacePageOpen(button, page.id, () => ({
           paragraphIndex:paragraphIndexes[0],
           paragraphIndexes,
           bibleOccurrences:searchResultBibleOccurrences(page),
           highlightQuery:page.bibleRef ? '' : activeSearchQuery
-        });
+        }));
         sectionGroup.children.append(button);
       }
       notebookGroup.children.append(sectionGroup.group);
@@ -1475,7 +1485,7 @@ function renderSearchResults(query, results, bibleResults = [], hasSelectedNoteb
   });
 }
 
-async function renderSearch(query) {
+async function renderSearch(query, options = {}) {
   activeSearchAbortController?.abort();
   const searchAbortController = new AbortController();
   activeSearchAbortController = searchAbortController;
@@ -1504,6 +1514,7 @@ async function renderSearch(query) {
   const request = searchRequest(query);
   const params = new URLSearchParams({
     q:request.query,
+    module:currentBibleModule(),
     mode:request.mode,
     caseSensitive:String(request.caseSensitive),
     view:searchResultsView
@@ -1515,7 +1526,7 @@ async function renderSearch(query) {
   }
   const bibleParams = new URLSearchParams({
     q:request.query,
-    module:bibleReaderModuleEl.value || currentBibleModule(),
+    module:options.bibleModule || bibleReaderModuleEl.value || currentBibleModule(),
     mode:request.mode,
     caseSensitive:String(request.caseSensitive),
     limit:'80'
@@ -1674,11 +1685,22 @@ function normalizedPdfAnchor(value, maxLength = 160) {
   return (lastSpace >= Math.floor(maxLength * 0.65) ? shortened.slice(0, lastSpace) : shortened).trim();
 }
 
-function pdfReferenceAnchor(paragraphText, referenceText, maxLength = 180) {
-  const paragraph = decodeHtmlText(String(paragraphText || '')).replace(/\s+/g, ' ').trim();
+function pdfReferenceAnchor(paragraphText, referenceText, maxLength = 180, referenceStart) {
+  const source = decodeHtmlText(String(paragraphText || ''));
+  const paragraph = source.replace(/\s+/g, ' ').trim();
   const reference = normalizedPdfAnchor(referenceText, 120);
   if (!paragraph || !reference) return normalizedPdfAnchor(paragraph, maxLength);
-  const referenceIndex = paragraph.toLocaleLowerCase().indexOf(reference.toLocaleLowerCase());
+  // Parsed offsets identify the selected occurrence even when the same verse
+  // number appears earlier in this paragraph. Normalize only after locating it.
+  const hasOffset = Number.isInteger(referenceStart) && referenceStart >= 0
+    && referenceStart < source.length;
+  const offsetIndex = hasOffset
+    ? source.slice(0, referenceStart).replace(/\s+/g, ' ').trimStart().length
+    : -1;
+  const referenceIndex = offsetIndex >= 0
+    && paragraph.slice(offsetIndex, offsetIndex + reference.length).toLocaleLowerCase() === reference.toLocaleLowerCase()
+    ? offsetIndex
+    : paragraph.toLocaleLowerCase().indexOf(reference.toLocaleLowerCase());
   if (referenceIndex < 0) return normalizedPdfAnchor(paragraph, maxLength);
   const beforeLength = Math.floor((maxLength - reference.length) * 0.48);
   const afterLength = maxLength - reference.length - beforeLength;
@@ -1728,6 +1750,99 @@ function pdfBibleLinkIsEligible(reference, pageTitle) {
   return /\p{L}/u.test(String(reference?.originalText || ''));
 }
 
+function pdfBibleReferenceScope(reference) {
+  const bookIndex = Number(reference?.bookIndex);
+  const chapter = Number(reference?.chapter);
+  if (Number.isInteger(bookIndex) && Number.isInteger(chapter)) return bookIndex + ':' + chapter;
+  const target = String(reference?.normalizedRef || reference?.normalized || '').trim();
+  const match = target.match(/^(.*\s+\d+)\s*[:：,]\s*\d+(?:\p{L})?(?:\s*[-‐‑‒–—]\s*(?:\d+\s*[:：,]\s*)?\d+(?:\p{L})?)?$/iu);
+  return String(match?.[1] || '').toLocaleLowerCase();
+}
+
+function pdfBibleReferenceBookScope(reference) {
+  const bookIndex = Number(reference?.bookIndex);
+  if (Number.isInteger(bookIndex)) return String(bookIndex);
+  const target = String(reference?.normalizedRef || reference?.normalized || '').trim();
+  return normalizedPdfBookLabel(target.replace(/\s+\d+(?::\d+)?(?:\s*[-–—]\s*\d+(?::\d+)?)?\s*$/u, ''));
+}
+
+function pdfContextualBareVerse(reference, references, referenceIndex, paragraphText, pageTitle) {
+  const text = normalizedPdfAnchor(reference?.originalText, 120);
+  if (String(reference?.entryType || '') !== 'Verse' || !/^\d+$/u.test(text)) return '';
+  const currentScope = pdfBibleReferenceScope(reference);
+  const currentStart = Number(reference?.startIndex);
+  const currentEnd = Number(reference?.endIndex);
+  const paragraph = decodeHtmlText(String(paragraphText || ''));
+  if (!currentScope || !Number.isInteger(currentStart) || !Number.isInteger(currentEnd) || currentEnd < currentStart) return '';
+  for (let index = referenceIndex - 1; index >= 0; index -= 1) {
+    const candidate = references[index];
+    if (pdfBibleReferenceScope(candidate) !== currentScope || !pdfBibleLinkIsEligible(candidate, pageTitle)) continue;
+    if (!/[\p{L}:：]/u.test(String(candidate?.originalText || ''))) continue;
+    const candidateStart = Number(candidate?.startIndex);
+    const candidateEnd = Number(candidate?.endIndex);
+    if (!Number.isInteger(candidateStart) || !Number.isInteger(candidateEnd) || candidateEnd >= currentStart) continue;
+    const between = paragraph.slice(candidateEnd + 1, currentStart);
+    if (!/^(?:\s*,\s*\d+)*\s*,\s*$/u.test(between)) continue;
+    const context = paragraph.slice(candidateStart, currentEnd + 1)
+      .replace(/[\u00ad\u200b]/gu, '')
+      .replace(/\s+/gu, ' ')
+      .trim();
+    return context.length <= 240 ? context : '';
+  }
+  return '';
+}
+
+function pdfContextualChapterVerse(reference, references, referenceIndex, paragraphText, pageTitle) {
+  const text = normalizedPdfAnchor(reference?.originalText, 120);
+  if (String(reference?.entryType || '') !== 'ChapterVerse' || !/^\d+\s*[:：,]\s*\d/u.test(text)) return '';
+  const currentBookScope = pdfBibleReferenceBookScope(reference);
+  const currentStart = Number(reference?.startIndex);
+  const currentEnd = Number(reference?.endIndex);
+  const paragraph = decodeHtmlText(String(paragraphText || ''));
+  if (!currentBookScope || !Number.isInteger(currentStart) || !Number.isInteger(currentEnd) || currentEnd < currentStart) return '';
+  for (let index = referenceIndex - 1; index >= 0; index -= 1) {
+    const candidate = references[index];
+    if (pdfBibleReferenceBookScope(candidate) !== currentBookScope) continue;
+    if (!String(candidate?.entryType || '').startsWith('Book') || !pdfBibleLinkIsEligible(candidate, pageTitle)) continue;
+    const candidateStart = Number(candidate?.startIndex);
+    const candidateEnd = Number(candidate?.endIndex);
+    if (!Number.isInteger(candidateStart) || !Number.isInteger(candidateEnd) || candidateEnd >= currentStart) continue;
+    const intervening = references.slice(index + 1, referenceIndex);
+    if (intervening.some(item => pdfBibleReferenceBookScope(item) !== currentBookScope)) return '';
+    const between = paragraph.slice(candidateEnd + 1, currentStart);
+    if (!/^(?:\s*,\s*\d+(?:\p{L})?(?:\s*[-‐‑‒–—]\s*\d+(?:\p{L})?)?)*\s*;\s*$/u.test(between)) continue;
+    const context = paragraph.slice(candidateStart, currentEnd + 1)
+      .replace(/[\u00ad\u200b]/gu, '')
+      .replace(/\s+/gu, ' ')
+      .trim();
+    return context.length <= 240 ? context : '';
+  }
+  return '';
+}
+
+function pdfContextualReference(reference, references, referenceIndex, paragraphText, pageTitle) {
+  return pdfContextualBareVerse(reference, references, referenceIndex, paragraphText, pageTitle)
+    || pdfContextualChapterVerse(reference, references, referenceIndex, paragraphText, pageTitle);
+}
+
+function pdfReferenceTarget(paragraph, reference, pageTitle) {
+  const text = normalizedPdfAnchor(reference?.originalText, 120);
+  const highlightText = pdfReferenceAnchor(paragraph.text, text, 180, reference?.startIndex);
+  const references = paragraph.references || [];
+  const contextualText = pdfContextualReference(reference, references, references.indexOf(reference), paragraph.text, pageTitle);
+  const explicitBook = String(reference?.entryType || '').startsWith('Book')
+    || (!reference?.entryType && /\p{L}/u.test(text));
+  // A verse-only or chapter-verse fragment is ambiguous across the PDF. Keep
+  // its list context (or surrounding text) in both the search and fallback.
+  const query = contextualText || (explicitBook ? text : highlightText);
+  if (!query && !highlightText) return undefined;
+  return {
+    paragraphIndex:Number(paragraph.index),
+    query:query || highlightText,
+    highlightText:highlightText || query
+  };
+}
+
 function pdfPageContext(bibleRefs, paragraphIndexes = [], bibleOccurrences = [], pageTitle = '') {
   const paragraphs = Array.isArray(bibleRefs?.paragraphs) ? bibleRefs.paragraphs : [];
   const paragraphByIndex = new Map(paragraphs.map(paragraph => [Number(paragraph?.index), paragraph]));
@@ -1735,9 +1850,11 @@ function pdfPageContext(bibleRefs, paragraphIndexes = [], bibleOccurrences = [],
   let bibleLinks;
   if (exactPdfLinks.length > 0) {
     bibleLinks = exactPdfLinks
-      .filter(link => link?.text && link?.href && !/^\d+$/u.test(String(link.text).trim()))
+      .filter(link => link?.text && link?.href
+        && (!/^\d+$/u.test(String(link.text).trim()) || String(link.matchText || '').trim()))
       .map(link => ({
         text:normalizedPdfAnchor(link.text, 120),
+        ...(link.matchText ? { matchText:normalizedPdfAnchor(link.matchText, 240) } : {}),
         href:String(link.href),
         title:String(link.title || link.text),
         pageNumber:Number(link.pageNumber),
@@ -1746,29 +1863,32 @@ function pdfPageContext(bibleRefs, paragraphIndexes = [], bibleOccurrences = [],
   } else {
     const bibleLinkCandidates = [];
     for (const paragraph of paragraphs) {
-      for (const reference of paragraph.references || []) {
-        if (!pdfBibleLinkIsEligible(reference, pageTitle)) continue;
+      const references = Array.isArray(paragraph.references) ? paragraph.references : [];
+      for (const [referenceIndex, reference] of references.entries()) {
+        const matchText = pdfContextualReference(reference, references, referenceIndex, paragraph.text, pageTitle);
+        if (!matchText && !pdfBibleLinkIsEligible(reference, pageTitle)) continue;
         const text = normalizedPdfAnchor(reference?.originalText, 120);
         const href = pdfBibleHref(reference);
         if (!text || !href) continue;
         bibleLinkCandidates.push({
           text,
+          ...(matchText ? { matchText } : {}),
           href,
           title:reference.normalizedRef || reference.originalText || text,
           paragraphIndex:Number(paragraph.index),
-          contextDependent:!String(reference?.entryType || '').startsWith('Book')
+          contextDependent:!matchText && !String(reference?.entryType || '').startsWith('Book')
         });
       }
     }
     const hrefsByText = new Map();
     for (const link of bibleLinkCandidates) {
-      const key = link.text.toLocaleLowerCase();
+      const key = (link.matchText || link.text).toLocaleLowerCase();
       if (!hrefsByText.has(key)) hrefsByText.set(key, new Set());
       hrefsByText.get(key).add(link.href);
     }
     const uniqueBibleLinks = new Map();
     for (const link of bibleLinkCandidates) {
-      const textKey = link.text.toLocaleLowerCase();
+      const textKey = (link.matchText || link.text).toLocaleLowerCase();
       if (link.contextDependent && hrefsByText.get(textKey)?.size !== 1) continue;
       const key = textKey + '\u0000' + link.href;
       if (!uniqueBibleLinks.has(key)) {
@@ -1777,6 +1897,45 @@ function pdfPageContext(bibleRefs, paragraphIndexes = [], bibleOccurrences = [],
       }
     }
     bibleLinks = [...uniqueBibleLinks.values()];
+  }
+
+  // Count repetitions across the whole document, not just the selected results.
+  // Identical reference text can occur on different pages or twice on one page.
+  const queryKey = value => normalizedPdfAnchor(value, 240).replace(/\s/gu, '').toLocaleLowerCase();
+  const targetsByQuery = new Map();
+  const targetByReference = new Map();
+  for (const paragraph of [...paragraphs].sort((a, b) => Number(a.index) - Number(b.index))) {
+    for (const reference of [...(paragraph.references || [])].sort((a, b) => Number(a.startIndex) - Number(b.startIndex))) {
+      const target = pdfReferenceTarget(paragraph, reference, pageTitle);
+      if (!target) continue;
+      const key = queryKey(target.query);
+      if (!targetsByQuery.has(key)) targetsByQuery.set(key, []);
+      const repetitions = targetsByQuery.get(key);
+      target.documentOccurrenceIndex = repetitions.length;
+      repetitions.push(target);
+      targetByReference.set(reference, target);
+    }
+  }
+  if (exactPdfLinks.length > 0) {
+    const linksByQuery = new Map();
+    for (const link of bibleLinks) {
+      const key = queryKey(link.matchText || link.text);
+      if (!linksByQuery.has(key)) linksByQuery.set(key, []);
+      linksByQuery.get(key).push(link);
+    }
+    for (const [key, repetitions] of targetsByQuery) {
+      const links = linksByQuery.get(key);
+      // Only pair complete groups: partially extracted metadata must not shift
+      // every subsequent reference to the wrong physical location.
+      if (links?.length !== repetitions.length) continue;
+      links.sort((a, b) => a.pageNumber - b.pageNumber || a.occurrenceIndex - b.occurrenceIndex);
+      repetitions.forEach((target, index) => {
+        const link = links[index];
+        target.query = link.matchText || link.text;
+        target.pageNumber = link.pageNumber;
+        target.occurrenceIndex = link.occurrenceIndex;
+      });
+    }
   }
 
   const targets = [];
@@ -1788,28 +1947,16 @@ function pdfPageContext(bibleRefs, paragraphIndexes = [], bibleOccurrences = [],
       Number(candidate?.startIndex) === Number(occurrence?.startIndex)
       && Number(candidate?.endIndex) === Number(occurrence?.endIndex)
     );
-    const query = normalizedPdfAnchor(reference?.originalText || reference?.normalizedRef, 120);
-    const highlightText = pdfReferenceAnchor(paragraph.text, reference?.originalText || query, 180);
-    if (!query && !highlightText) continue;
-    targets.push({
-      paragraphIndex:Number(paragraph.index),
-      query:query || highlightText,
-      highlightText:highlightText || query
-    });
+    const target = targetByReference.get(reference) || pdfReferenceTarget(paragraph, reference, pageTitle);
+    if (target) targets.push(target);
   }
   if (targets.length === 0) {
     for (const paragraphIndex of paragraphIndexes) {
       const paragraph = paragraphByIndex.get(Number(paragraphIndex));
       if (!paragraph) continue;
       const firstReference = (paragraph.references || [])[0];
-      const query = normalizedPdfAnchor(firstReference?.originalText || paragraph.text, 120);
-      const highlightText = normalizedPdfAnchor(paragraph.text, 180);
-      if (!query && !highlightText) continue;
-      targets.push({
-        paragraphIndex:Number(paragraph.index),
-        query:query || highlightText,
-        highlightText:highlightText || query
-      });
+      const target = targetByReference.get(firstReference) || pdfReferenceTarget(paragraph, firstReference, pageTitle);
+      if (target) targets.push(target);
     }
   }
   return { bibleLinks, targets };
@@ -2046,7 +2193,7 @@ function zoomArticleFromWheel(article, event) {
 }
 
 async function updatePageFocusNavigation(page) {
-  if (!pageFocusMode || !page?.id) return;
+  if (!pageFocusMode || !page) return;
   const pageTitle = page.title || '(без названия)';
   const pagePath = pagePathLabel(page);
   pageFocusTitle.textContent = pageTitle;
@@ -2059,7 +2206,7 @@ async function updatePageFocusNavigation(page) {
   setPageFocusNavigationState();
 
   const sectionId = page.parentSection?.id;
-  if (!sectionId) {
+  if (!page.id || !sectionId) {
     renderPageFocusMenu();
     return;
   }
@@ -2076,7 +2223,7 @@ function setPageFocusMode(enabled, page) {
   pageFocusMode = Boolean(enabled);
   document.documentElement.classList.toggle('page-focus-mode', pageFocusMode);
   pageFocusToolbar.hidden = !pageFocusMode;
-  pageFocusZoom.hidden = !pageFocusMode;
+  pageFocusZoom.hidden = !pageFocusMode || !selectedPageId;
   syncPageFocusZoom();
   postPageFocusModeToFrame();
   closePageFocusMenu();
@@ -2129,6 +2276,24 @@ function updateOneNoteOpenButtons() {
   });
 }
 
+function oneNoteLogoSvg() {
+  return '<svg class="onenote-logo" viewBox="0 0 24 24" aria-hidden="true">'
+    + '<path class="onenote-page-back" d="M9 4h9.5A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5H9z"/>'
+    + '<path class="onenote-page-front" d="M9 7h7.5A1.5 1.5 0 0 1 18 8.5v8a1.5 1.5 0 0 1-1.5 1.5H9z"/>'
+    + '<rect class="onenote-tile" x="3" y="5.5" width="11" height="13" rx="1.4"/>'
+    + '<path class="onenote-letter" d="M5.7 15.5v-7h1.8l3 4.6V8.5h1.7v7h-1.8l-3-4.6v4.6z"/>'
+    + '</svg>';
+}
+
+function pageViewIconSvg(showingHtml, isPdfPage) {
+  const icon = showingHtml
+    ? '<path d="M13 4v16M18 4v16M18 4H9a5 5 0 0 0 0 10h4"/>'
+    : isPdfPage
+      ? '<text x="12" y="12" dy=".35em" text-anchor="middle" fill="currentColor" stroke="none" font-size="18" font-weight="700">P</text>'
+      : '<path d="m8 6-6 6 6 6m8-12 6 6-6 6m-3-14-2 16"/>';
+  return '<svg viewBox="0 0 24 24" aria-hidden="true">' + icon + '</svg>';
+}
+
 function createOpenInOneNoteButton(page) {
   const target = oneNoteClientPageUrl(page);
   const localPageId = /^\{[0-9A-F-]+\}/i.test(String(page?.id || '')) ? page.id : '';
@@ -2139,12 +2304,7 @@ function createOpenInOneNoteButton(page) {
   button.hidden = !oneNoteIntegrationEnabled;
   button.title = 'Открыть в OneNote';
   button.setAttribute('aria-label', 'Открыть страницу «' + (page.title || 'без названия') + '» в OneNote');
-  button.innerHTML = '<svg class="onenote-logo" viewBox="0 0 24 24" aria-hidden="true">'
-    + '<path class="onenote-page-back" d="M9 4h9.5A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5H9z"/>'
-    + '<path class="onenote-page-front" d="M9 7h7.5A1.5 1.5 0 0 1 18 8.5v8a1.5 1.5 0 0 1-1.5 1.5H9z"/>'
-    + '<rect class="onenote-tile" x="3" y="5.5" width="11" height="13" rx="1.4"/>'
-    + '<path class="onenote-letter" d="M5.7 15.5v-7h1.8l3 4.6V8.5h1.7v7h-1.8l-3-4.6v4.6z"/>'
-    + '</svg>';
+  button.innerHTML = oneNoteLogoSvg();
   button.addEventListener('click', async () => {
     button.disabled = true;
     try {
@@ -2187,9 +2347,28 @@ window.addEventListener('message', event => {
   if (!frame || event.source !== frame.contentWindow || event.data?.type !== 'onenote-page-zoom-change') return;
   setArticlePageZoom(article, event.data.percent, { postFrame:false });
 });
-document.addEventListener('click', event => {
-  if (!pageFocusMenu.hidden && !pageFocusToolbar.contains(event.target)) closePageFocusMenu();
+window.addEventListener('message', event => {
+  if (pageFocusMenu.hidden || document.querySelector('dialog[open]')) return;
+  const frame = selectedPageArticle()?.querySelector('.html-frame');
+  if (!frame || event.source !== frame.contentWindow) return;
+  if (event.data?.type === 'onenote-page-pointerdown') closePageFocusMenu();
+  if (event.data?.type === 'onenote-page-escape') {
+    closePageFocusMenu();
+    pageFocusMenuButton.focus({ preventScroll:true });
+  }
 });
+document.addEventListener('pointerdown', event => {
+  if (!pageFocusMenu.hidden && !pageFocusMenu.contains(event.target) && !pageFocusMenuButton.contains(event.target)) {
+    closePageFocusMenu();
+  }
+}, true);
+document.addEventListener('keydown', event => {
+  if (event.key !== 'Escape' || pageFocusMenu.hidden || document.querySelector('dialog[open]')) return;
+  event.preventDefault();
+  event.stopPropagation();
+  closePageFocusMenu();
+  pageFocusMenuButton.focus({ preventScroll:true });
+}, true);
 document.addEventListener('keydown', event => {
   if (!pageFocusMode || document.querySelector('dialog[open]')) return;
   if (event.key === 'Escape') {
@@ -2223,7 +2402,7 @@ async function navigateViewHistory(step) {
         rememberHistory:false
       });
     } else if (entry.type === 'bible') {
-      await openBibleReaderLocation(entry, { rememberHistory:false });
+      await openBibleReaderLocation(entry, { rememberHistory:false, tabMode:'current' });
     }
   } finally {
     navigatingViewHistory = false;
@@ -2231,12 +2410,18 @@ async function navigateViewHistory(step) {
   }
 }
 
-function showRibbonPageLoading(pageTitle = '') {
-  activePageAbortController?.abort();
-  pendingPageRefreshToken += 1;
-  selectedPageId = null;
+async function showRibbonPageLoading(pageTitle = '') {
+  // A cold-start Ribbon command must not race with restoring the previous view.
+  await bibleNoteInitialization;
+  content.querySelector('.ribbon-page-loading')?.remove();
+  const hasOpenArticle = Boolean(content.querySelector('article'));
+  if (!hasOpenArticle) {
+    activePageAbortController?.abort();
+    pendingPageRefreshToken += 1;
+    selectedPageId = null;
+  }
   const loading = document.createElement('div');
-  loading.className = 'page-loading';
+  loading.className = 'page-loading ribbon-page-loading';
   loading.setAttribute('role', 'status');
   const loadingInner = document.createElement('div');
   const loadingSpinner = document.createElement('span');
@@ -2251,13 +2436,22 @@ function showRibbonPageLoading(pageTitle = '') {
   loadingNote.textContent = 'Если страницы ещё нет в BibleNote, сначала синхронизируем её.';
   loadingInner.append(loadingSpinner, loadingLabel, loadingNote);
   loading.append(loadingInner);
-  content.setAttribute('aria-busy', 'true');
-  content.replaceChildren(loading);
-  content.scrollTop = 0;
+  if (hasOpenArticle) {
+    content.append(loading);
+  } else {
+    content.setAttribute('aria-busy', 'true');
+    content.replaceChildren(loading);
+    content.scrollTop = 0;
+  }
   refreshPageFind();
 }
 
 function showRibbonPageLoadingError(message) {
+  content.querySelector('.ribbon-page-loading')?.remove();
+  if (content.querySelector('article')) {
+    showActivity('Не удалось открыть текущую страницу OneNote: ' + message, 'error');
+    return;
+  }
   content.removeAttribute('aria-busy');
   const error = document.createElement('div');
   error.className = 'error-box';
@@ -2268,6 +2462,43 @@ function showRibbonPageLoadingError(message) {
 
 async function openPage(id, options = {}) {
   uiLog('ui.openPage', { id, options });
+  document.querySelectorAll('.ribbon-page-loading').forEach(loading => loading.remove());
+  // Refreshes and navigation within a tab still reload its current document.
+  if (options.updateUrl !== false && !options.restoreWorkspaceView && !navigatingViewHistory) {
+    const active = activeWorkspaceTab();
+    const existing = active?.type === 'page' && active.pageId === id
+      ? active
+      : workspaceTabs.find(tab => tab.type === 'page' && tab.pageId === id);
+    if (existing) {
+      switchWorkspaceTab(existing.id);
+      await existing.pendingLoad;
+      if (activeWorkspaceTab() !== existing) return;
+      const article = existing.pane.querySelector('.page[data-page-id="' + CSS.escape(id) + '"]');
+      if (article) {
+        const paragraphIndexes = searchResultParagraphIndexes(options);
+        const bibleOccurrences = searchResultBibleOccurrences(options);
+        if (options.clearTarget) {
+          article.clearSearchMatches?.();
+          updatePageUrl(id, true);
+        } else if (paragraphIndexes.length > 0 || bibleOccurrences.length > 0 || options.highlightQuery) {
+          article.updateSearchMatches?.({
+            paragraphIndexes,
+            bibleOccurrences,
+            query:options.highlightQuery ?? activeSearchQuery,
+            bibleResult:paragraphIndexes.length > 0,
+            scrollToFirst:true
+          });
+          updatePageUrl(id, options.replaceUrl === true, currentTargetParagraphIndex);
+        }
+        captureWorkspaceTabState(existing);
+        saveWorkspaceSession();
+        return { reused:true };
+      }
+      // A tab that is still loading must not create another copy of itself.
+      options = { ...options, tabMode:'current' };
+    }
+  }
+  const workspaceTab = prepareWorkspaceTabForPage(id, options);
   activePageAbortController?.abort();
   const pageAbortController = new AbortController();
   activePageAbortController = pageAbortController;
@@ -2295,7 +2526,7 @@ async function openPage(id, options = {}) {
   currentTargetBibleOccurrences = !clearTarget && Array.isArray(options.bibleOccurrences)
     ? options.bibleOccurrences.filter(occurrence => Number.isInteger(occurrence?.paragraphIndex))
     : [];
-  const urlParagraphIndex = clearTarget ? undefined : paragraphIndexFromUrl();
+  const urlParagraphIndex = !clearTarget && pageIdFromUrl() === id ? paragraphIndexFromUrl() : undefined;
   const targetParagraphIndex = !clearTarget && Number.isInteger(options.paragraphIndex)
     ? options.paragraphIndex
     : (optionParagraphIndexes[0] ?? urlParagraphIndex);
@@ -2313,7 +2544,13 @@ async function openPage(id, options = {}) {
     throw error;
   }
   if (pageRefreshToken !== pendingPageRefreshToken || selectedPageId !== id) return;
-  if (pageFocusMode) updatePageFocusNavigation(page).catch(showError);
+  updateActiveWorkspaceTab({
+    type:'page',
+    pageId:id,
+    title:page.title || '(без названия)',
+    focusPage:page,
+    dedicatedBible:false
+  });
   if (options.rememberHistory !== false) {
     rememberViewHistory({
       type:'page',
@@ -2343,7 +2580,7 @@ async function openPage(id, options = {}) {
   const revealPageButton = document.createElement('button');
   revealPageButton.className = 'title-tool title-reveal';
   revealPageButton.type = 'button';
-  revealPageButton.textContent = '⌖';
+  revealPageButton.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="6"/><path d="M12 3v5m0 8v5M3 12h5m8 0h5"/></svg>';
   revealPageButton.title = 'Показать в дереве';
   revealPageButton.setAttribute('aria-label', 'Показать страницу «' + (page.title || 'без названия') + '» в дереве заметок');
   revealPageButton.addEventListener('click', () => {
@@ -2353,7 +2590,7 @@ async function openPage(id, options = {}) {
   syncPageButton.className = 'title-tool title-sync' + (syncRunning && activeSyncContext?.pageId === page.id ? ' syncing' : '');
   syncPageButton.type = 'button';
   syncPageButton.disabled = syncRunning;
-  syncPageButton.textContent = '↻';
+  syncPageButton.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 1 1-9-9c2.6 0 5.1 1 6.9 2.9L21 9M21 3v6h-6"/></svg>';
   syncPageButton.title = 'Синхронизировать страницу';
   syncPageButton.setAttribute('aria-label', 'Синхронизировать страницу «' + (page.title || 'без названия') + '»');
   syncPageButton.addEventListener('click', () => {
@@ -2509,6 +2746,7 @@ async function openPage(id, options = {}) {
     currentTargetBibleOccurrences,
     text
   );
+  highlightPageBibleOccurrences(text, currentTargetBibleOccurrences);
   let navigationUsesParagraphTargets = paragraphNavigationTargets.length > 0;
   let navigationTargets = navigationUsesParagraphTargets
     ? paragraphNavigationTargets
@@ -2564,9 +2802,11 @@ async function openPage(id, options = {}) {
       : navigationTargets.length;
     if (navigationCount === 0) return;
     navigationTargets[activeMatchIndex]?.classList.remove('current-match');
+    navigationTargets[activeMatchIndex]?.closest('.bible-paragraph-target')?.classList.remove('current-match');
     activeMatchIndex = (index + navigationCount) % navigationCount;
     const match = navigationTargets[activeMatchIndex];
     match?.classList.add('current-match');
+    match?.closest('.bible-paragraph-target')?.classList.add('current-match');
     syncPageFocusTitleSearchState(title);
     matchCount.textContent = (activeMatchIndex + 1) + ' / ' + navigationCount;
     if (showingHtml && !navigationUsesParagraphTargets) {
@@ -2650,7 +2890,7 @@ async function openPage(id, options = {}) {
     title.classList.toggle('page-title-target', titleIsTarget);
     title.classList.remove('current-match');
     syncPageFocusTitleSearchState(title);
-    for (const paragraph of text.querySelectorAll('[data-paragraph-index]')) {
+    for (const paragraph of text.querySelectorAll('[data-paragraph-index]:not([data-bible-occurrence])')) {
       const paragraphIndex = Number(paragraph.dataset.paragraphIndex);
       paragraph.classList.toggle(
         'bible-paragraph-target',
@@ -2658,6 +2898,7 @@ async function openPage(id, options = {}) {
       );
       paragraph.classList.remove('current-match');
     }
+    highlightPageBibleOccurrences(text, nextBibleOccurrences);
     const inlineQuery = bibleResult && nextParagraphIndexes.length > 0 ? '' : query;
     currentInlineSearchQuery = inlineQuery;
     if (showingHtml) postHtmlFrameMainSearch(htmlFrame, inlineQuery, 0, false);
@@ -2703,7 +2944,7 @@ async function openPage(id, options = {}) {
     const htmlButton = document.createElement('button');
     htmlButton.className = 'view-button';
     htmlButton.type = 'button';
-    htmlButton.textContent = isPdfPage ? 'P' : '<>';
+    htmlButton.innerHTML = pageViewIconSvg(false, isPdfPage);
     htmlButton.title = isPdfPage ? 'Показать PDF' : 'Показать HTML';
     htmlButton.setAttribute('aria-label', isPdfPage ? 'Показать PDF' : 'Показать HTML');
     const zoomLabel = document.createElement('label');
@@ -2732,7 +2973,7 @@ async function openPage(id, options = {}) {
         text.style.display = showingHtml ? 'none' : '';
         if (!htmlFrame) {
           htmlButton.disabled = true;
-          htmlButton.textContent = showingHtml ? '¶' : (isPdfPage ? 'P' : '<>');
+          htmlButton.innerHTML = pageViewIconSvg(showingHtml, isPdfPage);
           htmlButton.title = isPdfPage ? 'Загрузка PDF' : 'Загрузка HTML';
           htmlButton.setAttribute('aria-label', isPdfPage ? 'Загрузка PDF' : 'Загрузка HTML');
           htmlButton.setAttribute('aria-busy', 'true');
@@ -2749,17 +2990,23 @@ async function openPage(id, options = {}) {
           htmlFrame.referrerPolicy = 'no-referrer';
           const htmlFrameReady = waitForHtmlFrameReady(htmlFrame, pageAbortController.signal);
           htmlFrame.addEventListener('load', () => {
+            postContentTheme(htmlFrame);
             postHtmlFrameZoom(htmlFrame, articlePageZoom(article));
             postPageFocusModeToFrame(article);
             if (isPdfPage) postPdfFrameContext(htmlFrame, pdfContext);
-            if (currentTargetParagraphIndexes.length === 0) {
-              htmlFrame.contentWindow?.postMessage({ type:'onenote-clear-target-paragraphs' }, '*');
-            }
+            // Search results can change while the frame is still loading.
+            // Replay the current targets once its bridge can receive messages.
+            htmlFrame.contentWindow?.postMessage({
+              type:'onenote-set-target-paragraphs',
+              paragraphIndexes:currentTargetParagraphIndexes,
+              bibleOccurrences:currentTargetBibleOccurrences
+            }, '*');
             postHtmlFrameMainSearch(htmlFrame, currentInlineSearchQuery, activeMatchIndex, true);
             refreshPageFind();
           });
           if (isPdfPage) {
-            htmlFrame.src = '/ui/pdf-viewer.html?id=' + encodeURIComponent(page.id);
+            htmlFrame.src = '/ui/pdf-viewer.html?id=' + encodeURIComponent(page.id)
+              + '&theme=' + (document.documentElement.dataset.theme === 'c' ? 'dark' : 'light');
           } else {
             htmlFrame.srcdoc = pageHtmlFrameSrcdoc(
               result.html,
@@ -2770,12 +3017,16 @@ async function openPage(id, options = {}) {
               currentTargetBibleOccurrences
             );
           }
-          text.after(htmlFrame);
+          const viewer = isPdfPage ? htmlFrame : createPageOutlineViewer(htmlFrame, pageAbortController.signal, {
+            oneNote:!folderInfo,
+            title:page.title
+          });
+          text.after(viewer);
           if (result?.degraded) {
             htmlLoadError = document.createElement('div');
             htmlLoadError.className = 'error-box';
             htmlLoadError.textContent = result.warning;
-            htmlFrame.before(htmlLoadError);
+            viewer.before(htmlLoadError);
           }
           await htmlFrameReady;
           if (pageRefreshToken !== pendingPageRefreshToken || selectedPageId !== id) return;
@@ -2801,7 +3052,7 @@ async function openPage(id, options = {}) {
         }
         restorePageContentScroll(options.contentScrollTop);
         if (!showingHtml && navigationTargets.length > 0) goToMatch(activeMatchIndex, false, false);
-        htmlButton.textContent = showingHtml ? '¶' : (isPdfPage ? 'P' : '<>');
+        htmlButton.innerHTML = pageViewIconSvg(showingHtml, isPdfPage);
         htmlButton.title = showingHtml ? 'Показать извлечённый текст' : (isPdfPage ? 'Показать PDF' : 'Показать HTML');
         htmlButton.setAttribute('aria-label', showingHtml ? 'Показать извлечённый текст' : (isPdfPage ? 'Показать PDF' : 'Показать HTML'));
         refreshPageFind();
@@ -2809,7 +3060,7 @@ async function openPage(id, options = {}) {
         if (pageRefreshToken !== pendingPageRefreshToken || selectedPageId !== id) return;
         htmlButton.disabled = false;
         htmlButton.removeAttribute('aria-busy');
-        htmlButton.textContent = isPdfPage ? 'P' : '<>';
+        htmlButton.innerHTML = pageViewIconSvg(false, isPdfPage);
         htmlButton.title = isPdfPage ? 'Показать PDF' : 'Показать HTML';
         htmlButton.setAttribute('aria-label', isPdfPage ? 'Показать PDF' : 'Показать HTML');
         showingHtml = false;
@@ -2836,6 +3087,7 @@ async function openPage(id, options = {}) {
     if (pageRefreshToken !== pendingPageRefreshToken || selectedPageId !== id) return;
     loading.remove();
     content.removeAttribute('aria-busy');
+    restoreWorkspaceTabView(workspaceTab, article);
   };
   if (preferHtmlView) content.replaceChildren(loading, article);
   else {

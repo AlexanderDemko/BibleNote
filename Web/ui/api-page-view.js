@@ -86,6 +86,21 @@ function pageHtmlFrameSrcdoc(rawHtml, bibleParagraphs, targetParagraphIndexes = 
   };
   const parser = new DOMParser();
   const doc = parser.parseFromString(rawHtml || '', 'text/html');
+  const pageViewStyle = doc.createElement('style');
+  pageViewStyle.textContent = `
+    body.onenote-com-page:not([data-biblenote-renderer]) {
+      box-sizing:border-box; min-height:100vh; margin:0; padding:48px 24px 80px;
+      background:#fff; color:#000; font:11pt/1.42 Calibri,"Segoe UI",sans-serif;
+    }
+    body.onenote-com-page:not([data-biblenote-renderer]) h1 { margin:0; padding:0 0 8px; border-bottom:1px solid #aaa; font:20pt/1.15 "Calibri Light",Calibri,"Segoe UI",sans-serif; font-weight:400; }
+    body.onenote-com-page:not([data-biblenote-renderer]) .onenote-outline { margin-top:64px; }
+    body.onenote-com-page:not([data-biblenote-renderer]) .onenote-paragraph:empty { min-height:1em; }
+    body.onenote-com-page:not([data-biblenote-renderer]) .onenote-paragraph > .onenote-children { margin-left:1.5em; }
+    body.onenote-com-page { padding-right:24px; padding-left:24px; }
+    html.onenote-page-focus-mode body.onenote-com-page { padding-top:76px !important; }
+    @media(max-width:700px) { body.onenote-com-page { padding-right:16px !important; padding-left:16px !important; } }
+  `;
+  doc.head.append(pageViewStyle);
   const pageFindStyle = doc.createElement('style');
   pageFindStyle.textContent = '[data-onenote-page-find],[data-onenote-main-search]{padding:0;background:#f5d76e;color:inherit;border-radius:2px;}[data-onenote-page-find-current],[data-onenote-main-search-current]{background:#c99cff;outline:2px solid #7454a6;outline-offset:1px;}';
   doc.head.append(pageFindStyle);
@@ -118,7 +133,14 @@ function pageHtmlFrameSrcdoc(rawHtml, bibleParagraphs, targetParagraphIndexes = 
     .filter(item => item.text || item.references.length > 0);
   if (paragraphItems.length > 0) {
     const style = doc.createElement('style');
-    style.textContent = '[data-onenote-target-paragraph="true"]{background:rgba(116,84,166,.16)!important;box-shadow:inset 4px 0 0 #7454a6!important;outline:1px solid rgba(116,84,166,.35)!important;scroll-margin:80px!important;}[data-onenote-target-paragraph-current="true"],[data-onenote-target-match-current="true"]{background:rgba(116,84,166,.26)!important;outline:2px solid #7454a6!important;outline-offset:1px!important;}[data-onenote-target-match="true"]{scroll-margin:80px!important;}';
+    style.textContent = `
+      [data-onenote-target-paragraph="true"] { background:rgba(116,84,166,.16)!important; box-shadow:inset 4px 0 0 #7454a6!important; outline:1px solid rgba(116,84,166,.35)!important; scroll-margin:80px!important; }
+      [data-onenote-target-paragraph-current="true"] { background:rgba(116,84,166,.26)!important; outline:2px solid #7454a6!important; outline-offset:1px!important; }
+      [data-onenote-target-match="true"] { background:rgba(116,84,166,.3)!important; outline:1px solid #7454a6!important; outline-offset:1px!important; border-radius:3px!important; box-decoration-break:clone; -webkit-box-decoration-break:clone; scroll-margin:80px!important; }
+      [data-onenote-target-match="true"], [data-onenote-target-match="true"] * { color:#40225d!important; }
+      [data-onenote-target-match-current="true"] { background:#7454a6!important; outline:2px solid #7454a6!important; }
+      [data-onenote-target-match-current="true"], [data-onenote-target-match-current="true"] * { color:#fff!important; }
+    `;
     doc.head.append(style);
     const used = new Set();
     const activeTargetIndexByParagraph = new Map(
@@ -264,6 +286,17 @@ function pageHtmlFrameSrcdoc(rawHtml, bibleParagraphs, targetParagraphIndexes = 
       if (targetIndex === 0) target.setAttribute('data-onenote-target-match-current', 'true');
     }
   }
+  doc.documentElement.dataset.contentTheme = document.documentElement.dataset.theme === 'c' ? 'dark' : 'light';
+  if (doc.documentElement.dataset.contentTheme === 'dark') {
+    doc.documentElement.setAttribute('data-content-theme-pending', '');
+    const pendingStyle = doc.createElement('style');
+    pendingStyle.textContent = 'html[data-content-theme-pending]{background:#1f1e24!important}html[data-content-theme-pending] body{visibility:hidden!important}';
+    doc.head.append(pendingStyle);
+  }
+  const themeScript = doc.createElement('script');
+  themeScript.src = new URL('/ui/content-theme.js', location.href).href;
+  themeScript.referrerPolicy = 'no-referrer';
+  doc.body.append(themeScript);
   const bridgeScript = doc.createElement('script');
   bridgeScript.src = new URL('/ui/page-frame-bridge.js', location.href).href;
   bridgeScript.referrerPolicy = 'no-referrer';
@@ -290,6 +323,13 @@ async function loadPageHtmlWithFallback(params, options = {}) {
 function postHtmlFrameZoom(frame, percent) {
   const zoom = Math.max(50, Math.min(300, Number(percent) || 100)) / 100;
   frame?.contentWindow?.postMessage({ type:'onenote-html-zoom', zoom }, '*');
+}
+
+function postContentTheme(frame) {
+  frame?.contentWindow?.postMessage({
+    type:'onenote-content-theme',
+    theme:document.documentElement.dataset.theme === 'c' ? 'dark' : 'light'
+  }, '*');
 }
 
 function waitForHtmlFrameReady(frame, signal) {

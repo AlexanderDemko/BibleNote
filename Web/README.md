@@ -58,6 +58,18 @@ HTML and derived plain text are always cached. HTML preserves paragraph nesting 
 - DOCX is converted to HTML with paragraphs, headings, lists, and tables through Mammoth.
 - DOC is first converted to DOCX by installed Microsoft Word through COM on Windows, then follows
   the same structured extraction path as DOCX.
+- The HTML viewer provides a **Структура** panel with nested, collapsible headings, heading search,
+  click-to-scroll navigation, and the current section highlighted while reading. The panel also works
+  in full-page mode. Word heading styles and inherited or direct outline levels (1–9) are preserved;
+  resync previously cached Word files to pick up custom outline levels.
+- OneNote outlines use native heading styles and Markdown-style heading lines such as `## Introduction`.
+  The page title is excluded, and the panel is hidden when there are no sections. Resync local OneNote
+  pages to recover native heading levels from older cached HTML; Markdown headings work immediately.
+- **Settings → Просмотр заметок → C · Тёмная** applies to the application and documents.
+  HTML text, paper, table cells and highlights are recolored with their hues preserved;
+  images are gently dimmed. PDF pages use a dimmed inversion (including embedded images).
+  Switching back restores the original document colors without changing the cache,
+  reloading pages, or losing the reading position.
 - PDF text is reconstructed from positioned text items. A page indicator reports `textual`,
   `heuristic`, or `requires OCR`. The last state means the PDF has no useful text layer; OCR remains
   disabled in this version.
@@ -75,6 +87,14 @@ The registration uses the `common` authority for personal Microsoft accounts and
 accounts. It contains no client secret; desktop applications authenticate as public clients.
 
 ## 2. Configure locally
+
+Use Node.js 22.12.0 or newer. Electron's artifact downloader requires this runtime.
+
+The `app-builder-lib` override selects `@electron/get` 5.1 or newer within major version 5
+to remove the vulnerable `got` / `cacheable-request` / `http-cache-semantics` dependency chain.
+It uses native fetch; custom download options follow `FetchDownloaderOptions`. For proxy downloads,
+set `ELECTRON_GET_USE_PROXY=1` together with `HTTP_PROXY`, `HTTPS_PROXY`, and/or `NO_PROXY`.
+Keep this override until electron-builder adopts the updated downloader upstream.
 
 ```bash
 cp .env.example .env
@@ -178,6 +198,167 @@ Parsed references are stored per page and paragraph. The cache also stores Bible
 
 - `onenote_find_pages_by_bible_ref`
 - `onenote_find_parallel_bible_refs`
+
+## MyBible module analyzer
+
+The repository includes a read-only diagnostic analyzer for MyBible `.SQLite3` modules. It reports
+book/chapter/verse structure, numbering gaps, empty consolidated verses, supported and unknown
+markup, footnote integrity, cross-reference integrity, and licensing/source metadata. Verse and
+footnote bodies are deliberately excluded from the JSON report.
+
+Analyze a Bible module. A same-name `.commentaries.SQLite3` companion is discovered automatically:
+
+```powershell
+npm.cmd run mybible:analyze -- --bible "C:\Modules\RST+.SQLite3" --output ".tmp\rst-plus-report.json"
+```
+
+Add a cross-reference module and compare the module structurally with another MyBible Bible:
+
+```powershell
+npm.cmd run mybible:analyze -- `
+  --bible "C:\Modules\RST+.SQLite3" `
+  --cross-references "C:\Modules\RST-x.crossreferences.SQLite3" `
+  --compare "C:\Modules\KJV.SQLite3" `
+  --output ".tmp\rst-plus-vs-kjv.json"
+```
+
+Comparison hints align rows by their ordinal position inside each book and compress consecutive
+coordinate shifts into candidate runs. They are diagnostic suggestions only: a mapping must still
+be reviewed and validated in both directions before BibleNote assigns neutral VerseIds.
+
+### Editable verse maps
+
+Build an explicit draft map between a current BibleNote module and an imported MyBible module:
+
+```powershell
+npm.cmd run mybible:map -- `
+  --reference "..\Api\Modules\rst\rst.bnm" `
+  --module "C:\Modules\RST+.SQLite3" `
+  --output ".tmp\rst-to-rst-plus-map.json"
+```
+
+The map contains explicit many-to-many verse rows plus compact review groups. Safe direct
+coordinates are confirmed automatically. The generator also auto-detects `manifest.xml` next to
+the comparison module, applies a documented numbering run when the imported module's boundary rows
+prove that it uses the base numbering, and honors MyBible range markers such as `[20-21]`. It never
+pairs unrelated leftovers merely because they have the same row ordinal. Only genuine holes and
+ambiguous passages remain candidates for a reviewer. High-confidence evidence also includes unique
+normalized-text matches and exact concatenations. The normalized text and copyrighted verse bodies
+are never stored in the map.
+
+An intentionally relocated passage, such as a doxology placed in a different chapter, still fails
+the monotonic-order check until its reviewed group explicitly sets `"allowNonMonotonic": true`.
+This is the editable-map equivalent of the legacy exceptional-check flag.
+
+After editing the review statuses, validate coverage, duplicate assignments, ordering, source
+fingerprints, and both lookup directions:
+
+```powershell
+npm.cmd run mybible:map -- `
+  --validate ".tmp\rst-to-rst-plus-map.json" `
+  --output ".tmp\rst-to-rst-plus-validation.json"
+```
+
+For safer review, use **Параметры → Модули → Проверка соответствия стихов** in the desktop application.
+Choose the generated JSON map and press **Проверить карту**; the loopback-only reviewer opens inside
+BibleNote, loads verse text directly from the two source modules, pages large groups, and lets the
+reviewer confirm, reject, or return a group to candidate status. The selected path is remembered.
+
+The equivalent command remains available for automation and development:
+
+```powershell
+npm.cmd run mybible:review -- --map ".tmp\rst-to-rst-plus-map.json"
+```
+
+When using the command, open the tokenized URL it prints. On the first change in a review session, the server
+preserves the original map next to it as `map.json.backup-<timestamp>`. Each change re-runs source
+fingerprint and two-way consistency validation. The server accepts writes only with its random
+session token and from its own browser origin.
+
+Once every intended group has been explicitly confirmed and confirmed-only validation is complete,
+compile the editable JSON into a compact lookup database:
+
+```powershell
+npm.cmd run mybible:compile-map -- `
+  --map ".tmp\rst-to-rst-plus-map.json" `
+  --verse-id-registry "bnverse:v1" `
+  --coordinate-reference-module "kjv" `
+  --reference-differences-manifest "..\Api\Modules\rst\manifest.xml" `
+  --output ".tmp\rst-plus-verse-map.sqlite" `
+  --direct-mappings-output ".tmp\rst-plus-direct-mappings.xml"
+```
+
+`bnverse:v1` is BibleNote's neutral VerseId registry. For example, `bnverse:v1:3:14:55`
+identifies the registry unit seeded from book 3, chapter 14, verse 55. It does not identify KJV text
+or a KJV module. KJV supplies the initial numbering only and is recorded separately as the
+coordinate reference module. Both settings have safe defaults, so the two explicit options above
+may normally be omitted.
+
+RST is a convenient same-language comparison bridge while reviewing RST+. Its existing manifest
+describes how RST coordinates differ from the KJV-seeded numbering. During compilation those
+verified KJV-to-RST relations are composed with the reviewed RST-to-RST+ map. The compiled SQLite
+schema stores neutral `verse_ids`, module rows, and many-to-many relations between them. It also
+records `verse_id_registry=bnverse:v1` and `coordinate_reference_module=kjv` as separate metadata.
+
+Compilation refuses candidate groups, missing coverage, duplicate assignments, changed source
+fingerprints, an omitted bridge manifest, and unapproved non-monotonic transitions. `--force`
+replaces an existing compiled database only after preserving it as a timestamped backup.
+
+The optional direct-mappings XML is a ready-to-embed `BibleDirectVerseMappings` element for the
+converted module's `manifest.xml`. It contains only exceptions to identity mapping but writes every
+relation in a merge, split, or complex group. The API gives an exact direct map priority when its
+`ReferenceModule` matches the other translation, in both directions; coordinates absent from the
+element retain identity behavior. For two non-KJV modules, the API composes their mappings through
+the shared coordinate reference. The XML identifies its neutral registry independently as
+`VerseIdRegistry="bnverse:v1"`. This lets references written using RST, RST+, KJV, or another mapped
+translation resolve to the same VerseIds while keeping explicit split and merge relations.
+
+### Convert a reviewed MyBible module
+
+Convert the MyBible SQLite Bible and its same-name footnotes companion into an installable
+BibleNote package. The reference manifest supplies the established book aliases, but its legacy
+RST-to-KJV differences are deliberately removed from the new module: the compiled direct mapping
+is the sole authority for imported verse coordinates. MyBible long/short book names are added so
+references written in the imported module's language can be parsed as module-qualified references:
+
+```powershell
+npm.cmd run mybible:convert -- `
+  --bible "C:\Modules\RST+.SQLite3" `
+  --short-name "rstplus" `
+  --reference-manifest "..\Api\Modules\rst\manifest.xml" `
+  --direct-mappings ".tmp\rst-plus-direct-mappings.xml" `
+  --coordinate-reference-module "kjv" `
+  --verse-id-registry "bnverse:v1" `
+  --output ".tmp\rstplus.bnm"
+```
+
+A confirmed direct mapping is required for an installable package. For markup and footnote
+inspection only, `--allow-unmapped-preview` can create a package whose conversion report marks it
+as non-installable. This preview switch must not be used for a production module.
+
+The converter discovers `RST+.commentaries.SQLite3` automatically; use `--footnotes` to override
+it or `--no-footnotes` to disable discovery. It converts italic, bold/emphasis, underline,
+translator-added text, words of Jesus, superscript/subscript, and paragraph/line breaks to semantic
+Zefania elements. MyBible footnote markers become `NOTE` elements, using a unique same-book marker
+fallback for the known modules whose companion coordinates differ. Cross-nested MyBible markup is
+closed safely so the generated `bible.xml` remains well-formed. Strong-number markers are currently
+removed from visible text because BibleNote has no Strong lexicon UI yet; their count and the source
+SHA-256 remain in `conversion-report.json` inside the package.
+
+Use `--all-footnotes` to preserve every companion record, including cross references without
+inline markers. Such records appear at the end of their source verse (or a verse in the declared
+range), while marked notes retain their word position. The package also retains the original
+note markup and coordinates in `footnotes-source.json`. Note bodies use plain text to preserve
+mixed text order in the legacy reader. Notes and breaks are emitted outside style elements so
+they survive XML loading. A partial Bible's manifest lists only the books actually present.
+
+The desktop map-review settings also accept an explicit `*.commentaries.SQLite3` path. A module
+built from the review UI is rejected if any `<f>` marker has no matching companion record, so the
+success message never represents marker-only placeholders as imported footnotes.
+
+BibleNote's verse-text API projects the semantic Zefania elements as safe offset-based decorations,
+breaks, and footnotes. The reader renders those styles alongside inductive markings and shows each
+footnote in an expandable block. No module-provided HTML or CSS is injected into the page.
 
 ## Local cache viewer
 
@@ -362,6 +543,36 @@ Direct Graph tools, useful for quick checks:
 - `src/cache-schema.ts`, `src/cache-search.ts`, and `src/cache-types.ts` isolate SQLite schema, read queries, and data contracts.
 - `src/cache-ui.ts` owns the local HTTP routes; `src/biblenote-gateway.ts` owns communication with the BibleNote API/process.
 - `ui/` contains the browser application, split by feature area. Keep browser-only code out of the Node server modules.
+
+## Startup performance
+
+`npm run build` type-checks the project and bundles the Electron main process, cache UI server,
+and Ribbon worker with esbuild. Shared and lazy chunks stay in `dist/` so resource paths remain
+relative to the same directory. Keep the native SQLite addon, PDF.js worker runtime, Word converters,
+and MSAL external. The separate Windows Node runtime cannot read Electron ASAR paths, so packaging
+remains unpacked; do not enable ASAR without also changing the child-process/resource layout.
+
+The Electron shell starts the cache server while its loading page renders. The renderer requests
+cache initialization after painting; the previous fixed 1.2-second delay is gone. PDF/Word parsers,
+MSAL, MyBible review tools, and PDF.js assets load on demand. Office protocol diagnostics and Ribbon
+configuration run after the initial view. Restored note tabs do not wait for Bible modules; Bible
+tabs share the pending module request before opening their chapter.
+
+Reproduce startup measurements without an installer or a version change:
+
+```powershell
+npm.cmd run build
+npm.cmd run benchmark:electron -- 5
+npm.cmd run benchmark:startup -- 5
+```
+
+The Electron benchmark uses isolated profiles under `.tmp/electron-startup` and rotates default,
+no-menu, and no-GPU probes. The app benchmark uses a seeded test cache, fake Bible API, and disabled
+Ribbon registration under `.tmp/app-startup`; it does not measure production .NET/OneNote startup.
+Both print timings from process launch. Compare runs without parallel tests, and distinguish the
+first launch from later launches: OS file caches are not flushed. App logs include `mainCodeAt`,
+Electron version, and the clock origin. Normal launches use Node's time origin; the benchmark supplies
+`BIBLENOTE_STARTUP_LAUNCHED_AT` to include executable loading before Node starts.
 
 ## End-to-end tests
 

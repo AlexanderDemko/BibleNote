@@ -496,16 +496,23 @@ test('@notes текстовый и HTML-режимы используют оди
   await page.setViewportSize({ width:1100, height:620 });
   await page.goto(`${app.baseUrl}/page/page-grace`);
   const textWidth = await page.locator('#content .page-text').evaluate(element => element.getBoundingClientRect().width);
+  const contentBounds = (await page.locator('#content').boundingBox())!;
+  expect(textWidth).toBeGreaterThan(contentBounds.width - 44);
 
   await page.getByRole('button', { name:'Показать HTML' }).click();
   const frame = page.locator('#content iframe.html-frame');
   await expect(frame).toBeVisible();
   const htmlWidth = await frame.evaluate(element => element.getBoundingClientRect().width);
   expect(Math.abs(textWidth - htmlWidth)).toBeLessThanOrEqual(2);
+  // The note header leaves space for reading, including when its controls wrap.
+  expect((await frame.boundingBox())!.y - contentBounds.y).toBeLessThan(215);
   await expect(page.locator('#contentScrollbar')).toBeHidden();
 
   const references = page.locator('details.bible-page-refs');
   await references.locator('summary').click();
   await expect(page.locator('#contentScrollbar')).toBeVisible();
   await expect.poll(() => page.locator('#content').evaluate(element => element.scrollHeight > element.clientHeight)).toBe(true);
+  expect((await frame.boundingBox())!.height).toBeGreaterThan(400);
+  await references.locator('summary').click();
+  await expect(page.locator('#contentScrollbar')).toBeHidden();
 });

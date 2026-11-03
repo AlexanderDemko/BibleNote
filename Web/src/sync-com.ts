@@ -1,5 +1,6 @@
 import { bibleParseConfigFromEnv, bibleParserVersion, parsePageWithBibleNote } from './bible.js';
 import {
+  cachedPageHtmlContains,
   cacheStatus,
   checkpointCacheDb,
   clearSyncState,
@@ -26,7 +27,7 @@ import {
   upsertSectionGroup
 } from './cache.js';
 import { htmlToText } from './html.js';
-import { loadOneNoteComPageHtml, loadOneNoteComSnapshot } from './onenote-com.js';
+import { loadOneNoteComPageHtml, loadOneNoteComSnapshot, oneNoteComRendererMarker } from './onenote-com.js';
 import { runtimeLog } from './runtime-logging.js';
 import type { Page, SyncOptions, SyncResult } from './sync.js';
 
@@ -180,9 +181,12 @@ export async function syncOneNoteComCache(options: SyncOptions = {}): Promise<Sy
     });
     options.onProgress?.({ phase:'pages', pages:pages.length, sectionTotal:sections.length });
 
-    const pagesToFetch = pages.filter(page =>
-      shouldFetchPage(getCachedPageSyncState(db, page.id), page, options)
-    );
+    const pagesToFetch = pages.filter(page => {
+      if (options.metadataOnly) return false;
+      const cached = getCachedPageSyncState(db, page.id);
+      return shouldFetchPage(cached, page, options)
+        || !cachedPageHtmlContains(db, page.id, `data-biblenote-renderer="${oneNoteComRendererMarker}"`);
+    });
     let contentDownloaded = 0;
     let contentErrors = 0;
     const contentSkipped = pages.length - pagesToFetch.length;

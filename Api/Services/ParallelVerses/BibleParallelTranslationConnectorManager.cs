@@ -41,9 +41,8 @@ namespace BibleNote.Services.ParallelVerses
             List<ModuleVersePointer> result = null;
 
             var parallelBibleInfo = GetParallelBibleInfo(parallelModuleShortName, _configurationManager.ModuleShortName);
-            var parallelBookInfo = parallelBibleInfo[baseVersePointer.BookIndex];
-
-            if (parallelBookInfo != null && parallelBookInfo.TryGetValue(baseVersePointer, out ComparisonVersesInfo verseInfo))
+            if (parallelBibleInfo.TryGetValue(baseVersePointer.BookIndex, out ModuleVersePointersComparisonTable parallelBookInfo)
+                && parallelBookInfo.TryGetValue(baseVersePointer, out ComparisonVersesInfo verseInfo))
                 result = verseInfo;
             else
                 result = new List<ModuleVersePointer>(1) { (ModuleVersePointer)baseVersePointer.Clone() };
@@ -60,14 +59,223 @@ namespace BibleNote.Services.ParallelVerses
                 var baseModuleInfo = _modulesManager.GetModuleInfo(baseModuleShortName);
                 var parallelModuleInfo = _modulesManager.GetModuleInfo(parallelModuleShortName);
 
-                result = GetParallelBibleInfo(
-                    baseModuleShortName,
-                    parallelModuleShortName,
-                    baseModuleInfo.BibleTranslationDifferences,
-                    parallelModuleInfo.BibleTranslationDifferences,
-                    refreshCache);
+                result = GetDirectParallelBibleInfo(baseModuleInfo, parallelModuleInfo);
+                if (result == null)
+                    result = GetBridgedDirectParallelBibleInfo(baseModuleInfo, parallelModuleInfo, refreshCache);
+                if (result == null)
+                {
+                    result = GetParallelBibleInfo(
+                        baseModuleShortName,
+                        parallelModuleShortName,
+                        baseModuleInfo.BibleTranslationDifferences,
+                        parallelModuleInfo.BibleTranslationDifferences,
+                        refreshCache);
+                }
+                else
+                {
+                    lock (_locker)
+                    {
+                        if (!_cache.ContainsKey(key))
+                            _cache.Add(key, result);
+                        else
+                            _cache[key] = result;
+                    }
+                }
             }
 
+            return result;
+        }
+
+        private ParallelBibleInfo GetBridgedDirectParallelBibleInfo(
+            ModuleInfo baseModule,
+            ModuleInfo parallelModule,
+            bool refreshCache)
+        {
+            var parallelMappings = parallelModule.BibleDirectVerseMappings;
+            if (parallelMappings != null
+                && parallelMappings.SchemaVersion == 1
+                && !string.IsNullOrWhiteSpace(parallelMappings.ReferenceModule)
+                && !DirectMappingsReference(parallelMappings, baseModule.ShortName))
+            {
+                EnsureCompatibleVerseIdRegistries(baseModule.BibleDirectVerseMappings, parallelMappings);
+                var referenceModule = _modulesManager.GetModuleInfo(parallelMappings.ReferenceModule);
+                var baseToReference = GetParallelBibleInfoWithoutBridge(baseModule, referenceModule, refreshCache);
+                var referenceToBase = GetParallelBibleInfoWithoutBridge(referenceModule, baseModule, refreshCache);
+                var referenceToParallel = BuildDirectParallelBibleInfo(parallelMappings, false);
+                return ComposeParallelBibleInfo(baseToReference, referenceToBase, referenceToParallel);
+            }
+
+            var baseMappings = baseModule.BibleDirectVerseMappings;
+            if (baseMappings != null
+                && baseMappings.SchemaVersion == 1
+                && !string.IsNullOrWhiteSpace(baseMappings.ReferenceModule)
+                && !DirectMappingsReference(baseMappings, parallelModule.ShortName))
+            {
+                EnsureCompatibleVerseIdRegistries(baseMappings, parallelModule.BibleDirectVerseMappings);
+                var referenceModule = _modulesManager.GetModuleInfo(baseMappings.ReferenceModule);
+                var baseToReference = BuildDirectParallelBibleInfo(baseMappings, true);
+                var referenceToBase = BuildDirectParallelBibleInfo(baseMappings, false);
+                var referenceToParallel = GetParallelBibleInfoWithoutBridge(referenceModule, parallelModule, refreshCache);
+                return ComposeParallelBibleInfo(baseToReference, referenceToBase, referenceToParallel);
+            }
+
+            return null;
+        }
+
+        private static void EnsureCompatibleVerseIdRegistries(
+            BibleDirectVerseMappings first,
+            BibleDirectVerseMappings second)
+        {
+            if (first == null || second == null
+                || first.SchemaVersion != 1 || second.SchemaVersion != 1
+                || !string.Equals(first.ReferenceModule, second.ReferenceModule, StringComparison.OrdinalIgnoreCase))
+                return;
+
+            var firstRegistry = EffectiveVerseIdRegistry(first);
+            var secondRegistry = EffectiveVerseIdRegistry(second);
+            if (!string.IsNullOrWhiteSpace(firstRegistry)
+                && !string.IsNullOrWhiteSpace(secondRegistry)
+                && !string.Equals(firstRegistry, secondRegistry, StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException(
+                    $"Direct verse maps use incompatible VerseId registries: '{firstRegistry}' and '{secondRegistry}'.");
+        }
+
+        private static string EffectiveVerseIdRegistry(BibleDirectVerseMappings mappings)
+        {
+            if (!string.IsNullOrWhiteSpace(mappings.VerseIdRegistry))
+                return mappings.VerseIdRegistry;
+            if (string.Equals(mappings.CanonicalSystem, "biblenote-kjv-v1", StringComparison.OrdinalIgnoreCase))
+                return "bnverse:v1";
+            return mappings.CanonicalSystem;
+        }
+
+        private ParallelBibleInfo GetParallelBibleInfoWithoutBridge(
+            ModuleInfo baseModule,
+            ModuleInfo parallelModule,
+            bool refreshCache)
+        {
+            return GetDirectParallelBibleInfo(baseModule, parallelModule)
+                ?? GetParallelBibleInfo(
+                    baseModule.ShortName,
+                    parallelModule.ShortName,
+                    baseModule.BibleTranslationDifferences,
+                    parallelModule.BibleTranslationDifferences,
+                    refreshCache);
+        }
+
+        private static ParallelBibleInfo ComposeParallelBibleInfo(
+            ParallelBibleInfo baseToReference,
+            ParallelBibleInfo referenceToBase,
+            ParallelBibleInfo referenceToParallel)
+        {
+            var sources = new HashSet<ModuleVersePointer>();
+            foreach (var book in baseToReference.Values)
+                foreach (var source in book.Keys)
+                    sources.Add((ModuleVersePointer)source.Clone());
+
+            foreach (var referenceBook in referenceToParallel.Values)
+            {
+                foreach (var reference in referenceBook.Keys)
+                {
+                    foreach (var source in ResolveParallelPointers(referenceToBase, reference))
+                        sources.Add((ModuleVersePointer)source.Clone());
+                }
+            }
+
+            var result = new ParallelBibleInfo();
+            foreach (var source in sources)
+            {
+                var targets = new ComparisonVersesInfo();
+                foreach (var reference in ResolveParallelPointers(baseToReference, source))
+                {
+                    foreach (var target in ResolveParallelPointers(referenceToParallel, reference))
+                    {
+                        var value = (ModuleVersePointer)target.Clone();
+                        if (!targets.Contains(value))
+                            targets.Add(value);
+                    }
+                }
+                if (targets.Count == 0)
+                    continue;
+                if (!result.TryGetValue(source.BookIndex, out ModuleVersePointersComparisonTable table))
+                {
+                    table = new ModuleVersePointersComparisonTable();
+                    result.Add(source.BookIndex, table);
+                }
+                table.Add((ModuleVersePointer)source.Clone(), targets);
+            }
+            return result;
+        }
+
+        private static ComparisonVersesInfo ResolveParallelPointers(
+            ParallelBibleInfo info,
+            ModuleVersePointer source)
+        {
+            if (info.TryGetValue(source.BookIndex, out ModuleVersePointersComparisonTable table)
+                && table.TryGetValue(source, out ComparisonVersesInfo values))
+                return values;
+
+            return ComparisonVersesInfo.FromVersePointer((ModuleVersePointer)source.Clone());
+        }
+
+        private ParallelBibleInfo GetDirectParallelBibleInfo(ModuleInfo baseModule, ModuleInfo parallelModule)
+        {
+            if (DirectMappingsReference(parallelModule.BibleDirectVerseMappings, baseModule.ShortName))
+                return BuildDirectParallelBibleInfo(parallelModule.BibleDirectVerseMappings, false);
+
+            if (DirectMappingsReference(baseModule.BibleDirectVerseMappings, parallelModule.ShortName))
+                return BuildDirectParallelBibleInfo(baseModule.BibleDirectVerseMappings, true);
+
+            return null;
+        }
+
+        private static bool DirectMappingsReference(BibleDirectVerseMappings mappings, string moduleShortName)
+        {
+            return mappings != null
+                && mappings.SchemaVersion == 1
+                && !string.IsNullOrWhiteSpace(mappings.ReferenceModule)
+                && string.Equals(mappings.ReferenceModule, moduleShortName, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static ParallelBibleInfo BuildDirectParallelBibleInfo(BibleDirectVerseMappings mappings, bool reverse)
+        {
+            var result = new ParallelBibleInfo();
+            foreach (var book in mappings.Books ?? Enumerable.Empty<BibleDirectBookMappings>())
+            {
+                if (book.BookIndex < 1)
+                    throw new InvalidOperationException("A direct verse mapping has an invalid book index.");
+
+                foreach (var mapping in book.Mappings ?? Enumerable.Empty<BibleDirectVerseMapping>())
+                {
+                    var keyChapter = reverse ? mapping.ModuleChapter : mapping.ReferenceChapter;
+                    var keyVerse = reverse ? mapping.ModuleVerse : mapping.ReferenceVerse;
+                    var valueChapter = reverse ? mapping.ReferenceChapter : mapping.ModuleChapter;
+                    var valueVerse = reverse ? mapping.ReferenceVerse : mapping.ModuleVerse;
+                    var valueIsEmpty = reverse ? mapping.ReferenceIsEmpty : mapping.ModuleIsEmpty;
+                    if (keyChapter < 1 || keyVerse < 1 || valueChapter < 1 || valueVerse < 1)
+                        throw new InvalidOperationException("A direct verse mapping has an invalid chapter or verse coordinate.");
+
+                    if (!result.TryGetValue(book.BookIndex, out ModuleVersePointersComparisonTable table))
+                    {
+                        table = new ModuleVersePointersComparisonTable();
+                        result.Add(book.BookIndex, table);
+                    }
+
+                    var key = new ModuleVersePointer(book.BookIndex, keyChapter, keyVerse);
+                    var value = new ModuleVersePointer(book.BookIndex, valueChapter, valueVerse)
+                    {
+                        IsEmpty = valueIsEmpty
+                    };
+                    if (!table.TryGetValue(key, out ComparisonVersesInfo values))
+                    {
+                        table.Add(key, ComparisonVersesInfo.FromVersePointer(value));
+                    }
+                    else if (!values.Contains(value))
+                    {
+                        values.Add(value);
+                    }
+                }
+            }
             return result;
         }
 

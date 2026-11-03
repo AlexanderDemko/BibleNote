@@ -21,6 +21,7 @@ let inductiveJustCreatedRelationId = null;
 let inductiveActiveRelationIds = [];
 let inductiveActiveRelationAnchorIds = [];
 let inductiveVerseTextByVerse = new Map();
+let inductiveVerseRichTextByVerse = new Map();
 let inductiveEventsReady = false;
 const exportInductiveMarkingsButton = document.getElementById('exportInductiveMarkings');
 const exportAllInductiveMarkingsButton = document.getElementById('exportAllInductiveMarkings');
@@ -90,10 +91,12 @@ async function loadInductiveChapter(location) {
 
 function updateInductiveActionButtons() {
   if (inductiveUndoButton) {
+    inductiveUndoButton.hidden = !inductiveMarksVisible;
     inductiveUndoButton.disabled = inductiveUndoStack.length === 0;
     inductiveUndoButton.title = '\u041e\u0442\u043c\u0435\u043d\u0438\u0442\u044c \u043f\u043e\u0441\u043b\u0435\u0434\u043d\u0435\u0435 \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0435 (\u0432 \u0438\u0441\u0442\u043e\u0440\u0438\u0438: ' + inductiveUndoStack.length + ')';
   }
   if (inductiveRedoButton) {
+    inductiveRedoButton.hidden = !inductiveMarksVisible;
     inductiveRedoButton.disabled = inductiveRedoStack.length === 0;
     inductiveRedoButton.title = '\u0412\u0435\u0440\u043d\u0443\u0442\u044c \u043e\u0442\u043c\u0435\u043d\u0451\u043d\u043d\u043e\u0435 \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0435 (\u0432 \u0438\u0441\u0442\u043e\u0440\u0438\u0438: ' + inductiveRedoStack.length + ')';
   }
@@ -148,6 +151,7 @@ function updateInductiveVisibilityButton() {
     : inductiveMarksVisible ? '\u0421\u043a\u0440\u044b\u0442\u044c \u0440\u0430\u0437\u043c\u0435\u0442\u043a\u0443' : '\u041f\u043e\u043a\u0430\u0437\u0430\u0442\u044c \u0440\u0430\u0437\u043c\u0435\u0442\u043a\u0443';
   inductiveVisibilityButton.setAttribute('aria-label', inductiveVisibilityButton.title);
   inductiveVisibilityButton.setAttribute('aria-pressed', String(!inductiveMarksVisible));
+  updateInductiveActionButtons();
 }
 
 function inductiveAnnotationInput(annotation) {
@@ -816,15 +820,68 @@ function validInductiveRelationEndpointsForText(verse, text) {
   return endpoints;
 }
 
-function renderInductiveText(textElement, verse, text) {
+let bibleFootnoteSequence = 0;
+
+function bibleVerseFootnotes(richText) {
+  return Array.isArray(richText?.footnotes) ? richText.footnotes.filter(item => item?.text) : [];
+}
+
+function bibleFootnoteTargetId(textElement, index) {
+  if (!textElement.dataset.footnotePrefix) textElement.dataset.footnotePrefix = 'bible-footnote-' + (++bibleFootnoteSequence);
+  return textElement.dataset.footnotePrefix + '-' + index;
+}
+
+function findBibleVerseFootnote(textElement, targetId) {
+  return textElement.closest('.bible-reader-translation-fragment, .bible-reader-translation-cell, .bible-reader-verse-block')
+    ?.querySelector('#' + targetId);
+}
+
+function renderInductiveText(textElement, verse, text, richText = null) {
   textElement.replaceChildren();
-  if (!inductiveMarksVisible) {
-    textElement.textContent = text;
-    return;
-  }
-  const annotations = validInductiveAnnotationsForText(verse, text);
-  const relationEndpoints = validInductiveRelationEndpointsForText(verse, text);
-  if (annotations.length === 0 && relationEndpoints.length === 0) {
+  textElement.dataset.bibleTextLength = String(text.length);
+  const annotations = inductiveMarksVisible ? validInductiveAnnotationsForText(verse, text) : [];
+  const relationEndpoints = inductiveMarksVisible ? validInductiveRelationEndpointsForText(verse, text) : [];
+  const decorations = (Array.isArray(richText?.decorations) ? richText.decorations : []).filter(decoration => (
+    Number(decoration.startOffset) >= 0
+    && Number(decoration.endOffset) <= text.length
+    && Number(decoration.startOffset) < Number(decoration.endOffset)
+  ));
+  const breaks = (Array.isArray(richText?.breaks) ? richText.breaks : []).filter(item => (
+    Number.isInteger(Number(item.offset))
+    && Number(item.offset) > 0 && Number(item.offset) < text.length
+    // Each verse already has its own block. A boundary paragraph marker must
+    // not create an empty first/last line beside its verse number.
+    && text.slice(0, Number(item.offset)).trim().length > 0
+    && text.slice(Number(item.offset)).trim().length > 0
+  ));
+  const footnotes = bibleVerseFootnotes(richText).map((note, index) => ({ ...note, index }))
+    .filter(note => Number.isInteger(note.offset) && note.offset >= 0 && note.offset <= text.length);
+  const appendFootnoteMarkers = offset => {
+    for (const note of footnotes.filter(item => item.offset === offset)) {
+      const targetId = bibleFootnoteTargetId(textElement, note.index);
+      const marker = document.createElement('button');
+      marker.type = 'button';
+      marker.className = 'bible-footnote-marker';
+      // CSS supplies the visible marker so selection offsets remain those of the verse text.
+      marker.dataset.marker = note.marker || String(note.index + 1);
+      marker.dataset.offset = String(offset);
+      marker.setAttribute('aria-label', 'Сноска ' + marker.dataset.marker);
+      marker.setAttribute('aria-controls', targetId);
+      marker.setAttribute('aria-expanded', String(findBibleVerseFootnote(textElement, targetId)?.open ?? false));
+      marker.title = note.text;
+      marker.addEventListener('mouseup', event => event.stopPropagation());
+      marker.addEventListener('click', event => {
+        event.stopPropagation();
+        const details = findBibleVerseFootnote(textElement, targetId);
+        if (!details) return;
+        details.open = !details.open;
+        marker.setAttribute('aria-expanded', String(details.open));
+        if (details.open) details.scrollIntoView({ block:'nearest' });
+      });
+      textElement.append(marker);
+    }
+  };
+  if (annotations.length === 0 && relationEndpoints.length === 0 && decorations.length === 0 && breaks.length === 0 && footnotes.length === 0) {
     textElement.textContent = text;
     return;
   }
@@ -837,21 +894,38 @@ function renderInductiveText(textElement, verse, text) {
     boundaries.add(endpoint.startOffset);
     boundaries.add(endpoint.endOffset);
   });
+  decorations.forEach(decoration => {
+    boundaries.add(Number(decoration.startOffset));
+    boundaries.add(Number(decoration.endOffset));
+  });
+  breaks.forEach(item => boundaries.add(Number(item.offset)));
+  footnotes.forEach(note => boundaries.add(note.offset));
   const points = [...boundaries].sort((a, b) => a - b);
   for (let index = 0; index < points.length - 1; index += 1) {
     const start = points[index];
     const end = points[index + 1];
+    appendFootnoteMarkers(start);
+    for (const lineBreak of breaks.filter(item => Number(item.offset) === start)) {
+      const breakElement = document.createElement('br');
+      breakElement.className = 'bible-rich-break ' + (lineBreak.kind === 'paragraph' ? 'paragraph' : 'line');
+      textElement.append(breakElement);
+    }
     if (end <= start) continue;
     const active = annotations.filter(annotation => Number(annotation.startOffset) <= start && Number(annotation.endOffset) >= end);
     const activeEndpoints = relationEndpoints.filter(endpoint => endpoint.startOffset <= start && endpoint.endOffset >= end);
+    const activeDecorations = decorations.filter(decoration => Number(decoration.startOffset) <= start && Number(decoration.endOffset) >= end);
     const value = text.slice(start, end);
-    if (active.length === 0 && activeEndpoints.length === 0) {
+    if (active.length === 0 && activeEndpoints.length === 0 && activeDecorations.length === 0) {
       textElement.append(document.createTextNode(value));
       continue;
     }
     const mark = document.createElement('span');
     mark.className = 'inductive-text-segment';
     const titleParts = [];
+    for (const decoration of activeDecorations) {
+      const kind = String(decoration.kind || 'styled').toLowerCase().replace(/[^a-z0-9-]/g, '');
+      mark.classList.add('bible-rich-text', 'bible-rich-' + (kind || 'styled'));
+    }
     if (active.length > 0) {
       const primary = active[active.length - 1];
       const style = inductiveStyleForAnnotation(primary);
@@ -881,6 +955,12 @@ function renderInductiveText(textElement, verse, text) {
     mark.textContent = value;
     textElement.append(mark);
   }
+  appendFootnoteMarkers(text.length);
+  for (const lineBreak of breaks.filter(item => Number(item.offset) === text.length)) {
+    const breakElement = document.createElement('br');
+    breakElement.className = 'bible-rich-break ' + (lineBreak.kind === 'paragraph' ? 'paragraph' : 'line');
+    textElement.append(breakElement);
+  }
 }
 
 function prepareInductiveTextElement(textElement, result, verse, text) {
@@ -891,17 +971,46 @@ function prepareInductiveTextElement(textElement, result, verse, text) {
   textElement.dataset.verse = String(verse.verse);
   textElement.addEventListener('mouseup', handleInductiveTextSelection);
   textElement.addEventListener('click', handleInductiveMarkClick);
-  renderInductiveText(textElement, verse.verse, text);
+  renderInductiveText(textElement, verse.verse, text, verse.richText);
 }
 
 function refreshInductiveRendering() {
   document.querySelectorAll('[data-inductive-text="true"]').forEach(textElement => {
     const verse = Number(textElement.dataset.verse);
     const text = inductiveVerseTextByVerse.get(verse) ?? textElement.textContent ?? '';
-    renderInductiveText(textElement, verse, text);
+    renderInductiveText(textElement, verse, text, inductiveVerseRichTextByVerse.get(verse));
   });
   renderInductiveRelationChapterHint();
   renderInductiveObservations();
+}
+
+function createBibleVerseFootnotes(richText, textElement) {
+  const footnotes = bibleVerseFootnotes(richText);
+  if (footnotes.length === 0) return null;
+  const list = document.createElement('div');
+  list.className = 'bible-verse-footnotes';
+  list.addEventListener('click', event => event.stopPropagation());
+  for (const [index, footnote] of footnotes.entries()) {
+    const details = document.createElement('details');
+    details.className = 'bible-verse-footnote';
+    details.name = 'bible-reader-footnotes';
+    details.id = bibleFootnoteTargetId(textElement, index);
+    const inline = Number.isInteger(footnote.offset) && footnote.offset >= 0
+      && footnote.offset <= Number(textElement.dataset.bibleTextLength);
+    details.classList.toggle('inline-linked', inline);
+    details.addEventListener('toggle', () => {
+      const marker = textElement.querySelector('[aria-controls="' + details.id + '"]');
+      marker?.setAttribute('aria-expanded', String(details.open));
+    });
+    const summary = document.createElement('summary');
+    summary.textContent = footnote.marker || String(index + 1);
+    const body = document.createElement('span');
+    body.className = 'bible-verse-footnote-body';
+    body.textContent = footnote.text;
+    details.append(summary, body);
+    list.append(details);
+  }
+  return list;
 }
 
 function cancelInductiveRelationDraft() {
@@ -1007,9 +1116,12 @@ function createInductiveRelationEditor(relation = null) {
 function renderInductiveObservations() {
   if (!inductiveObservationsPanel) return;
   const workspace = inductiveObservationsPanel.closest('.inductive-reader-workspace');
+  inductiveObservationsPanel.hidden = !inductiveMarksVisible;
+  workspace?.classList.toggle('marks-hidden', !inductiveMarksVisible);
   inductiveObservationsPanel.classList.toggle('collapsed', inductivePanelCollapsed);
-  workspace?.classList.toggle('panel-collapsed', inductivePanelCollapsed);
+  workspace?.classList.toggle('panel-collapsed', inductiveMarksVisible && inductivePanelCollapsed);
   inductiveObservationsPanel.replaceChildren();
+  if (!inductiveMarksVisible) return;
   const header = document.createElement('div');
   header.className = 'inductive-panel-header';
   const heading = document.createElement('div');
@@ -1584,7 +1696,7 @@ function setBibleReaderTranslationModules(modules) {
   const available = new Set(bibleReaderModules.map(module => module.shortName));
   bibleReaderTranslationModules = [
     primaryModule,
-    ...modules.filter(module => module !== primaryModule && available.has(module))
+    ...new Set(modules.filter(module => module !== primaryModule && available.has(module)))
   ].filter(Boolean).slice(0, 3);
   localStorage.setItem('biblenote.reader.translationModules', JSON.stringify(bibleReaderTranslationModules));
 }
@@ -1660,34 +1772,156 @@ function currentBibleReaderLocation() {
   };
 }
 
-async function refreshBibleReaderModules() {
+function updateBibleReaderModules(modules, preferredModule = bibleReaderModuleEl.value || bibleReaderSavedState().module) {
+  bibleReaderModules = modules.filter(module => module?.shortName);
+  fillBibleModuleSelect(bibleReaderModuleEl, modules, preferredModule);
+  syncBibleReaderTranslationModules();
+  for (const control of content.querySelectorAll('.bible-reader-translations')) {
+    control.replaceWith(createBibleReaderTranslationsControl());
+  }
+}
+
+let bibleReaderModuleSequence = 0;
+let bibleReaderBooksSequence = 0;
+
+function captureBibleReaderReadingPosition(tab) {
+  const bounds = tab.pane.getBoundingClientRect();
+  const rows = [...tab.pane.querySelectorAll('.bible-reader-verse, .bible-reader-translation-row')];
+  const visible = rows.filter(row => {
+    const rect = row.getBoundingClientRect();
+    return rect.bottom > bounds.top && rect.top < bounds.bottom;
+  });
+  const row = visible.find(item => item.classList.contains('selected')) || visible[0] || rows[rows.length - 1];
+  const coordinates = row?.id.match(/^bible-verse-(\d+)-(\d+)$/);
+  if (!coordinates) return undefined;
+  const rect = row.getBoundingClientRect();
+  const offset = rect.top - bounds.top;
+  return {
+    chapter:Number(coordinates[1]), verse:Number(coordinates[2]),
+    offset,
+    fraction:rect.height > 0 ? Math.max(0, Math.min(1, -offset / rect.height)) : 0,
+    selected:row.classList.contains('selected')
+  };
+}
+
+async function mapBibleReaderReadingPosition(location, position, module) {
+  const params = new URLSearchParams({
+    baseModule:location.module, module,
+    bookIndex:String(location.bookIndex), chapter:String(position?.chapter || location.chapter)
+  });
+  const result = await api('/api/bible/parallel-text?' + params.toString(), { timeoutMs:60000 });
+  const sourceVerse = position?.verse ?? location.verse;
+  const row = result.rows?.find(item => Number(item.baseChapter) === Number(position?.chapter || location.chapter)
+    && (sourceVerse == null || Number(item.baseVerse) === Number(sourceVerse)));
+  // For a split verse, reading continues at the beginning of its correspondence.
+  const verse = row?.verses?.find(item => (!item.isEmpty || item.text)
+    && Number.isInteger(Number(item.chapter)) && Number(item.chapter) > 0
+    && Number.isInteger(Number(item.verse)) && Number(item.verse) >= 0);
+  if (!verse) throw new Error('Не удалось сохранить место чтения: в выбранном переводе нет соответствующего стиха.');
+  return {
+    ...position, chapter:Number(verse.chapter), verse:Number(verse.verse),
+    topVerse:Number(verse.topVerse) || Number(verse.verse)
+  };
+}
+
+async function applyBibleReaderModule(module) {
+  const sequence = ++bibleReaderModuleSequence;
+  ++bibleReaderBooksSequence;
+  const tab = activeWorkspaceTab();
+  const location = tab?.type === 'bible' && tab.bibleLocation
+    ? { ...tab.bibleLocation }
+    : currentBibleReaderLocation();
+  const position = tab?.type === 'bible' ? captureBibleReaderReadingPosition(tab) : undefined;
+  const translations = [...bibleReaderTranslationModules];
+  if (bibleReaderModulesPromise) await bibleReaderModulesPromise;
+  if (!bibleReaderModules.some(item => item.shortName === module)) await refreshBibleReaderModules();
+  if (sequence !== bibleReaderModuleSequence || activeWorkspaceTab()?.id !== tab?.id) return;
+  if (!bibleReaderModules.some(item => item.shortName === module)) throw new Error('Выбранный модуль Библии недоступен.');
+  bibleReaderModuleEl.value = module;
+  if (tab?.type === 'bible') tab.bibleRequestSequence = (Number(tab.bibleRequestSequence) || 0) + 1;
+  bibleReaderStatusEl.textContent = 'Загрузка перевода...';
+  let result;
+  let mappedPosition;
+  try {
+    [result, mappedPosition] = await Promise.all([
+      api('/api/bible/books?' + new URLSearchParams({ module }).toString(), { timeoutMs:60000 }),
+      tab?.type === 'bible' && location.chapter > 0 && location.module !== module
+        ? mapBibleReaderReadingPosition(location, position, module)
+        : Promise.resolve(position)
+    ]);
+    const targetChapter = mappedPosition?.chapter || location.chapter;
+    const book = result.books?.find(item => Number(item.index) === Number(location.bookIndex));
+    if (mappedPosition && (!book || !(Array.isArray(book.chapters)
+      ? book.chapters.map(Number).includes(targetChapter)
+      : targetChapter <= Number(book.chapterCount)))) {
+      throw new Error('Не удалось сохранить место чтения: соответствующая глава недоступна.');
+    }
+  } catch (error) {
+    if (sequence !== bibleReaderModuleSequence || activeWorkspaceTab()?.id !== tab?.id) return;
+    bibleReaderModuleEl.value = location.module;
+    bibleReaderLoading = false;
+    showBibleReaderActionError(error);
+    return;
+  }
+  if (sequence !== bibleReaderModuleSequence || activeWorkspaceTab()?.id !== tab?.id
+    || bibleReaderModuleEl.value !== module) return;
+  fillBibleReaderBooks(Array.isArray(result.books) ? result.books : [], location.bookIndex, mappedPosition?.chapter || location.chapter);
+  setBibleReaderTranslationModules(translations.length > 1 ? [module, ...translations] : [module]);
+  bibleReaderStatusEl.textContent = bibleReaderBooks.length ? '' : 'В модуле не найдены книги.';
+  bibleReaderLoading = false;
+  saveBibleReaderState();
+  if (tab?.type === 'bible' && Number(bibleReaderChapterEl.value) > 0) {
+    await openBibleReaderChapter({
+      replaceUrl:true,
+      readingPosition:mappedPosition,
+      ref:mappedPosition?.selected ? {
+        module, bookIndex:location.bookIndex,
+        chapter:mappedPosition.chapter, verse:mappedPosition.verse,
+        topChapter:mappedPosition.chapter, topVerse:mappedPosition.topVerse || mappedPosition.verse
+      } : undefined
+    });
+  }
+}
+
+let bibleReaderModulesPromise;
+function refreshBibleReaderModules() {
+  if (bibleReaderModulesPromise) return bibleReaderModulesPromise;
+  bibleReaderModulesPromise = loadBibleReaderModules()
+    .finally(() => { bibleReaderModulesPromise = undefined; });
+  return bibleReaderModulesPromise;
+}
+
+async function loadBibleReaderModules() {
   const state = bibleReaderSavedState();
   bibleReaderStatusEl.textContent = 'Загрузка модулей...';
   const result = await api('/api/biblenote/modules');
   const modules = Array.isArray(result.modules) ? result.modules : [];
-  bibleReaderModules = modules.filter(module => module?.shortName);
-  fillBibleModuleSelect(bibleReaderModuleEl, modules, state.module);
+  updateBibleReaderModules(modules, bibleReaderModuleEl.value || state.module);
   if (bibleReaderModuleEl.disabled) {
     bibleReaderStatusEl.textContent = result.available ? 'Загруженные модули не найдены.' : (result.error || 'BibleNote недоступен.');
     fillBibleReaderBooks([], undefined, undefined);
     return;
   }
-  syncBibleReaderTranslationModules();
   await refreshBibleReaderBooks(state.bookIndex, state.chapter);
 }
 
 async function refreshBibleReaderBooks(preferredBookIndex, preferredChapter, options = {}) {
   if (!bibleReaderModuleEl.value) return;
+  const module = bibleReaderModuleEl.value;
+  const tabId = activeWorkspaceTab()?.id;
+  const sequence = ++bibleReaderBooksSequence;
   bibleReaderLoading = true;
   bibleReaderStatusEl.textContent = 'Загрузка книг...';
   try {
-    const result = await api('/api/bible/books?' + new URLSearchParams({ module:bibleReaderModuleEl.value }).toString(), { timeoutMs:60000 });
+    const result = await api('/api/bible/books?' + new URLSearchParams({ module }).toString(), { timeoutMs:60000 });
+    if (sequence !== bibleReaderBooksSequence || bibleReaderModuleEl.value !== module
+      || activeWorkspaceTab()?.id !== tabId) return;
     const books = Array.isArray(result.books) ? result.books : [];
     fillBibleReaderBooks(books, preferredBookIndex, preferredChapter);
     bibleReaderStatusEl.textContent = books.length > 0 ? '' : 'В модуле не найдены книги.';
     if (books.length > 0 && options.open === true && Number(bibleReaderChapterEl.value) > 0) await openBibleReaderChapter();
   } finally {
-    bibleReaderLoading = false;
+    if (sequence === bibleReaderBooksSequence) bibleReaderLoading = false;
   }
 }
 
@@ -1722,7 +1956,202 @@ async function showBibleReaderVerseNotes(ref) {
   rememberSearch(query);
   const notesPanel = document.querySelector('.notes-panel');
   if (notesPanel) notesPanel.setAttribute('open', '');
-  await renderSearch(query);
+  await renderSearch(query, { bibleModule:ref.module });
+}
+
+function showBibleReaderActionError(error) {
+  bibleReaderStatusEl.textContent = error?.message || String(error);
+}
+
+async function runBibleReaderVerseAction(ref, action) {
+  bibleReaderStatusEl.textContent = '';
+  const module = currentBibleModule();
+  if (!ref.module || ref.module === module) return action(ref);
+  const tabId = activeWorkspaceTab()?.id;
+  const params = new URLSearchParams({
+    baseModule:ref.module, module,
+    bookIndex:String(ref.bookIndex), chapter:String(ref.chapter)
+  });
+  const result = await api('/api/bible/parallel-text?' + params.toString(), { timeoutMs:60000 });
+  if (activeWorkspaceTab()?.id !== tabId || currentBibleModule() !== module) return;
+  const row = result.rows?.find(item => Number(item.baseChapter) === Number(ref.chapter)
+    && Number(item.baseVerse) === Number(ref.verse));
+  const references = new Map();
+  for (const verse of row?.verses || []) {
+    if (verse.isEmpty || !(Number(verse.chapter) > 0) || !(Number(verse.verse) > 0)) continue;
+    const topVerse = Number(verse.topVerse) || Number(verse.verse);
+    for (let number = Number(verse.verse); number <= topVerse; number += 1) {
+      const label = (ref.bookShortName || ref.bookName) + ' ' + verse.chapter + ':' + number;
+      references.set(verse.chapter + ':' + number, {
+        ...ref, module, chapter:Number(verse.chapter), verse:number,
+        topChapter:Number(verse.chapter), topVerse:number, normalizedRef:label, originalText:label
+      });
+    }
+  }
+  if (!references.size) throw new Error('Для этого стиха нет соответствия в основном переводе.');
+  if (references.size === 1) return action(references.values().next().value);
+
+  // A split verse needs an explicit choice; using the original number or the
+  // first mapped verse would silently search a different passage.
+  const dialog = document.createElement('dialog');
+  dialog.className = 'name-dialog';
+  dialog.setAttribute('aria-label', 'Выберите соответствующий стих');
+  const body = document.createElement('div');
+  body.className = 'name-dialog-body';
+  const heading = document.createElement('h2');
+  heading.textContent = 'Выберите соответствующий стих';
+  const hint = document.createElement('p');
+  hint.className = 'name-dialog-original';
+  hint.textContent = 'В основном переводе (' + bibleReaderModuleLabel(module) + ') этому стиху соответствуют несколько стихов.';
+  body.append(heading, hint);
+  const choices = document.createElement('div');
+  choices.className = 'name-dialog-actions';
+  choices.style.flexWrap = 'wrap';
+  for (const mapped of references.values()) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'dialog-button';
+    button.textContent = mapped.normalizedRef;
+    button.addEventListener('click', () => {
+      dialog.close();
+      Promise.resolve().then(() => action(mapped)).catch(showBibleReaderActionError);
+    });
+    choices.append(button);
+  }
+  const close = document.createElement('button');
+  close.type = 'button';
+  close.className = 'dialog-button';
+  close.textContent = 'Отмена';
+  close.addEventListener('click', () => dialog.close());
+  choices.append(close);
+  body.append(choices);
+  dialog.append(body);
+  dialog.addEventListener('close', () => dialog.remove(), { once:true });
+  document.body.append(dialog);
+  dialog.showModal();
+}
+
+let activeBibleVerseTranslationsDialog;
+
+function renderBibleVerseTranslation(host, verses, ref) {
+  host.replaceChildren();
+  const readable = (Array.isArray(verses) ? verses : []).filter(verse => !verse.isEmpty || verse.text);
+  if (!readable.length) {
+    host.textContent = 'Соответствующий стих отсутствует.';
+    host.classList.add('empty');
+    return;
+  }
+  for (const verse of readable) {
+    const fragment = document.createElement('div');
+    fragment.className = 'bible-reader-translation-fragment';
+    const reference = document.createElement('div');
+    reference.className = 'bible-verse-translations-reference';
+    const coordinates = verse.reference || verse.chapter + ':' + verse.verse
+      + (verse.topVerse && verse.topVerse !== verse.verse ? '–' + verse.topVerse : '');
+    reference.textContent = /[A-Za-zА-Яа-яЁё]/.test(coordinates)
+      ? coordinates : [ref.bookShortName || ref.bookName, coordinates].filter(Boolean).join(' ');
+    const text = document.createElement('div');
+    text.className = 'bible-verse-translations-text';
+    renderInductiveText(text, Number.NaN, bibleReaderDisplayText(verse.text), verse.richText);
+    fragment.append(reference, text);
+    const footnotes = createBibleVerseFootnotes(verse.richText, text);
+    if (footnotes) fragment.append(footnotes);
+    host.append(fragment);
+  }
+}
+
+async function showBibleVerseTranslations(ref) {
+  if (activeBibleVerseTranslationsDialog) {
+    activeBibleVerseTranslationsDialog.close();
+    activeBibleVerseTranslationsDialog.remove();
+  }
+  const dialog = document.createElement('dialog');
+  dialog.id = 'bibleVerseTranslationsDialog';
+  dialog.className = 'bible-text-dialog bible-verse-translations-dialog';
+  dialog.setAttribute('aria-labelledby', 'bibleVerseTranslationsTitle');
+  const controller = new AbortController();
+  dialog.addEventListener('close', () => {
+    controller.abort();
+    dialog.remove();
+    if (activeBibleVerseTranslationsDialog === dialog) activeBibleVerseTranslationsDialog = undefined;
+  }, { once:true });
+  dialog.addEventListener('click', event => {
+    const rect = dialog.getBoundingClientRect();
+    if (event.target === dialog && (event.clientX < rect.left || event.clientX > rect.right
+      || event.clientY < rect.top || event.clientY > rect.bottom)) dialog.close();
+  });
+  const body = document.createElement('div');
+  body.className = 'bible-verse-translations-body';
+  const header = document.createElement('div');
+  header.className = 'bible-verse-translations-header';
+  const title = document.createElement('h2');
+  title.id = 'bibleVerseTranslationsTitle';
+  title.textContent = 'Переводы стиха · ' + (ref.normalizedRef || ref.originalText
+    || [ref.bookShortName || ref.bookName, ref.chapter + ':' + ref.verse].filter(Boolean).join(' '));
+  const close = document.createElement('button');
+  close.type = 'button';
+  close.className = 'dialog-button';
+  close.textContent = 'Закрыть';
+  close.addEventListener('click', () => dialog.close());
+  header.append(title, close);
+  const list = document.createElement('div');
+  list.className = 'bible-verse-translations-list';
+  list.setAttribute('aria-live', 'polite');
+  list.setAttribute('aria-busy', 'true');
+  list.textContent = 'Загрузка переводов…';
+  body.append(header, list);
+  dialog.append(body);
+  document.body.append(dialog);
+  activeBibleVerseTranslationsDialog = dialog;
+  dialog.showModal();
+  const sourceModule = ref.module || bibleReaderModuleEl.value || currentBibleModule();
+  try {
+    const result = await api('/api/biblenote/modules', { signal:controller.signal });
+    if (!dialog.open) return;
+    if (result.available === false) throw new Error('Не удалось получить список установленных переводов.');
+    const modules = (Array.isArray(result.modules) ? result.modules : []).filter(module => module?.shortName);
+    modules.sort((a, b) => Number(b.shortName === sourceModule) - Number(a.shortName === sourceModule));
+    list.replaceChildren();
+    if (!modules.length) list.textContent = 'Установленные переводы не найдены.';
+    await Promise.all(modules.map(async module => {
+      const section = document.createElement('section');
+      section.className = 'bible-verse-translation';
+      section.dataset.module = module.shortName;
+      const heading = document.createElement('h3');
+      heading.textContent = [module.shortName, module.displayName].filter(Boolean).join(' · ');
+      const text = document.createElement('div');
+      text.className = 'bible-verse-translation-content';
+      text.textContent = 'Загрузка…';
+      section.append(heading, text);
+      list.append(section);
+      try {
+        let verses;
+        if (module.shortName === sourceModule) {
+          const chapter = await api(bibleTextUrl({ ...ref, module:sourceModule }), { timeoutMs:60000, signal:controller.signal });
+          verses = chapter.verses?.filter(verse => bibleVerseIsInsideReference(verse, ref));
+        } else {
+          const params = new URLSearchParams({
+            baseModule:sourceModule, module:module.shortName,
+            bookIndex:String(ref.bookIndex), chapter:String(ref.chapter)
+          });
+          const chapter = await api('/api/bible/parallel-text?' + params.toString(), { timeoutMs:60000, signal:controller.signal });
+          verses = chapter.rows?.find(row => Number(row.baseChapter) === Number(ref.chapter)
+            && Number(row.baseVerse) === Number(ref.verse))?.verses;
+        }
+        if (dialog.open) renderBibleVerseTranslation(text, verses, ref);
+      } catch {
+        if (!dialog.open) return;
+        text.classList.add('error');
+        text.textContent = 'Не удалось загрузить перевод.';
+      }
+    }));
+  } catch (error) {
+    if (!dialog.open) return;
+    list.classList.add('error');
+    list.textContent = 'Не удалось загрузить установленные переводы.';
+  } finally {
+    list.setAttribute('aria-busy', 'false');
+  }
 }
 
 function createBibleReaderVerseActions(ref) {
@@ -1736,7 +2165,7 @@ function createBibleReaderVerseActions(ref) {
   notesButton.setAttribute('aria-label', 'Показать заметки для ' + (ref.normalizedRef || ref.originalText));
   notesButton.addEventListener('click', event => {
     event.stopPropagation();
-    showBibleReaderVerseNotes(ref).catch(showError);
+    runBibleReaderVerseAction(ref, showBibleReaderVerseNotes).catch(showBibleReaderActionError);
   });
   const parallelButton = document.createElement('button');
   parallelButton.className = 'bible-reader-action';
@@ -1746,24 +2175,43 @@ function createBibleReaderVerseActions(ref) {
   parallelButton.setAttribute('aria-label', 'Показать параллельные ссылки для ' + (ref.normalizedRef || ref.originalText));
   parallelButton.addEventListener('click', event => {
     event.stopPropagation();
-    openBibleParallelPanel(ref).catch(showError);
+    runBibleReaderVerseAction(ref, openBibleParallelPanel).catch(showBibleReaderActionError);
   });
-  actions.append(notesButton, parallelButton);
+  const translationsButton = document.createElement('button');
+  translationsButton.className = 'bible-reader-action bible-reader-translations-action';
+  translationsButton.type = 'button';
+  translationsButton.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h10v12H4zM14 8h6v12H10v-4M7 8h4M7 11h3M13 17h4M16 12h1"/></svg>';
+  translationsButton.title = 'Показать переводы стиха';
+  translationsButton.setAttribute('aria-label', 'Показать переводы для ' + (ref.normalizedRef || ref.originalText));
+  translationsButton.setAttribute('aria-haspopup', 'dialog');
+  translationsButton.addEventListener('click', event => {
+    event.stopPropagation();
+    showBibleVerseTranslations(ref).catch(showBibleReaderActionError);
+  });
+  actions.append(notesButton, parallelButton, translationsButton);
   return actions;
 }
+
+document.addEventListener('pointerdown', event => {
+  for (const details of document.querySelectorAll('.bible-reader-translations[open]')) {
+    if (!details.contains(event.target)) details.open = false;
+  }
+}, true);
 
 function createBibleReaderTranslationsControl() {
   const details = document.createElement('details');
   details.className = 'bible-reader-translations';
   const summary = document.createElement('summary');
   summary.className = 'bible-reader-translations-summary';
-  summary.title = 'Выбрать до трёх переводов';
-  summary.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h6v14H4zM14 5h6v14h-6z"/></svg><span>Переводы</span><strong>' + bibleReaderTranslationModules.length + '</strong>';
+  summary.title = 'Переводы: выбрано ' + bibleReaderTranslationModules.length + ' из 3';
+  summary.setAttribute('aria-label', 'Переводы');
+  summary.setAttribute('aria-description', 'Выбрать до трёх переводов. Выбрано: ' + bibleReaderTranslationModules.length);
+  summary.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h6v14H4zM14 5h6v14h-6z"/></svg>';
   const menu = document.createElement('div');
   menu.className = 'bible-reader-translations-menu';
   const hint = document.createElement('div');
   hint.className = 'bible-reader-translations-hint';
-  hint.textContent = 'Одновременно можно показать до трёх переводов.';
+  hint.textContent = 'До трёх переводов. Нумерация стихов — по переводу чтения, выбранному слева.';
   menu.append(hint);
   const selected = new Set(bibleReaderTranslationModules);
   const pending = [...bibleReaderTranslationModules];
@@ -1785,7 +2233,7 @@ function createBibleReaderTranslationsControl() {
     text.append(name);
     if (module.shortName === primaryModule) {
       const primary = document.createElement('small');
-      primary.textContent = 'Основной перевод';
+      primary.textContent = 'Перевод чтения';
       text.append(primary);
     }
     input.addEventListener('change', () => {
@@ -1881,12 +2329,7 @@ function renderBibleReaderParallelChapter(versesEl, result, translations, highli
     const name = document.createElement('strong');
     name.textContent = bibleReaderModuleLabel(column.module);
     cell.append(name);
-    if (column.primary) {
-      const primary = document.createElement('span');
-      primary.className = 'bible-reader-primary-badge';
-      primary.textContent = 'Основной';
-      cell.append(primary);
-    } else if (column.error) {
+    if (column.error) {
       cell.classList.add('error');
       cell.title = column.error;
       const error = document.createElement('span');
@@ -1918,7 +2361,10 @@ function renderBibleReaderParallelChapter(versesEl, result, translations, highli
     const primaryText = document.createElement('span');
     primaryText.className = 'bible-reader-translation-text';
     prepareInductiveTextElement(primaryText, result, verse, bibleReaderDisplayText(verse.text));
-    primaryCell.append(primaryText, createBibleReaderVerseActions(ref));
+    primaryCell.append(primaryText);
+    const primaryFootnotes = createBibleVerseFootnotes(verse.richText, primaryText);
+    if (primaryFootnotes) primaryCell.append(primaryFootnotes);
+    primaryCell.append(createBibleReaderVerseActions(ref));
     row.append(primaryCell);
 
     for (const column of columns.slice(1)) {
@@ -1948,8 +2394,10 @@ function renderBibleReaderParallelChapter(versesEl, result, translations, highli
             fragment.append(mappedNumber);
           }
           const text = document.createElement('span');
-          text.textContent = bibleReaderDisplayText(mappedVerse.text);
+          renderInductiveText(text, Number.NaN, bibleReaderDisplayText(mappedVerse.text), mappedVerse.richText);
           fragment.append(text);
+          const mappedFootnotes = createBibleVerseFootnotes(mappedVerse.richText, text);
+          if (mappedFootnotes) fragment.append(mappedFootnotes);
           cell.append(fragment);
         }
         if (!cell.hasChildNodes()) {
@@ -1977,13 +2425,15 @@ function renderBibleReaderParallelChapter(versesEl, result, translations, highli
   return firstHighlighted;
 }
 
-function renderBibleReaderChapter(result, highlightRef, translations = []) {
-  if (typeof setPageFocusMode === 'function' && pageFocusMode) setPageFocusMode(false);
+function renderBibleReaderChapter(result, highlightRef, translations = [], readingPosition) {
   ensureInductiveEvents();
   inductiveVerseTextByVerse = new Map((Array.isArray(result.verses) ? result.verses : []).map(verse => [
     Number(verse.verse),
     bibleReaderDisplayText(verse.text)
   ]));
+  inductiveVerseRichTextByVerse = new Map((Array.isArray(result.verses) ? result.verses : [])
+    .filter(verse => verse.richText)
+    .map(verse => [Number(verse.verse), verse.richText]));
   content.replaceChildren();
   selectedPageId = null;
   currentTargetParagraphIndex = undefined;
@@ -2023,6 +2473,9 @@ function renderBibleReaderChapter(result, highlightRef, translations = []) {
   meta.className = 'bible-text-meta';
   meta.textContent = result.reference || '';
   toolbar.append(previous, next, meta, createInductiveToolbarControls(), createBibleReaderTranslationsControl());
+  toolbar.append(createLegacyBibleChapterButton({
+    ...result, bookIndex:result.bookIndex || Number(bibleReaderBookEl.value)
+  }));
   const versesEl = document.createElement('div');
   versesEl.className = 'bible-reader-verses';
   let firstHighlighted = null;
@@ -2057,6 +2510,8 @@ function renderBibleReaderChapter(result, highlightRef, translations = []) {
       if (!firstHighlighted) firstHighlighted = row;
     }
     block.append(row);
+    const footnotes = createBibleVerseFootnotes(verse.richText, text);
+    if (footnotes) block.append(footnotes);
     versesEl.append(block);
   }
   const workspace = document.createElement('div');
@@ -2077,13 +2532,45 @@ function renderBibleReaderChapter(result, highlightRef, translations = []) {
   workspace.append(readerMain, observations);
   article.append(crumbs, heading, toolbar, workspace);
   content.append(article);
+  updateActiveWorkspaceTab({
+    type:'bible',
+    title:[result.bookShortName || result.bookName || 'Библия', result.chapter].filter(Boolean).join(' '),
+    bibleLocation:{
+      module:result.module,
+      bookIndex:Number(result.bookIndex),
+      chapter:Number(result.chapter),
+      verse:highlightRef?.verse,
+      topChapter:highlightRef?.topChapter,
+      topVerse:highlightRef?.topVerse
+    }
+  });
   renderInductiveRelationChapterHint();
   renderInductiveObservations();
   refreshPageFind();
-  if (firstHighlighted) requestAnimationFrame(() => firstHighlighted.scrollIntoView({ block:'center', behavior:'smooth' }));
+  if (readingPosition) {
+    const tab = activeWorkspaceTab();
+    const request = tab?.bibleRequestSequence;
+    requestAnimationFrame(() => {
+      if (!article.isConnected || activeWorkspaceTab()?.id !== tab?.id || tab.bibleRequestSequence !== request) return;
+      const target = article.querySelector('#bible-verse-' + readingPosition.chapter + '-' + readingPosition.verse);
+      if (!target) return;
+      const targetRect = target.getBoundingClientRect();
+      const offset = readingPosition.offset < 0
+        ? -targetRect.height * readingPosition.fraction
+        : Number.isFinite(readingPosition.offset) ? readingPosition.offset : 0;
+      tab.pane.scrollTo({
+        top:tab.pane.scrollTop + targetRect.top - tab.pane.getBoundingClientRect().top - offset,
+        behavior:'instant'
+      });
+    });
+  } else if (firstHighlighted && !activeWorkspaceTab()?.pendingViewRestore) {
+    requestAnimationFrame(() => firstHighlighted.scrollIntoView({ block:'center', behavior:'smooth' }));
+  }
 }
 
 async function openBibleReaderChapter(options = {}) {
+  const workspaceTab = prepareWorkspaceTabForBible(options);
+  if (!options.restoreWorkspaceView) workspaceTab.pendingViewRestore = undefined;
   if (typeof captureCurrentPageViewHistoryState === 'function') {
     await captureCurrentPageViewHistoryState();
   }
@@ -2091,6 +2578,20 @@ async function openBibleReaderChapter(options = {}) {
   if (!location.book || !Number.isInteger(location.chapter) || location.chapter <= 0) {
     bibleReaderStatusEl.textContent = 'Выберите модуль, книгу и главу.';
     return;
+  }
+  const workspaceTabId = workspaceTab?.id;
+  const workspaceBibleRequest = (Number(workspaceTab?.bibleRequestSequence) || 0) + 1;
+  if (workspaceTab) {
+    workspaceTab.bibleRequestSequence = workspaceBibleRequest;
+    workspaceTab.bibleLocation = {
+      module:location.module,
+      bookIndex:location.bookIndex,
+      chapter:location.chapter,
+      verse:options.ref?.verse || options.verse,
+      topChapter:options.ref?.topChapter,
+      topVerse:options.ref?.topVerse
+    };
+    workspaceTab.needsBibleReload = false;
   }
   saveBibleReaderState({ verse:options.ref?.verse || options.verse });
   syncBibleReaderTranslationModules();
@@ -2128,6 +2629,12 @@ async function openBibleReaderChapter(options = {}) {
     })),
     loadInductiveChapter(location)
   ]);
+  const currentWorkspaceTab = workspaceTabs.find(tab => tab.id === workspaceTabId);
+  if (!currentWorkspaceTab || currentWorkspaceTab.bibleRequestSequence !== workspaceBibleRequest) return;
+  if (activeWorkspaceTabId !== workspaceTabId) {
+    currentWorkspaceTab.needsBibleReload = true;
+    return;
+  }
   bibleReaderSummaryEl.textContent = 'Библия: ' + (result.bookShortName || location.book.shortName || location.book.name) + ' ' + location.chapter;
   bibleReaderStatusEl.textContent = '';
   const highlightRef = options.ref || (options.verse ? {
@@ -2154,7 +2661,8 @@ async function openBibleReaderChapter(options = {}) {
   } else {
     updateViewHistoryButtons();
   }
-  renderBibleReaderChapter(result, highlightRef, translations);
+  renderBibleReaderChapter(result, highlightRef, translations, options.readingPosition);
+  restoreWorkspaceTabView(workspaceTab, workspaceTab.pane.querySelector('article'));
 }
 
 async function stepBibleReaderChapter(delta) {
@@ -2174,6 +2682,12 @@ async function stepBibleReaderChapter(delta) {
 
 async function openBibleReaderLocation(location, options = {}) {
   if (!location?.module || !location?.bookIndex || !location?.chapter) return;
+  if (bibleReaderModulesPromise) await bibleReaderModulesPromise;
+  else if (!bibleReaderModules.length) await refreshBibleReaderModules();
+  if (bibleReaderModuleEl.disabled || !bibleReaderModules.some(module => module.shortName === location.module)) {
+    throw new Error(bibleReaderStatusEl.textContent || 'Выбранный перевод Библии недоступен.');
+  }
+  prepareWorkspaceTabForBible(options);
   if (bibleReaderModuleEl.value !== location.module) {
     bibleReaderModuleEl.value = location.module;
     localStorage.setItem('biblenote.reader.module', location.module);
@@ -2187,6 +2701,7 @@ async function openBibleReaderLocation(location, options = {}) {
   updateBibleReaderNavButtons();
   await openBibleReaderChapter({
     rememberHistory:options.rememberHistory,
+    restoreWorkspaceView:options.restoreWorkspaceView,
     updateUrl:options.updateUrl,
     replaceUrl:options.replaceUrl,
     ref:location.verse ? {
@@ -2231,27 +2746,12 @@ async function openBibleFromRibbon() {
 
 async function openBibleTextInReader(ref = currentBibleTextRef) {
   if (!ref?.bookIndex || !ref?.chapter) return;
-  const moduleName = ref.module || currentBibleModule();
-  if (bibleReaderModuleEl.value !== moduleName) {
-    bibleReaderModuleEl.value = moduleName;
-    localStorage.setItem('biblenote.reader.module', moduleName);
-  }
-  if (bibleReaderBookEl.disabled || Number(bibleReaderBookEl.value) !== Number(ref.bookIndex)) {
-    await refreshBibleReaderBooks(Number(ref.bookIndex), Number(ref.chapter));
-  }
-  bibleReaderBookEl.value = String(ref.bookIndex);
-  fillBibleReaderChapters(Number(ref.chapter));
-  bibleReaderChapterEl.value = String(ref.chapter);
-  updateBibleReaderNavButtons();
   if (bibleTextDialog.open) bibleTextDialog.close();
-  await openBibleReaderChapter({ ref });
+  await openBibleReaderLocation({ ...ref, module:ref.module || currentBibleModule() });
 }
 
 bibleReaderModuleEl.addEventListener('change', () => {
-  const state = bibleReaderSavedState();
-  localStorage.setItem('biblenote.reader.module', bibleReaderModuleEl.value);
-  syncBibleReaderTranslationModules();
-  refreshBibleReaderBooks(state.bookIndex, state.chapter, { open:true }).catch(showError);
+  applyBibleReaderModule(bibleReaderModuleEl.value).catch(showError);
 });
 bibleReaderBookEl.addEventListener('change', () => {
   fillBibleReaderChapters(undefined);

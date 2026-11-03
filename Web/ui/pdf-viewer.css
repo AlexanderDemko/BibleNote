@@ -18,6 +18,14 @@ html, body { width:100%; height:100%; margin:0; overflow:hidden; background:#3a3
 .pdfViewer { padding:18px 0 30px; }
 .pdfViewer .page { margin:0 auto 16px; border:0; box-shadow:0 4px 18px rgba(0,0,0,.38); }
 .pdfViewer .textLayer { z-index:3; }
+/* Transform only the painted page; text selection, links and search overlays
+   keep their own colors and remain interactive. Hue rotation preserves hues. */
+:root[data-content-theme="dark"] { color-scheme:dark; }
+:root[data-content-theme="dark"] body,
+:root[data-content-theme="dark"] #loading,
+:root[data-content-theme="dark"] #error { background:#1f1e24; }
+:root[data-content-theme="dark"] .pdfViewer .page { background:#1f1e24; }
+:root[data-content-theme="dark"] .pdfViewer .canvasWrapper { filter:invert(1) hue-rotate(180deg) brightness(.82) contrast(.86); }
 .textLayer .highlight { --highlight-bg-color:rgba(255,211,61,.64); --highlight-selected-bg-color:rgba(167,100,223,.78); box-shadow:inset 0 -2px rgba(164,112,0,.72); }
 .textLayer .highlight.selected { outline:2px solid #7a35b7; outline-offset:1px; box-shadow:0 0 0 1px rgba(255,255,255,.72), 0 0 10px rgba(122,53,183,.42); }
 .pdf-bible-link-layer { position:absolute; z-index:7; inset:0; pointer-events:none; }

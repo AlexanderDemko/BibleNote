@@ -65,10 +65,9 @@ namespace BibleNote.Providers.Html
                 {
                     if (IsHerarchy(node))
                     {
-                        foreach (var childNode in node.ChildNodes)
-                        {
-                            ParseNode(docParser, childNode, state == ElementType.Title || isReadonly);
-                        }
+                        HtmlParagraphChildren.Parse(node,
+                            child => ParseNode(docParser, child, state == ElementType.Title || isReadonly),
+                            paragraph => ParseParagraph(docParser, paragraph, state == ElementType.Title || isReadonly));
                     }
                     else
                     {

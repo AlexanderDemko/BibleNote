@@ -1,7 +1,7 @@
 import './env.js';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
-import { PublicClientApplication, Configuration, AuthenticationResult } from '@azure/msal-node';
+import type { PublicClientApplication, Configuration, AuthenticationResult } from '@azure/msal-node';
 import { defaultBibleNoteDir } from './paths.js';
 
 export type OneNoteAuthConfig = {
@@ -28,7 +28,8 @@ export function oneNoteAuthConfig(): OneNoteAuthConfig {
 export const scopes = oneNoteAuthConfig().scopes;
 export const cachePath = oneNoteAuthConfig().cachePath;
 
-export function createMsalClient(): PublicClientApplication {
+export async function createMsalClient(): Promise<PublicClientApplication> {
+  const { PublicClientApplication } = await import('@azure/msal-node');
   const { clientId, tenantId } = oneNoteAuthConfig();
   const config: Configuration = {
     auth: {
@@ -58,7 +59,7 @@ export async function saveCache(pca: PublicClientApplication): Promise<void> {
 
 export async function acquireTokenSilent(forceRefresh = false): Promise<AuthenticationResult> {
   const { scopes } = oneNoteAuthConfig();
-  const pca = createMsalClient();
+  const pca = await createMsalClient();
   await loadCache(pca);
 
   const accounts = await pca.getTokenCache().getAllAccounts();
@@ -104,7 +105,7 @@ export async function acquireTokenByDeviceCode(
   onDeviceCode?: (response: MicrosoftDeviceCode) => void
 ): Promise<AuthenticationResult> {
   const { scopes } = oneNoteAuthConfig();
-  const pca = createMsalClient();
+  const pca = await createMsalClient();
   await loadCache(pca);
 
   const result = await pca.acquireTokenByDeviceCode({

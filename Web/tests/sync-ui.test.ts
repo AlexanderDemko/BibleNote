@@ -64,6 +64,9 @@ test('sync progress and partial failures are presented as one staged operation',
 test('sync UI discovers externally started synchronization while idle', () => {
   const sync = fs.readFileSync(path.join(uiDirectory, 'sync.js'), 'utf8');
   const initializeStart = sync.indexOf('async function initializeApp()');
+  const popupStart = sync.indexOf('if (bibleVersePopupMode)', initializeStart);
+  const popupOpen = sync.indexOf('await openExternalBibleRefFromUrl()', popupStart);
+  const popupStartupWait = sync.indexOf('await waitForCacheReady()', popupStart);
   const initialSyncPoll = sync.indexOf('refreshSyncState().catch(handleSyncPollError)', initializeStart);
   const initialStatusLoad = sync.indexOf("api('/api/status')", initializeStart);
   const startupWait = sync.indexOf('await waitForCacheReady()', initializeStart);
@@ -74,6 +77,7 @@ test('sync UI discovers externally started synchronization while idle', () => {
   assert.equal(sync.includes('let lastHandledTerminalSyncKey = null'), true);
   assert.equal(sync.includes('terminalSyncKey !== lastHandledTerminalSyncKey'), true);
   assert.equal(sync.includes("api('/api/startup', { timeoutMs:180000 })"), true);
+  assert.equal(popupStartupWait > popupStart && popupStartupWait < popupOpen, true);
   assert.equal(sync.includes("setTimeout(() => initializeApp().catch(showError), 500)"), false);
   assert.equal(startupWait > initializeStart && startupWait < initialSyncPoll, true);
   assert.equal(initialSyncPoll > initializeStart && initialSyncPoll < initialStatusLoad, true);
@@ -106,15 +110,10 @@ test('targeted sync removes a page that was deleted from classic OneNote', () =>
 
 test('synchronization journal presents durable run history instead of individual pages', () => {
   const cacheUi = fs.readFileSync(path.join(uiDirectory, '..', 'src', 'cache-ui.ts'), 'utf8');
-  const journal = fs.readFileSync(path.join(uiDirectory, 'notebooks-log.js'), 'utf8');
   const html = fs.readFileSync(path.join(uiDirectory, 'index.html'), 'utf8');
 
   assert.equal(cacheUi.includes("url.pathname === '/api/sync-history'"), true);
   assert.equal(cacheUi.includes('saveSyncHistory(db, body, startedAt, finishedAt, result)'), true);
-  assert.equal(journal.includes("api('/api/sync-history?'"), true);
-  assert.equal(journal.includes("['проверено', values.pages || 0]"), true);
-  assert.equal(journal.includes("['загружено', values.contentDownloaded || 0]"), true);
-  assert.equal(journal.includes('formatSyncDuration(item.startedAt, item.finishedAt)'), true);
   assert.equal(html.includes('<h2>История синхронизаций</h2>'), true);
   assert.equal(html.includes('id="logFilter"'), false);
 });

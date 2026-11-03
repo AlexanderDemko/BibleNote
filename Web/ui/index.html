@@ -91,6 +91,10 @@
       </div>
       <button id="closeBibleParallelDrawer" class="bible-parallel-drawer-close" type="button" title="Закрыть панель" aria-label="Закрыть панель">×</button>
     </div>
+    <label class="bible-parallel-search">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg>
+      <input id="bibleParallelSearch" type="search" placeholder="Ссылка или текст стиха" autocomplete="off" spellcheck="false" aria-label="Поиск по параллельным ссылкам и тексту Библии">
+    </label>
     <div id="bibleTextParallelPanel" class="bible-parallel-drawer-content"></div>
   </aside>
   <dialog id="settingsDialog" class="settings-dialog">
@@ -163,13 +167,18 @@
               <div id="oneNoteInstalledPrograms" class="onenote-program-list"></div>
               <label class="check onenote-ribbon-toggle">
                 <input id="enableOneNoteRibbon" type="checkbox">
-                <span id="enableOneNoteRibbonLabel">Добавить вкладку BibleNote в OneNote</span>
+                <span id="enableOneNoteRibbonLabel">Добавить вкладку BibleNote 4 в OneNote</span>
               </label>
               <p class="settings-note">На вкладке будут команды анализа текущей страницы, быстрого анализа и открытия BibleNote. После изменения параметра перезапустите OneNote.</p>
             </div>
             <div class="onenote-integration-option">
               <strong class="onenote-integration-option-title">Открытие библейских ссылок</strong>
               <div id="protocolStatus" class="settings-status">Проверка настройки открытия ссылок...</div>
+              <label class="check">
+                <input id="openBibleLinksInBibleNote4" type="checkbox" disabled>
+                <span>Открывать библейские ссылки в BibleNote 4</span>
+              </label>
+              <p class="settings-note">Отключите, чтобы открывать ссылки в установленном старом BibleNote.</p>
               <label class="check">
                 <input id="openOneNoteBibleLinksInReader" type="checkbox">
                 <span>Открывать ссылки из OneNote сразу в окне «Библия»</span>
@@ -193,18 +202,47 @@
             </div>
             <div id="bibleModulesList" class="settings-module-list"></div>
             <div id="bibleModuleStatus" class="settings-status"></div>
+            <section class="settings-tool-section" aria-labelledby="myBibleReviewTitle" hidden>
+              <h3 id="myBibleReviewTitle">Проверка соответствия стихов</h3>
+              <p class="settings-note">Выберите JSON-карту расхождений. Редактор откроется внутри BibleNote, а подтверждения будут сохранены прямо в выбранном файле с резервной копией.</p>
+              <label class="field">Карта расхождений
+                <div class="settings-path-row">
+                  <input id="myBibleReviewMapPath" class="settings-path-input" type="text" placeholder="Путь к *-map.json" spellcheck="false">
+                  <button id="selectMyBibleReviewMap" class="small-button" type="button">Выбрать…</button>
+                </div>
+              </label>
+              <label class="field">Файл сносок
+                <div class="settings-path-row">
+                  <input id="myBibleReviewFootnotesPath" class="settings-path-input" type="text" placeholder="Необязательно: *.commentaries.SQLite3" spellcheck="false">
+                  <button id="selectMyBibleReviewFootnotes" class="small-button" type="button">Выбрать…</button>
+                </div>
+              </label>
+              <p class="settings-note">Если путь не указан, при сборке файл <code>*.commentaries.SQLite3</code> ищется рядом с модулем Библии. Модуль не будет собран, пока для всех маркеров сносок не найдутся тексты.</p>
+              <div class="settings-row settings-actions-right">
+                <button id="openMyBibleReview" class="small-button" type="button" disabled>Проверить карту</button>
+              </div>
+              <div id="myBibleReviewStatus" class="settings-status" aria-live="polite"></div>
+            </section>
           </div>
         </details>
         <details class="settings-module-section view-settings">
           <summary>Просмотр заметок</summary>
           <div class="settings-module-body">
-            <label class="field">Тема интерфейса
+            <label class="field">При открытии приложения
+              <select id="startupMode" aria-describedby="startupModeHint">
+                <option value="empty">Пустая страница</option>
+                <option value="restore">Открывать закрытые вкладки</option>
+              </select>
+            </label>
+            <p id="startupModeHint" class="settings-note">Восстанавливать вкладки, оставшиеся открытыми при закрытии приложения.</p>
+            <label class="field">Тема приложения и страниц
               <select id="themeSelect">
                 <option value="a">A · Тёплая</option>
                 <option value="b">B · Светлая</option>
                 <option value="c">C · Тёмная</option>
               </select>
             </label>
+            <p class="settings-note">Тёмная тема приглушает фон документов, сохраняя оттенки текста и выделений. В PDF преобразуются цвета всей страницы, включая изображения.</p>
             <label class="field">Открывать страницу
               <select id="pageViewMode">
                 <option value="text">Текст</option>
@@ -214,6 +252,14 @@
             <label class="field">Масштаб HTML по умолчанию
               <input id="defaultHtmlZoom" type="number" min="50" max="300" step="10" value="100">
             </label>
+            <label class="field">Открывать Библию из заметки
+              <select id="bibleTabOpenMode">
+                <option value="dedicated" selected>В отдельной вкладке Библии</option>
+                <option value="current">В текущей вкладке</option>
+                <option value="new">Каждый раз в новой вкладке</option>
+              </select>
+            </label>
+            <p class="settings-note">Отдельная вкладка сохраняет открытую заметку в памяти и повторно используется для следующих библейских ссылок.</p>
             <label class="check"><input id="showAuxBibleRefs" type="checkbox" aria-describedby="showAuxBibleRefsHint">Учитывать библейские ссылки в квадратных [ ] и фигурных { } скобках</label>
             <p id="showAuxBibleRefsHint" class="settings-note">Включать такие ссылки в поиск, список ссылок страницы и параллельные места.</p>
           </div>
@@ -245,6 +291,18 @@
           <button id="closeSettings" class="dialog-button primary" type="button">Закрыть</button>
         </div>
       </footer>
+    </div>
+  </dialog>
+  <dialog id="myBibleReviewDialog" class="mybible-review-dialog">
+    <div class="mybible-review-dialog-body">
+      <header class="mybible-review-dialog-header">
+        <div>
+          <h2>Проверка соответствия стихов</h2>
+          <p id="myBibleReviewDialogPath"></p>
+        </div>
+        <button id="closeMyBibleReview" class="dialog-button" type="button">Закрыть</button>
+      </header>
+      <iframe id="myBibleReviewFrame" title="Редактор карты соответствия стихов" sandbox="allow-forms allow-same-origin allow-scripts"></iframe>
     </div>
   </dialog>
   <dialog id="setupWizardDialog" class="setup-wizard-dialog">
@@ -318,7 +376,7 @@
           <div id="setupOneNotePrograms" class="onenote-program-list"></div>
           <label class="setup-option">
             <input id="setupEnableOneNoteRibbon" type="checkbox">
-            <span>Добавить вкладку BibleNote во все найденные версии OneNote</span>
+            <span>Добавить вкладку BibleNote 4 во все найденные версии OneNote</span>
           </label>
           <label class="setup-option">
             <input id="setupRegisterBibleProtocol" type="checkbox" checked>
@@ -389,10 +447,10 @@
           </div>
         </div>
       </header>
-      <details class="bible-reader-panel">
+      <details class="bible-reader-panel" open>
         <summary id="bibleReaderSummary">Библия</summary>
         <div class="bible-reader-controls">
-          <select id="bibleReaderModule" class="bible-reader-select" title="Модуль"></select>
+          <select id="bibleReaderModule" class="bible-reader-select" title="Перевод чтения (основной перевод меняется в настройках)" aria-label="Перевод чтения"></select>
           <select id="bibleReaderBook" class="bible-reader-select book" title="Книга"></select>
           <div class="bible-reader-row">
             <button id="bibleReaderPrev" class="small-button" type="button" title="Предыдущая глава">←</button>
@@ -443,6 +501,7 @@
         <div class="log-controls">
           <button id="refreshLog" class="small-button" type="button">Обновить</button>
         </div>
+        <div id="logStatus" class="log-load-status" role="status" aria-live="polite"></div>
         <div id="logList" class="log-list"></div>
         <div class="log-pager">
           <button id="logPrev" class="small-button" type="button">Назад</button>
@@ -465,6 +524,10 @@
     </aside>
     <div id="sidebarResizer" class="sidebar-resizer" role="separator" aria-label="Изменить ширину левой панели" aria-orientation="vertical" tabindex="0"></div>
     <div class="content-shell">
+      <div id="workspaceTabs" class="workspace-tabs" aria-label="Открытые вкладки">
+        <div id="workspaceTabList" class="workspace-tab-list" role="tablist"></div>
+        <button id="newWorkspaceTab" class="new-workspace-tab" type="button" title="Новая вкладка (Ctrl+T)" aria-label="Новая вкладка">+</button>
+      </div>
       <div id="pageFindWidget" class="page-find-widget hidden" role="search" aria-label="Поиск по текущей странице">
         <input id="pageFindInput" class="page-find-input" type="search" placeholder="Найти" autocomplete="off" spellcheck="false" aria-label="Найти на странице">
         <span id="pageFindCount" class="page-find-count" aria-live="polite">0 / 0</span>
@@ -478,9 +541,12 @@
   </div>
   <script src="/ui/bootstrap.js"></script>
   <script src="/ui/navigation-search.js"></script>
+  <script src="/ui/tabs.js"></script>
   <script src="/ui/layout.js"></script>
   <script src="/ui/settings.js"></script>
+  <script src="/ui/mybible-settings.js"></script>
   <script src="/ui/api-page-view.js"></script>
+  <script src="/ui/page-outline.js"></script>
   <script src="/ui/notebooks-log.js"></script>
   <script src="/ui/bible-reader.js"></script>
   <script src="/ui/tree-pages.js"></script>

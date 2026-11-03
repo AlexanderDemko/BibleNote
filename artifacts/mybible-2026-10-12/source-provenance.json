@@ -1,0 +1,304 @@
+[
+  {
+    "id": "NET",
+    "url": "https://mybible.zone/repository/modules/NET.zip",
+    "registryVersion": 7981308,
+    "downloadedAt": "2026-10-10T12:36:33.770Z",
+    "registryRecord": {
+      "abr": "NET",
+      "lng": "en",
+      "des": "New English Translation, 2007",
+      "inf": "1996 - 2007 by Biblical Studies Press, LLC",
+      "fil": "NET",
+      "upd": "2020-03-16",
+      "cmt": "(2020-03-16) RLE correction\n(2017-04-20) Re-created from another source\n(2017-02-13) RLE correction\n(2016-11-25) Re-created fron another sourse\n(2016-09-16) Added Psalm\n(2016-02-17) Code cleaning\n(2015-12-31) corrected Red letters\n(2015-11-23) Correction of Red Color Words of Jesus\n(2015-08-17) Description is renewed\n(2015-08-16) Description correction Code errors fixed, specially Hebrew alfabet.\n(2014-07-28) Code is cleaned from extra formatting and errors; Text is cleaned from numbers.\n(2014-07-02) added numering for work with the Notes - Commentries file.\n(2014-02-03) Published",
+      "bkq": "66",
+      "url": [
+        "{mz}NET",
+        "{inf}NET",
+        "{1gb}NET",
+        "{p4}NET"
+      ],
+      "siz": "7.6M"
+    },
+    "archiveSha256": "a749360aa1e4d8cf39adc7bd16ef2d5da9968abe11d2a26332d69bec31f0d259",
+    "files": [
+      {
+        "name": ".SQLite3",
+        "bytes": 6703104,
+        "sha256": "ac4299d0d8dce7f1192ba3d99f8d475b06774cedf1c7c314f49567c63d47d9f4"
+      },
+      {
+        "name": ".commentaries.SQLite3",
+        "bytes": 18064384,
+        "sha256": "c3fb97e84e91e0021aa0210735fbdbe5cfc92cfd8ee36c3661d739c365cbdd52"
+      }
+    ]
+  },
+  {
+    "id": "NASU",
+    "url": "https://mybible.zone/repository/modules/NASU.zip",
+    "registryVersion": 7981308,
+    "downloadedAt": "2026-10-10T12:36:30.196Z",
+    "registryRecord": {
+      "abr": "NASU",
+      "lng": "en",
+      "des": "New American Standard Bible, 1995",
+      "inf": "1960, 1962, 1963, 1968, 1971, 1972, 1973, 1975, 1977, 1995 by The Lockman Foundation",
+      "fil": "NASU",
+      "upd": "2017-01-28",
+      "cmt": "(2017-01-28) Published",
+      "bkq": "66",
+      "url": [
+        "{mz}NASU",
+        "{inf}NASU",
+        "{1gb}NASU",
+        "{p4}NASU"
+      ],
+      "siz": "1.9M",
+      "hid": true
+    },
+    "archiveSha256": "960f725e9ce56fc0451be736349f3b6c2c5eb56599e5dba7cbbfbe9e15fe0685",
+    "files": [
+      {
+        "name": ".SQLite3",
+        "bytes": 5767168,
+        "sha256": "3c617432080dd62a09c2588ee3de4137306f8ecd0a0078ae65cbc78842c5c43b"
+      },
+      {
+        "name": ".commentaries.SQLite3",
+        "bytes": 229376,
+        "sha256": "86ce839be24f289065bf4584838e51b38461b11c8ca8e970acb5b4fc33959b48"
+      }
+    ]
+  },
+  {
+    "id": "NKJV",
+    "url": "https://mybible.zone/repository/modules/NKJV.zip",
+    "registryVersion": 7981308,
+    "downloadedAt": "2026-10-10T12:36:30.805Z",
+    "registryRecord": {
+      "abr": "NKJV",
+      "lng": "en",
+      "des": "New King James Version, 1982",
+      "inf": "The Holy Bible, New King James Version, Copyright © 1982 Thomas Nelson. All rights\nreserved.",
+      "fil": "NKJV",
+      "upd": "2024-10-14",
+      "cmt": "(2020-02-07) Ex 12:25 j ust → just\n(2016-10-15) Strongs numbering false\n(2016-09-16) Added Psalm\n(2016-06-15) Prov 11:1 was wrong text\n(2016-05-16) small formatting error in Malachi 3:5\n(2016-04-05) Luk 9:55,56 - corrected Red letters\n(2016-03-29) 'Y(AH) ' → 'YAH'\n(2016-02-17) 'G(OD) ' → 'GOD'\n(2016-02-09) Psalm 109:21 'O G( OD ) ' → 'O GOD'\n(2016-01-25) fixed space mistakes\n(2016-01-18) Added spaces\n(2016-01-11) Added Stories and Footnotes\n(2015-08-17) Description is renewed\n(2015-08-14) Changed to the requirements of MyBible 4.4\n(2014-09-04) Red Color Words of Jesus\n(2014-02-25) Published",
+      "bkq": "66",
+      "url": [
+        "{mz}NKJV",
+        "{inf}NKJV",
+        "{1gb}NKJV",
+        "{p4}NKJV"
+      ],
+      "siz": "3.1M",
+      "hid": true,
+      "lic": "*"
+    },
+    "archiveSha256": "df2c284d4eb6111ac552ea54982e6561fc57e770fa92446f8d882d90534aed04",
+    "files": [
+      {
+        "name": ".commentaries.SQLite3",
+        "bytes": 4353024,
+        "sha256": "1b4d2202d04494687c29075d3a30e4711e7018ab4c10d7e861868518437bf7ea"
+      },
+      {
+        "name": ".SQLite3",
+        "bytes": 6422528,
+        "sha256": "9d0fce4be9cc087cf76cdea6636c2daed8d93026db0f0b3bd484c10fa29c31cc"
+      }
+    ]
+  },
+  {
+    "id": "NRT'23",
+    "url": "https://mybible.zone/repository/modules/NRT'23.zip",
+    "registryVersion": 7981308,
+    "downloadedAt": "2026-10-10T12:36:30.785Z",
+    "registryRecord": {
+      "abr": "NRT'23",
+      "lng": "ru",
+      "des": "Новый русский перевод (НРП), 2023",
+      "inf": "New Russian Translation 2023 – <br/>\nСвятая Библия, Новый русский перевод™ НРП™ © Biblica, Inc., 2006, 2010, 2012, 2014, 2023 Используется с разрешения. Все права защищены по всему миру. <br/>\nThe Holy Bible, New Russian Translation™ NRT™ Copyright © 2006, 2010, 2012, 2014, 2023 by Biblica, Inc. Used with permission. All rights reserved worldwide. <br/>\nRussian — Русский\n",
+      "fil": "NRT'23",
+      "upd": "2024-07-02",
+      "cmt": "(2023-11-14) Выложен",
+      "bkq": "66",
+      "url": [
+        "{mz}NRT%2723",
+        "{inf}NRT%2723",
+        "{1gb}NRT%2723",
+        "{p4}NRT%2723"
+      ],
+      "siz": "2.6M"
+    },
+    "archiveSha256": "928ba8cc4ca6b804215298c8021972983e7507a9f0c46fa324d97afbd02efb12",
+    "files": [
+      {
+        "name": ".SQLite3",
+        "bytes": 8519680,
+        "sha256": "2892937e084b20657898d5b3000bbea0fe9e359a436200dccd7d39290e3eab7f"
+      },
+      {
+        "name": ".commentaries.SQLite3",
+        "bytes": 1048576,
+        "sha256": "a5669e5b1dbf3aef1e45bbd42f3c978ef7bdcfd1f9a9a9b55b66474c98b90f59"
+      }
+    ]
+  },
+  {
+    "id": "РБО2",
+    "url": "https://mybible.zone/repository/modules/%D0%A0%D0%91%D0%9E2.zip",
+    "registryVersion": 7981308,
+    "downloadedAt": "2026-10-10T12:36:30.468Z",
+    "registryRecord": {
+      "abr": "РБО2",
+      "lng": "ru",
+      "des": "Современный русский перевод, 2015",
+      "inf": "<b>Библия: Современный русский перевод: [Пер. с древнеевр., арам.и древнегреч.]</b> — М.: Российское Библейское общество, 2015. — 2-е изд., перераб. и доп. — 1408 с.\n\n\n",
+      "fil": "РБО2",
+      "upd": "2019-05-13",
+      "cmt": "(2019-05-11) 2 Пар 36:5 вадцать → Двадцать\n(2018-03-05) 2 Цар 18:29 был ужасная суматоха → была ужасная суматоха\n(2017-07-10) 3 Цар 2:19 комм.: именоваласьгевира́ → именовалась гевира́\n(2017-04-18) Исправлены сноски в 1Пет 1:1\n(2017-03-27) Добавлен словарь\n(2017-02-13) RLE correction\n(2017-01-12) 4.6.0 version\n(2016-09-16) Добавлено Псалом\n(2015-12-26) Исправлена ошибка кода\n(2015-12-24) The abbreviation is bought to one standard\n(2015-12-22) Дея 9:12, Ин 17:26 исправлено выделение слов Иисуса\n(2015-12-06) Евр 13:10 сноски 72 и 73 были перепутаны местами\n(2015-11-18) исправлено выделение слов Иисуса красным\n(2015-11-14) Мк 10:49 исправлено выделение слов Иисуса красным\n(2015-11-11) Лк 17:1 исправлено выделение слов Иисуса красным\n(2015-11-09) Лк 13:31 исправлено выделение слов Иисуса красным\n(2015-11-05) Откр 22:20 Коррекция красного выделения слов Иисуса",
+      "bkq": "66",
+      "url": [
+        "{mz}%D0%A0%D0%91%D0%9E2",
+        "{inf}%D0%A0%D0%91%D0%9E2",
+        "{1gb}%D0%A0%D0%91%D0%9E2",
+        "{p4}%D0%A0%D0%91%D0%9E2"
+      ],
+      "siz": "2.5M",
+      "hid": true,
+      "lic": "<br/><h4>Российское Библейское Общество</h4>\n<div style='margin-top: 0px; font-size: x-small;'>\n<b>Написать письмо:</b> <a href='http://biblia.ru/about/contacts/letter/'>http://biblia.ru/about/contacts/letter/</a>\n<br/><b>Адрес для писем:</b> 115054, г. Москва, ул. Валовая, д. 8, стр. 1\n<br/><b>Телефон:</b> +7 (495) 940-54-90 (доб. 215)\n<br/><b>Е-mail:</b> <a href='mailto:info@biblia.ru'>info@biblia.ru</a>\n</div>"
+    },
+    "archiveSha256": "faa8d34eec1fcc2b4129dfc954e83394e6404afa886ac9f8817ef4c0320149e7",
+    "files": [
+      {
+        "name": "РБО2.commentaries.SQLite3",
+        "bytes": 1409024,
+        "sha256": "2523dc76f268021e03d8d30c610bb9cb7c33d9fcc792fac2ed29332dd7f30641"
+      },
+      {
+        "name": "РБО2.dictionary.SQLite3",
+        "bytes": 229376,
+        "sha256": "4793b444c999993a674adb304d27cb3bb0c3c974ab25b608c008a5864798846d"
+      },
+      {
+        "name": "РБО2.SQLite3",
+        "bytes": 7700480,
+        "sha256": "4e9d89e1068728d1cffe2dcb07acc7af18b0654e4c13ddb108341e89c86f8dcf"
+      }
+    ]
+  },
+  {
+    "id": "CAS",
+    "url": "https://mybible.zone/repository/modules/CAS.zip",
+    "registryVersion": 7981308,
+    "downloadedAt": "2026-10-10T12:36:28.933Z",
+    "registryRecord": {
+      "abr": "CAS",
+      "lng": "ru",
+      "des": "Новый Завет под ред. еп. Кассиана (Безобразова), 1970",
+      "inf": "<center>\n<h2>Новый Завет</h2>\n<h3>в переводе с греческого языка\nпод редакцией\nепископа Кассиана (Безобразова)</h3>\n</center>\n<p>Текст перевода © British and Foreign Bible Society, 1970</p>\n<p>© Российское Библейское общество, 2014</p>\n",
+      "fil": "CAS",
+      "upd": "2019-11-18",
+      "cmt": "(2019-11-18) Деян 4:13-22 исправлено форматирование абзаца\n(2019-07-29) Мат 4:24 недужных. → недужных,\n(2018-11-26) пер. Кассиана создан заново и сверен с печатным изданием\n(2017-12-14) Мат 7:4 'глава' → 'глаза'\n(2017-09-22) Отк 21:22 'у видел' → 'увидел'\n(2017-09-13) Рим 9:31 'Законане' → 'Закона не'\n(2016-02-18) Чистка кода\n(2016-01-14) Мат 11:20 'зато' → 'за то'\n(2015-12-31) исправлено выделение слов Иисуса красным\n(2015-12-30) Обновлен модуль\n(2014-11-23) исправлено выделение слов Иисуса красным\n(2015-11-09) Лк 13:31 исправлено выделение слов Иисуса красным\n(2015-11-04) Добавлено выделение слов Иисуса красным\n(2015-08-17) Обновлено описание\n(2015-08-14) Изменен под требования MyBible 4.4\n(2015-06-07) Ряд мелких исправлений\n(2015-05-09) Деян 10:33 'повеДено' → 'повеЛено'\n(2015-05-06) Исправлены небольшие ошибки",
+      "bkq": "27",
+      "url": [
+        "{mz}CAS",
+        "{inf}CAS",
+        "{1gb}CAS",
+        "{p4}CAS"
+      ],
+      "siz": "530K"
+    },
+    "archiveSha256": "63c5f0b65cccbe8d3925eed86a8754377e5e39fbbe0d43432f5670b31086d0b4",
+    "files": [
+      {
+        "name": ".commentaries.SQLite3",
+        "bytes": 5120,
+        "sha256": "0a6c518a4b17c102f60f9d2eed492d30be3c54de78815611089a451ad9d9e556"
+      },
+      {
+        "name": ".SQLite3",
+        "bytes": 1966080,
+        "sha256": "7b3fbad0aa64fe01a2b4c9d6af3c0482951772662d2da39700ae40a4f20d30b9"
+      }
+    ]
+  },
+  {
+    "id": "NIV'11",
+    "url": "https://mybible.zone/repository/modules/NIV'11.zip",
+    "registryVersion": 7981308,
+    "downloadedAt": "2026-10-10T12:36:30.502Z",
+    "registryRecord": {
+      "abr": "NIV'11",
+      "lng": "en",
+      "des": "New International Version",
+      "inf": "New International Version 2011 – <br/>\r\nThe Holy Bible, New International Version® NIV® Copyright © 1973, 1978, 1984, 2011 by Biblica, Inc.® Used by Permission of Biblica, Inc.® All rights reserved worldwide. <br/>\r\nEnglish",
+      "fil": "NIV'11",
+      "upd": "2019-06-10",
+      "cmt": "(2019-06-10) Published",
+      "bkq": "66",
+      "url": [
+        "{mz}NIV%2711",
+        "{inf}NIV%2711",
+        "{1gb}NIV%2711",
+        "{p4}NIV%2711"
+      ],
+      "siz": "2M",
+      "hid": true,
+      "lic": "*"
+    },
+    "archiveSha256": "8355b01bac9d9e5c22ccc950d7e87b1d3079e3d23a79e586efc08a803292abf2",
+    "files": [
+      {
+        "name": ".SQLite3",
+        "bytes": 5805056,
+        "sha256": "7bb9527b6e67aaff211a9b61c787b74eb20f1053c4cfc43855bac6ae9937b206"
+      },
+      {
+        "name": ".commentaries.SQLite3",
+        "bytes": 361472,
+        "sha256": "6e0a55283acdd5bca3a18dc68e38a57c29e8956495e8a42f725e81b283285186"
+      }
+    ]
+  },
+  {
+    "id": "ESV",
+    "url": "https://mybible.zone/repository/modules/ESV.zip",
+    "registryVersion": 7981308,
+    "downloadedAt": "2026-10-10T12:36:31.154Z",
+    "registryRecord": {
+      "abr": "ESV",
+      "lng": "en",
+      "des": "English Standard Version 2001, 2016",
+      "inf": "The Holy Bible, English Standard Version. \n<br/>ESV® Permanent Text Edition® (2016). \n<br/>Copyright © 2001 by Crossway Bibles, a publishing ministry of Good News Publishers.",
+      "fil": "ESV",
+      "upd": "2021-10-18",
+      "cmt": "(2017-05-15) Books corrected\n(2017-04-04) Re-created from another source\n(2017-02-13) RLE correction\n(2016-09-16) Added Psalm\n(2016-02-18) Code cleaning\n(2015-12-31) corrected Red letters\n(2015-11-27) Correction of Red Color Words of Jesus\n(2015-07-08) Fixed Red Color Words of Jesus\n(2015-06-08) Fixed 1Cor 16:11\n(2014-09-04) Red Color Words of Jesus\n(2014-02-27) Published",
+      "bkq": "66",
+      "url": [
+        "{mz}ESV",
+        "{inf}ESV",
+        "{1gb}ESV",
+        "{p4}ESV"
+      ],
+      "siz": "3.5M",
+      "hid": true,
+      "lic": "*"
+    },
+    "archiveSha256": "08b52a3460bc37cb3b371036dbac2f7727f7e7b4739e1bca7c49bfe51bdf2621",
+    "files": [
+      {
+        "name": ".SQLite3",
+        "bytes": 6354944,
+        "sha256": "92ca1d68b74b23c0abaeee3525fb65ad1c0113af2ebc0e692de0d1894846bbcd"
+      },
+      {
+        "name": ".commentaries.SQLite3",
+        "bytes": 5407744,
+        "sha256": "2d27ccafa7be73b1f1a577eefe93ebe1f685e97fa4637f3ab99dd3a29066caa8"
+      }
+    ]
+  }
+]

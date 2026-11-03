@@ -1,0 +1,97 @@
+[
+  {
+    "module": "cas",
+    "books": 27,
+    "verses": 7957,
+    "notes": 1,
+    "hebrew": 0,
+    "greek": 0,
+    "samples": [],
+    "readerProjection": "passed"
+  },
+  {
+    "module": "esv",
+    "books": 66,
+    "verses": 31103,
+    "notes": 49199,
+    "hebrew": 0,
+    "greek": 0,
+    "samples": [],
+    "readerProjection": "passed"
+  },
+  {
+    "module": "nasb1995",
+    "books": 66,
+    "verses": 31103,
+    "notes": 1071,
+    "hebrew": 0,
+    "greek": 0,
+    "samples": [],
+    "readerProjection": "passed"
+  },
+  {
+    "module": "net",
+    "books": 66,
+    "verses": 31102,
+    "notes": 58297,
+    "hebrew": 9175,
+    "greek": 5659,
+    "samples": [
+      {
+        "book": "1",
+        "chapter": "1",
+        "verse": "1",
+        "marker": "[2]",
+        "offset": 23
+      },
+      {
+        "book": "1",
+        "chapter": "1",
+        "verse": "1",
+        "marker": "[3]",
+        "offset": 32
+      }
+    ],
+    "readerProjection": "passed"
+  },
+  {
+    "module": "niv2011",
+    "books": 66,
+    "verses": 31102,
+    "notes": 3286,
+    "hebrew": 0,
+    "greek": 0,
+    "samples": [],
+    "readerProjection": "passed"
+  },
+  {
+    "module": "nkjv1982",
+    "books": 66,
+    "verses": 31102,
+    "notes": 32517,
+    "hebrew": 0,
+    "greek": 0,
+    "samples": [],
+    "readerProjection": "passed"
+  },
+  {
+    "module": "nrt23",
+    "books": 66,
+    "verses": 31163,
+    "notes": 5184,
+    "hebrew": 0,
+    "greek": 0,
+    "samples": [],
+    "readerProjection": "passed"
+  },
+  {
+    "module": "rbo2",
+    "books": 66,
+    "verses": 31167,
+    "notes": 7198,
+    "hebrew": 0,
+    "greek": 0,
+    "samples": [],
+    "readerProjection": "passed"
+  }
+]

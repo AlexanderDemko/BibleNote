@@ -214,7 +214,15 @@ namespace BibleNote.Services.ModulesManager
                 var module = ReadModuleInfoFromDirectory(tempFolder);
                 CheckModule(module);
 
-                ReplaceModuleDirectory(tempFolder, GetModuleDirectory(moduleName));
+                var installedName = module.ShortName;
+                if (string.IsNullOrWhiteSpace(installedName)
+                    || installedName == "." || installedName == ".."
+                    || installedName != installedName.Trim()
+                    || installedName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0
+                    || installedName.Contains('/') || installedName.Contains('\\'))
+                    throw new InvalidModuleException("Manifest ShortName must be a valid module directory name.");
+
+                ReplaceModuleDirectory(tempFolder, GetModuleDirectory(installedName));
                 tempFolder = null;
 
                 if (module.Type == Scheme.Module.ModuleType.Bible || module.Type == Scheme.Module.ModuleType.Strong)

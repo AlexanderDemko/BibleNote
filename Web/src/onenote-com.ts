@@ -7,6 +7,10 @@ type XmlNode = any;
 // The desktop OneNote XML page coordinate is half a CSS pixel at 100% zoom.
 const oneNoteComLayoutUnitInCssPixels = 2;
 
+// Kept in the cached HTML so synchronization can refresh pages produced by an
+// older renderer even when OneNote's last-modified timestamp has not changed.
+export const oneNoteComRendererMarker = 'onenote-com-v4';
+
 export type OneNoteComSnapshot = {
   notebooks: Notebook[];
   sections: Section[];
@@ -186,6 +190,13 @@ function positiveNumber(value: string | undefined): number | undefined {
   return Number.isFinite(number) && number > 0 && number <= 100_000 ? number : undefined;
 }
 
+function paragraphSpace(node: XmlNode, quickStyle: XmlNode | undefined, name: string): number | undefined {
+  const value = attr(node, name) ?? attr(quickStyle, name);
+  if (value == null || !value.trim()) return undefined;
+  const number = Number(value);
+  return Number.isFinite(number) && number >= 0 && number <= 100_000 ? number : undefined;
+}
+
 function safeCssColor(value: string | undefined): string | undefined {
   const color = value?.trim();
   return color && /^#(?:[0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(color) ? color : undefined;
@@ -217,6 +228,26 @@ function quickStyleCss(node: XmlNode | undefined): string {
   return declarations.join(';');
 }
 
+function pageCreationPresentation(node: XmlNode): { date: string; time: string } | undefined {
+  const titleEntry = elementChildren(node, 'OE')[0];
+  const value = attr(titleEntry, 'creationTime');
+  if (!value) return undefined;
+  const createdAt = new Date(value);
+  if (!Number.isFinite(createdAt.getTime())) return undefined;
+  const locale = attr(node, 'lang') || undefined;
+  try {
+    return {
+      date:new Intl.DateTimeFormat(locale, { day:'numeric', month:'long', year:'numeric' }).format(createdAt),
+      time:new Intl.DateTimeFormat(locale, { hour:'2-digit', minute:'2-digit' }).format(createdAt)
+    };
+  } catch {
+    return {
+      date:createdAt.toLocaleDateString(),
+      time:createdAt.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' })
+    };
+  }
+}
+
 function renderPageNode(
   $xml: cheerio.CheerioAPI,
   node: XmlNode,
@@ -224,7 +255,11 @@ function renderPageNode(
   quickStyles = new Map<string, XmlNode>()
 ): string {
   const name = localName(node);
-  if (name === 'T') return safeInlineHtml($xml(node).text());
+  if (name === 'T') {
+    const html = safeInlineHtml($xml(node).text());
+    const style = attr(node, 'style');
+    return style ? `<span style="${escapeHtml(style)}">${html}</span>` : html;
+  }
   if (name === 'Image') {
     const dataNode = elementChildren(node, 'Data')[0];
     const data = dataNode ? nodeText($xml, dataNode).replace(/\s+/g, '') : '';
@@ -282,12 +317,31 @@ function renderPageNode(
     const listNode = elementChildren(node, 'List')[0];
     const bulletNode = listNode ? elementChildren(listNode, 'Bullet')[0] : undefined;
     const numberNode = listNode ? elementChildren(listNode, 'Number')[0] : undefined;
-    const body = elementChildren(node)
+    const quickStyle = quickStyles.get(attr(node, 'quickStyleIndex') ?? '');
+    const headingLevel = localName(node.parent) === 'Title'
+      ? undefined
+      : /^h([1-6])$/i.exec(attr(quickStyle, 'name') ?? '')?.[1];
+    const contentNodes = elementChildren(node)
       .filter(child => !['List', 'Meta', 'InkDrawing'].includes(localName(child)))
-      .map(child => renderPageNode($xml, child, 'td', quickStyles))
-      .join('');
+      .map(child => ({ name:localName(child), html:renderPageNode($xml, child, 'td', quickStyles) }));
+    // A heading covers only the entry's own text, never its nested paragraphs.
+    const ownNodes = contentNodes.filter(child => child.name !== 'OEChildren');
+    const ownContent = ownNodes.map(child => child.html).join('');
+    const spaceBefore = paragraphSpace(node, quickStyle, 'spaceBefore');
+    const spaceAfter = paragraphSpace(node, quickStyle, 'spaceAfter');
+    const spaceBetween = paragraphSpace(node, quickStyle, 'spaceBetween');
+    const contentStyle = spaceAfter == null ? '' : ` style="margin-bottom:${spaceAfter}pt"`;
+    const headingAttributes = headingLevel && contentNodes.some(child => child.name === 'T')
+      ? ` role="heading" aria-level="${headingLevel}"` : '';
+    // Space after this entry belongs before its children, not after the whole subtree.
+    const body = (ownNodes.length ? `<div class="onenote-paragraph-content"${headingAttributes}${contentStyle}>${ownContent}</div>` : '')
+      + contentNodes.filter(child => child.name === 'OEChildren').map(child => child.html).join('');
+    const alignment = attr(node, 'alignment');
     const style = [
-      quickStyleCss(quickStyles.get(attr(node, 'quickStyleIndex') ?? '')),
+      quickStyleCss(quickStyle),
+      spaceBefore == null ? '' : `margin-top:${spaceBefore}pt`,
+      spaceBetween ? `line-height:${spaceBetween}pt` : '',
+      /^(left|center|right|justify)$/.test(alignment ?? '') ? `text-align:${alignment}` : '',
       attr(node, 'style')
     ].filter(Boolean).join(';');
     const listClass = bulletNode
@@ -301,7 +355,11 @@ function renderPageNode(
     return `<div class="onenote-paragraph${listClass}"${numberAttribute}${style ? ` style="${escapeHtml(style)}"` : ''}>${body}</div>`;
   }
   if (name === 'Title') {
-    return `<h1>${elementChildren(node).map(child => renderPageNode($xml, child, 'td', quickStyles)).join('')}</h1>`;
+    const created = pageCreationPresentation(node);
+    const createdAttributes = created
+      ? ` data-onenote-created-date="${escapeHtml(created.date)}" data-onenote-created-time="${escapeHtml(created.time)}"`
+      : '';
+    return `<header class="onenote-page-header"${createdAttributes}><h1>${elementChildren(node).map(child => renderPageNode($xml, child, 'td', quickStyles)).join('')}</h1></header>`;
   }
   if (name === 'Outline') {
     return `<section class="onenote-outline">${elementChildren(node)
@@ -324,7 +382,15 @@ export function oneNoteComPageXmlToHtml(xml: string): string {
   );
   const body = root ? renderPageNode($xml, root, 'td', quickStyles) : '';
   return `<!doctype html><html><head><meta charset="utf-8"><style>
-.onenote-com-page{font-family:Calibri,"Segoe UI",sans-serif;font-size:11pt}
+html{background:#fff}
+.onenote-com-page{box-sizing:border-box;min-height:100vh;margin:0;padding:48px 56px 80px;background:#fff;color:#000;font-family:Calibri,"Segoe UI",sans-serif;font-size:11pt;line-height:1.42}
+.onenote-com-page .onenote-page-header{width:min(100%,615px)}
+.onenote-com-page .onenote-page-header h1{margin:0;padding:0 0 8px;border-bottom:1px solid #aaa;font:inherit}
+.onenote-com-page .onenote-page-header[data-onenote-created-date]:after{content:attr(data-onenote-created-date) "\\00a0\\00a0\\00a0\\00a0\\00a0\\00a0\\00a0\\00a0" attr(data-onenote-created-time);display:block;padding-top:6px;color:#777;font:10.5pt/1.3 Calibri,"Segoe UI",sans-serif;white-space:pre}
+.onenote-com-page .onenote-outline{margin-top:44px}
+.onenote-com-page .onenote-paragraph{display:flow-root}
+.onenote-com-page .onenote-children{display:flow-root}
+.onenote-com-page .onenote-paragraph-content:empty{min-height:1em}
 .onenote-com-page .onenote-paragraph:empty{min-height:1em}
 .onenote-com-page .onenote-paragraph>.onenote-children{margin-left:1.5em}
 .onenote-com-page .onenote-list-item{box-sizing:border-box;position:relative;padding-left:1.25em}
@@ -336,7 +402,9 @@ export function oneNoteComPageXmlToHtml(xml: string): string {
 .onenote-com-page .onenote-table th,.onenote-com-page .onenote-table td{box-sizing:border-box;padding:2px 4px;vertical-align:top}
 .onenote-com-page .onenote-table th{font-weight:normal;text-align:left}
 .onenote-com-page .onenote-table-bordered th,.onenote-com-page .onenote-table-bordered td{border:1px solid #999}
-</style></head><body class="onenote-com-page">${body}</body></html>`;
+html.onenote-page-focus-mode .onenote-com-page{padding-top:76px}
+@media(max-width:700px){.onenote-com-page{padding-right:24px;padding-left:24px}}
+</style></head><body class="onenote-com-page" data-biblenote-renderer="${oneNoteComRendererMarker}">${body}</body></html>`;
 }
 
 export async function loadOneNoteComSnapshot(): Promise<OneNoteComSnapshot> {

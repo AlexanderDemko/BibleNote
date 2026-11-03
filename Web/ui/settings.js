@@ -13,6 +13,8 @@ function setupSettingsDialog() {
   bibleModuleNameInput.value = localStorage.getItem('onenote.bibleModule') || 'rst';
   pageViewModeSelect.value = defaultPageViewMode();
   defaultHtmlZoomInput.value = String(defaultHtmlZoom());
+  bibleTabOpenModeSelect.value = bibleWorkspaceTabMode();
+  startupModeSelect.value = workspaceStartupMode();
   showAuxBibleRefsInput.checked = showAuxBibleRefs();
   updateBibleModuleUploadState();
 }
@@ -32,11 +34,24 @@ function openDownloadLogDialog() {
 }
 
 function currentBibleModule() {
-  return (bibleModuleNameInput.value || 'rst').trim() || 'rst';
+  return (bibleModuleNameInput.value || localStorage.getItem('onenote.bibleModule') || 'rst').trim() || 'rst';
+}
+
+function synchronizeBibleModuleSelection(module) {
+  if (!module) return;
+  localStorage.setItem('onenote.bibleModule', module);
+  for (const select of [bibleModuleNameInput, setupBibleModuleInput]) {
+    if ([...select.options].some(option => option.value === module)) select.value = module;
+  }
+  for (const choice of bibleModulesListEl.querySelectorAll('input[name="bibleModuleChoice"]')) {
+    choice.checked = choice.value === module;
+  }
 }
 
 function saveBibleModuleSetting() {
-  localStorage.setItem('onenote.bibleModule', currentBibleModule());
+  const module = currentBibleModule();
+  synchronizeBibleModuleSelection(module);
+  return applyBibleReaderModule(module).catch(showError);
 }
 
 function moduleDisplayName(module) {
@@ -93,6 +108,13 @@ function savePageViewSettings() {
   localStorage.setItem('onenote.defaultHtmlZoom', String(zoom));
 }
 
+function saveTabSettings() {
+  const mode = ['current', 'dedicated', 'new'].includes(bibleTabOpenModeSelect.value)
+    ? bibleTabOpenModeSelect.value
+    : 'dedicated';
+  localStorage.setItem('biblenote.tabs.bibleOpenMode', mode);
+}
+
 function saveBibleDisplaySettings() {
   localStorage.setItem('onenote.showAuxBibleRefs', String(showAuxBibleRefsInput.checked));
   if (activeSearchQuery) renderSearch(activeSearchQuery).catch(showError);
@@ -102,9 +124,11 @@ function saveBibleDisplaySettings() {
 function renderRuntimeSettings(settings) {
   verboseLoggingEnabled = settings.verboseLogging === true;
   verboseLoggingInput.checked = verboseLoggingEnabled;
-  verboseLoggingStatusEl.textContent = verboseLoggingEnabled
-    ? 'Расширенное логирование включено. Файл: ' + (settings.logPath || '')
-    : 'Расширенное логирование выключено. Файл: ' + (settings.logPath || '');
+  verboseLoggingStatusEl.textContent = settings.logError
+    ? 'Не удалось записать расширенный лог: ' + settings.logError + '. Файл: ' + (settings.logPath || '')
+    : verboseLoggingEnabled
+      ? 'Расширенное логирование включено. Файл: ' + (settings.logPath || '')
+      : 'Расширенное логирование выключено. Файл: ' + (settings.logPath || '');
 }
 
 async function refreshRuntimeSettings() {
@@ -171,8 +195,8 @@ function renderOneNoteIntegration(result) {
   }
 
   enableOneNoteRibbonLabelEl.textContent = programs.length > 1
-    ? 'Добавить вкладку BibleNote во все найденные версии OneNote'
-    : 'Добавить вкладку BibleNote в OneNote';
+    ? 'Добавить вкладку BibleNote 4 во все найденные версии OneNote'
+    : 'Добавить вкладку BibleNote 4 в OneNote';
   enableOneNoteRibbonInput.checked = result.enabled === true;
   enableOneNoteRibbonInput.disabled = programs.length === 0 || Boolean(result.error);
   if (result.error) {
@@ -637,9 +661,11 @@ function setupSyncProgressText(progress = {}, startedAt) {
   const startedTime = Date.parse(startedAt || '');
   if (Number.isFinite(startedTime)) {
     const elapsedSeconds = Math.max(0, Math.floor((Date.now() - startedTime) / 1000));
-    const minutes = Math.floor(elapsedSeconds / 60);
+    const hours = Math.floor(elapsedSeconds / 3600);
+    const minutes = Math.floor((elapsedSeconds % 3600) / 60);
     const seconds = elapsedSeconds % 60;
-    elapsedText = 'прошло: ' + (minutes ? minutes + ' мин ' : '') + seconds + ' сек';
+    elapsedText = 'прошло: ' + (hours ? hours + ' ч ' : '')
+      + (hours || minutes ? minutes + ' мин ' : '') + seconds + ' сек';
   }
   return parts.join(' · ') + (elapsedText ? '\n' + elapsedText : '');
 }
@@ -698,6 +724,11 @@ function updateSetupWizard() {
   });
   setupWizardBackButton.hidden = setupWizardStep === steps.length - 1;
   setupWizardBackButton.disabled = setupWizardStep === 0 || setupWizardBusy;
+  setupSelectAllNotebooksButton.disabled = setupWizardBusy;
+  setupClearAllNotebooksButton.disabled = setupWizardBusy;
+  setupNotebookListEl.querySelectorAll('input[data-notebook-id]').forEach(input => {
+    input.disabled = setupWizardBusy;
+  });
   setupWizardNextButton.disabled = setupWizardBusy
     || (setupWizardStep === 0 && !setupMicrosoftConnected)
     || (setupWizardStep === 1 && !setupBibleModuleSelected());
@@ -763,7 +794,7 @@ async function verifySetupMicrosoftAccess(loginState) {
     setupMicrosoftAccountEl.textContent = setupUsesFolder()
       ? 'Не удалось прочитать выбранную папку. Проверьте путь и права доступа.'
       : setupUsesLocalOneNote()
-        ? 'Не удалось прочитать локальные данные OneNote. Откройте классический OneNote и повторите проверку.'
+        ? 'Не удалось прочитать локальные данные OneNote: ' + (error?.message || String(error))
         : 'Нужно войти в Microsoft, чтобы BibleNote мог прочитать заметки OneNote.';
     updateSetupWizard();
     return false;
@@ -962,10 +993,21 @@ async function loadSetupNotebooks() {
 }
 
 async function waitForSetupInitialSync() {
+  let lastProgressText = '';
   while (true) {
-    const state = await api('/api/sync', { timeoutMs:120000 });
+    let state;
+    try {
+      state = await api('/api/sync', { timeoutMs:120000 });
+    } catch (error) {
+      if (error?.status) throw error;
+      setupInitialSyncStatusEl.textContent = (lastProgressText ? lastProgressText + '\n' : '')
+        + 'Ожидание связи с синхронизацией: ' + (error?.message || String(error)) + '. Повторяем проверку…';
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      continue;
+    }
     if (state.status === 'running') {
-      setupInitialSyncStatusEl.textContent = setupSyncProgressText(state.progress, state.startedAt);
+      lastProgressText = setupSyncProgressText(state.progress, state.startedAt);
+      setupInitialSyncStatusEl.textContent = lastProgressText;
       await new Promise(resolve => setTimeout(resolve, 1500));
       continue;
     }
@@ -1154,6 +1196,7 @@ async function refreshBibleModulesList() {
     return;
   }
   const modules = Array.isArray(result.modules) ? result.modules : [];
+  updateBibleReaderModules(modules);
   fillBibleModuleSelect(bibleModuleNameInput, modules, localStorage.getItem('onenote.bibleModule') || result.module);
   fillBibleModuleSelect(setupBibleModuleInput, modules, localStorage.getItem('onenote.bibleModule') || result.module);
   if (modules.length === 0) {
@@ -1180,7 +1223,7 @@ async function refreshBibleModulesList() {
     title.textContent = moduleDisplayName(module);
     const meta = document.createElement('div');
     meta.className = 'settings-module-meta';
-    meta.textContent = [module.type, module.locale, module.isCurrent ? 'текущий в BibleNote' : ''].filter(Boolean).join(' · ');
+    meta.textContent = [module.type, module.locale].filter(Boolean).join(' · ');
     body.append(title, meta);
     option.append(input, body);
     bibleModulesListEl.append(option);
@@ -1225,16 +1268,16 @@ async function uploadBibleModuleFiles(fileInput, uploadButton, statusElement, mo
         headers:{ 'Content-Type':'application/json' },
         body:JSON.stringify({ fileName:file.name, contentBase64 })
       });
+      if (!result.installed) throw new Error(result.message || 'Модуль не установлен.');
       if (result.moduleName) installed.push(result.moduleName);
     }
+    await refreshBibleNoteSettings();
     if (installed.length > 0) {
       moduleInput.value = installed[installed.length - 1];
-      if (saveModule) saveBibleModuleSetting();
+      if (saveModule) await saveBibleModuleSetting();
     }
     statusElement.textContent = 'Загружено модулей: ' + installed.length + '/' + files.length;
     fileInput.value = '';
-    await refreshBibleNoteSettings();
-    if (installed.length > 0) moduleInput.value = installed[installed.length - 1];
   } catch (error) {
     statusElement.textContent = 'Не удалось загрузить модуль: ' + error.message;
   } finally {
@@ -1253,13 +1296,44 @@ async function uploadSetupBibleModule() {
   updateSetupWizard();
 }
 
-async function refreshProtocolSettings() {
-  const result = await api('/api/system/protocol');
+function renderProtocolSettings(result) {
+  openBibleLinksInBibleNote4Input.checked = result.registered === true;
+  openBibleLinksInBibleNote4Input.disabled = !result.available;
+  openOneNoteBibleLinksInReaderInput.disabled = !result.available || !result.registered;
   registerBibleProtocolButton.hidden = result.available && result.registered;
   registerBibleProtocolButton.disabled = false;
   protocolStatusEl.textContent = result.available
-    ? (result.registered ? 'Библейские ссылки открываются в BibleNote.' : 'Разрешите Windows открывать библейские ссылки в BibleNote.')
+    ? (result.registered ? 'Библейские ссылки открываются в BibleNote 4.' : 'Библейские ссылки открываются текущим обработчиком Windows.')
     : 'Настройка доступна только в установленной версии BibleNote.';
+}
+
+async function refreshProtocolSettings() {
+  renderProtocolSettings(await api('/api/system/protocol'));
+}
+
+async function changeBibleProtocolHandler() {
+  const enabled = openBibleLinksInBibleNote4Input.checked;
+  openBibleLinksInBibleNote4Input.disabled = true;
+  openOneNoteBibleLinksInReaderInput.disabled = true;
+  registerBibleProtocolButton.disabled = true;
+  protocolStatusEl.textContent = 'Настройка открытия библейских ссылок...';
+  try {
+    const result = await api('/api/system/protocol', {
+      method:'PUT', headers:{ 'Content-Type':'application/json' }, body:JSON.stringify({ enabled })
+    });
+    renderProtocolSettings(result);
+    if (!enabled && result.available && !result.registered) {
+      protocolStatusEl.textContent = 'Библейские ссылки открываются в старом BibleNote.';
+    }
+  } catch (error) {
+    await refreshProtocolSettings().catch(() => {
+      openBibleLinksInBibleNote4Input.checked = !enabled;
+      openBibleLinksInBibleNote4Input.disabled = false;
+      openOneNoteBibleLinksInReaderInput.disabled = enabled;
+      registerBibleProtocolButton.disabled = false;
+    });
+    protocolStatusEl.textContent = 'Не удалось изменить открытие ссылок: ' + error.message;
+  }
 }
 
 async function registerBibleProtocol() {
@@ -1290,6 +1364,7 @@ themeSelect.addEventListener('change', () => {
   const theme = ['a', 'b', 'c'].includes(themeSelect.value) ? themeSelect.value : 'a';
   document.documentElement.dataset.theme = theme;
   localStorage.setItem('onenote.theme', theme);
+  document.querySelectorAll('iframe.html-frame').forEach(postContentTheme);
 });
 
 openSettingsButton.addEventListener('click', openSettingsDialog);
@@ -1375,10 +1450,12 @@ setupChangeMicrosoftAccountButton.addEventListener('click', () => {
   updateSetupWizard();
 });
 setupSelectAllNotebooksButton.addEventListener('click', () => {
+  if (setupWizardBusy) return;
   setupNotebookListEl.querySelectorAll('input[data-notebook-id]').forEach(input => { input.checked = true; });
   setupInitialSyncStatusEl.textContent = 'Выбрано коллекций: ' + setupSelectedNotebookIds().length;
 });
 setupClearAllNotebooksButton.addEventListener('click', () => {
+  if (setupWizardBusy) return;
   setupNotebookListEl.querySelectorAll('input[data-notebook-id]').forEach(input => { input.checked = false; });
   setupInitialSyncStatusEl.textContent = 'Выберите хотя бы одну коллекцию.';
 });
@@ -1426,6 +1503,7 @@ setupBibleModuleFileInput.addEventListener('click', () => {
 setupBibleModuleFileInput.addEventListener('change', updateSetupBibleModuleUploadState);
 setupUploadBibleModuleButton.addEventListener('click', () => uploadSetupBibleModule().catch(showError));
 registerBibleProtocolButton.addEventListener('click', () => registerBibleProtocol().catch(showError));
+openBibleLinksInBibleNote4Input.addEventListener('change', () => changeBibleProtocolHandler().catch(showError));
 openOneNoteBibleLinksInReaderInput.addEventListener('change', () => {
   localStorage.setItem('biblenote.onenoteLinksOpenInBible', String(openOneNoteBibleLinksInReaderInput.checked));
 });
@@ -1436,6 +1514,11 @@ if (enableOneNoteRibbonInput) enableOneNoteRibbonInput.addEventListener('change'
 });
 pageViewModeSelect.addEventListener('change', savePageViewSettings);
 defaultHtmlZoomInput.addEventListener('change', savePageViewSettings);
+bibleTabOpenModeSelect.addEventListener('change', saveTabSettings);
+startupModeSelect.addEventListener('change', () => {
+  localStorage.setItem('biblenote.tabs.startupMode', startupModeSelect.value === 'restore' ? 'restore' : 'empty');
+  saveWorkspaceSession();
+});
 showAuxBibleRefsInput.addEventListener('change', saveBibleDisplaySettings);
 verboseLoggingInput.addEventListener('change', () => saveRuntimeSettings().catch(error => {
   verboseLoggingStatusEl.textContent = 'Не удалось сохранить параметры диагностики: ' + error.message;

@@ -1,17 +1,17 @@
 {
   "name": "biblenote",
-  "version": "4.0.54",
+  "version": "4.0.78",
   "description": "BibleNote desktop and OneNote cache application.",
   "type": "module",
   "engines": {
-    "node": ">=20"
+    "node": ">=22.12.0"
   },
   "bin": {
     "onenote-mcp": "./dist/server.js"
   },
   "main": "./dist/electron-main.js",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && node scripts/bundle.mjs",
     "test": "tsx --import ./tests/test-env.ts --test tests/*.test.ts",
     "e2e": "playwright test",
     "e2e:all": "playwright test",
@@ -44,7 +44,14 @@
     "start": "node dist/server.js",
     "sync": "tsx src/sync.ts",
     "cache:status": "tsx src/sync.ts --status",
-    "cache:ui": "tsx src/cache-ui.ts"
+    "cache:ui": "tsx src/cache-ui.ts",
+    "mybible:analyze": "tsx src/mybible-analyzer-cli.ts",
+    "mybible:map": "tsx src/mybible-verse-map-cli.ts",
+    "mybible:compile-map": "tsx src/mybible-verse-map-compiler-cli.ts",
+    "mybible:review": "tsx src/mybible-verse-map-review-cli.ts",
+    "mybible:convert": "tsx src/mybible-converter-cli.ts",
+    "benchmark:electron": "node scripts/benchmark-electron.mjs",
+    "benchmark:startup": "node --import tsx scripts/benchmark-app.mjs"
   },
   "dependencies": {
     "@azure/msal-node": "^5.0.6",
@@ -61,10 +68,16 @@
     "@playwright/test": "^1.62.0",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^22.0.0",
-    "electron": "^42.5.1",
+    "electron": "^42.11.10",
     "electron-builder": "^26.15.3",
+    "esbuild": "0.28.1",
     "tsx": "^4.20.0",
     "typescript": "^5.8.0"
+  },
+  "overrides": {
+    "app-builder-lib": {
+      "@electron/get": "^5.1.0"
+    }
   },
   "build": {
     "appId": "local.biblenote",

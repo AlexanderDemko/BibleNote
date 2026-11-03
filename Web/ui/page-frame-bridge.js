@@ -7,9 +7,117 @@
     parent.postMessage(message, '*');
   }
 
+  let outlineHeadings = [];
+  let outlinePositions = [];
+  let outlineTracking = false;
+  let outlineDirty = true;
+  let outlineTick = 0;
+  let outlineActiveIndex = -1;
+
+  const outlineHeadingSelector = 'h1,h2,h3,h4,h5,h6,[role="heading"][aria-level]';
+  const normalizeOutlineText = text => String(text || '').replace(/\s+/g, ' ').trim();
+
+  function markdownOutlineHeading(text) {
+    const match = /^(#{1,6})[ \t]+([^\r\n]+)$/.exec(text.trim());
+    const title = match?.[2].replace(/[ \t]+#+[ \t]*$/, '').trim();
+    return title ? { level:match[1].length, text:normalizeOutlineText(title) } : null;
+  }
+
+  function oneNoteEntryText(element) {
+    // COM entries may contain an entire nested outline. Read their own inline
+    // content without cloning the subtree or including descendant paragraphs.
+    const blockSelector = '.onenote-children,p,div,li,ul,ol,table,blockquote,pre,' + outlineHeadingSelector;
+    const read = node => {
+      if (node.nodeType === Node.TEXT_NODE) return node.textContent;
+      if (node.nodeType !== Node.ELEMENT_NODE) return '';
+      if (node.matches('.onenote-paragraph-content') && !node.matches(outlineHeadingSelector)) {
+        return [...node.childNodes].map(read).join('');
+      }
+      if (node.matches(blockSelector)) return '\n';
+      if (node.matches('br')) return '\n';
+      return [...node.childNodes].map(read).join('');
+    };
+    return [...element.childNodes].map(read).join('').trim();
+  }
+
+  function sendOutline(options = {}) {
+    const oneNote = Boolean(options.oneNote);
+    const title = normalizeOutlineText(options.title);
+    const selector = outlineHeadingSelector + (oneNote ? ',.onenote-paragraph,p,div,li' : '');
+    let firstNativeHeading = true;
+    const headings = [...document.body.querySelectorAll(selector)]
+      .map(element => {
+        if (element.matches('.onenote-paragraph-content') && !element.matches(outlineHeadingSelector)) return null;
+        if (element.closest('script,style,noscript,pre,code')) return null;
+        if (oneNote && element.closest('.onenote-page-header')) return null;
+        let heading;
+        if (element.matches(outlineHeadingSelector)) {
+          const text = normalizeOutlineText(element.textContent);
+          const level = Number(element.getAttribute('aria-level')) || Number(element.tagName.slice(1)) || 1;
+          const pageTitle = oneNote && firstNativeHeading && level === 1 && title && text === title;
+          firstNativeHeading = false;
+          if (pageTitle || !text) return null;
+          heading = { level, text:oneNote ? markdownOutlineHeading(text)?.text || text : text };
+        } else {
+          if (element.closest(outlineHeadingSelector)) return null;
+          heading = markdownOutlineHeading(oneNoteEntryText(element));
+          if (!heading) return null;
+        }
+        for (let ancestor = element; ancestor; ancestor = ancestor.parentElement) {
+          const style = getComputedStyle(ancestor);
+          if (ancestor.hidden || ancestor.getAttribute('aria-hidden') === 'true'
+            || style.display === 'none' || style.visibility === 'hidden') return null;
+        }
+        return { element, ...heading };
+      }).filter(Boolean);
+    outlineHeadings = headings.map(heading => heading.element);
+    outlineDirty = true;
+    outlineActiveIndex = -1;
+    postToParent({
+      type:'onenote-outline',
+      headings:headings.map(({ level, text }) => ({ level, text }))
+    });
+    scheduleOutlineUpdate();
+  }
+
+  function scheduleOutlineUpdate(invalidate = false) {
+    if (invalidate) outlineDirty = true;
+    if (!outlineTracking || outlineTick) return;
+    outlineTick = requestAnimationFrame(() => {
+      outlineTick = 0;
+      if (!outlineTracking || !outlineHeadings.length || !innerHeight) return;
+      if (outlineDirty) {
+        outlinePositions = outlineHeadings.map((element, index) => ({
+          index, top:element.getBoundingClientRect().top + scrollY
+        })).sort((left, right) => left.top - right.top);
+        outlineDirty = false;
+      }
+      // Binary search avoids scanning a large outline on every scroll event.
+      let low = 0;
+      let high = outlinePositions.length;
+      while (low < high) {
+        const middle = (low + high) >>> 1;
+        if (outlinePositions[middle].top <= scrollY + 40) low = middle + 1;
+        else high = middle;
+      }
+      const index = outlinePositions[Math.max(0, low - 1)].index;
+      if (index !== outlineActiveIndex) {
+        outlineActiveIndex = index;
+        postToParent({ type:'onenote-outline-active', index });
+      }
+    });
+  }
+
+  window.addEventListener('scroll', () => scheduleOutlineUpdate(), { passive:true });
+  window.addEventListener('resize', () => scheduleOutlineUpdate(true));
+  document.addEventListener('load', () => scheduleOutlineUpdate(true), true);
+  new ResizeObserver(() => scheduleOutlineUpdate(true)).observe(document.body);
+  document.fonts.ready.then(() => scheduleOutlineUpdate(true));
+
   function applyPageZoom(zoom, notifyParent = false) {
     pageZoom = Math.max(0.5, Math.min(3, Number(zoom) || 1));
     document.documentElement.style.zoom = String(pageZoom);
+    scheduleOutlineUpdate(true);
     if (notifyParent) {
       postToParent({ type:'onenote-page-zoom-change', percent:Math.round(pageZoom * 100) });
     }
@@ -65,7 +173,18 @@
     event.stopPropagation();
   }, true);
 
+  document.addEventListener('pointerdown', () => {
+    postToParent({ type:'onenote-page-pointerdown' });
+  }, true);
+
   document.addEventListener('keydown', event => {
+    if (event.key === 'Escape') postToParent({ type:'onenote-page-escape' });
+    if (event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey && /^[1-9]$/.test(event.key)) {
+      event.preventDefault();
+      event.stopPropagation();
+      postToParent({ type:'onenote-workspace-tab-select', number:Number(event.key) });
+      return;
+    }
     const key = String(event.key || '').toLocaleLowerCase();
     const findKey = event.code === 'KeyF' || key === 'f';
     if (!(event.ctrlKey || event.metaKey) || event.altKey || event.shiftKey || !findKey) return;
@@ -369,6 +488,8 @@
     });
   }
 
+  window.addEventListener('scroll', () => reportPageViewState(), { passive:true });
+
   function restorePageViewState(state) {
     const scrolling = document.scrollingElement || document.documentElement || document.body;
     if (!scrolling || !state) return;
@@ -401,6 +522,7 @@
     if (target) {
       if (target.hasAttribute('data-onenote-target-match')) {
         target.setAttribute('data-onenote-target-match-current', 'true');
+        target.closest(paragraphSelector)?.setAttribute('data-onenote-target-paragraph-current', 'true');
       } else {
         target.setAttribute('data-onenote-target-paragraph-current', 'true');
       }
@@ -423,7 +545,24 @@
   window.addEventListener('message', event => {
     if (event.source !== parent) return;
     const data = event.data || {};
+    if (data.type === 'onenote-outline-request') sendOutline(data);
+    if (data.type === 'onenote-outline-tracking') {
+      outlineTracking = Boolean(data.enabled);
+      scheduleOutlineUpdate(true);
+    }
+    if (data.type === 'onenote-outline-navigate' && Number.isInteger(data.index)) {
+      const heading = outlineHeadings[data.index];
+      if (heading) {
+        clearTargetScrollTimers();
+        heading.scrollIntoView({ block:'start', behavior:'instant' });
+        scheduleOutlineUpdate();
+      }
+    }
     if (data.type === 'onenote-html-zoom') applyPageZoom(data.zoom);
+    if (data.type === 'onenote-page-focus-mode') {
+      document.documentElement.classList.toggle('onenote-page-focus-mode', Boolean(data.enabled));
+      scheduleOutlineUpdate(true);
+    }
     if (data.type === 'onenote-scroll-target-paragraph') {
       const index = Number.isInteger(data.targetIndex) ? data.targetIndex : undefined;
       const paragraphIndex = Number.isInteger(data.paragraphIndex) ? data.paragraphIndex : undefined;

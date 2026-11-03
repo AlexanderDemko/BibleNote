@@ -82,7 +82,7 @@ export const test = base.extend<Fixtures>({
       localStorage.setItem('biblenote.setupWizardDone', 'true');
       localStorage.setItem('biblenote.microsoftScopeVersion', 'notes-read-all-v1');
       localStorage.setItem('onenote.pageViewMode', 'text');
-      localStorage.setItem('onenote.bibleModule', 'rst');
+      if (!localStorage.getItem('onenote.bibleModule')) localStorage.setItem('onenote.bibleModule', 'rst');
       localStorage.removeItem('onenote.hiddenNotebookIds');
       localStorage.removeItem('onenote.searchHistory');
     });

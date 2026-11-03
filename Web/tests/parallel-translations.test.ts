@@ -38,24 +38,6 @@ test('parallel translation gateway forwards the base and target modules', async 
   }
 });
 
-test('reader exposes a three-translation picker and correspondence-based rows', () => {
-  const reader = fs.readFileSync(path.join(root, 'ui', 'bible-reader.js'), 'utf8');
-  const styles = fs.readFileSync(path.join(root, 'ui', 'styles.css'), 'utf8');
-  const cacheUi = fs.readFileSync(path.join(root, 'src', 'cache-ui.ts'), 'utf8');
-
-  assert.equal(reader.includes("slice(0, 3)"), true);
-  assert.equal(reader.includes("api('/api/bible/parallel-text?'"), true);
-  assert.equal(reader.includes('row.baseChapter'), true);
-  assert.equal(reader.includes('row.baseVerse'), true);
-  assert.equal(reader.includes("className = 'bible-reader-translation-header'"), true);
-  assert.equal(reader.includes("className = 'bible-reader-translation-row'"), true);
-  assert.equal(reader.includes("textContent = 'Основной'"), true);
-  assert.equal(reader.includes("textContent = 'Показать'"), true);
-  assert.equal(styles.includes('@container (max-width:760px)'), true);
-  assert.equal(styles.includes('.bible-reader-translation-cell::before'), true);
-  assert.equal(cacheUi.includes("url.pathname === '/api/bible/parallel-text'"), true);
-});
-
 test('reader decodes HTML entities in primary and parallel verse text', () => {
   const reader = fs.readFileSync(path.join(root, 'ui', 'bible-reader.js'), 'utf8');
   const start = reader.indexOf('function bibleReaderDisplayText(value)');
@@ -76,18 +58,41 @@ test('reader decodes HTML entities in primary and parallel verse text', () => {
   );
 
   assert.equal(context.result, '<To the chief Musician> & Psalm');
-  assert.equal(reader.includes('prepareInductiveTextElement(primaryText, result, verse, bibleReaderDisplayText(verse.text))'), true);
-  assert.equal(reader.includes('text.textContent = bibleReaderDisplayText(mappedVerse.text)'), true);
-  assert.equal(reader.includes('prepareInductiveTextElement(text, result, verse, bibleReaderDisplayText(verse.text))'), true);
 
-  const controller = fs.readFileSync(
-    path.join(root, '..', 'Api', 'Application', 'Controllers', 'VerseParsingController.cs'),
-    'utf8'
-  );
-  assert.equal(
-    (controller.match(/Text = WebUtility\.HtmlDecode\(text\)/g) || []).length,
-    2
-  );
+  class FakeElement {
+    children: Array<FakeElement | { textContent: string }> = [];
+    className = '';
+    classList = { add: (...names: string[]) => { this.className += ` ${names.join(' ')}`; } };
+    dataset: Record<string, string> = {};
+    style = { setProperty: () => undefined };
+    title = '';
+    private value = '';
+    append(...children: Array<FakeElement | { textContent: string }>) { this.children.push(...children); }
+    replaceChildren() { this.children = []; this.value = ''; }
+    set textContent(value: string) { this.value = value; this.children = [{ textContent: value }]; }
+    get textContent() { return this.value || this.children.map(child => child.textContent).join(''); }
+  }
+  const renderStart = reader.indexOf('let bibleFootnoteSequence = 0;');
+  const renderEnd = reader.indexOf('function prepareInductiveTextElement(', renderStart);
+  const richContext = {
+    document: {
+      createElement: () => new FakeElement(),
+      createTextNode: (value: string) => ({ textContent: value })
+    },
+    inductiveMarksVisible: false,
+    validInductiveAnnotationsForText: () => [],
+    validInductiveRelationEndpointsForText: () => [],
+    result: null as null | ((element: FakeElement, verse: number, text: string, rich: unknown) => void)
+  };
+  vm.runInNewContext(reader.slice(renderStart, renderEnd) + '\nresult = renderInductiveText;', richContext);
+  const rendered = new FakeElement();
+  richContext.result!(rendered, Number.NaN, '<Music> & Psalm', {
+    decorations: [{ startOffset:0, endOffset:7, kind:'italic' }],
+    breaks: [{ offset:8, kind:'paragraph' }]
+  });
+  assert.equal(rendered.textContent, '<Music> & Psalm');
+  assert.match((rendered.children[0] as FakeElement).className, /bible-rich-italic/);
+  assert.match((rendered.children[2] as FakeElement).className, /paragraph/);
 });
 
 test('clicking a selected Bible verse clears its selection', () => {

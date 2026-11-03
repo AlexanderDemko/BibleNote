@@ -34,18 +34,19 @@ namespace BibleNote.OneNoteRibbon
         private const string RibbonXml =
             "<?xml version=\"1.0\" encoding=\"utf-8\"?>" +
             "<customUI xmlns=\"http://schemas.microsoft.com/office/2006/01/customui\" loadImage=\"GetRibbonImage\">" +
-            "<ribbon><tabs><tab id=\"BibleNoteTab\" label=\"BibleNote\">" +
-            "<group id=\"BibleNoteCommandsGroup\" label=\"BibleNote\">" +
-            "<button id=\"BibleNoteOpenBible\" label=\"Открыть Библию\" size=\"large\" " +
-            "screentip=\"Открыть Библию в BibleNote.\" onAction=\"OnRibbonAction\" image=\"OpenBible.png\"/>" +
+            "<ribbon><tabs><tab id=\"BibleNoteTab\" label=\"BibleNote 4\">" +
+            "<group id=\"BibleNoteCommandsGroup\" label=\"BibleNote 4\">" +
+            "<button id=\"BibleNoteOpenBible\" label=\"Библия в BibleNote\" size=\"large\" " +
+            "screentip=\"Открыть Библию в приложении BibleNote 4.\" onAction=\"OnRibbonAction\" image=\"OpenBible.png\"/>" +
             "<button id=\"BibleNoteQuickAnalyze\" label=\"Распознать библейские ссылки\" " +
-            "size=\"large\" screentip=\"Распознать библейские ссылки без синхронизации с BibleNote.\" " +
+            "size=\"large\" screentip=\"Распознать библейские ссылки на текущей странице OneNote.\" " +
+            "supertip=\"Добавляет ссылки к распознанным библейским местам на текущей странице OneNote.\" " +
             "onAction=\"OnRibbonAction\" image=\"QuickAnalyze.png\"/>" +
             "<button id=\"BibleNoteAnalyzeCurrent\" label=\"Синхронизировать текущую страницу\" " +
-            "size=\"large\" screentip=\"Синхронизировать текущую страницу с BibleNote.\" " +
+            "size=\"large\" screentip=\"Синхронизировать текущую страницу OneNote с приложением BibleNote 4.\" " +
             "onAction=\"OnRibbonAction\" image=\"AnalyzeCurrent.png\"/>" +
-            "<button id=\"BibleNoteOpen\" label=\"Открыть в BibleNote\" size=\"large\" " +
-            "screentip=\"Открыть текущую страницу в BibleNote.\" onAction=\"OnRibbonAction\" image=\"OpenBibleNote.png\"/>" +
+            "<button id=\"BibleNoteOpen\" label=\"Заметка в BibleNote\" size=\"large\" " +
+            "screentip=\"Открыть текущую страницу OneNote в приложении BibleNote 4.\" onAction=\"OnRibbonAction\" image=\"OpenBibleNote.png\"/>" +
             "</group></tab></tabs></ribbon></customUI>";
 
         public RibbonAddIn()

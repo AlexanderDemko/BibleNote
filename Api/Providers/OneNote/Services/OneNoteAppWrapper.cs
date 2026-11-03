@@ -71,9 +71,12 @@ namespace BibleNote.Providers.OneNote.Services
 
                 var pageId = app.Windows.CurrentWindow.CurrentPageId;
                 app.GetHyperlinkToObject(pageId, string.Empty, out var clientUrl);
+                // OneNote strips punctuation from hyperlink titles; read the original page name.
+                app.GetHierarchy(pageId, HierarchyScope.hsSelf, out var pageHierarchy, OneNoteConstants.CurrentOneNoteSchema);
                 result = new OneNoteCurrentPageInfo
                 {
                     PageId = pageId,
+                    Title = (string)XElement.Parse(pageHierarchy).Attribute("name"),
                     ClientUrl = clientUrl
                 };
             });
@@ -91,6 +94,14 @@ namespace BibleNote.Providers.OneNote.Services
             });
 
             return result;
+        }
+
+        public Task NavigateToAsync(string hierarchyId)
+        {
+            return UseOneNoteAppInSingleThreadAsync(app =>
+            {
+                app.NavigateTo(hierarchyId, string.Empty, false);
+            });
         }
 
         public async Task<string> GetCurrentSectionIdAsync()

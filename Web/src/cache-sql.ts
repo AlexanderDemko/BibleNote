@@ -21,6 +21,17 @@ export function visibleBibleRefSql(alias: string, paragraphAlias?: string): stri
     ${fragment}`;
 }
 
+export function completeBibleRefSql(alias: string, paragraphAlias: string): string {
+  const tail = `LTRIM(SUBSTR(COALESCE(${paragraphAlias}.text, ''), COALESCE(${alias}.end_index, -1) + 2))`;
+  const afterDelimiter = `LTRIM(SUBSTR(${tail}, 2))`;
+  return `NOT (
+    COALESCE(${alias}.verse, 0) = 0
+    AND (COALESCE(${alias}.is_chapter, 0) <> 0 OR COALESCE(${alias}.entry_type, '') = 'BookChapter')
+    AND SUBSTR(${tail}, 1, 1) IN ('.', ':', '：', ',', '，')
+    AND SUBSTR(${afterDelimiter}, 1, 1) GLOB '[0-9]'
+  )`;
+}
+
 export function visibleBibleScopeSql(pageAlias: string, sectionAlias?: string): string {
   const values = [
     `COALESCE(${pageAlias}.title, '')`,

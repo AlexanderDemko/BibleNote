@@ -116,11 +116,15 @@ export function startFakeBibleNoteApi(): Promise<FakeService> {
       }]);
     }
     if (url.pathname === '/api/VerseParsing/ParallelVerseText') {
+      const chapter = Number(url.searchParams.get('chapter') || '1');
       return json(response, 200, {
         baseModule: url.searchParams.get('baseModule'),
         module: url.searchParams.get('module'),
         moduleName: 'King James Version',
-        rows: []
+        rows: [1, 2, 3].map(verse => ({
+          baseChapter:chapter, baseVerse:verse,
+          verses:[{ chapter, verse, reference:`${chapter}:${verse}`, text:`Parallel verse ${verse}` }]
+        }))
       });
     }
     if (url.pathname === '/api/VerseParsing/ParsePage' && request.method === 'POST') {
@@ -172,9 +176,16 @@ export function startFakeBibleNoteApi(): Promise<FakeService> {
 }
 
 export function startFakeElectronControl(): Promise<FakeService> {
-  return listen((_request, response, url) => {
-    if (url.pathname === '/protocol/status' || url.pathname === '/protocol/register') {
-      return json(response, 200, { available: true, registered: true });
+  let bibleNote4Registered = true;
+  return listen((request, response, url) => {
+    if (url.pathname === '/legacy-bible/status') return json(response, 200, { available:true });
+    if (url.pathname === '/legacy-bible/open-chapter' || url.pathname === '/legacy-bible/open-verse') return json(response, 200, {
+      opened:true, method:request.method, ref:JSON.parse(url.searchParams.get('ref') || 'null')
+    });
+    if (url.pathname === '/protocol/register') bibleNote4Registered = true;
+    if (url.pathname === '/protocol/set') bibleNote4Registered = url.searchParams.get('enabled') === '1';
+    if (['/protocol/status', '/protocol/register', '/protocol/set'].includes(url.pathname)) {
+      return json(response, 200, { available:true, registered:bibleNote4Registered });
     }
     if (url.pathname.startsWith('/onenote-integration/')) {
       return json(response, 200, { platform: 'win32', enabled: false, installedPrograms: [] });

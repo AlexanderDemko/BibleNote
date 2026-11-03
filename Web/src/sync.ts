@@ -1414,7 +1414,8 @@ function parseArgs(argv: string[]): SyncOptions & { statusOnly?: boolean } {
   return result;
 }
 
-const isMainModule = process.argv[1]
+// Bundlers may inline this library into another executable entry point.
+const isMainModule = process.argv[1] && /^sync\.(?:js|ts)$/.test(path.basename(process.argv[1]))
   ? path.resolve(fileURLToPath(import.meta.url)) === path.resolve(process.argv[1])
   : false;
 

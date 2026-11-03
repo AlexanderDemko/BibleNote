@@ -61,6 +61,16 @@ namespace BibleNote.Application.Controllers
         }
 
         [HttpPost]
+        public async Task<IActionResult> OpenPage(string pageId)
+        {
+            if (string.IsNullOrWhiteSpace(pageId))
+                return BadRequest("pageId is required.");
+
+            await oneNoteApp.NavigateToAsync(pageId);
+            return Ok(new { Opened = true });
+        }
+
+        [HttpPost]
         public async Task<ActionResult<QuickAnalyzeCurrentPageResponse>> QuickAnalyzeCurrentPage()
         {
             var currentPage = await oneNoteApp.GetCurrentPageInfoAsync();

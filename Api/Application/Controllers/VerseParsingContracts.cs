@@ -299,6 +299,44 @@ namespace BibleNote.Application.Controllers
         public int? PartIndex { get; set; }
 
         public bool IsEmpty { get; set; }
+
+        public VerseRichTextResponse RichText { get; set; }
+    }
+
+    public class VerseRichTextResponse
+    {
+        public string Text { get; set; }
+
+        public List<VerseTextDecorationResponse> Decorations { get; set; }
+
+        public List<VerseTextBreakResponse> Breaks { get; set; }
+
+        public List<VerseFootnoteResponse> Footnotes { get; set; }
+    }
+
+    public class VerseTextDecorationResponse
+    {
+        public int StartOffset { get; set; }
+
+        public int EndOffset { get; set; }
+
+        public string Kind { get; set; }
+    }
+
+    public class VerseTextBreakResponse
+    {
+        public int Offset { get; set; }
+
+        public string Kind { get; set; }
+    }
+
+    public class VerseFootnoteResponse
+    {
+        public int Offset { get; set; }
+
+        public string Marker { get; set; }
+
+        public string Text { get; set; }
     }
 
     public class ParallelVerseTextRequest

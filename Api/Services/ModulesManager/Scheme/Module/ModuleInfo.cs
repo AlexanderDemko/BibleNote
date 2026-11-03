@@ -89,6 +89,9 @@ namespace BibleNote.Services.ModulesManager.Scheme.Module
         public BibleTranslationDifferences BibleTranslationDifferences { get; set; }
 
         [XmlElement]
+        public BibleDirectVerseMappings BibleDirectVerseMappings { get; set; }
+
+        [XmlElement]
         public BibleStructureInfo BibleStructure { get; set; }
 
         private int _maxBookNameLength;

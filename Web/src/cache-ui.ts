@@ -5,7 +5,7 @@ import path from 'node:path';
 import { pathToFileURL, URL } from 'node:url';
 import * as z from 'zod/v4';
 import { bibleParseConfigFromEnv, bibleParserVersion, getVerseTextWithBibleNote, parsePageWithBibleNote, type BibleVerseText } from './bible.js';
-import { bibleNoteBooks, bibleNoteCurrentOneNotePage, bibleNoteHealth, bibleNoteModules, bibleNoteOneNotePageLink, bibleNoteParallelVerseText, bibleNoteQuickAnalyzeCurrentPage, bibleNoteSearchText, electronControl, ensureBibleNoteAvailable, parseExternalBibleRef, uploadBibleNoteModule, type OneNoteCurrentPage } from './biblenote-gateway.js';
+import { bibleNoteBooks, bibleNoteCurrentOneNotePage, bibleNoteHealth, bibleNoteModules, bibleNoteOpenOneNotePage, bibleNoteParallelVerseText, bibleNoteQuickAnalyzeCurrentPage, bibleNoteSearchText, electronControl, ensureBibleNoteAvailable, parseExternalBibleRef, uploadBibleNoteModule, type OneNoteCurrentPage } from './biblenote-gateway.js';
 import { cacheUiPageHtml, serveCacheUiAsset } from './cache-ui-assets.js';
 import { cacheStatistics, cacheStatus, defaultDbPath, findCachedGraphSectionIdByOneNoteGuid, findCachedPageByOneNoteGuid, findParallelBibleReferenceNotes, findParallelBibleReferences, getBibleParseState, getCachedPageContent, getCachedPageMetadata, getCachedPageStatus, getSyncState, listSyncHistory, markPageHtmlParsed, markPageOpened, openCacheDb, readCachedPage, recordSyncHistory, searchBibleReferenceNotesByWeight, searchCacheAdvanced, searchCacheRelaxed, shouldParseBibleRefs, shouldParsePageHtml, updatePageHtml, upsertBibleParseResult, type SyncHistoryStatus } from './cache.js';
 import { visibleBibleRefSql, visibleBibleScopeSql } from './cache-sql.js';
@@ -17,14 +17,18 @@ import { acquireTokenByDeviceCode, signedInMicrosoftAccount, type MicrosoftAccou
 import { configuredDataSources, folderPathsForSource, folderSourcePaths, oneNoteDataSource, readOneNoteAccessSettings, saveOneNoteAccessSettings, type ConfiguredDataSource } from './onenote-settings.js';
 import { folderNotebookId, listFolderNotebooks } from './folder-source.js';
 import { loadOneNoteComSnapshot } from './onenote-com.js';
+import { isMainBibleAction } from './main-bible-action.js';
+import { legacyBibleChapterLink, legacyBibleVerseLink } from './legacy-bible.js';
 import { extractOneNotePageGuid, extractOneNotePageTitle, extractOneNoteSectionGuid, findGraphPageForOneNoteClientPage, findGraphSectionForOneNoteClientPage, type OneNoteLinkedSection } from './onenote-page-link.js';
-import { configureRuntimeLogging, readRuntimeLoggingSettings, runtimeLog, saveRuntimeLoggingSettings } from './runtime-logging.js';
+import { configureRuntimeLogging, readRuntimeLoggingSettings, runtimeLog, runtimeWarning, saveRuntimeLoggingSettings } from './runtime-logging.js';
 import { SingleFlight } from './single-flight.js';
 import { loadOneNoteSectionPages, syncOneNoteCache, type SyncOptions, type SyncProgressEvent, type SyncResult } from './sync.js';
+import type { VerseMapReviewServer } from './mybible-verse-map-review.js';
 
 type UiOptions = {
   dbPath: string;
   port: number;
+  deferDbInit?: boolean;
 };
 
 type SyncUiState = {
@@ -593,7 +597,7 @@ function parseArgs(argv: string[]): UiOptions {
     }
   }
 
-  return { dbPath, port };
+  return { dbPath, port, deferDbInit:process.env.ONENOTE_CACHE_DEFER_INIT === '1' };
 }
 
 function json(response: ServerResponse, status: number, value: unknown): void {
@@ -624,7 +628,7 @@ function page(response: ServerResponse): void {
   response.writeHead(200, {
     'Content-Type': 'text/html; charset=utf-8',
     'Cache-Control': 'no-store',
-    'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; frame-ancestors 'none'",
+    'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; frame-src 'self' http://127.0.0.1:*; frame-ancestors 'none'",
     'X-Content-Type-Options': 'nosniff',
     'X-Frame-Options': 'DENY'
   });
@@ -662,18 +666,71 @@ export function startCacheUi(options: UiOptions): http.Server {
   let cacheDb: CacheDb | undefined;
   let dbInitStarted = false;
   let dbInitError: Error | undefined;
+  let closed = false;
   let syncState: SyncUiState = { status: 'idle' };
   let microsoftLoginState: MicrosoftLoginState = { status: 'idle' };
   let microsoftLoginPromise: Promise<void> | undefined;
   const pageHtmlRefreshes = new SingleFlight<void>(1);
   const verseTextRequests = new SingleFlight<BibleVerseText>(1);
   const ribbonCurrentPageOperations = new SingleFlight<RibbonCurrentPageResult>(1);
+  let myBibleReviewServer: VerseMapReviewServer | undefined;
+  let myBibleReviewOperations: Promise<void> = Promise.resolve();
+
+  function queueMyBibleReviewOperation<T>(operation: () => Promise<T>): Promise<T> {
+    const result = myBibleReviewOperations.then(operation, operation);
+    myBibleReviewOperations = result.then(() => undefined, () => undefined);
+    return result;
+  }
+
+  function resolveMyBibleMapPath(value: unknown): string {
+    if (typeof value !== 'string' || !value.trim() || !path.isAbsolute(value.trim())) {
+      throw new Error('Выберите абсолютный путь к JSON-карте расхождений MyBible.');
+    }
+    const mapPath = fs.realpathSync(value.trim());
+    if (path.extname(mapPath).toLowerCase() !== '.json' || !fs.statSync(mapPath).isFile()) {
+      throw new Error('Карта расхождений должна быть существующим JSON-файлом.');
+    }
+    return mapPath;
+  }
+
+  function resolveMyBibleFootnotesPath(value: unknown): string | undefined {
+    if (value == null || (typeof value === 'string' && !value.trim())) return undefined;
+    if (typeof value !== 'string' || !path.isAbsolute(value.trim())) {
+      throw new Error('Укажите абсолютный путь к файлу сносок MyBible.');
+    }
+    const footnotesPath = fs.realpathSync(value.trim());
+    if (path.extname(footnotesPath).toLowerCase() !== '.sqlite3' || !fs.statSync(footnotesPath).isFile()) {
+      throw new Error('Сноски MyBible должны быть существующим файлом SQLite3.');
+    }
+    return footnotesPath;
+  }
+
+  async function startMyBibleReview(mapPathValue: unknown, footnotesPathValue?: unknown): Promise<VerseMapReviewServer> {
+    const mapPath = resolveMyBibleMapPath(mapPathValue);
+    const footnotesPath = resolveMyBibleFootnotesPath(footnotesPathValue);
+    return queueMyBibleReviewOperation(async () => {
+      if (myBibleReviewServer?.mapPath === mapPath && myBibleReviewServer.footnotesPath === footnotesPath) return myBibleReviewServer;
+      await myBibleReviewServer?.close();
+      const { startVerseMapReviewServer } = await import('./mybible-verse-map-review.js');
+      myBibleReviewServer = await startVerseMapReviewServer({ mapPath, footnotesPath, port:0 });
+      return myBibleReviewServer;
+    });
+  }
+
+  async function stopMyBibleReview(): Promise<void> {
+    await queueMyBibleReviewOperation(async () => {
+      const active = myBibleReviewServer;
+      myBibleReviewServer = undefined;
+      await active?.close();
+    });
+  }
 
   function startDbInit(): void {
     if (cacheDb || dbInitStarted) return;
     dbInitStarted = true;
     logStartupTiming('db init scheduled');
-    setTimeout(() => {
+    setImmediate(() => {
+      if (closed) return;
       try {
         logStartupTiming('db init start');
         cacheDb = openCacheDb(options.dbPath);
@@ -682,7 +739,7 @@ export function startCacheUi(options: UiOptions): http.Server {
         dbInitError = error instanceof Error ? error : new Error(String(error));
         logStartupTiming(`db init failed: ${dbInitError.message}`);
       }
-    }, 1200);
+    });
   }
 
   function requireDb(): CacheDb {
@@ -736,7 +793,7 @@ export function startCacheUi(options: UiOptions): http.Server {
     if (oneNoteDataSource() === 'com') {
       return {
         id:currentPage.pageId,
-        title:extractOneNotePageTitle(currentPage.clientUrl),
+        title:currentPage.title?.trim() || extractOneNotePageTitle(currentPage.clientUrl),
         clientUrl:currentPage.clientUrl
       };
     }
@@ -966,18 +1023,24 @@ export function startCacheUi(options: UiOptions): http.Server {
       if (isCrossOriginStateChangingApiRequest(request, url.pathname, options.port)) {
         return json(response, 403, { error:'Cross-origin state-changing requests are not allowed.' });
       }
-      if (request.method === 'GET' && serveCacheUiAsset(url.pathname, response)) return;
+      if (request.method === 'GET' && (url.pathname.startsWith('/ui/') || url.pathname.startsWith('/vendor/pdfjs/'))) {
+        if (await serveCacheUiAsset(url.pathname, response)) return;
+        return json(response, 404, { error:'Asset not found.' });
+      }
       if (request.method === 'GET' && (url.pathname === '/' || url.pathname.startsWith('/page/') || url.pathname.startsWith('/bible/'))) return page(response);
       if (url.pathname === '/api/onenote-image' && request.method === 'GET') {
         await oneNoteImage(response, required(url, 'src'));
         return;
       }
       if (url.pathname === '/api/sync' && request.method === 'GET') return json(response, 200, syncState);
-      if (url.pathname === '/api/startup' && request.method === 'GET') return json(response, dbInitError ? 500 : 200, {
-        ready: Boolean(cacheDb),
-        starting: dbInitStarted && !cacheDb && !dbInitError,
-        error: dbInitError?.message
-      });
+      if (url.pathname === '/api/startup' && (request.method === 'GET' || request.method === 'POST')) {
+        if (request.method === 'POST') startDbInit();
+        return json(response, dbInitError ? 500 : 200, {
+          ready: Boolean(cacheDb),
+          starting: dbInitStarted && !cacheDb && !dbInitError,
+          error: dbInitError?.message
+        });
+      }
       if (url.pathname === '/api/runtime-settings' && request.method === 'GET') {
         return json(response, 200, readRuntimeLoggingSettings());
       }
@@ -1001,6 +1064,20 @@ export function startCacheUi(options: UiOptions): http.Server {
       }
       if (url.pathname === '/api/system/select-folder' && request.method === 'POST') {
         return json(response, 200, await electronControl('/select-folder', 'POST'));
+      }
+      if (url.pathname === '/api/system/select-file' && request.method === 'POST') {
+        const kind = url.searchParams.get('kind');
+        if (kind !== 'mybible-map' && kind !== 'mybible-footnotes') return json(response, 400, { error:'Unknown file selection kind.' });
+        return json(response, 200, await electronControl(`/select-file?kind=${encodeURIComponent(kind)}`, 'POST'));
+      }
+      if (url.pathname === '/api/mybible/review/start' && request.method === 'POST') {
+        const body = await readJsonBody(request);
+        const review = await startMyBibleReview(body.mapPath, body.footnotesPath);
+        return json(response, 200, { active:true, mapPath:review.mapPath, url:review.url });
+      }
+      if (url.pathname === '/api/mybible/review/stop' && request.method === 'POST') {
+        await stopMyBibleReview();
+        return json(response, 200, { active:false });
       }
       if (url.pathname === '/api/onenote/login/status' && request.method === 'GET') {
         const requestedSource = url.searchParams.get('source');
@@ -1070,13 +1147,23 @@ export function startCacheUi(options: UiOptions): http.Server {
         const dataSource = requestedSource === 'graph' || requestedSource === 'com' || requestedSource === 'folder'
           ? requestedSource
           : oneNoteDataSource();
-        const notebooks: RemoteNotebook[] = dataSource === 'folder'
-          ? await listFolderNotebooks(folderSourcePaths())
-          : dataSource === 'com'
-            ? (await loadOneNoteComSnapshot()).notebooks
-            : await graphListAll<RemoteNotebook>(
-                '/me/onenote/notebooks?$select=id,displayName,lastModifiedDateTime&$top=100'
-              );
+        let notebooks: RemoteNotebook[];
+        if (dataSource === 'folder') {
+          notebooks = await listFolderNotebooks(folderSourcePaths());
+        } else if (dataSource === 'com') {
+          try {
+            notebooks = (await loadOneNoteComSnapshot()).notebooks;
+          } catch (error: any) {
+            runtimeWarning('onenote-local', 'Failed to read OneNote hierarchy', {
+              error:error?.stack ?? error?.message ?? String(error)
+            });
+            throw error;
+          }
+        } else {
+          notebooks = await graphListAll<RemoteNotebook>(
+            '/me/onenote/notebooks?$select=id,displayName,lastModifiedDateTime&$top=100'
+          );
+        }
         return json(response, 200, {
           notebooks:notebooks.map(notebook => ({
             id:notebook.id,
@@ -1096,15 +1183,35 @@ export function startCacheUi(options: UiOptions): http.Server {
       }
       if (url.pathname === '/api/system/open-onenote-page' && request.method === 'POST') {
         const body = await readJsonBody(request);
-        let target = typeof body.url === 'string' ? body.url.trim() : '';
+        const target = typeof body.url === 'string' ? body.url.trim() : '';
         const pageId = typeof body.pageId === 'string' ? body.pageId.trim() : '';
-        if (!/^onenote:/i.test(target) && /^\{[0-9A-F-]+\}/i.test(pageId) && pageId.length <= 512) {
-          target = await bibleNoteOneNotePageLink(pageId);
+        let opened: Record<string, unknown>;
+        // Local hierarchy IDs identify objects already known to desktop OneNote.
+        // Opening a generated URL can instead send OneNote to an unusable cloud path.
+        if (/^\{[0-9A-F-]+\}/i.test(pageId)) {
+          if (pageId.length > 512) return json(response, 400, { error:'Invalid OneNote object id.' });
+          opened = await bibleNoteOpenOneNotePage(pageId);
+        } else {
+          if (!target || target.length > 8192 || !/^onenote:/i.test(target)) {
+            return json(response, 400, { error: 'A valid OneNote page link is required.' });
+          }
+          opened = await electronControl(`/onenote/open-page?url=${encodeURIComponent(target)}`, 'POST');
         }
-        if (!target || target.length > 8192 || !/^onenote:/i.test(target)) {
-          return json(response, 400, { error: 'A valid OneNote page link is required.' });
+        if (opened.opened === true) {
+          // Run activation in the desktop process, which owns the foreground window.
+          // A focus failure must not turn successful page navigation into an error.
+          try {
+            const activation = await electronControl('/onenote/activate', 'POST');
+            if (activation.activated === false) {
+              runtimeWarning('onenote-local', 'OneNote page opened but window activation failed');
+            }
+          } catch (error) {
+            runtimeWarning('onenote-local', 'OneNote page opened but window activation failed', {
+              error:error instanceof Error ? error.message : String(error)
+            });
+          }
         }
-        return json(response, 200, await electronControl(`/onenote/open-page?url=${encodeURIComponent(target)}`, 'POST'));
+        return json(response, 200, opened);
       }
       if (url.pathname === '/api/biblenote/health' && request.method === 'GET') {
         try {
@@ -1116,17 +1223,36 @@ export function startCacheUi(options: UiOptions): http.Server {
       }
       if (url.pathname === '/api/biblenote/modules' && request.method === 'GET') {
         try {
+          await ensureBibleNoteAvailable();
           const modules = await bibleNoteModules();
           return json(response, 200, { available:true, modules });
         } catch (error: any) {
           return json(response, 200, { available:false, error:error?.message ?? String(error), modules:[] });
         }
       }
+      if (url.pathname === '/api/system/legacy-bible' && request.method === 'GET') {
+        return json(response, 200, await electronControl('/legacy-bible/status'));
+      }
+      if ((url.pathname === '/api/system/legacy-bible/open-chapter' || url.pathname === '/api/system/legacy-bible/open-verse') && request.method === 'POST') {
+        const ref = await readJsonBody(request);
+        const action = url.pathname.endsWith('open-verse') ? 'open-verse' : 'open-chapter';
+        try {
+          (action === 'open-verse' ? legacyBibleVerseLink : legacyBibleChapterLink)(ref);
+        } catch {
+          return json(response, 400, { error:'A valid Bible reference is required.' });
+        }
+        return json(response, 200, await electronControl(`/legacy-bible/${action}?ref=${encodeURIComponent(JSON.stringify(ref))}`, 'POST'));
+      }
       if (url.pathname === '/api/system/protocol' && request.method === 'GET') {
         return json(response, 200, await electronControl('/protocol/status'));
       }
       if (url.pathname === '/api/system/protocol/register' && request.method === 'POST') {
         return json(response, 200, await electronControl('/protocol/register', 'POST'));
+      }
+      if (url.pathname === '/api/system/protocol' && request.method === 'PUT') {
+        const body = await readJsonBody(request);
+        if (typeof body.enabled !== 'boolean') return json(response, 400, { error:'enabled must be a boolean.' });
+        return json(response, 200, await electronControl(`/protocol/set?enabled=${body.enabled ? '1' : '0'}`, 'POST'));
       }
       if (url.pathname === '/api/system/onenote-integration' && request.method === 'GET') {
         return json(response, 200, await electronControl('/onenote-integration/status'));
@@ -1147,7 +1273,7 @@ export function startCacheUi(options: UiOptions): http.Server {
         return json(response, 200, {
           currentPage:{
             ...currentPage,
-            title:extractOneNotePageTitle(currentPage.clientUrl)
+            title:currentPage.title?.trim() || extractOneNotePageTitle(currentPage.clientUrl)
           }
         });
       }
@@ -1176,7 +1302,7 @@ export function startCacheUi(options: UiOptions): http.Server {
       }
       if (url.pathname === '/api/system/main-bible-action' && request.method === 'POST') {
         const body = await readJsonBody(request);
-        const action = body.action === 'reader' || body.action === 'notes' ? body.action : undefined;
+        const action = isMainBibleAction(body.action) ? body.action : undefined;
         const ref = body.ref;
         if (!action || !ref || typeof ref !== 'object' || Array.isArray(ref)) {
           return json(response, 400, { error: 'A valid Bible action and reference are required.' });
@@ -1710,32 +1836,7 @@ export function startCacheUi(options: UiOptions): http.Server {
           notebookIds,
           limit,
           includeAuxiliaryRefs
-        }).map(row => {
-          if (Number(row.verse) > 0) return row;
-          const noteRows = findParallelBibleReferenceNotes(db, {
-            bookIndex,
-            chapter,
-            verse,
-            relatedBookIndex:Number(row.bookIndex),
-            relatedChapter:Number(row.chapter),
-            notebookIds,
-            limit:200,
-            includeAuxiliaryRefs
-          });
-          const commonNotePageIds = [...new Set(noteRows.map(note => String(note.pageId)).filter(Boolean))].sort();
-          return {
-            ...row,
-            relationWeight:Math.round(noteRows.reduce((sum, note) => sum + Number(note.relationWeight || 0), 0) * 10000) / 10000,
-            relations:noteRows.reduce((sum, note) => sum + Number(note.relations || 0), 0),
-            pages:commonNotePageIds.length,
-            commonNotePageIds
-          };
-        }).sort((left, right) =>
-          Number(right.relationWeight || 0) - Number(left.relationWeight || 0)
-          || Number(right.maxRelationWeight || 0) - Number(left.maxRelationWeight || 0)
-          || Number(right.pages || 0) - Number(left.pages || 0)
-          || Number(left.relatedVerseId || 0) - Number(right.relatedVerseId || 0)
-        );
+        });
         return json(response, 200, { rows });
       }
       if (url.pathname === '/api/bible/parallel/notes') {
@@ -2213,6 +2314,8 @@ export function startCacheUi(options: UiOptions): http.Server {
               parent_notebook_name:row.notebook,
               parent_section_name:row.section,
               paragraphIndexes:[],
+              // Each row includes all occurrences of both references on this page.
+              bibleOccurrences:Array.isArray(row.bibleOccurrences) ? row.bibleOccurrences : [],
               snippet:null,
               snippetIndex:Number.POSITIVE_INFINITY,
               bibleRef:query,
@@ -2452,6 +2555,8 @@ export function startCacheUi(options: UiOptions): http.Server {
   });
 
   server.on('close', () => {
+    closed = true;
+    void stopMyBibleReview();
     cacheDb?.close();
     inductiveDb.close();
   });
@@ -2460,7 +2565,7 @@ export function startCacheUi(options: UiOptions): http.Server {
     console.log(`BibleNote: http://127.0.0.1:${options.port}`);
     console.log(`Database: ${options.dbPath}`);
     console.log('Press Ctrl+C to stop.');
-    startDbInit();
+    if (!options.deferDbInit) startDbInit();
   });
   return server;
 }

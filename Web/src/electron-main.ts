@@ -6,8 +6,16 @@ import http from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { resolveFolderSelection } from './folder-picker.js';
+import { seedBundledBibleModules } from './bundled-bible-modules.js';
 import { listenOnLoopbackWithFallback } from './loopback-server.js';
 import { ensureOfficeTrustedProtocol, isOfficeTrustedProtocol } from './office-trusted-protocol.js';
+import { isMainBibleAction, mainBibleActionScript } from './main-bible-action.js';
+import { quickAnalyzeCurrentPage } from './ribbon-api.js';
+import { activateOneNoteWindow } from './onenote-foreground.js';
+import { SingleFlight } from './single-flight.js';
+import { SessionCache } from './session-cache.js';
+import { findLegacyBibleHandler, legacyBibleChapterLink, legacyBibleVerseLink, legacyBibleLinkFromExternal, openLegacyBibleChapter } from './legacy-bible.js';
+import { BibleProtocolSettings, loadPreviousBibleProtocolCommands, notifyBibleProtocolAssociationsChanged, readBibleProtocolCommands, writeBibleProtocolCommands } from './bible-protocol-settings.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -22,14 +30,25 @@ const bibleProtocols = [primaryBibleProtocol, legacyBibleProtocol] as const;
 
 let bibleNoteProcess: ChildProcess | undefined;
 let uiProcess: ChildProcess | undefined;
+let ribbonWorkerProcess: ChildProcess | undefined;
 let controlServer: http.Server | undefined;
 let lastFolderPickerPath: string | undefined;
+let lastMyBibleMapPath: string | undefined;
+let lastMyBibleFootnotesPath: string | undefined;
 let mainWindow: BrowserWindow | undefined;
 let biblePopupWindow: BrowserWindow | undefined;
 let bibleNoteEnsurePromise: Promise<void> | undefined;
+let fullUiEnsurePromise: Promise<void> | undefined;
+const ribbonActionOperations = new SingleFlight<void>(1);
+const legacyBibleHandler = new SessionCache(findLegacyBibleHandler);
+const oneNoteIntegrationStatus = new SessionCache(() => runOneNoteRibbonRegistrar('status'));
 let uiProcessLog = '';
 let uiProcessExit: { code: number | null; signal: NodeJS.Signals | null } | undefined;
-let startupStartedAt = Date.now();
+const mainCodeStartedAt = Date.now();
+// An external launcher can include native executable loading in these timings.
+const launcherStartedAt = Number(process.env.BIBLENOTE_STARTUP_LAUNCHED_AT);
+const startupStartedAt = Number.isFinite(launcherStartedAt) && launcherStartedAt > 0
+  ? launcherStartedAt : Math.round(performance.timeOrigin);
 let startupLogPath = '';
 let pendingBibleLink = findBibleProtocolArg(process.argv);
 let pendingOneNoteRibbonAction = findOneNoteRibbonAction(process.argv);
@@ -88,10 +107,6 @@ function uiUrl(pathname = '/'): string {
   return `http://127.0.0.1:${uiPort}${pathname}`;
 }
 
-function uiBibleLinkUrl(link: string): string {
-  return uiUrl(`/?openBibleRef=${encodeURIComponent(link)}`);
-}
-
 function uiBiblePopupUrl(link: string): string {
   return uiUrl(`/?bibleVersePopup=1&openBibleRef=${encodeURIComponent(link)}`);
 }
@@ -108,25 +123,69 @@ function registerBibleProtocolHandler(): boolean {
   return registered && officeTrusted;
 }
 
-function bibleProtocolStatus(): {
+async function setBibleProtocolHandler(enabled: boolean): Promise<void> {
+  if (process.platform !== 'win32') {
+    if (enabled && registerBibleProtocolHandler()) return;
+    throw new Error('Выбор версии BibleNote доступен только в Windows.');
+  }
+  const previousFile = path.join(app.getPath('userData'), 'previous-bible-protocols.json');
+  const settings = new BibleProtocolSettings({
+    registered:() => bibleProtocols.every(protocol => app.isDefaultProtocolClient(protocol)),
+    register:registerBibleProtocolHandler,
+    notifyChanged:notifyBibleProtocolAssociationsChanged,
+    readCommands:readBibleProtocolCommands,
+    writeCommands:writeBibleProtocolCommands,
+    loadPrevious:() => loadPreviousBibleProtocolCommands(previousFile),
+    savePrevious:commands => {
+      fs.mkdirSync(path.dirname(previousFile), { recursive:true });
+      fs.writeFileSync(previousFile, JSON.stringify(commands), 'utf8');
+    },
+    findLegacy:() => legacyBibleHandler.get(),
+    legacyBridgeCommand:() => [process.execPath, ...(process.defaultApp ? [path.resolve(process.argv[1] ?? '')] : []),
+      '--open-legacy-bible-link', '%1'].map(argument => `"${argument}"`).join(' '),
+    exists:executable => {
+      try { return fs.statSync(executable).isFile(); } catch { return false; }
+    }
+  });
+  await settings.setEnabled(enabled);
+}
+
+async function forwardBibleLinkToLegacy(link: string): Promise<void> {
+  const executable = await legacyBibleHandler.get();
+  if (!executable) throw new Error('Старый BibleNote не найден.');
+  await openLegacyBibleChapter(executable, legacyBibleLinkFromExternal(link));
+}
+
+function usesLegacyBibleProtocolHandler(): boolean {
+  return process.platform === 'win32'
+    && !bibleProtocols.every(protocol => app.isDefaultProtocolClient(protocol));
+}
+
+async function bibleProtocolStatus(): Promise<{
   available: boolean;
   registered: boolean;
   protocol: string;
   legacyProtocols: string[];
   officeTrusted: boolean;
-} {
+}> {
   return {
     available:true,
     registered:bibleProtocols.every(protocol => app.isDefaultProtocolClient(protocol)),
     protocol:'bnVerse',
     legacyProtocols:['isbtBibleVerse'],
-    officeTrusted:bibleProtocols.every(protocol => isOfficeTrustedProtocol(protocol))
+    officeTrusted:(await Promise.all(bibleProtocols.map(protocol => isOfficeTrustedProtocol(protocol)))).every(Boolean)
   };
 }
 
 async function openBibleLink(link: string): Promise<void> {
+  if (usesLegacyBibleProtocolHandler()) {
+    await forwardBibleLinkToLegacy(link);
+    logStartup('bible link forwarded to legacy BibleNote because v4 handling is disabled');
+    return;
+  }
   logStartup('bible link received');
   pendingBibleLink = link;
+  await ensureFullUi(false);
   await waitForCacheUi(45000);
   const nextLink = pendingBibleLink;
   pendingBibleLink = undefined;
@@ -273,7 +332,22 @@ async function refreshCurrentOneNotePageInBackground(): Promise<void> {
   throw new Error(body?.error || text || `HTTP ${response.status}`);
 }
 
-async function handleOneNoteRibbonAction(action: OneNoteRibbonAction): Promise<void> {
+async function performOneNoteRibbonAction(action: OneNoteRibbonAction): Promise<void> {
+  if (action === 'quick-analyze') {
+    await ensureBibleNote();
+    const result = await quickAnalyzeCurrentPage(bibleNoteUrl);
+    logStartup(`OneNote Ribbon quick-analyze completed result=${JSON.stringify(result)}`);
+    return;
+  }
+
+  if (action === 'analyze-current' && !uiProcess) {
+    await ensureBibleNote();
+    const result = await runRibbonWorker(action);
+    logStartup(`OneNote Ribbon analyze-current completed without UI result=${JSON.stringify(result)}`);
+    return;
+  }
+
+  if (action === 'open-bible' || action === 'open') await ensureFullUi(true);
   if (action === 'open-bible' || action === 'open') focusMainWindow(true);
   if (action === 'analyze-current') {
     await showRibbonActivity('Определяем текущую страницу OneNote…', 'running');
@@ -347,11 +421,12 @@ async function handleOneNoteRibbonAction(action: OneNoteRibbonAction): Promise<v
     if (!target || target.isDestroyed()) {
       throw new Error('Окно BibleNote недоступно.');
     }
-    await target.webContents.executeJavaScript(
-      `Promise.resolve(openPage(${JSON.stringify(pageId)})).then(() => true)`,
+    const reusedExistingTab = await target.webContents.executeJavaScript(
+      `Promise.resolve(openPage(${JSON.stringify(pageId)}, { clearTarget:true, highlightQuery:'' })).then(result => result?.reused === true)`,
       true
     );
     focusMainWindow(true);
+    if (reusedExistingTab) return;
     if (body?.needsBackgroundSync === true) {
       await showRibbonActivity(
         currentPageTitle
@@ -363,7 +438,7 @@ async function handleOneNoteRibbonAction(action: OneNoteRibbonAction): Promise<v
         .then(async () => {
           if (target.isDestroyed()) return;
           await target.webContents.executeJavaScript(
-            `selectedPageId === ${JSON.stringify(pageId)} ? Promise.resolve(openPage(${JSON.stringify(pageId)}, { updateUrl:false, rememberHistory:false })).then(() => true) : true`,
+            `selectedPageId === ${JSON.stringify(pageId)} ? Promise.resolve(openPage(${JSON.stringify(pageId)}, { updateUrl:false, rememberHistory:false, clearTarget:true, highlightQuery:'' })).then(() => true) : true`,
             true
           );
           await showRibbonActivity(
@@ -389,6 +464,11 @@ async function handleOneNoteRibbonAction(action: OneNoteRibbonAction): Promise<v
   }
 }
 
+function handleOneNoteRibbonAction(action: OneNoteRibbonAction): Promise<void> {
+  if (action === 'open-bible' || action === 'open') return performOneNoteRibbonAction(action);
+  return ribbonActionOperations.run(action, () => performOneNoteRibbonAction(action)).promise;
+}
+
 async function startControlServer(): Promise<void> {
   if (controlServer) return;
   controlServer = http.createServer((request, response) => {
@@ -403,12 +483,24 @@ async function startControlServer(): Promise<void> {
     };
 
     if (url.pathname === '/protocol/status' && request.method === 'GET') {
-      send(200, bibleProtocolStatus());
+      bibleProtocolStatus().then(status => send(200, status)).catch(error => send(500, { error:String(error) }));
       return;
     }
     if (url.pathname === '/protocol/register' && request.method === 'POST') {
-      registerBibleProtocolHandler();
-      send(200, bibleProtocolStatus());
+      setBibleProtocolHandler(true).then(async () => send(200, await bibleProtocolStatus())).catch(error => {
+        send(500, { error:error instanceof Error ? error.message : String(error) });
+      });
+      return;
+    }
+    if (url.pathname === '/protocol/set' && request.method === 'POST') {
+      const enabled = url.searchParams.get('enabled');
+      if (enabled !== '0' && enabled !== '1') {
+        send(400, { error:'enabled must be 0 or 1.' });
+        return;
+      }
+      setBibleProtocolHandler(enabled === '1').then(async () => send(200, await bibleProtocolStatus())).catch(error => {
+        send(500, { error:error instanceof Error ? error.message : String(error) });
+      });
       return;
     }
     if (url.pathname === '/biblenote/ensure' && request.method === 'POST') {
@@ -437,6 +529,41 @@ async function startControlServer(): Promise<void> {
       }).catch(error => {
         send(500, { error:error instanceof Error ? error.message : String(error) });
       });
+      return;
+    }
+    if (url.pathname === '/legacy-bible/status' && request.method === 'GET') {
+      legacyBibleHandler.get().then(executable => {
+        send(200, { available:Boolean(executable) });
+      }).catch(error => {
+        send(500, { error:error instanceof Error ? error.message : String(error) });
+      });
+      return;
+    }
+    if ((url.pathname === '/legacy-bible/open-chapter' || url.pathname === '/legacy-bible/open-verse') && request.method === 'POST') {
+      let link: string;
+      try {
+        const createLink = url.pathname.endsWith('open-verse') ? legacyBibleVerseLink : legacyBibleChapterLink;
+        link = createLink(JSON.parse(url.searchParams.get('ref') || 'null'));
+      } catch {
+        send(400, { error:'A valid Bible reference is required.' });
+        return;
+      }
+      legacyBibleHandler.get().then(async executable => {
+        if (!executable) {
+          send(404, { error:'Старый BibleNote не найден на этом компьютере.' });
+          return;
+        }
+        await openLegacyBibleChapter(executable, link);
+        send(200, { opened:true });
+      }).catch(error => {
+        send(500, { error:error instanceof Error ? error.message : String(error) });
+      });
+      return;
+    }
+    if (url.pathname === '/onenote/activate' && request.method === 'POST') {
+      activateOneNoteWindow().then(activated => {
+        send(200, { activated });
+      }).catch(() => send(200, { activated:false }));
       return;
     }
     if (url.pathname === '/onenote/open-page' && request.method === 'POST') {
@@ -528,8 +655,42 @@ async function startControlServer(): Promise<void> {
       });
       return;
     }
+    if (url.pathname === '/select-file' && request.method === 'POST') {
+      const kind = url.searchParams.get('kind');
+      if (kind !== 'mybible-map' && kind !== 'mybible-footnotes') {
+        send(400, { error:'Unknown file selection kind.' });
+        return;
+      }
+      const isFootnotes = kind === 'mybible-footnotes';
+      const owner = mainWindow && !mainWindow.isDestroyed() ? mainWindow : undefined;
+      const options = {
+        title:isFootnotes ? 'Выбор файла сносок MyBible' : 'Выбор карты расхождений',
+        buttonLabel:isFootnotes ? 'Выбрать сноски' : 'Выбрать карту',
+        defaultPath:(isFootnotes ? lastMyBibleFootnotesPath : lastMyBibleMapPath) || app.getPath('documents'),
+        properties:['openFile'] as Array<'openFile'>,
+        filters:isFootnotes ? [
+          { name:'Сноски MyBible', extensions:['sqlite3'] },
+          { name:'Все файлы', extensions:['*'] }
+        ] : [
+          { name:'Карта расхождений', extensions:['json'] },
+          { name:'Все файлы', extensions:['*'] }
+        ]
+      };
+      const selection = owner
+        ? dialog.showOpenDialog(owner, options)
+        : dialog.showOpenDialog(options);
+      selection.then(result => {
+        const filePath = result.canceled ? undefined : result.filePaths[0];
+        if (filePath && isFootnotes) lastMyBibleFootnotesPath = filePath;
+        if (filePath && !isFootnotes) lastMyBibleMapPath = filePath;
+        send(200, { canceled:result.canceled || !filePath, filePath });
+      }).catch(error => {
+        send(500, { error:error instanceof Error ? error.message : String(error) });
+      });
+      return;
+    }
     if (url.pathname === '/onenote-integration/status' && request.method === 'GET') {
-      runOneNoteRibbonRegistrar('status').then(result => {
+      oneNoteIntegrationStatus.get().then(result => {
         send(200, result);
       }).catch(error => {
         send(500, { available:true, error:error instanceof Error ? error.message : String(error) });
@@ -543,8 +704,10 @@ async function startControlServer(): Promise<void> {
     ) {
       const action = url.pathname.endsWith('/install') ? 'install' : 'uninstall';
       runOneNoteRibbonRegistrar(action).then(result => {
+        oneNoteIntegrationStatus.set(result);
         send(200, result);
       }).catch(error => {
+        oneNoteIntegrationStatus.clear();
         send(500, { available:true, error:error instanceof Error ? error.message : String(error) });
       });
       return;
@@ -562,6 +725,9 @@ async function startControlServer(): Promise<void> {
           if (action === 'open') void showOneNotePageLoadingError(message);
         } else if (action === 'analyze-current') {
           void showRibbonActivity(`Не удалось синхронизировать текущую страницу: ${message}`, 'error');
+          if (!mainWindow) dialog.showErrorBox('BibleNote — синхронизация не выполнена', message);
+        } else if (action === 'quick-analyze') {
+          dialog.showErrorBox('BibleNote — распознавание не выполнено', message);
         }
       });
       return;
@@ -576,7 +742,7 @@ async function startControlServer(): Promise<void> {
         send(400, { error:'Invalid Bible reference.' });
         return;
       }
-      if ((action !== 'reader' && action !== 'notes') || !ref || typeof ref !== 'object' || Array.isArray(ref)) {
+      if (!isMainBibleAction(action) || !ref || typeof ref !== 'object' || Array.isArray(ref)) {
         send(400, { error:'A valid Bible action and reference are required.' });
         return;
       }
@@ -585,10 +751,7 @@ async function startControlServer(): Promise<void> {
         send(503, { error:'The main BibleNote window is not available.' });
         return;
       }
-      const serializedRef = JSON.stringify(ref);
-      const script = action === 'reader'
-        ? `Promise.resolve(openBibleTextInReader(${serializedRef})).then(() => true)`
-        : `Promise.resolve((bibleTextDialog.open && bibleTextDialog.close(), showBibleReaderVerseNotes(${serializedRef}))).then(() => true)`;
+      const script = mainBibleActionScript(action, ref as Record<string, unknown>);
       if (target.isMinimized()) target.restore();
       target.show();
       target.focus();
@@ -706,39 +869,46 @@ function cacheUiScriptPath(): string {
   return path.join(__dirname, 'cache-ui.js');
 }
 
+function ribbonWorkerScriptPath(): string {
+  return path.join(__dirname, 'ribbon-worker.js');
+}
+
 function appIconPath(): string {
   const iconName = process.platform === 'win32' ? 'biblenote.ico' : 'biblenote-icon.png';
   return path.resolve(__dirname, '..', 'assets', iconName);
 }
 
-function seedBundledBibleModules(): void {
-  if (!app.isPackaged || process.platform !== 'darwin' || !process.resourcesPath) return;
+function seedPackagedBibleModules(): void {
+  if (!app.isPackaged || !process.resourcesPath) return;
 
   const sourceRoot = path.join(process.resourcesPath, 'BibleNote', 'Modules');
-  const targetRoot = path.join(app.getPath('userData'), 'Modules');
-  if (!fs.existsSync(sourceRoot)) return;
+  let dataRoot: string;
+  if (process.env.BIBLENOTE_DATA_DIR) {
+    dataRoot = process.env.BIBLENOTE_DATA_DIR;
+  } else if (process.platform === 'darwin') {
+    dataRoot = app.getPath('userData');
+  } else if (process.platform === 'win32') {
+    dataRoot = path.join(process.env.LOCALAPPDATA || path.join(app.getPath('home'), 'AppData', 'Local'), 'BibleNote');
+  } else {
+    return;
+  }
 
-  fs.mkdirSync(targetRoot, { recursive:true });
-  for (const entry of fs.readdirSync(sourceRoot, { withFileTypes:true })) {
-    if (!entry.isDirectory()) continue;
-    const target = path.join(targetRoot, entry.name);
-    if (fs.existsSync(target)) continue;
-    fs.cpSync(path.join(sourceRoot, entry.name), target, { recursive:true });
-    logStartup(`seeded bundled Bible module ${entry.name}`);
+  for (const moduleName of seedBundledBibleModules(sourceRoot, path.join(dataRoot, 'Modules'))) {
+    logStartup(`seeded bundled Bible module ${moduleName}`);
   }
 }
 
 function startBibleNote(): void {
-  seedBundledBibleModules();
+  seedPackagedBibleModules();
+  const exe = bibleNoteExecutablePath();
   const env = {
     ...process.env,
-    ASPNETCORE_ENVIRONMENT: process.env.ASPNETCORE_ENVIRONMENT ?? 'Development',
+    ASPNETCORE_ENVIRONMENT: exe ? 'Production' : process.env.ASPNETCORE_ENVIRONMENT ?? 'Development',
     BIBLENOTE_API_URL: bibleNoteUrl,
     ...(process.platform === 'darwin'
       ? { BIBLENOTE_DATA_DIR: process.env.BIBLENOTE_DATA_DIR ?? app.getPath('userData') }
       : {})
   };
-  const exe = bibleNoteExecutablePath();
   if (exe) {
     logStartup(`starting BibleNote API exe=${exe}`);
     bibleNoteProcess = spawn(exe, ['--urls', bibleNoteUrl], {
@@ -801,6 +971,8 @@ function startBibleNoteInBackground(): void {
 }
 
 function startCacheUiProcess(): void {
+  if (uiProcess && uiProcessExit === undefined) return;
+  uiProcessExit = undefined;
   const uiScript = cacheUiScriptPath();
   const uiArgs = [uiScript, '--port', String(uiPort)];
   if (process.env.ONENOTE_CACHE_DB) {
@@ -814,6 +986,7 @@ function startCacheUiProcess(): void {
       BIBLENOTE_EXE_PATH: bibleNoteExecutablePath() ?? '',
       ONENOTE_ELECTRON_CONTROL_URL: `http://127.0.0.1:${electronControlPort}`,
       ONENOTE_STARTUP_TIMING: '1',
+      ONENOTE_CACHE_DEFER_INIT: '1',
       ONENOTE_STARTUP_LOG: startupLogPath,
       ...(app.isPackaged && process.platform === 'darwin' ? { ELECTRON_RUN_AS_NODE: '1' } : {})
     },
@@ -826,6 +999,52 @@ function startCacheUiProcess(): void {
   uiProcess.on('exit', (code, signal) => {
     uiProcessExit = { code, signal };
     logStartup(`cache ui process exited code=${code ?? 'null'} signal=${signal ?? 'null'}`);
+  });
+}
+
+function runRibbonWorker(action: 'analyze-current'): Promise<Record<string, unknown>> {
+  return new Promise((resolve, reject) => {
+    const args = [ribbonWorkerScriptPath(), '--action', action];
+    if (process.env.ONENOTE_CACHE_DB) args.push('--db', process.env.ONENOTE_CACHE_DB);
+    const child = spawn(nodeExecutablePath(), args, {
+      cwd:path.resolve(__dirname, '..'),
+      env:{
+        ...process.env,
+        BIBLENOTE_API_URL:bibleNoteUrl,
+        BIBLENOTE_EXE_PATH:bibleNoteExecutablePath() ?? '',
+        ONENOTE_ELECTRON_CONTROL_URL:`http://127.0.0.1:${electronControlPort}`,
+        ...(app.isPackaged && process.platform === 'darwin' ? { ELECTRON_RUN_AS_NODE:'1' } : {})
+      },
+      windowsHide:true,
+      stdio:['ignore', 'pipe', 'pipe']
+    });
+    ribbonWorkerProcess = child;
+    let stdout = '';
+    let stderr = '';
+    child.stdout?.on('data', chunk => {
+      stdout = `${stdout}${chunk.toString()}`.slice(-1024 * 1024);
+    });
+    child.stderr?.on('data', chunk => {
+      stderr = `${stderr}${chunk.toString()}`.slice(-1024 * 1024);
+    });
+    child.on('error', reject);
+    child.on('exit', code => {
+      if (ribbonWorkerProcess === child) ribbonWorkerProcess = undefined;
+      if (code !== 0) {
+        reject(new Error((stderr || stdout || `Ribbon worker exited with code ${code ?? 'null'}.`).trim()));
+        return;
+      }
+      const line = stdout.split(/\r?\n/).find(value => value.startsWith('BIBLENOTE_RIBBON_RESULT='));
+      if (!line) {
+        reject(new Error('Ribbon worker did not return a result.'));
+        return;
+      }
+      try {
+        resolve(JSON.parse(line.slice('BIBLENOTE_RIBBON_RESULT='.length)) as Record<string, unknown>);
+      } catch (error) {
+        reject(new Error(`Ribbon worker returned invalid JSON: ${error instanceof Error ? error.message : String(error)}`));
+      }
+    });
   });
 }
 
@@ -843,10 +1062,28 @@ async function waitForCacheUi(timeoutMs: number): Promise<void> {
     } catch (error) {
       lastError = error;
     }
-    await new Promise(resolve => setTimeout(resolve, 300));
+    await new Promise(resolve => setTimeout(resolve, 100));
   }
   const suffix = uiProcessLog ? `\n\nCache UI log:\n${uiProcessLog}` : '';
   throw lastError instanceof Error ? new Error(`${lastError.message}${suffix}`) : new Error(`${String(lastError)}${suffix}`);
+}
+
+async function waitForCacheReady(timeoutMs: number): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  let lastError: unknown;
+  while (Date.now() < deadline) {
+    try {
+      const result = await request(uiUrl('/api/startup'));
+      const body = result.body ? JSON.parse(result.body) as { ready?: boolean; error?: string } : {};
+      if (result.statusCode === 200 && body.ready === true) return;
+      if (body.error) throw new Error(body.error);
+      lastError = new Error('Local cache is starting.');
+    } catch (error) {
+      lastError = error;
+    }
+    await new Promise(resolve => setTimeout(resolve, 150));
+  }
+  throw lastError instanceof Error ? lastError : new Error(String(lastError));
 }
 
 function loadingHtml(): string {
@@ -1046,8 +1283,7 @@ async function recoverRenderer(reason: string): Promise<void> {
   return rendererRecoveryPromise;
 }
 
-async function createWindow(): Promise<void> {
-  startupStartedAt = Date.now();
+async function initializeApplication(): Promise<void> {
   startupLogPath = path.join(app.getPath('userData'), 'startup.log');
   try {
     fs.mkdirSync(path.dirname(startupLogPath), { recursive: true });
@@ -1055,43 +1291,102 @@ async function createWindow(): Promise<void> {
   } catch {
     startupLogPath = '';
   }
-  logStartup('createWindow start');
+  logStartup(`application ready electron=${process.versions.electron} mainCodeAt=+${mainCodeStartedAt - startupStartedAt}ms clock=${launcherStartedAt > 0 ? 'launcher' : 'node-time-origin'}`);
   process.env.BIBLENOTE_API_URL = bibleNoteUrl;
-  const protocolRegistered = registerBibleProtocolHandler();
-  logStartup(`bible protocol registration requested result=${protocolRegistered} registered=${bibleProtocols.every(protocol => app.isDefaultProtocolClient(protocol))} officeTrusted=${bibleProtocols.every(protocol => isOfficeTrustedProtocol(protocol))}`);
   installApplicationMenu();
   await startControlServer();
-  void runOneNoteRibbonRegistrar('status').then(status => {
-    if (status.enabled === true) return runOneNoteRibbonRegistrar('configure');
-    return undefined;
-  }).catch(error => {
-    logStartup(`OneNote Ribbon configuration refresh failed: ${error instanceof Error ? error.message : String(error)}`);
+  void legacyBibleHandler.get().catch(error => logStartup(`Legacy BibleNote discovery failed: ${String(error)}`));
+}
+
+let startupIntegrationPromise: Promise<unknown> | undefined;
+function refreshStartupIntegration(): void {
+  if (startupIntegrationPromise) return;
+  startupIntegrationPromise = Promise.all([
+    bibleProtocolStatus().then(status => logStartup(`bible protocol status registered=${status.registered} officeTrusted=${status.officeTrusted}`)),
+    oneNoteIntegrationStatus.get().then(async status => {
+      if (status.enabled === true) oneNoteIntegrationStatus.set(await runOneNoteRibbonRegistrar('configure'));
+      return undefined;
+    })
+  ]).catch(error => logStartup(`Startup integration refresh failed: ${error instanceof Error ? error.message : String(error)}`));
+}
+
+async function ensureFullUi(show: boolean, initialUrl = uiUrl('/')): Promise<void> {
+  if (fullUiEnsurePromise) {
+    await fullUiEnsurePromise;
+    if (show) focusMainWindow(true);
+    return;
+  }
+
+  fullUiEnsurePromise = (async () => {
+    mainWindow = createBrowserWindow(show);
+    startRendererHealthMonitor();
+    logStartup('browser window created');
+
+    const loadingPage = showLoadingPage(mainWindow);
+    startCacheUiProcess();
+    logStartup('cache ui process spawned');
+    await loadingPage;
+    logStartup('loading page shown');
+    startBibleNoteInBackground();
+    logStartup('BibleNote background startup requested');
+    await waitForCacheUi(45000);
+    logStartup('cache ui http ready');
+
+    await mainWindow.loadURL(initialUrl);
+    logStartup('main ui loaded');
+    await waitForCacheReady(45_000);
+    logStartup('main ui cache ready');
+    if (show) focusMainWindow(true);
+    // Wait for the initial notes view before starting optional registry/.NET work.
+    void mainWindow.webContents.executeJavaScript(
+      `typeof bibleNoteInitialization === 'undefined' ? null : bibleNoteInitialization`
+    ).then(() => {
+      logStartup('initial view ready');
+      refreshStartupIntegration();
+    }).catch(error => logStartup(`Initial view readiness failed: ${String(error)}`));
+  })().catch(error => {
+    fullUiEnsurePromise = undefined;
+    throw error;
   });
 
-  mainWindow = createBrowserWindow(
-    pendingOneNoteRibbonAction === undefined
-      || pendingOneNoteRibbonAction === 'open-bible'
-      || pendingOneNoteRibbonAction === 'open'
-  );
-  startRendererHealthMonitor();
-  logStartup('browser window created');
+  await fullUiEnsurePromise;
+}
 
-  await showLoadingPage(mainWindow);
-  logStartup('loading page shown');
-
-  startCacheUiProcess();
-  logStartup('cache ui process spawned');
-  startBibleNoteInBackground();
-  logStartup('BibleNote background startup requested');
-  await waitForCacheUi(45000);
-  logStartup('cache ui http ready');
-
+async function startApplication(): Promise<void> {
+  // Office may retain an old command containing --open-legacy-bible-link.
+  // The current Windows setting takes precedence over that cached argument.
+  if (pendingBibleLink && usesLegacyBibleProtocolHandler()) {
+    await forwardBibleLinkToLegacy(pendingBibleLink);
+    app.quit();
+    return;
+  }
+  await initializeApplication();
   const firstBibleLink = pendingBibleLink;
   pendingBibleLink = undefined;
-  await mainWindow.loadURL(firstBibleLink ? uiBibleLinkUrl(firstBibleLink) : uiUrl('/'));
-  logStartup('main ui loaded');
   const firstRibbonAction = pendingOneNoteRibbonAction;
   pendingOneNoteRibbonAction = undefined;
+
+  if (firstRibbonAction === 'quick-analyze' || firstRibbonAction === 'analyze-current') {
+    try {
+      await handleOneNoteRibbonAction(firstRibbonAction);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      logStartup(`startup OneNote Ribbon action ${firstRibbonAction} failed: ${message}`);
+      dialog.showErrorBox(
+        'BibleNote — команда OneNote не выполнена',
+        firstRibbonAction === 'quick-analyze'
+          ? `Не удалось распознать библейские ссылки.\n\n${message}`
+          : `Не удалось синхронизировать текущую страницу.\n\n${message}`
+      );
+    }
+    return;
+  }
+
+  if (firstBibleLink) {
+    await openBibleLink(firstBibleLink);
+  } else {
+    await ensureFullUi(true);
+  }
   if (firstRibbonAction) {
     await handleOneNoteRibbonAction(firstRibbonAction).catch(async error => {
       const message = error instanceof Error ? error.message : String(error);
@@ -1121,6 +1416,9 @@ app.on('before-quit', () => {
   controlServer?.close();
   if (uiProcess && !uiProcess.killed) {
     uiProcess.kill();
+  }
+  if (ribbonWorkerProcess && !ribbonWorkerProcess.killed) {
+    ribbonWorkerProcess.kill();
   }
   if (bibleNoteProcess && !bibleNoteProcess.killed) {
     bibleNoteProcess.kill();
@@ -1154,10 +1452,18 @@ if (!singleInstanceLock) {
           focusMainWindow(true);
           void showRibbonActivity(`Команда OneNote не выполнена: ${message}`, 'error');
           if (ribbonAction === 'open') void showOneNotePageLoadingError(message);
+        } else if (ribbonAction === 'analyze-current') {
+          if (mainWindow) void showRibbonActivity(`Не удалось синхронизировать текущую страницу: ${message}`, 'error');
+          else dialog.showErrorBox('BibleNote — синхронизация не выполнена', message);
+        } else {
+          dialog.showErrorBox('BibleNote — распознавание не выполнено', message);
         }
       });
-    } else if (mainWindow) {
-      focusMainWindow(true);
+    } else {
+      void ensureFullUi(true).catch(error => {
+        const message = error instanceof Error ? error.message : String(error);
+        dialog.showErrorBox('BibleNote failed to open', message);
+      });
     }
   });
 }
@@ -1174,7 +1480,7 @@ app.on('open-url', (event, url) => {
 
 if (singleInstanceLock) {
   app.whenReady()
-    .then(createWindow)
+    .then(startApplication)
     .catch(error => {
       const message = error instanceof Error ? error.stack ?? error.message : String(error);
       dialog.showErrorBox('BibleNote failed to start', message);

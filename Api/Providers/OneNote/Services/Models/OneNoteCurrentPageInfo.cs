@@ -4,6 +4,8 @@ namespace BibleNote.Providers.OneNote.Services.Models
     {
         public string PageId { get; set; }
 
+        public string Title { get; set; }
+
         public string ClientUrl { get; set; }
     }
 }

@@ -1,5 +1,6 @@
 import {
   normalizedPdfText,
+  pdfLinkMatchRange,
   pdfLinkMatchesPage,
   pdfReferencePattern,
   preferredPdfLinkMatches
@@ -34,6 +35,8 @@ let targetFallbackTimer;
 let targetSearchToken = 0;
 let targetSearchHasMatches = false;
 let activeTargetKey = '';
+let targetAlignmentTimer;
+let targetSearch;
 let mainAlignmentTimer;
 let mainSearchRunToken = 0;
 let pendingPageViewState;
@@ -59,6 +62,8 @@ function reportPageViewState(requestId) {
     ...pageViewState()
   }, '*');
 }
+
+viewerContainer.addEventListener('scroll', () => reportPageViewState(), { passive:true });
 
 function restorePageViewState(state) {
   if (!state) return;
@@ -120,6 +125,7 @@ function dispatchFind(query, options = {}) {
 function enablePdfSearch() {
   if (pdfSearchReady || !pdfTextLayerReady || !pdfFindReady) return;
   pdfSearchReady = true;
+  if (activeFindKind === 'target' && targetSearch) startTargetSearch();
   startMainSearch();
 }
 
@@ -194,6 +200,7 @@ function handleFindMatches(matchesCount = {}) {
     if (Math.max(0, Number(matchesCount.total) || 0) > 0) {
       targetSearchHasMatches = true;
       clearTimeout(targetFallbackTimer);
+      scheduleTargetAlignment();
     }
     return;
   }
@@ -289,20 +296,63 @@ function runTargetSearch(paragraphIndex, targetIndex, forceTarget = false) {
   const primary = normalizedPdfText(target.query || target.highlightText);
   const fallback = normalizedPdfText(target.highlightText);
   if (!primary && !fallback) return;
-  const targetKey = JSON.stringify({ paragraphIndex, targetIndex, primary, fallback });
-  if (activeFindKind === 'target' && activeTargetKey === targetKey && targetSearchHasMatches) return;
+  const targetKey = JSON.stringify({ paragraphIndex, targetIndex, ...target });
+  if (activeFindKind === 'target' && activeTargetKey === targetKey) return;
   clearTimeout(targetFallbackTimer);
-  const token = ++targetSearchToken;
+  clearTimeout(targetAlignmentTimer);
+  ++targetSearchToken;
   targetSearchHasMatches = false;
   activeTargetKey = targetKey;
   activeFindKind = 'target';
+  targetSearch = { ...target, primary, fallback, query:primary || fallback };
+  if (pdfSearchReady) startTargetSearch();
+}
+
+function startTargetSearch() {
+  const { primary, fallback, pageNumber:targetPage } = targetSearch;
+  const token = targetSearchToken;
+  if (Number.isInteger(targetPage) && targetPage > 0 && targetPage <= pdfDocument.numPages) {
+    pdfViewer.currentPageNumber = targetPage;
+  }
   dispatchFind(primary || fallback, { entireWord:false });
   if (fallback && fallback !== primary) {
     targetFallbackTimer = setTimeout(() => {
       if (token !== targetSearchToken || activeFindKind !== 'target' || targetSearchHasMatches) return;
+      targetSearch.query = fallback;
       dispatchFind(fallback, { entireWord:false });
     }, 900);
   }
+}
+
+function scheduleTargetAlignment(delay = 0) {
+  clearTimeout(targetAlignmentTimer);
+  const token = targetSearchToken;
+  targetAlignmentTimer = setTimeout(() => {
+    if (activeFindKind !== 'target' || token !== targetSearchToken || !targetSearch) return;
+    // Counts arrive page by page. Align only after the entire query has been
+    // evaluated, otherwise a later page changes the global match index.
+    const matches = findController.pageMatches;
+    if (!Array.from({ length:pdfDocument.numPages }, (_, index) => matches[index]).every(Array.isArray)) {
+      scheduleTargetAlignment(50);
+      return;
+    }
+    const selected = findController.selected;
+    if (selected.pageIdx < 0 || selected.matchIdx < 0) return;
+    const pageIndex = Number(targetSearch.pageNumber) - 1;
+    const localIndex = Number(targetSearch.occurrenceIndex);
+    const count = matches.reduce((total, page) => total + page.length, 0);
+    const hasPageLocation = Number.isInteger(pageIndex) && pageIndex >= 0
+      && Number.isInteger(localIndex) && localIndex >= 0 && localIndex < (matches[pageIndex]?.length || 0);
+    const desired = targetSearch.query !== targetSearch.primary ? 0 : hasPageLocation
+      ? matches.slice(0, pageIndex).reduce((total, page) => total + page.length, 0) + localIndex
+      : Number(targetSearch.documentOccurrenceIndex);
+    if (!Number.isInteger(desired) || desired < 0 || desired >= count) return;
+    const current = matches.slice(0, selected.pageIdx).reduce((total, page) => total + page.length, 0) + selected.matchIdx;
+    if (current === desired) return;
+    const forward = (desired - current + count) % count;
+    const backward = (current - desired + count) % count;
+    dispatchFind(targetSearch.query, { again:true, previous:backward < forward });
+  }, delay);
 }
 
 function applyRelativeZoom(zoom, notifyParent = false) {
@@ -370,9 +420,9 @@ function mappedPosition(positions, index, step) {
   return undefined;
 }
 
-function addBibleLinkRect(layer, overlay, match, link, positions) {
-  const start = mappedPosition(positions, match.index, 1);
-  const end = mappedPosition(positions, match.index + match[0].length - 1, -1);
+function addBibleLinkRect(layer, overlay, bounds, link, positions) {
+  const start = mappedPosition(positions, bounds.start, 1);
+  const end = mappedPosition(positions, bounds.end - 1, -1);
   if (!start || !end) return;
   const range = document.createRange();
   try {
@@ -412,7 +462,7 @@ function applyBibleLinksToLayer(layer) {
   const links = (Array.isArray(pdfContext.bibleLinks) ? pdfContext.bibleLinks : [])
     .filter(link => link?.text && link?.href
       && pdfLinkMatchesPage(link.pageNumber, renderedPageNumber))
-    .sort((left, right) => String(right.text).length - String(left.text).length);
+    .sort((left, right) => String(right.matchText || right.text).length - String(left.matchText || left.text).length);
   if (links.length === 0) return;
   const mapped = mappedTextLayer(layer);
   if (!mapped.text) return;
@@ -421,16 +471,15 @@ function applyBibleLinksToLayer(layer) {
   overlay.setAttribute('aria-label', 'Библейские ссылки');
   const occupied = [];
   for (const link of links) {
-    const pattern = pdfReferencePattern(link.text);
+    const pattern = pdfReferencePattern(link.matchText || link.text);
     if (!pattern) continue;
     const matches = [...mapped.text.matchAll(pattern)];
     const preferred = preferredPdfLinkMatches(matches, link.occurrenceIndex);
     for (const match of preferred.matches) {
-      const start = Number(match.index) || 0;
-      const end = start + match[0].length;
-      if (occupied.some(range => start < range.end && end > range.start)) continue;
-      occupied.push({ start, end });
-      addBibleLinkRect(layer, overlay, match, link, mapped.positions);
+      const bounds = pdfLinkMatchRange(match, link.matchText ? link.text : undefined);
+      if (!bounds || occupied.some(range => bounds.start < range.end && bounds.end > range.start)) continue;
+      occupied.push(bounds);
+      addBibleLinkRect(layer, overlay, bounds, link, mapped.positions);
       if (preferred.occurrenceSpecific) break;
     }
   }
@@ -466,6 +515,8 @@ window.addEventListener('message', event => {
   if (data.type === 'onenote-clear-target-paragraphs' && activeFindKind === 'target') {
     ++targetSearchToken;
     clearTimeout(targetFallbackTimer);
+    clearTimeout(targetAlignmentTimer);
+    targetSearch = undefined;
     dispatchFind('');
     activeFindKind = '';
     activeTargetKey = '';
@@ -477,6 +528,18 @@ window.addEventListener('message', event => {
     restorePageViewState(data.state);
   }
 });
+
+document.addEventListener('pointerdown', () => {
+  parent.postMessage({ type:'onenote-page-pointerdown' }, '*');
+}, true);
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape') parent.postMessage({ type:'onenote-page-escape' }, '*');
+  if (event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey && /^[1-9]$/.test(event.key)) {
+    event.preventDefault();
+    event.stopPropagation();
+    parent.postMessage({ type:'onenote-workspace-tab-select', number:Number(event.key) }, '*');
+  }
+}, true);
 
 window.addEventListener('keydown', event => {
   if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && String(event.key).toLowerCase() === 'f') {

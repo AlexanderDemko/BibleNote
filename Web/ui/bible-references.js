@@ -116,6 +116,66 @@ function createBibleRefAction(label, icon, onClick, options = {}) {
   return button;
 }
 
+let legacyBibleAvailable;
+let legacyBibleStatusPromise;
+
+function loadLegacyBibleStatus() {
+  if (!legacyBibleStatusPromise) {
+    legacyBibleStatusPromise = api('/api/system/legacy-bible').then(status => {
+      legacyBibleAvailable = status.available === true;
+      return legacyBibleAvailable;
+    }).catch(error => {
+      legacyBibleStatusPromise = undefined;
+      throw error;
+    });
+  }
+  return legacyBibleStatusPromise;
+}
+
+function updateLegacyBibleChapterButtonVisibility(button) {
+  button.hidden = legacyBibleAvailable !== true;
+  if (legacyBibleAvailable === undefined) {
+    loadLegacyBibleStatus().then(available => { button.hidden = !available; }).catch(() => {});
+  }
+}
+
+function createLegacyBibleButton(ref, mode) {
+  const openVerse = mode === 'verse';
+  const button = document.createElement('button');
+  button.className = 'title-tool legacy-bible-chapter-button';
+  button.dataset.legacyBibleMode = mode;
+  button.type = 'button';
+  button.innerHTML = oneNoteLogoSvg();
+  button.title = openVerse
+    ? 'Открыть первый стих исходного диапазона в OneNote через старый BibleNote'
+    : 'Открыть главу в OneNote через старый BibleNote';
+  button.setAttribute('aria-label', openVerse ? 'Открыть стих в OneNote' : 'Открыть главу в OneNote');
+  updateLegacyBibleChapterButtonVisibility(button);
+  button.addEventListener('click', async () => {
+    button.disabled = true;
+    try {
+      await api('/api/system/legacy-bible/' + (openVerse ? 'open-verse' : 'open-chapter'), {
+        method:'POST',
+        body:JSON.stringify({
+          bookIndex:Number(ref.bookIndex), chapter:Number(ref.chapter),
+          bookName:ref.bookShortName || ref.bookName,
+          ...(openVerse ? { verse:Number(ref.verse ?? 1) } : {})
+        })
+      });
+    } catch (error) {
+      if (bibleTextDialog.contains(button)) bibleTextMeta.textContent = 'Не удалось открыть стих в OneNote: ' + error.message;
+      else showError(error);
+    } finally {
+      button.disabled = false;
+    }
+  });
+  return button;
+}
+
+function createLegacyBibleChapterButton(ref) {
+  return createLegacyBibleButton(ref, 'chapter');
+}
+
 function renderBiblePageRefs(data) {
   const section = document.createElement('details');
   section.className = 'bible-page-refs';
@@ -362,6 +422,12 @@ function createVerseParallelButton(ref) {
   button.title = 'Показать параллельные ссылки';
   button.setAttribute('aria-label', 'Показать параллельные ссылки для ' + (ref.normalizedRef || ref.originalText));
   button.addEventListener('click', () => {
+    if (bibleVersePopupMode) {
+      openBibleActionInMain('parallel', ref).catch(error => {
+        bibleTextMeta.textContent = 'Не удалось открыть параллельные ссылки: ' + (error?.message || String(error));
+      });
+      return;
+    }
     if (bibleTextDialog.open) bibleTextDialog.close();
     openBibleParallelPanel(ref).catch(showError);
   });
@@ -401,10 +467,20 @@ function renderBibleContextText(result, highlightRef) {
   return renderBibleTextVerses(result, highlightRef, highlightRef);
 }
 
+function updateBibleTextLegacyVerseButton(result, ref) {
+  bibleTextDialog.querySelector('.legacy-bible-chapter-button')?.remove();
+  bibleTextDialog.querySelector('.bible-text-actions').append(createLegacyBibleButton({
+    ...result, ...ref,
+    bookName:ref.bookName || result.bookName,
+    bookShortName:ref.bookShortName || result.bookShortName
+  }, 'verse'));
+}
+
 async function showBibleText(ref, options = {}) {
   if (!ref.bookIndex || !ref.chapter) return;
   uiLog('ui.showBibleText', { ref });
   currentBibleTextRef = ref;
+  updateBibleTextLegacyVerseButton({}, ref);
   if (options.remember !== false) rememberBibleTextHistory(ref, 'text');
   else updateBibleTextHistoryButtons();
   showBibleTextContextButton.hidden = !ref.verse;
@@ -421,6 +497,7 @@ async function showBibleText(ref, options = {}) {
     bibleTextTitle.textContent = result.reference || ref.normalizedRef || ref.originalText || 'Библейская ссылка';
     bibleTextMeta.textContent = [result.moduleName || result.module, result.bookName].filter(Boolean).join(' · ');
     renderBibleTextVerses(result, ref);
+    updateBibleTextLegacyVerseButton(result, ref);
   } catch (error) {
     bibleTextMeta.textContent = 'BibleNote';
     bibleTextContent.textContent = 'Не удалось загрузить текст: ' + (error?.message || String(error));
@@ -443,6 +520,7 @@ async function showBibleTextContext(options = {}) {
     bibleTextMeta.textContent = [result.moduleName || result.module, result.bookName, '10 стихов до и после'].filter(Boolean).join(' · ');
     bibleTextContent.textContent = result.text || 'Текст не найден.';
     renderBibleContextText(result, ref);
+    updateBibleTextLegacyVerseButton(result, ref);
   } catch (error) {
     bibleTextContent.textContent = 'Не удалось загрузить контекст: ' + (error?.message || String(error));
     showBibleTextContextButton.disabled = false;
@@ -699,15 +777,47 @@ async function loadParallelVerseText(ref, host, includeReference = true) {
   }
 }
 
+function normalizeBibleParallelSearch(value) {
+  return String(value || '')
+    .toLocaleLowerCase('ru-RU')
+    .replace(/ё/g, 'е')
+    .replace(/([\p{L}])(\p{N})/gu, '$1 $2')
+    .replace(/(\p{N})([\p{L}])/gu, '$1 $2')
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim();
+}
+
+function filterBibleParallelRows() {
+  const query = normalizeBibleParallelSearch(bibleParallelSearchInput.value);
+  const terms = query ? query.split(/\s+/) : [];
+  const rows = [...bibleTextParallelPanel.querySelectorAll('.bible-parallel-row')];
+  let visibleCount = 0;
+  let hasLoadingText = false;
+  for (const row of rows) {
+    const reference = row.querySelector('.bible-parallel-ref')?.textContent || '';
+    const verseText = row.querySelector('.bible-parallel-verse-text');
+    hasLoadingText ||= Boolean(verseText?.classList.contains('loading'));
+    const text = verseText?.classList.contains('loading') ? '' : (verseText?.textContent || '');
+    const haystack = normalizeBibleParallelSearch(reference + ' ' + text);
+    const visible = terms.every(term => haystack.includes(term));
+    row.hidden = !visible;
+    if (visible) visibleCount += 1;
+  }
+  const empty = bibleTextParallelPanel.querySelector('.bible-parallel-filter-empty');
+  if (empty) empty.hidden = terms.length === 0 || visibleCount > 0 || hasLoadingText;
+}
+
 function closeBibleParallelDrawer() {
   bibleParallelDrawer.hidden = true;
   delete bibleParallelDrawer.dataset.parallelKey;
+  bibleParallelSearchInput.value = '';
   bibleParallelDrawerSource.replaceChildren();
   bibleTextParallelPanel.replaceChildren();
   document.documentElement.classList.remove('bible-parallel-drawer-open');
 }
 
 closeBibleParallelDrawerButton.addEventListener('click', closeBibleParallelDrawer);
+bibleParallelSearchInput.addEventListener('input', filterBibleParallelRows);
 
 async function showParallelPairNotes(targetRef, relatedRef) {
   const query = [parallelReferenceLabel(targetRef), parallelReferenceLabel(relatedRef)]
@@ -729,6 +839,7 @@ async function openBibleParallelPanel(ref) {
   document.documentElement.classList.add('bible-parallel-drawer-open');
   bibleParallelDrawer.dataset.parallelKey = parallelKey;
   bibleParallelDrawerTitle.textContent = parallelReferenceLabel(ref);
+  bibleParallelSearchInput.value = '';
   bibleParallelDrawerSource.replaceChildren();
   bibleTextParallelPanel.replaceChildren();
   const sourceText = document.createElement('div');
@@ -785,7 +896,7 @@ async function openBibleParallelPanel(ref) {
     notesButton.addEventListener('click', () => showParallelPairNotes(ref, relatedRef).catch(showError));
     const metrics = document.createElement('span');
     metrics.className = 'bible-parallel-metrics';
-    const weight = Number(item.relationWeight || 0).toFixed(4).replace(/\.?0+$/, '').replace('.', ',');
+    const weight = formatBibleWeight(item.relationWeight);
     const weightMetric = document.createElement('span');
     weightMetric.className = 'bible-parallel-metric';
     weightMetric.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h10M14 4l3 3-3 3M17 17H7M10 14l-3 3 3 3"/></svg><span>' + weight + '</span>';
@@ -797,9 +908,13 @@ async function openBibleParallelPanel(ref) {
     head.append(refButton, metrics);
     row.append(head, verseText);
     list.append(row);
-    loadParallelVerseText(relatedRef, verseText).catch(showError);
+    loadParallelVerseText(relatedRef, verseText).then(filterBibleParallelRows).catch(showError);
   }
-  bibleTextParallelPanel.append(list);
+  const filterEmpty = document.createElement('div');
+  filterEmpty.className = 'bible-parallel-meta bible-parallel-filter-empty';
+  filterEmpty.textContent = 'Совпадений не найдено.';
+  filterEmpty.hidden = true;
+  bibleTextParallelPanel.append(list, filterEmpty);
 }
 
 function metaItem(label, value) {
@@ -925,12 +1040,12 @@ document.addEventListener('pointerdown', event => {
 window.addEventListener('popstate', () => {
   const pageId = pageIdFromUrl();
   if (pageId) {
-    openPage(pageId, { updateUrl:false }).catch(showError);
+    openPage(pageId, { updateUrl:false, tabMode:'current' }).catch(showError);
     return;
   }
   const bibleLocation = bibleLocationFromUrl();
   if (bibleLocation) {
-    openBibleReaderLocation(bibleLocation, { updateUrl:false, rememberHistory:false }).catch(showError);
+    openBibleReaderLocation(bibleLocation, { updateUrl:false, rememberHistory:false, tabMode:'current' }).catch(showError);
     return;
   }
   selectedPageId = null;

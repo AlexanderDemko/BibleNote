@@ -129,7 +129,7 @@ function startLocalBibleNoteProcess(): void {
     cwd:path.dirname(exe),
     env:{
       ...process.env,
-      ASPNETCORE_ENVIRONMENT:process.env.ASPNETCORE_ENVIRONMENT ?? 'Development',
+      ASPNETCORE_ENVIRONMENT:'Production',
       BIBLENOTE_API_URL:bibleConfig.apiUrl
     },
     windowsHide:true,
@@ -232,7 +232,7 @@ export async function uploadBibleNoteModule(fileName: string, contentBase64: str
       moduleName,
       savedPath:tempFile,
       modulesPackagePath,
-      message:'Файл модуля сохранен, но текущий BibleNote API не предоставляет endpoint установки модуля. Нужна доработка BibleNote: POST /api/VerseParsing/UploadModule с вызовом ModulesManager.UploadModule.'
+      message:'Не удалось установить модуль: ' + messageOf(error) + '. Файл модуля сохранён для повторной установки.'
     };
   }
 }
@@ -312,6 +312,7 @@ export async function parseExternalBibleRef(rawRef: string, module?: string): Pr
 
 export type OneNoteCurrentPage = {
   pageId: string;
+  title?: string;
   clientUrl: string;
 };
 
@@ -348,6 +349,16 @@ export async function bibleNoteOneNotePageContent(pageId: string): Promise<strin
   ) as OneNoteComContentResponse;
   if (!result.xml) throw new Error(`Classic OneNote returned empty content for page ${pageId}.`);
   return result.xml;
+}
+
+export async function bibleNoteOpenOneNotePage(pageId: string): Promise<Record<string, unknown>> {
+  await ensureBibleNoteAvailable();
+  const bibleConfig = bibleParseConfigFromEnv();
+  const params = new URLSearchParams({ pageId });
+  return fetchJson(
+    `${bibleConfig.apiUrl}/api/OneNoteIntegration/OpenPage?${params.toString()}`,
+    { method:'POST', signal:AbortSignal.timeout(60_000) }
+  );
 }
 
 export async function bibleNoteOneNotePageLink(pageId: string): Promise<string> {

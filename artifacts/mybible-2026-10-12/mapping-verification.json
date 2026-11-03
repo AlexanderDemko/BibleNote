@@ -1,0 +1,1666 @@
+[
+  {
+    "id": "NET",
+    "sourceSha256": "ac4299d0d8dce7f1192ba3d99f8d475b06774cedf1c7c314f49567c63d47d9f4",
+    "referenceSha256": "1c2dfb54d2ee14e51a0f499164e25103bb9cb45f439f5b299ab8046f68b38835",
+    "validation": {
+      "groups": 105,
+      "entries": 31067,
+      "referenceCoverage": {
+        "totalRows": 31102,
+        "mappedRows": 31102,
+        "missingRows": 0,
+        "percent": 100,
+        "missingExamples": []
+      },
+      "moduleCoverage": {
+        "totalRows": 31102,
+        "mappedRows": 31102,
+        "missingRows": 0,
+        "percent": 100,
+        "missingExamples": []
+      },
+      "invalidReferenceLocations": 0,
+      "invalidModuleLocations": 0,
+      "duplicateReferenceAssignments": 0,
+      "duplicateModuleAssignments": 0,
+      "crossBookEntries": 0,
+      "reverseOrderTransitions": 0,
+      "allowedNonMonotonicTransitions": 0,
+      "roundTripFailures": 0,
+      "unmatchedReferenceRows": 0,
+      "unmatchedModuleRows": 0,
+      "oneToOneEntries": 31047,
+      "manyToOneEntries": 2,
+      "oneToManyEntries": 2,
+      "manyToManyEntries": 16,
+      "emptyPlaceholderEntries": 16,
+      "entriesWithUnknownReviewGroup": 0,
+      "isCompleteAndConsistent": true
+    },
+    "manualReview": [
+      {
+        "reference": [
+          {
+            "bookIndex": 32,
+            "chapter": 1,
+            "verse": 17,
+            "sourceBookNumber": 32,
+            "empty": false
+          },
+          {
+            "bookIndex": 32,
+            "chapter": 2,
+            "verse": 1,
+            "sourceBookNumber": 32,
+            "empty": false
+          }
+        ],
+        "module": [
+          {
+            "bookIndex": 32,
+            "chapter": 2,
+            "verse": 1,
+            "sourceBookNumber": 390,
+            "empty": false
+          }
+        ],
+        "reason": "Source NET 2:1 explicitly contains Jonah 1:17 and 2:1."
+      },
+      {
+        "reference": [
+          {
+            "bookIndex": 47,
+            "chapter": 13,
+            "verse": 12,
+            "sourceBookNumber": 47,
+            "empty": false
+          },
+          {
+            "bookIndex": 47,
+            "chapter": 13,
+            "verse": 13,
+            "sourceBookNumber": 47,
+            "empty": false
+          }
+        ],
+        "module": [
+          {
+            "bookIndex": 47,
+            "chapter": 13,
+            "verse": 12,
+            "sourceBookNumber": 540,
+            "empty": false
+          }
+        ],
+        "reason": "NET combines the holy kiss and all saints greetings in 13:12."
+      },
+      {
+        "reference": [
+          {
+            "bookIndex": 47,
+            "chapter": 13,
+            "verse": 14,
+            "sourceBookNumber": 47,
+            "empty": false
+          }
+        ],
+        "module": [
+          {
+            "bookIndex": 47,
+            "chapter": 13,
+            "verse": 13,
+            "sourceBookNumber": 540,
+            "empty": false
+          }
+        ],
+        "reason": "NET benediction is 13:13, KJV 13:14."
+      },
+      {
+        "reference": [
+          {
+            "bookIndex": 64,
+            "chapter": 1,
+            "verse": 14,
+            "sourceBookNumber": 64,
+            "empty": false
+          }
+        ],
+        "module": [
+          {
+            "bookIndex": 64,
+            "chapter": 1,
+            "verse": 14,
+            "sourceBookNumber": 710,
+            "empty": false
+          },
+          {
+            "bookIndex": 64,
+            "chapter": 1,
+            "verse": 15,
+            "sourceBookNumber": 710,
+            "empty": false
+          }
+        ],
+        "reason": "3 John: face-to-face meeting and closing greetings split into two verses."
+      },
+      {
+        "reference": [
+          {
+            "bookIndex": 66,
+            "chapter": 13,
+            "verse": 1,
+            "sourceBookNumber": 66,
+            "empty": false
+          }
+        ],
+        "module": [
+          {
+            "bookIndex": 66,
+            "chapter": 12,
+            "verse": 18,
+            "sourceBookNumber": 730,
+            "empty": false
+          },
+          {
+            "bookIndex": 66,
+            "chapter": 13,
+            "verse": 1,
+            "sourceBookNumber": 730,
+            "empty": false
+          }
+        ],
+        "reason": "The standing on seashore clause is Revelation 12:18, followed by the beast rising in 13:1; both belong to KJV 13:1."
+      }
+    ],
+    "directMappingsSha256": "687c044dce52dcf7114b61491f95f31f64a90cded76f06a075393a187a89464a"
+  },
+  {
+    "id": "NASU",
+    "sourceSha256": "3c617432080dd62a09c2588ee3de4137306f8ecd0a0078ae65cbc78842c5c43b",
+    "referenceSha256": "1c2dfb54d2ee14e51a0f499164e25103bb9cb45f439f5b299ab8046f68b38835",
+    "validation": {
+      "groups": 67,
+      "entries": 31102,
+      "referenceCoverage": {
+        "totalRows": 31102,
+        "mappedRows": 31102,
+        "missingRows": 0,
+        "percent": 100,
+        "missingExamples": []
+      },
+      "moduleCoverage": {
+        "totalRows": 31103,
+        "mappedRows": 31103,
+        "missingRows": 0,
+        "percent": 100,
+        "missingExamples": []
+      },
+      "invalidReferenceLocations": 0,
+      "invalidModuleLocations": 0,
+      "duplicateReferenceAssignments": 0,
+      "duplicateModuleAssignments": 0,
+      "crossBookEntries": 0,
+      "reverseOrderTransitions": 0,
+      "allowedNonMonotonicTransitions": 0,
+      "roundTripFailures": 0,
+      "unmatchedReferenceRows": 0,
+      "unmatchedModuleRows": 0,
+      "oneToOneEntries": 31101,
+      "manyToOneEntries": 0,
+      "oneToManyEntries": 1,
+      "manyToManyEntries": 0,
+      "emptyPlaceholderEntries": 0,
+      "entriesWithUnknownReviewGroup": 0,
+      "isCompleteAndConsistent": true
+    },
+    "manualReview": [
+      {
+        "reference": [
+          {
+            "bookIndex": 64,
+            "chapter": 1,
+            "verse": 14,
+            "sourceBookNumber": 64,
+            "empty": false
+          }
+        ],
+        "module": [
+          {
+            "bookIndex": 64,
+            "chapter": 1,
+            "verse": 14,
+            "sourceBookNumber": 710,
+            "empty": false
+          },
+          {
+            "bookIndex": 64,
+            "chapter": 1,
+            "verse": 15,
+            "sourceBookNumber": 710,
+            "empty": false
+          }
+        ],
+        "reason": "3 John: face-to-face meeting and closing greetings split into two verses."
+      }
+    ],
+    "directMappingsSha256": "5cec7256ca970127f1013b9d0dab4059a1dfef610ee4f8cfc7615c8ea533dc6c"
+  },
+  {
+    "id": "NKJV",
+    "sourceSha256": "9d0fce4be9cc087cf76cdea6636c2daed8d93026db0f0b3bd484c10fa29c31cc",
+    "referenceSha256": "1c2dfb54d2ee14e51a0f499164e25103bb9cb45f439f5b299ab8046f68b38835",
+    "validation": {
+      "groups": 66,
+      "entries": 31102,
+      "referenceCoverage": {
+        "totalRows": 31102,
+        "mappedRows": 31102,
+        "missingRows": 0,
+        "percent": 100,
+        "missingExamples": []
+      },
+      "moduleCoverage": {
+        "totalRows": 31102,
+        "mappedRows": 31102,
+        "missingRows": 0,
+        "percent": 100,
+        "missingExamples": []
+      },
+      "invalidReferenceLocations": 0,
+      "invalidModuleLocations": 0,
+      "duplicateReferenceAssignments": 0,
+      "duplicateModuleAssignments": 0,
+      "crossBookEntries": 0,
+      "reverseOrderTransitions": 0,
+      "allowedNonMonotonicTransitions": 0,
+      "roundTripFailures": 0,
+      "unmatchedReferenceRows": 0,
+      "unmatchedModuleRows": 0,
+      "oneToOneEntries": 31102,
+      "manyToOneEntries": 0,
+      "oneToManyEntries": 0,
+      "manyToManyEntries": 0,
+      "emptyPlaceholderEntries": 0,
+      "entriesWithUnknownReviewGroup": 0,
+      "isCompleteAndConsistent": true
+    },
+    "manualReview": [],
+    "directMappingsSha256": "1442e8f0f741022c5b02a7181ae41b23dd1e6cd97213317cc849b4ad50dc2c7b"
+  },
+  {
+    "id": "NRT'23",
+    "sourceSha256": "2892937e084b20657898d5b3000bbea0fe9e359a436200dccd7d39290e3eab7f",
+    "referenceSha256": "9a668c3f6dd875fd029f34777698984ec5e6790ed36bb1c32519c0742f3ca946",
+    "validation": {
+      "groups": 68,
+      "entries": 31163,
+      "referenceCoverage": {
+        "totalRows": 31163,
+        "mappedRows": 31163,
+        "missingRows": 0,
+        "percent": 100,
+        "missingExamples": []
+      },
+      "moduleCoverage": {
+        "totalRows": 31163,
+        "mappedRows": 31163,
+        "missingRows": 0,
+        "percent": 100,
+        "missingExamples": []
+      },
+      "invalidReferenceLocations": 0,
+      "invalidModuleLocations": 0,
+      "duplicateReferenceAssignments": 0,
+      "duplicateModuleAssignments": 0,
+      "crossBookEntries": 0,
+      "reverseOrderTransitions": 0,
+      "allowedNonMonotonicTransitions": 1,
+      "roundTripFailures": 0,
+      "unmatchedReferenceRows": 0,
+      "unmatchedModuleRows": 0,
+      "oneToOneEntries": 31163,
+      "manyToOneEntries": 0,
+      "oneToManyEntries": 0,
+      "manyToManyEntries": 0,
+      "emptyPlaceholderEntries": 0,
+      "entriesWithUnknownReviewGroup": 0,
+      "isCompleteAndConsistent": true
+    },
+    "manualReview": [],
+    "directMappingsSha256": "93c0fa36e8bca509f2ff83ac31d2917fe0141ed4c2c8a74b94b44f1c71fe396f"
+  },
+  {
+    "id": "РБО2",
+    "sourceSha256": "4e9d89e1068728d1cffe2dcb07acc7af18b0654e4c13ddb108341e89c86f8dcf",
+    "referenceSha256": "9a668c3f6dd875fd029f34777698984ec5e6790ed36bb1c32519c0742f3ca946",
+    "validation": {
+      "groups": 147,
+      "entries": 31090,
+      "referenceCoverage": {
+        "totalRows": 31163,
+        "mappedRows": 31163,
+        "missingRows": 0,
+        "percent": 100,
+        "missingExamples": []
+      },
+      "moduleCoverage": {
+        "totalRows": 31167,
+        "mappedRows": 31167,
+        "missingRows": 0,
+        "percent": 100,
+        "missingExamples": []
+      },
+      "invalidReferenceLocations": 0,
+      "invalidModuleLocations": 0,
+      "duplicateReferenceAssignments": 0,
+      "duplicateModuleAssignments": 0,
+      "crossBookEntries": 0,
+      "reverseOrderTransitions": 0,
+      "allowedNonMonotonicTransitions": 1,
+      "roundTripFailures": 0,
+      "unmatchedReferenceRows": 0,
+      "unmatchedModuleRows": 0,
+      "oneToOneEntries": 31048,
+      "manyToOneEntries": 0,
+      "oneToManyEntries": 4,
+      "manyToManyEntries": 38,
+      "emptyPlaceholderEntries": 40,
+      "entriesWithUnknownReviewGroup": 0,
+      "isCompleteAndConsistent": true
+    },
+    "manualReview": [
+      {
+        "reference": [
+          {
+            "bookIndex": 66,
+            "chapter": 13,
+            "verse": 1,
+            "sourceBookNumber": 66,
+            "empty": false
+          }
+        ],
+        "module": [
+          {
+            "bookIndex": 66,
+            "chapter": 12,
+            "verse": 18,
+            "sourceBookNumber": 730,
+            "empty": false
+          },
+          {
+            "bookIndex": 66,
+            "chapter": 13,
+            "verse": 1,
+            "sourceBookNumber": 730,
+            "empty": false
+          }
+        ],
+        "reason": "The standing on seashore clause is Revelation 12:18, followed by the beast rising in 13:1; both belong to KJV 13:1."
+      },
+      {
+        "reference": [
+          {
+            "bookIndex": 20,
+            "chapter": 13,
+            "verse": 1,
+            "sourceBookNumber": 20,
+            "empty": false
+          }
+        ],
+        "module": [
+          {
+            "bookIndex": 20,
+            "chapter": 13,
+            "verse": 1,
+            "sourceBookNumber": 240,
+            "empty": false
+          }
+        ],
+        "reason": "Proverbs 13: source contains an empty 14 row; text following it is numbered one verse higher. Matched chapter text against RST."
+      },
+      {
+        "reference": [
+          {
+            "bookIndex": 20,
+            "chapter": 13,
+            "verse": 2,
+            "sourceBookNumber": 20,
+            "empty": false
+          }
+        ],
+        "module": [
+          {
+            "bookIndex": 20,
+            "chapter": 13,
+            "verse": 2,
+            "sourceBookNumber": 240,
+            "empty": false
+          }
+        ],
+        "reason": "Proverbs 13: source contains an empty 14 row; text following it is numbered one verse higher. Matched chapter text against RST."
+      },
+      {
+        "reference": [
+          {
+            "bookIndex": 20,
+            "chapter": 13,
+            "verse": 3,
+            "sourceBookNumber": 20,
+            "empty": false
+          }
+        ],
+        "module": [
+          {
+            "bookIndex": 20,
+            "chapter": 13,
+            "verse": 3,
+            "sourceBookNumber": 240,
+            "empty": false
+          }
+        ],
+        "reason": "Proverbs 13: source contains an empty 14 row; text following it is numbered one verse higher. Matched chapter text against RST."
+      },
+      {
+        "reference": [
+          {
+            "bookIndex": 20,
+            "chapter": 13,
+            "verse": 4,
+            "sourceBookNumber": 20,
+            "empty": false
+          }
+        ],
+        "module": [
+          {
+            "bookIndex": 20,
+            "chapter": 13,
+            "verse": 4,
+            "sourceBookNumber": 240,
+            "empty": false
+          }
+        ],
+        "reason": "Proverbs 13: source contains an empty 14 row; text following it is numbered one verse higher. Matched chapter text against RST."
+      },
+      {
+        "reference": [
+          {
+            "bookIndex": 20,
+            "chapter": 13,
+            "verse": 5,
+            "sourceBookNumber": 20,
+            "empty": false
+          }
+        ],
+        "module": [
+          {
+            "bookIndex": 20,
+            "chapter": 13,
+            "verse": 5,
+            "sourceBookNumber": 240,
+            "empty": false
+          }
+        ],
+        "reason": "Proverbs 13: source contains an empty 14 row; text following it is numbered one verse higher. Matched chapter text against RST."
+      },
+      {
+        "reference": [
+          {
+            "bookIndex": 20,
+            "chapter": 13,
+            "verse": 6,
+            "sourceBookNumber": 20,
+            "empty": false
+          }
+        ],
+        "module": [
+          {
+            "bookIndex": 20,
+            "chapter": 13,
+            "verse": 6,
+            "sourceBookNumber": 240,
+            "empty": false
+          }
+        ],
+        "reason": "Proverbs 13: source contains an empty 14 row; text following it is numbered one verse higher. Matched chapter text against RST."
+      },
+      {
+        "reference": [
+          {
+            "bookIndex": 20,
+            "chapter": 13,
+            "verse": 7,
+            "sourceBookNumber": 20,
+            "empty": false
+          }
+        ],
+        "module": [
+          {
+            "bookIndex": 20,
+            "chapter": 13,
+            "verse": 7,
+            "sourceBookNumber": 240,
+            "empty": false
+          }
+        ],
+        "reason": "Proverbs 13: source contains an empty 14 row; text following it is numbered one verse higher. Matched chapter text against RST."
+      },
+      {
+        "reference": [
+          {
+            "bookIndex": 20,
+            "chapter": 13,
+            "verse": 8,
+            "sourceBookNumber": 20,
+            "empty": false
+          }
+        ],
+        "module": [
+          {
+            "bookIndex": 20,
+            "chapter": 13,
+            "verse": 8,
+            "sourceBookNumber": 240,
+            "empty": false
+          }
+        ],
+        "reason": "Proverbs 13: source contains an empty 14 row; text following it is numbered one verse higher. Matched chapter text against RST."
+      },
+      {
+        "reference": [
+          {
+            "bookIndex": 20,
+            "chapter": 13,
+            "verse": 9,
+            "sourceBookNumber": 20,
+            "empty": false
+          }
+        ],
+        "module": [
+          {
+            "bookIndex": 20,
+            "chapter": 13,
+            "verse": 9,
+            "sourceBookNumber": 240,
+            "empty": false
+          }
+        ],
+        "reason": "Proverbs 13: source contains an empty 14 row; text following it is numbered one verse higher. Matched chapter text against RST."
+      },
+      {
+        "reference": [
+          {
+            "bookIndex": 20,
+            "chapter": 13,
+            "verse": 10,
+            "sourceBookNumber": 20,
+            "empty": false
+          }
+        ],
+        "module": [
+          {
+            "bookIndex": 20,
+            "chapter": 13,
+            "verse": 10,
+            "sourceBookNumber": 240,
+            "empty": false
+          }
+        ],
+        "reason": "Proverbs 13: source contains an empty 14 row; text following it is numbered one verse higher. Matched chapter text against RST."
+      },
+      {
+        "reference": [
+          {
+            "bookIndex": 20,
+            "chapter": 13,
+            "verse": 11,
+            "sourceBookNumber": 20,
+            "empty": false
+          }
+        ],
+        "module": [
+          {
+            "bookIndex": 20,
+            "chapter": 13,
+            "verse": 11,
+            "sourceBookNumber": 240,
+            "empty": false
+          }
+        ],
+        "reason": "Proverbs 13: source contains an empty 14 row; text following it is numbered one verse higher. Matched chapter text against RST."
+      },
+      {
+        "reference": [
+          {
+            "bookIndex": 20,
+            "chapter": 13,
+            "verse": 12,
+            "sourceBookNumber": 20,
+            "empty": false
+          }
+        ],
+        "module": [
+          {
+            "bookIndex": 20,
+            "chapter": 13,
+            "verse": 12,
+            "sourceBookNumber": 240,
+            "empty": false
+          }
+        ],
+        "reason": "Proverbs 13: source contains an empty 14 row; text following it is numbered one verse higher. Matched chapter text against RST."
+      },
+      {
+        "reference": [
+          {
+            "bookIndex": 20,
+            "chapter": 13,
+            "verse": 13,
+            "sourceBookNumber": 20,
+            "empty": false
+          }
+        ],
+        "module": [
+          {
+            "bookIndex": 20,
+            "chapter": 13,
+            "verse": 13,
+            "sourceBookNumber": 240,
+            "empty": false
+          }
+        ],
+        "reason": "Proverbs 13: source contains an empty 14 row; text following it is numbered one verse higher. Matched chapter text against RST."
+      },
+      {
+        "reference": [
+          {
+            "bookIndex": 20,
+            "chapter": 13,
+            "verse": 14,
+            "sourceBookNumber": 20,
+            "empty": false
+          }
+        ],
+        "module": [
+          {
+            "bookIndex": 20,
+            "chapter": 13,
+            "verse": 14,
+            "sourceBookNumber": 240,
+            "empty": true
+          },
+          {
+            "bookIndex": 20,
+            "chapter": 13,
+            "verse": 15,
+            "sourceBookNumber": 240,
+            "empty": false
+          }
+        ],
+        "reason": "Proverbs 13: source contains an empty 14 row; text following it is numbered one verse higher. Matched chapter text against RST."
+      },
+      {
+        "reference": [
+          {
+            "bookIndex": 20,
+            "chapter": 13,
+            "verse": 15,
+            "sourceBookNumber": 20,
+            "empty": false
+          }
+        ],
+        "module": [
+          {
+            "bookIndex": 20,
+            "chapter": 13,
+            "verse": 16,
+            "sourceBookNumber": 240,
+            "empty": false
+          }
+        ],
+        "reason": "Proverbs 13: source contains an empty 14 row; text following it is numbered one verse higher. Matched chapter text against RST."
+      },
+      {
+        "reference": [
+          {
+            "bookIndex": 20,
+            "chapter": 13,
+            "verse": 16,
+            "sourceBookNumber": 20,
+            "empty": false
+          }
+        ],
+        "module": [
+          {
+            "bookIndex": 20,
+            "chapter": 13,
+            "verse": 17,
+            "sourceBookNumber": 240,
+            "empty": false
+          }
+        ],
+        "reason": "Proverbs 13: source contains an empty 14 row; text following it is numbered one verse higher. Matched chapter text against RST."
+      },
+      {
+        "reference": [
+          {
+            "bookIndex": 20,
+            "chapter": 13,
+            "verse": 17,
+            "sourceBookNumber": 20,
+            "empty": false
+          }
+        ],
+        "module": [
+          {
+            "bookIndex": 20,
+            "chapter": 13,
+            "verse": 18,
+            "sourceBookNumber": 240,
+            "empty": false
+          }
+        ],
+        "reason": "Proverbs 13: source contains an empty 14 row; text following it is numbered one verse higher. Matched chapter text against RST."
+      },
+      {
+        "reference": [
+          {
+            "bookIndex": 20,
+            "chapter": 13,
+            "verse": 18,
+            "sourceBookNumber": 20,
+            "empty": false
+          }
+        ],
+        "module": [
+          {
+            "bookIndex": 20,
+            "chapter": 13,
+            "verse": 19,
+            "sourceBookNumber": 240,
+            "empty": false
+          }
+        ],
+        "reason": "Proverbs 13: source contains an empty 14 row; text following it is numbered one verse higher. Matched chapter text against RST."
+      },
+      {
+        "reference": [
+          {
+            "bookIndex": 20,
+            "chapter": 13,
+            "verse": 19,
+            "sourceBookNumber": 20,
+            "empty": false
+          }
+        ],
+        "module": [
+          {
+            "bookIndex": 20,
+            "chapter": 13,
+            "verse": 20,
+            "sourceBookNumber": 240,
+            "empty": false
+          }
+        ],
+        "reason": "Proverbs 13: source contains an empty 14 row; text following it is numbered one verse higher. Matched chapter text against RST."
+      },
+      {
+        "reference": [
+          {
+            "bookIndex": 20,
+            "chapter": 13,
+            "verse": 20,
+            "sourceBookNumber": 20,
+            "empty": false
+          }
+        ],
+        "module": [
+          {
+            "bookIndex": 20,
+            "chapter": 13,
+            "verse": 21,
+            "sourceBookNumber": 240,
+            "empty": false
+          }
+        ],
+        "reason": "Proverbs 13: source contains an empty 14 row; text following it is numbered one verse higher. Matched chapter text against RST."
+      },
+      {
+        "reference": [
+          {
+            "bookIndex": 20,
+            "chapter": 13,
+            "verse": 21,
+            "sourceBookNumber": 20,
+            "empty": false
+          }
+        ],
+        "module": [
+          {
+            "bookIndex": 20,
+            "chapter": 13,
+            "verse": 22,
+            "sourceBookNumber": 240,
+            "empty": false
+          }
+        ],
+        "reason": "Proverbs 13: source contains an empty 14 row; text following it is numbered one verse higher. Matched chapter text against RST."
+      },
+      {
+        "reference": [
+          {
+            "bookIndex": 20,
+            "chapter": 13,
+            "verse": 22,
+            "sourceBookNumber": 20,
+            "empty": false
+          }
+        ],
+        "module": [
+          {
+            "bookIndex": 20,
+            "chapter": 13,
+            "verse": 23,
+            "sourceBookNumber": 240,
+            "empty": false
+          }
+        ],
+        "reason": "Proverbs 13: source contains an empty 14 row; text following it is numbered one verse higher. Matched chapter text against RST."
+      },
+      {
+        "reference": [
+          {
+            "bookIndex": 20,
+            "chapter": 13,
+            "verse": 23,
+            "sourceBookNumber": 20,
+            "empty": false
+          }
+        ],
+        "module": [
+          {
+            "bookIndex": 20,
+            "chapter": 13,
+            "verse": 24,
+            "sourceBookNumber": 240,
+            "empty": false
+          }
+        ],
+        "reason": "Proverbs 13: source contains an empty 14 row; text following it is numbered one verse higher. Matched chapter text against RST."
+      },
+      {
+        "reference": [
+          {
+            "bookIndex": 20,
+            "chapter": 13,
+            "verse": 24,
+            "sourceBookNumber": 20,
+            "empty": false
+          }
+        ],
+        "module": [
+          {
+            "bookIndex": 20,
+            "chapter": 13,
+            "verse": 25,
+            "sourceBookNumber": 240,
+            "empty": false
+          }
+        ],
+        "reason": "Proverbs 13: source contains an empty 14 row; text following it is numbered one verse higher. Matched chapter text against RST."
+      },
+      {
+        "reference": [
+          {
+            "bookIndex": 20,
+            "chapter": 13,
+            "verse": 25,
+            "sourceBookNumber": 20,
+            "empty": false
+          }
+        ],
+        "module": [
+          {
+            "bookIndex": 20,
+            "chapter": 13,
+            "verse": 26,
+            "sourceBookNumber": 240,
+            "empty": false
+          }
+        ],
+        "reason": "Proverbs 13: source contains an empty 14 row; text following it is numbered one verse higher. Matched chapter text against RST."
+      },
+      {
+        "reference": [
+          {
+            "bookIndex": 20,
+            "chapter": 18,
+            "verse": 1,
+            "sourceBookNumber": 20,
+            "empty": false
+          }
+        ],
+        "module": [
+          {
+            "bookIndex": 20,
+            "chapter": 18,
+            "verse": 1,
+            "sourceBookNumber": 240,
+            "empty": false
+          }
+        ],
+        "reason": "Proverbs 18: source contains an empty 8 row; text following it is numbered one verse higher. Matched chapter text against RST."
+      },
+      {
+        "reference": [
+          {
+            "bookIndex": 20,
+            "chapter": 18,
+            "verse": 2,
+            "sourceBookNumber": 20,
+            "empty": false
+          }
+        ],
+        "module": [
+          {
+            "bookIndex": 20,
+            "chapter": 18,
+            "verse": 2,
+            "sourceBookNumber": 240,
+            "empty": false
+          }
+        ],
+        "reason": "Proverbs 18: source contains an empty 8 row; text following it is numbered one verse higher. Matched chapter text against RST."
+      },
+      {
+        "reference": [
+          {
+            "bookIndex": 20,
+            "chapter": 18,
+            "verse": 3,
+            "sourceBookNumber": 20,
+            "empty": false
+          }
+        ],
+        "module": [
+          {
+            "bookIndex": 20,
+            "chapter": 18,
+            "verse": 3,
+            "sourceBookNumber": 240,
+            "empty": false
+          }
+        ],
+        "reason": "Proverbs 18: source contains an empty 8 row; text following it is numbered one verse higher. Matched chapter text against RST."
+      },
+      {
+        "reference": [
+          {
+            "bookIndex": 20,
+            "chapter": 18,
+            "verse": 4,
+            "sourceBookNumber": 20,
+            "empty": false
+          }
+        ],
+        "module": [
+          {
+            "bookIndex": 20,
+            "chapter": 18,
+            "verse": 4,
+            "sourceBookNumber": 240,
+            "empty": false
+          }
+        ],
+        "reason": "Proverbs 18: source contains an empty 8 row; text following it is numbered one verse higher. Matched chapter text against RST."
+      },
+      {
+        "reference": [
+          {
+            "bookIndex": 20,
+            "chapter": 18,
+            "verse": 5,
+            "sourceBookNumber": 20,
+            "empty": false
+          }
+        ],
+        "module": [
+          {
+            "bookIndex": 20,
+            "chapter": 18,
+            "verse": 5,
+            "sourceBookNumber": 240,
+            "empty": false
+          }
+        ],
+        "reason": "Proverbs 18: source contains an empty 8 row; text following it is numbered one verse higher. Matched chapter text against RST."
+      },
+      {
+        "reference": [
+          {
+            "bookIndex": 20,
+            "chapter": 18,
+            "verse": 6,
+            "sourceBookNumber": 20,
+            "empty": false
+          }
+        ],
+        "module": [
+          {
+            "bookIndex": 20,
+            "chapter": 18,
+            "verse": 6,
+            "sourceBookNumber": 240,
+            "empty": false
+          }
+        ],
+        "reason": "Proverbs 18: source contains an empty 8 row; text following it is numbered one verse higher. Matched chapter text against RST."
+      },
+      {
+        "reference": [
+          {
+            "bookIndex": 20,
+            "chapter": 18,
+            "verse": 7,
+            "sourceBookNumber": 20,
+            "empty": false
+          }
+        ],
+        "module": [
+          {
+            "bookIndex": 20,
+            "chapter": 18,
+            "verse": 7,
+            "sourceBookNumber": 240,
+            "empty": false
+          }
+        ],
+        "reason": "Proverbs 18: source contains an empty 8 row; text following it is numbered one verse higher. Matched chapter text against RST."
+      },
+      {
+        "reference": [
+          {
+            "bookIndex": 20,
+            "chapter": 18,
+            "verse": 8,
+            "sourceBookNumber": 20,
+            "empty": false
+          }
+        ],
+        "module": [
+          {
+            "bookIndex": 20,
+            "chapter": 18,
+            "verse": 8,
+            "sourceBookNumber": 240,
+            "empty": true
+          },
+          {
+            "bookIndex": 20,
+            "chapter": 18,
+            "verse": 9,
+            "sourceBookNumber": 240,
+            "empty": false
+          }
+        ],
+        "reason": "Proverbs 18: source contains an empty 8 row; text following it is numbered one verse higher. Matched chapter text against RST."
+      },
+      {
+        "reference": [
+          {
+            "bookIndex": 20,
+            "chapter": 18,
+            "verse": 9,
+            "sourceBookNumber": 20,
+            "empty": false
+          }
+        ],
+        "module": [
+          {
+            "bookIndex": 20,
+            "chapter": 18,
+            "verse": 10,
+            "sourceBookNumber": 240,
+            "empty": false
+          }
+        ],
+        "reason": "Proverbs 18: source contains an empty 8 row; text following it is numbered one verse higher. Matched chapter text against RST."
+      },
+      {
+        "reference": [
+          {
+            "bookIndex": 20,
+            "chapter": 18,
+            "verse": 10,
+            "sourceBookNumber": 20,
+            "empty": false
+          }
+        ],
+        "module": [
+          {
+            "bookIndex": 20,
+            "chapter": 18,
+            "verse": 11,
+            "sourceBookNumber": 240,
+            "empty": false
+          }
+        ],
+        "reason": "Proverbs 18: source contains an empty 8 row; text following it is numbered one verse higher. Matched chapter text against RST."
+      },
+      {
+        "reference": [
+          {
+            "bookIndex": 20,
+            "chapter": 18,
+            "verse": 11,
+            "sourceBookNumber": 20,
+            "empty": false
+          }
+        ],
+        "module": [
+          {
+            "bookIndex": 20,
+            "chapter": 18,
+            "verse": 12,
+            "sourceBookNumber": 240,
+            "empty": false
+          }
+        ],
+        "reason": "Proverbs 18: source contains an empty 8 row; text following it is numbered one verse higher. Matched chapter text against RST."
+      },
+      {
+        "reference": [
+          {
+            "bookIndex": 20,
+            "chapter": 18,
+            "verse": 12,
+            "sourceBookNumber": 20,
+            "empty": false
+          }
+        ],
+        "module": [
+          {
+            "bookIndex": 20,
+            "chapter": 18,
+            "verse": 13,
+            "sourceBookNumber": 240,
+            "empty": false
+          }
+        ],
+        "reason": "Proverbs 18: source contains an empty 8 row; text following it is numbered one verse higher. Matched chapter text against RST."
+      },
+      {
+        "reference": [
+          {
+            "bookIndex": 20,
+            "chapter": 18,
+            "verse": 13,
+            "sourceBookNumber": 20,
+            "empty": false
+          }
+        ],
+        "module": [
+          {
+            "bookIndex": 20,
+            "chapter": 18,
+            "verse": 14,
+            "sourceBookNumber": 240,
+            "empty": false
+          }
+        ],
+        "reason": "Proverbs 18: source contains an empty 8 row; text following it is numbered one verse higher. Matched chapter text against RST."
+      },
+      {
+        "reference": [
+          {
+            "bookIndex": 20,
+            "chapter": 18,
+            "verse": 14,
+            "sourceBookNumber": 20,
+            "empty": false
+          }
+        ],
+        "module": [
+          {
+            "bookIndex": 20,
+            "chapter": 18,
+            "verse": 15,
+            "sourceBookNumber": 240,
+            "empty": false
+          }
+        ],
+        "reason": "Proverbs 18: source contains an empty 8 row; text following it is numbered one verse higher. Matched chapter text against RST."
+      },
+      {
+        "reference": [
+          {
+            "bookIndex": 20,
+            "chapter": 18,
+            "verse": 15,
+            "sourceBookNumber": 20,
+            "empty": false
+          }
+        ],
+        "module": [
+          {
+            "bookIndex": 20,
+            "chapter": 18,
+            "verse": 16,
+            "sourceBookNumber": 240,
+            "empty": false
+          }
+        ],
+        "reason": "Proverbs 18: source contains an empty 8 row; text following it is numbered one verse higher. Matched chapter text against RST."
+      },
+      {
+        "reference": [
+          {
+            "bookIndex": 20,
+            "chapter": 18,
+            "verse": 16,
+            "sourceBookNumber": 20,
+            "empty": false
+          }
+        ],
+        "module": [
+          {
+            "bookIndex": 20,
+            "chapter": 18,
+            "verse": 17,
+            "sourceBookNumber": 240,
+            "empty": false
+          }
+        ],
+        "reason": "Proverbs 18: source contains an empty 8 row; text following it is numbered one verse higher. Matched chapter text against RST."
+      },
+      {
+        "reference": [
+          {
+            "bookIndex": 20,
+            "chapter": 18,
+            "verse": 17,
+            "sourceBookNumber": 20,
+            "empty": false
+          }
+        ],
+        "module": [
+          {
+            "bookIndex": 20,
+            "chapter": 18,
+            "verse": 18,
+            "sourceBookNumber": 240,
+            "empty": false
+          }
+        ],
+        "reason": "Proverbs 18: source contains an empty 8 row; text following it is numbered one verse higher. Matched chapter text against RST."
+      },
+      {
+        "reference": [
+          {
+            "bookIndex": 20,
+            "chapter": 18,
+            "verse": 18,
+            "sourceBookNumber": 20,
+            "empty": false
+          }
+        ],
+        "module": [
+          {
+            "bookIndex": 20,
+            "chapter": 18,
+            "verse": 19,
+            "sourceBookNumber": 240,
+            "empty": false
+          }
+        ],
+        "reason": "Proverbs 18: source contains an empty 8 row; text following it is numbered one verse higher. Matched chapter text against RST."
+      },
+      {
+        "reference": [
+          {
+            "bookIndex": 20,
+            "chapter": 18,
+            "verse": 19,
+            "sourceBookNumber": 20,
+            "empty": false
+          }
+        ],
+        "module": [
+          {
+            "bookIndex": 20,
+            "chapter": 18,
+            "verse": 20,
+            "sourceBookNumber": 240,
+            "empty": false
+          }
+        ],
+        "reason": "Proverbs 18: source contains an empty 8 row; text following it is numbered one verse higher. Matched chapter text against RST."
+      },
+      {
+        "reference": [
+          {
+            "bookIndex": 20,
+            "chapter": 18,
+            "verse": 20,
+            "sourceBookNumber": 20,
+            "empty": false
+          }
+        ],
+        "module": [
+          {
+            "bookIndex": 20,
+            "chapter": 18,
+            "verse": 21,
+            "sourceBookNumber": 240,
+            "empty": false
+          }
+        ],
+        "reason": "Proverbs 18: source contains an empty 8 row; text following it is numbered one verse higher. Matched chapter text against RST."
+      },
+      {
+        "reference": [
+          {
+            "bookIndex": 20,
+            "chapter": 18,
+            "verse": 21,
+            "sourceBookNumber": 20,
+            "empty": false
+          }
+        ],
+        "module": [
+          {
+            "bookIndex": 20,
+            "chapter": 18,
+            "verse": 22,
+            "sourceBookNumber": 240,
+            "empty": false
+          }
+        ],
+        "reason": "Proverbs 18: source contains an empty 8 row; text following it is numbered one verse higher. Matched chapter text against RST."
+      },
+      {
+        "reference": [
+          {
+            "bookIndex": 20,
+            "chapter": 18,
+            "verse": 22,
+            "sourceBookNumber": 20,
+            "empty": false
+          }
+        ],
+        "module": [
+          {
+            "bookIndex": 20,
+            "chapter": 18,
+            "verse": 23,
+            "sourceBookNumber": 240,
+            "empty": false
+          }
+        ],
+        "reason": "Proverbs 18: source contains an empty 8 row; text following it is numbered one verse higher. Matched chapter text against RST."
+      },
+      {
+        "reference": [
+          {
+            "bookIndex": 20,
+            "chapter": 18,
+            "verse": 23,
+            "sourceBookNumber": 20,
+            "empty": false
+          }
+        ],
+        "module": [
+          {
+            "bookIndex": 20,
+            "chapter": 18,
+            "verse": 24,
+            "sourceBookNumber": 240,
+            "empty": false
+          }
+        ],
+        "reason": "Proverbs 18: source contains an empty 8 row; text following it is numbered one verse higher. Matched chapter text against RST."
+      },
+      {
+        "reference": [
+          {
+            "bookIndex": 20,
+            "chapter": 18,
+            "verse": 24,
+            "sourceBookNumber": 20,
+            "empty": false
+          }
+        ],
+        "module": [
+          {
+            "bookIndex": 20,
+            "chapter": 18,
+            "verse": 25,
+            "sourceBookNumber": 240,
+            "empty": false
+          }
+        ],
+        "reason": "Proverbs 18: source contains an empty 8 row; text following it is numbered one verse higher. Matched chapter text against RST."
+      }
+    ],
+    "directMappingsSha256": "6a77c9d80ba2347e687c9e246ab512f2ca64d5c34a4d1311fc0804b7275ccc54"
+  },
+  {
+    "id": "CAS",
+    "sourceSha256": "7b3fbad0aa64fe01a2b4c9d6af3c0482951772662d2da39700ae40a4f20d30b9",
+    "referenceSha256": "8767ce5edc00f55a4008a591ac251ec89ed23971aa7af4fb72ec2acdf5e34667",
+    "validation": {
+      "groups": 54,
+      "entries": 7943,
+      "referenceCoverage": {
+        "totalRows": 7955,
+        "mappedRows": 7955,
+        "missingRows": 0,
+        "percent": 100,
+        "missingExamples": []
+      },
+      "moduleCoverage": {
+        "totalRows": 7957,
+        "mappedRows": 7957,
+        "missingRows": 0,
+        "percent": 100,
+        "missingExamples": []
+      },
+      "invalidReferenceLocations": 0,
+      "invalidModuleLocations": 0,
+      "duplicateReferenceAssignments": 0,
+      "duplicateModuleAssignments": 0,
+      "crossBookEntries": 0,
+      "reverseOrderTransitions": 0,
+      "allowedNonMonotonicTransitions": 1,
+      "roundTripFailures": 0,
+      "unmatchedReferenceRows": 0,
+      "unmatchedModuleRows": 0,
+      "oneToOneEntries": 7929,
+      "manyToOneEntries": 0,
+      "oneToManyEntries": 2,
+      "manyToManyEntries": 12,
+      "emptyPlaceholderEntries": 12,
+      "entriesWithUnknownReviewGroup": 0,
+      "isCompleteAndConsistent": true
+    },
+    "manualReview": [
+      {
+        "reference": [
+          {
+            "bookIndex": 66,
+            "chapter": 13,
+            "verse": 1,
+            "sourceBookNumber": 66,
+            "empty": false
+          }
+        ],
+        "module": [
+          {
+            "bookIndex": 66,
+            "chapter": 12,
+            "verse": 18,
+            "sourceBookNumber": 730,
+            "empty": false
+          },
+          {
+            "bookIndex": 66,
+            "chapter": 13,
+            "verse": 1,
+            "sourceBookNumber": 730,
+            "empty": false
+          }
+        ],
+        "reason": "The standing on seashore clause is Revelation 12:18, followed by the beast rising in 13:1; both belong to KJV 13:1."
+      }
+    ],
+    "directMappingsSha256": "d720376d85b150fd028654231574031321332f40a337ea2fc66c5e460041439f"
+  },
+  {
+    "id": "NIV'11",
+    "sourceSha256": "7bb9527b6e67aaff211a9b61c787b74eb20f1053c4cfc43855bac6ae9937b206",
+    "referenceSha256": "1c2dfb54d2ee14e51a0f499164e25103bb9cb45f439f5b299ab8046f68b38835",
+    "validation": {
+      "groups": 66,
+      "entries": 31102,
+      "referenceCoverage": {
+        "totalRows": 31102,
+        "mappedRows": 31102,
+        "missingRows": 0,
+        "percent": 100,
+        "missingExamples": []
+      },
+      "moduleCoverage": {
+        "totalRows": 31102,
+        "mappedRows": 31102,
+        "missingRows": 0,
+        "percent": 100,
+        "missingExamples": []
+      },
+      "invalidReferenceLocations": 0,
+      "invalidModuleLocations": 0,
+      "duplicateReferenceAssignments": 0,
+      "duplicateModuleAssignments": 0,
+      "crossBookEntries": 0,
+      "reverseOrderTransitions": 0,
+      "allowedNonMonotonicTransitions": 0,
+      "roundTripFailures": 0,
+      "unmatchedReferenceRows": 0,
+      "unmatchedModuleRows": 0,
+      "oneToOneEntries": 31102,
+      "manyToOneEntries": 0,
+      "oneToManyEntries": 0,
+      "manyToManyEntries": 0,
+      "emptyPlaceholderEntries": 0,
+      "entriesWithUnknownReviewGroup": 0,
+      "isCompleteAndConsistent": true
+    },
+    "manualReview": [],
+    "directMappingsSha256": "1442e8f0f741022c5b02a7181ae41b23dd1e6cd97213317cc849b4ad50dc2c7b"
+  },
+  {
+    "id": "ESV",
+    "sourceSha256": "92ca1d68b74b23c0abaeee3525fb65ad1c0113af2ebc0e692de0d1894846bbcd",
+    "referenceSha256": "1c2dfb54d2ee14e51a0f499164e25103bb9cb45f439f5b299ab8046f68b38835",
+    "validation": {
+      "groups": 101,
+      "entries": 31084,
+      "referenceCoverage": {
+        "totalRows": 31102,
+        "mappedRows": 31102,
+        "missingRows": 0,
+        "percent": 100,
+        "missingExamples": []
+      },
+      "moduleCoverage": {
+        "totalRows": 31103,
+        "mappedRows": 31103,
+        "missingRows": 0,
+        "percent": 100,
+        "missingExamples": []
+      },
+      "invalidReferenceLocations": 0,
+      "invalidModuleLocations": 0,
+      "duplicateReferenceAssignments": 0,
+      "duplicateModuleAssignments": 0,
+      "crossBookEntries": 0,
+      "reverseOrderTransitions": 0,
+      "allowedNonMonotonicTransitions": 0,
+      "roundTripFailures": 0,
+      "unmatchedReferenceRows": 0,
+      "unmatchedModuleRows": 0,
+      "oneToOneEntries": 31065,
+      "manyToOneEntries": 0,
+      "oneToManyEntries": 1,
+      "manyToManyEntries": 18,
+      "emptyPlaceholderEntries": 17,
+      "entriesWithUnknownReviewGroup": 0,
+      "isCompleteAndConsistent": true
+    },
+    "manualReview": [
+      {
+        "reference": [
+          {
+            "bookIndex": 64,
+            "chapter": 1,
+            "verse": 14,
+            "sourceBookNumber": 64,
+            "empty": false
+          }
+        ],
+        "module": [
+          {
+            "bookIndex": 64,
+            "chapter": 1,
+            "verse": 14,
+            "sourceBookNumber": 710,
+            "empty": false
+          },
+          {
+            "bookIndex": 64,
+            "chapter": 1,
+            "verse": 15,
+            "sourceBookNumber": 710,
+            "empty": false
+          }
+        ],
+        "reason": "3 John: face-to-face meeting and closing greetings split into two verses."
+      },
+      {
+        "reference": [
+          {
+            "bookIndex": 66,
+            "chapter": 12,
+            "verse": 17,
+            "sourceBookNumber": 66,
+            "empty": false
+          },
+          {
+            "bookIndex": 66,
+            "chapter": 13,
+            "verse": 1,
+            "sourceBookNumber": 66,
+            "empty": false
+          }
+        ],
+        "module": [
+          {
+            "bookIndex": 66,
+            "chapter": 12,
+            "verse": 17,
+            "sourceBookNumber": 730,
+            "empty": false
+          },
+          {
+            "bookIndex": 66,
+            "chapter": 13,
+            "verse": 1,
+            "sourceBookNumber": 730,
+            "empty": false
+          }
+        ],
+        "reason": "ESV includes the standing on the seashore clause in 12:17, while KJV includes it in 13:1. Reviewed as an inseparable two-verse correspondence."
+      }
+    ],
+    "directMappingsSha256": "f696d701b494e0b9a6f533164acf996fe085c9f79d2b2e5ecff616ae0c395932"
+  }
+]

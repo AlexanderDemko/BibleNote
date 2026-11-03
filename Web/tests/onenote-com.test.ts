@@ -6,9 +6,9 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { openCacheDb, readCachedPage } from '../src/cache.js';
+import { openCacheDb, readCachedPage, updatePageContent } from '../src/cache.js';
 import { htmlToText } from '../src/html.js';
-import { oneNoteComPageXmlToHtml, parseOneNoteComHierarchy } from '../src/onenote-com.js';
+import { oneNoteComPageXmlToHtml, oneNoteComRendererMarker, parseOneNoteComHierarchy } from '../src/onenote-com.js';
 import { syncOneNoteCache } from '../src/sync.js';
 
 const testDirectory = path.dirname(fileURLToPath(import.meta.url));
@@ -51,7 +51,10 @@ test('classic OneNote page XML becomes searchable renderable HTML', () => {
   const text = htmlToText(html);
 
   assert.match(html, /<table\b/);
-  assert.match(html, /class="onenote-com-page"/);
+  assert.equal(cheerio.load(html)('body').attr('data-biblenote-renderer'), oneNoteComRendererMarker);
+  assert.match(html, /\.onenote-com-page\{box-sizing:border-box;min-height:100vh;margin:0;padding:48px 56px 80px/);
+  assert.match(html, /\.onenote-page-header h1\{[^}]*border-bottom:1px solid #aaa/);
+  assert.match(html, /html\.onenote-page-focus-mode \.onenote-com-page\{padding-top:76px\}/);
   assert.match(text, /Троица/);
   assert.match(text, /Иудейская пасха/);
   assert.match(text, /Уникальные черты Бога/);
@@ -90,6 +93,20 @@ test('classic OneNote table layout and appearance are preserved', () => {
   assert.equal(table.find('thead th').length, 2);
   assert.equal(table.find('thead th').first().attr('style'), 'background-color:#B3B3B3');
   assert.equal(table.find('tbody td').length, 2);
+});
+
+test('classic OneNote title keeps its creation date as presentation metadata', () => {
+  const html = oneNoteComPageXmlToHtml(`<?xml version="1.0"?>
+    <one:Page xmlns:one="http://schemas.microsoft.com/office/onenote/2013/onenote" ID="{page}">
+      <one:Title lang="ru"><one:OE creationTime="2014-04-29T10:34:03.000Z"><one:T><![CDATA[Заголовок]]></one:T></one:OE></one:Title>
+    </one:Page>`);
+  const $ = cheerio.load(html);
+  const header = $('.onenote-page-header');
+
+  assert.equal(header.find('h1').text(), 'Заголовок');
+  assert.ok(header.attr('data-onenote-created-date'));
+  assert.match(header.attr('data-onenote-created-time') || '', /^\d{2}:\d{2}$/);
+  assert.match(html, /\.onenote-page-header\[data-onenote-created-date\]:after\{content:attr\(data-onenote-created-date\)/);
 });
 
 test('classic OneNote tables keep nested bullets and fit their container', () => {
@@ -151,6 +168,81 @@ test('unsafe inline markup from OneNote is removed before cached rendering', () 
   assert.doesNotMatch(html, /onclick|<script|javascript:/i);
 });
 
+test('OneNote paragraph spacing stays with its own text before nested numbered entries', () => {
+  const xml = fs.readFileSync(path.join(testDirectory, 'fixtures/onenote-paragraph-spacing.xml'), 'utf8');
+  const html = oneNoteComPageXmlToHtml(xml);
+  const $ = cheerio.load(html);
+  const heading = $('.onenote-list-number');
+  assert.match(heading.attr('style') || '', /margin-top:27pt/);
+  assert.match(heading.attr('style') || '', /line-height:24pt/);
+  assert.equal(heading.children('.onenote-paragraph-content').attr('style'), 'margin-bottom:9pt');
+  const parent = heading.parent().parent();
+  assert.equal(parent.children('.onenote-paragraph-content').attr('style'), 'margin-bottom:12pt');
+  assert.equal(parent.children('.onenote-paragraph-content').find('span[style="font-size:12pt"]').length, 1);
+  assert.equal(htmlToText(html), 'Первый абзац.\n\n'
+    + 'Пусть Господь сохранит наши сердца в чистоте, а брак в целостности и любви.\n\n'
+    + '1. Божий замысел об интимной близости\n\n'
+    + 'В Библии говорится о многом, но о многом и нет.');
+});
+
+test('OneNote paragraph spacing inherits quick styles and accepts explicit zero overrides', () => {
+  const $ = cheerio.load(oneNoteComPageXmlToHtml(`<one:Page xmlns:one="urn:onenote">
+    <one:QuickStyleDef index="1" spaceBefore="6" spaceAfter="4" spaceBetween="18"/>
+    <one:Outline><one:OEChildren>
+      <one:OE quickStyleIndex="1"><one:T>Inherited</one:T></one:OE>
+      <one:OE quickStyleIndex="1" spaceBefore="0" spaceAfter="0"><one:T>Zero</one:T></one:OE>
+      <one:OE spaceBefore="-1" spaceAfter="NaN" spaceBetween="Infinity"><one:T>Invalid</one:T></one:OE>
+    </one:OEChildren></one:Outline></one:Page>`));
+  const paragraphs = $('.onenote-paragraph');
+  assert.match(paragraphs.eq(0).attr('style') || '', /margin-top:6pt;line-height:18pt/);
+  assert.equal(paragraphs.eq(0).children().attr('style'), 'margin-bottom:4pt');
+  assert.match(paragraphs.eq(1).attr('style') || '', /margin-top:0pt/);
+  assert.equal(paragraphs.eq(1).children().attr('style'), 'margin-bottom:0pt');
+  assert.equal(paragraphs.eq(2).attr('style'), undefined);
+  assert.equal(paragraphs.eq(2).children().attr('style'), undefined);
+});
+
+test('OneNote structural entries do not add empty paragraphs while explicit empty text remains visible', () => {
+  const $ = cheerio.load(oneNoteComPageXmlToHtml(`<one:Page xmlns:one="urn:onenote">
+    <one:Outline><one:OEChildren><one:OE><one:OEChildren>
+      <one:OE><one:T/></one:OE><one:OE><one:T>Text</one:T></one:OE>
+    </one:OEChildren></one:OE></one:OEChildren></one:Outline></one:Page>`));
+  const structural = $('.onenote-paragraph').first();
+  assert.equal(structural.children('.onenote-paragraph-content').length, 0);
+  assert.equal(structural.find('.onenote-paragraph-content:empty').length, 1);
+  assert.equal(structural.find('.onenote-paragraph-content').last().text(), 'Text');
+});
+
+test('OneNote heading styles preserve levels and links without including nested paragraph text', () => {
+  const html = oneNoteComPageXmlToHtml(`<one:Page xmlns:one="http://schemas.microsoft.com/office/onenote/2013/onenote">
+    <one:QuickStyleDef index="0" name="p" bold="true"/>
+    <one:QuickStyleDef index="1" name="h1"/>
+    <one:QuickStyleDef index="2" name="h2"/>
+    <one:QuickStyleDef index="6" name="h6"/>
+    <one:Title><one:OE><one:T>Название заметки</one:T></one:OE></one:Title>
+    <one:Outline><one:OEChildren>
+      <one:OE quickStyleIndex="1"><one:T><![CDATA[Введение <a href="bnVerse:rst/43 3:16">Ин 3:16</a>]]></one:T>
+        <one:OEChildren>
+          <one:OE quickStyleIndex="0"><one:T>Текст раздела</one:T></one:OE>
+          <one:OE quickStyleIndex="2"><one:T>Подраздел</one:T></one:OE>
+        </one:OEChildren>
+      </one:OE>
+      <one:OE quickStyleIndex="6"><one:T>Подробности</one:T></one:OE>
+    </one:OEChildren></one:Outline>
+  </one:Page>`);
+  const $ = cheerio.load(html);
+  assert.deepEqual($('[role="heading"]').toArray().map(element => ({
+    text:$(element).text(), level:$(element).attr('aria-level')
+  })), [
+    { text:'Введение Ин 3:16', level:'1' },
+    { text:'Подраздел', level:'2' },
+    { text:'Подробности', level:'6' }
+  ]);
+  assert.equal($('[role="heading"]').first().find('a').attr('href'), 'bnVerse:rst/43 3:16');
+  assert.equal($('.onenote-page-header h1').text(), 'Название заметки');
+  assert.match(htmlToText(html), /Текст раздела/);
+});
+
 test('COM source synchronizes hierarchy and page content into the shared cache', async () => {
   const hierarchyXml = `<?xml version="1.0"?>
     <one:Notebooks xmlns:one="http://schemas.microsoft.com/office/onenote/2013/onenote">
@@ -162,8 +254,9 @@ test('COM source synchronizes hierarchy and page content into the shared cache',
     </one:Notebooks>`;
   const pageXml = `<?xml version="1.0"?>
     <one:Page xmlns:one="http://schemas.microsoft.com/office/onenote/2013/onenote" ID="{page}">
+      <one:QuickStyleDef index="2" name="h2"/>
       <one:Title><one:OE><one:T><![CDATA[Grace]]></one:T></one:OE></one:Title>
-      <one:Outline><one:OEChildren><one:OE><one:T><![CDATA[Saved through COM]]></one:T></one:OE></one:OEChildren></one:Outline>
+      <one:Outline><one:OEChildren><one:OE quickStyleIndex="2"><one:T><![CDATA[Saved through COM]]></one:T></one:OE></one:OEChildren></one:Outline>
     </one:Page>`;
   const server = http.createServer((request, response) => {
     response.setHeader('Content-Type', 'application/json; charset=utf-8');
@@ -201,9 +294,28 @@ test('COM source synchronizes hierarchy and page content into the shared cache',
     try {
       const page = readCachedPage(db, '{page}', true, 100_000);
       assert.match(String(page.text ?? ''), /Saved through COM/);
-      assert.match(String(page.html ?? ''), /onenote-com-page/);
+      assert.equal(cheerio.load(String(page.html ?? ''))('body').attr('data-biblenote-renderer'), oneNoteComRendererMarker);
+      updatePageContent(
+        db,
+        '{page}',
+        'Saved through COM',
+        '<html><body class="onenote-com-page" data-biblenote-renderer="onenote-com-v2">Saved through COM</body></html>',
+        '2026-07-30T12:00:00Z',
+        '2026-07-30T12:05:00Z'
+      );
     } finally {
       db.close();
+    }
+
+    const upgraded = await syncOneNoteCache({ dbPath, parseBibleRefs:false });
+    assert.equal(upgraded.contentDownloaded, 1);
+    const upgradedDb = openCacheDb(dbPath);
+    try {
+      const $ = cheerio.load(String(readCachedPage(upgradedDb, '{page}', true, 100_000).html ?? ''));
+      assert.equal($('body').attr('data-biblenote-renderer'), oneNoteComRendererMarker);
+      assert.equal($('[role="heading"][aria-level="2"]').text(), 'Saved through COM');
+    } finally {
+      upgradedDb.close();
     }
   } finally {
     if (previousSource == null) delete process.env.ONENOTE_DATA_SOURCE;

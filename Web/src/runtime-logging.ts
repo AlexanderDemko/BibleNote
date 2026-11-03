@@ -6,6 +6,7 @@ export type RuntimeLoggingSettings = {
   verboseLogging: boolean;
   settingsPath: string;
   logPath: string;
+  logError?: string;
 };
 
 const sensitiveKeyPattern = /token|secret|password|authorization|clientid|client_id|cache/i;
@@ -14,6 +15,7 @@ const runtimeLogBackupCount = 3;
 let settingsPath = path.join(defaultBibleNoteDir, 'runtime-settings.json');
 let logPath = path.join(defaultBibleNoteDir, 'extended.log');
 let verboseLogging = false;
+let logWriteError: string | undefined;
 
 function ignoreMissingFile(error: any): void {
   if (error?.code !== 'ENOENT') throw error;
@@ -90,12 +92,15 @@ function readSettingsFile(): void {
 export function configureRuntimeLogging(baseDir: string): RuntimeLoggingSettings {
   settingsPath = path.join(baseDir, 'runtime-settings.json');
   logPath = path.join(baseDir, 'extended.log');
+  logWriteError = undefined;
   try {
     rotateRuntimeLogFiles(logPath);
   } catch {
     // Log maintenance must never break startup.
   }
+  verboseLogging = false;
   readSettingsFile();
+  if (verboseLogging) runtimeLog('settings', 'Extended logging active');
   return readRuntimeLoggingSettings();
 }
 
@@ -103,14 +108,17 @@ export function readRuntimeLoggingSettings(): RuntimeLoggingSettings {
   return {
     verboseLogging,
     settingsPath,
-    logPath
+    logPath,
+    ...(logWriteError ? { logError: logWriteError } : {})
   };
 }
 
 export async function saveRuntimeLoggingSettings(input: Record<string, unknown>): Promise<RuntimeLoggingSettings> {
-  verboseLogging = input.verboseLogging === true;
+  const enabled = input.verboseLogging === true;
   await fs.promises.mkdir(path.dirname(settingsPath), { recursive: true });
-  await fs.promises.writeFile(settingsPath, `${JSON.stringify({ verboseLogging }, null, 2)}\n`, 'utf8');
+  await fs.promises.writeFile(settingsPath, `${JSON.stringify({ verboseLogging: enabled }, null, 2)}\n`, 'utf8');
+  verboseLogging = enabled;
+  if (!enabled) logWriteError = undefined;
   runtimeLog('settings', `Extended logging ${verboseLogging ? 'enabled' : 'disabled'}`);
   return readRuntimeLoggingSettings();
 }
@@ -139,20 +147,22 @@ export function runtimeWarning(category: string, message: string, details?: unkn
 }
 
 function writeRuntimeLog(category: string, message: string, details?: unknown, level: 'info' | 'warning' = 'info'): void {
-  const entry = {
-    time: new Date().toISOString(),
-    pid: process.pid,
-    level,
-    category,
-    message,
-    details: redact(details)
-  };
   try {
+    const entry = {
+      time: new Date().toISOString(),
+      pid: process.pid,
+      level,
+      category,
+      message,
+      details: redact(details)
+    };
     fs.mkdirSync(path.dirname(logPath), { recursive: true });
     const line = `${JSON.stringify(entry)}\n`;
     rotateRuntimeLogFiles(logPath, runtimeLogMaxBytes, runtimeLogBackupCount, Buffer.byteLength(line, 'utf8'));
     fs.appendFileSync(logPath, line, 'utf8');
-  } catch {
+    logWriteError = undefined;
+  } catch (error: any) {
+    logWriteError = error?.message ?? String(error);
     // Logging must never break the app.
   }
 }

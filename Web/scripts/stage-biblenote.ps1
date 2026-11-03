@@ -6,6 +6,11 @@ $bibleNoteProjectDir = Split-Path -Parent $bibleNoteProjectPath
 $runtimeIdentifier = 'win-x64'
 $sourceDir = Join-Path $bibleNoteProjectDir "bin\Release\net10.0\$runtimeIdentifier"
 $targetDir = Join-Path $repoRoot 'vendor\BibleNote'
+$modulesSourceDir = Join-Path (Split-Path -Parent $bibleNoteProjectDir) 'Modules'
+
+if (-not (Test-Path (Join-Path $modulesSourceDir 'rst\manifest.xml'))) {
+  throw "Bundled rst module was not found at $modulesSourceDir"
+}
 
 dotnet build $bibleNoteProjectPath -c Release -r $runtimeIdentifier --self-contained true
 if ($LASTEXITCODE -ne 0) {
@@ -26,6 +31,7 @@ if (Test-Path $targetDir) {
 
 New-Item -ItemType Directory -Force -Path $targetDir | Out-Null
 Copy-Item -Path (Join-Path $sourceDir '*') -Destination $targetDir -Recurse -Force
+Copy-Item -LiteralPath $modulesSourceDir -Destination (Join-Path $targetDir 'Modules') -Recurse -Force
 
 Write-Host "BibleNote staged to $targetDir"
 

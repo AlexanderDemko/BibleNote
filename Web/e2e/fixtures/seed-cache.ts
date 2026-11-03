@@ -118,9 +118,11 @@ export function seedCache(dbPath: string): void {
         module, parser_version, parsed_at
       ) VALUES (?, ?, ?, ?, ?, ?, 43, 'От Иоанна', 'Ин', 3, ?, 3, ?, 0, ?, ?, NULL, NULL, ?, ?, ?)
     `);
-    insertReference.run(seeded.firstPageId, 1, 'Ин 3:14-16', 'Ин 3:14-16', 43003014, 43003016, 14, 16, 31, 41, module, parserVersion, syncedAt);
-    insertReference.run(seeded.firstPageId, 1, 'Ин 3:16', 'Ин 3:16', 43003016, 43003016, 16, 16, 44, 50, module, parserVersion, syncedAt);
-    insertReference.run(seeded.firstPageId, 2, 'Ин 3:16', 'Ин 3:16', 43003016, 43003016, 16, 16, 42, 48, module, parserVersion, syncedAt);
+    for (const [paragraphIndex, reference, verse] of [[1, 'Ин 3:14-16', 14], [1, 'Ин 3:16', 16], [2, 'Ин 3:16', 16]] as const) {
+      const start = paragraphs[paragraphIndex].text.indexOf(reference);
+      insertReference.run(seeded.firstPageId, paragraphIndex, reference, reference, 43003000 + verse, 43003016,
+        verse, 16, start, start + reference.length - 1, module, parserVersion, syncedAt);
+    }
     db.prepare(`
       INSERT INTO page_bible_parse_state(
         page_id, content_hash, module, parser_version, parsed_at,
